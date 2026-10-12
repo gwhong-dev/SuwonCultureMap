@@ -2,10 +2,12 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
+    <!-- 모바일에서 PC 화면을 축소해서 보여주지 않고, 기기 폭 그대로 그리게 함 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>수원 문화 프로그램 지도</title>
     <style>
       :root {
-        --sidebar-width: 450px; /* 모바일 미디어쿼리에서 100vw로 덮어씀 */
+        --sidebar-width: 450px; /* PC 사이드바 폭 (모바일은 바텀시트라 사용 안 함) */
       }
 
       body {
@@ -14,6 +16,7 @@
         display: flex;
         flex-direction: column;
         height: 100vh;
+        height: 100dvh; /* 모바일 브라우저 주소창 높이를 뺀 실제 화면 높이 */
       }
 
       #topbar {
@@ -32,9 +35,21 @@
         border-radius: 6px;
         border: 1px solid #ccc;
       }
-      #authStatus {
+      /* 로그인 상태 + 버튼 묶음 (PC: 상단바 오른쪽 / 모바일: ☰ 메뉴 안) */
+      #topbarActions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
         margin-left: auto;
+      }
+      #authStatus {
         margin-right: 0.25rem;
+      }
+      .past-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        white-space: nowrap;
       }
       .login-btn {
         padding: 0.375rem 0.75rem;
@@ -294,29 +309,484 @@
         word-break: break-word;
       }
 
-      /* ===== 모바일 대응 (2단계: 모바일 / 데스크톱) ===== */
-      @media (max-width: 768px) {
-        :root {
-          --sidebar-width: 100vw;
+      /* ===== 모바일 전용 요소: PC에서는 숨김 ===== */
+      #mobileMenuBtn,
+      #categoryChips,
+      #sheetHeader,
+      #previewStrip,
+      #mapViewBtn,
+      .card-fav {
+        display: none;
+      }
+      /* 아이폰 하단 홈 바 높이를 JS에서 읽기 위한 측정용 요소 */
+      #safeAreaProbe {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 0;
+        height: env(safe-area-inset-bottom, 0px);
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      /* =====================================================
+         모바일 · 태블릿 세로 (화면 폭 1024px 이하)
+         에어비앤비 스타일: 지도 전체 화면 + 떠 있는 검색창
+                          + 아래에서 끌어올리는 목록(바텀시트)
+         ===================================================== */
+      @media (max-width: 1024px) {
+        body {
+          overflow: hidden;
+        }
+        button,
+        .chip {
+          touch-action: manipulation; /* 더블탭 확대 지연 제거 */
         }
 
+        /* ----- 상단: 지도 위에 떠 있는 검색창 ----- */
         #topbar {
-          font-size: 0.78rem;
-          padding: 0.375rem 0.625rem;
-          gap: 0.375rem;
-        }
-
-        /* 사이드바가 지도를 밀어내지 않고, 지도 위에 덮어씌워지는 오버레이로 동작 */
-        #sidebar {
           position: absolute;
           top: 0;
+          left: 0;
           right: 0;
-          height: 100%;
-          box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
+          z-index: 30;
+          background: transparent;
+          color: #222;
+          padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 0;
+          gap: 8px;
+          pointer-events: none; /* 빈 공간은 통과 → 지도 드래그 가능 */
+          transition: background 0.2s;
+        }
+        #topbar > * {
+          pointer-events: auto;
+        }
+        /* 목록을 끝까지 올렸을 때는 상단을 흰 배경으로 */
+        body.sheet-full #topbar {
+          background: #fff;
+          box-shadow: 0 1px 0 #eee;
+        }
+        /* 드롭다운·체크박스는 아래 칩 버튼으로 대체 */
+        #topbar #categorySelect,
+        #topbar .past-toggle {
+          display: none;
+        }
+        #topbar #searchInput {
+          flex: 1 1 0;
+          min-width: 0;
+          height: 48px;
+          padding: 0 16px 0 44px;
+          border: none;
+          border-radius: 999px;
+          font-size: 16px; /* 16px 미만이면 아이폰이 입력할 때 화면을 확대함 */
+          background: #fff
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23222' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E")
+            no-repeat 16px center / 18px;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+          outline: none;
+          -webkit-appearance: none;
+          appearance: none;
+        }
+        #mobileMenuBtn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex: none;
+          width: 48px;
+          height: 48px;
+          border: none;
+          border-radius: 50%;
+          background: #fff;
+          color: #222;
+          font-size: 1.2rem;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+          cursor: pointer;
         }
 
+        /* ----- ☰ 메뉴 (로그인 상태 · 로그인/로그아웃 · 동기화) ----- */
+        #topbarActions {
+          display: none;
+          position: absolute;
+          top: calc(env(safe-area-inset-top, 0px) + 64px);
+          right: 12px;
+          flex-direction: column;
+          align-items: stretch;
+          gap: 8px;
+          min-width: 200px;
+          margin-left: 0;
+          padding: 14px;
+          background: #fff;
+          border-radius: 14px;
+          box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+        }
+        #topbar.menu-open #topbarActions {
+          display: flex;
+        }
+        #authStatus {
+          margin: 0 0 4px;
+          font-size: 0.85rem;
+          color: #555;
+        }
+        #topbarActions .login-btn {
+          padding: 11px 12px;
+          font-size: 0.9rem;
+          text-align: center;
+        }
+
+        /* ----- 카테고리 칩 (가로 스크롤) ----- */
+        #categoryChips {
+          display: flex;
+          flex-basis: 100%;
+          gap: 8px;
+          overflow-x: auto;
+          margin: 0 -12px;
+          padding: 2px 12px 10px;
+          scrollbar-width: none;
+        }
+        #categoryChips::-webkit-scrollbar {
+          display: none;
+        }
+        .chip {
+          flex: none;
+          padding: 8px 14px;
+          border: 1px solid #e3e3e3;
+          border-radius: 999px;
+          background: #fff;
+          color: #222;
+          font-size: 0.88rem;
+          white-space: nowrap;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+          cursor: pointer;
+        }
+        .chip.active {
+          background: #222;
+          border-color: #222;
+          color: #fff;
+        }
+
+        /* ----- 사이드바 → 바텀시트 ----- */
+        #sidebarToggleBtn {
+          display: none;
+        }
+        #sidebar,
+        #sidebar.collapsed {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          width: auto;
+          z-index: 20;
+          border-left: none;
+          border-radius: 18px 18px 0 0;
+          box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+          transform: translateY(100%); /* 실제 위치는 JS가 상태에 맞게 지정 */
+          transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+          will-change: transform;
+        }
+        #sheetHeader {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          flex: none;
+          padding: 10px 16px 14px;
+          border-bottom: 1px solid #f0f0f0;
+          cursor: grab;
+          touch-action: none; /* 끌어올릴 때 페이지가 같이 움직이지 않게 */
+          user-select: none;
+          -webkit-user-select: none;
+        }
+        .sheet-handle {
+          width: 40px;
+          height: 5px;
+          margin-bottom: 10px;
+          border-radius: 3px;
+          background: #d0d0d0;
+        }
+        #resultCount {
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: #222;
+        }
+
+        /* ----- 목록 카드: 큰 사진 위 + 글 아래 (태블릿은 2열) ----- */
+        #list {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 24px 16px;
+          align-content: start;
+          padding: 16px 16px 0;
+          overscroll-behavior: contain;
+        }
+        .event-item {
+          flex-direction: column;
+          gap: 10px;
+          padding: 0;
+          border-bottom: none;
+        }
+        .event-item:hover {
+          background: none;
+        }
+        .event-thumb {
+          width: 100%;
+          height: auto;
+          aspect-ratio: 4 / 3;
+          border-radius: 14px;
+        }
+        .event-body {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .event-body .title {
+          order: -1; /* 제목을 날짜보다 위로 */
+          margin-top: 0;
+          font-size: 1rem;
+        }
+        .event-body .date {
+          font-size: 0.85rem;
+          color: #717171;
+        }
+        .event-body .info {
+          margin-top: 2px;
+          font-size: 0.85rem;
+          color: #717171;
+          -webkit-line-clamp: 2;
+        }
+        .favorite-badge {
+          display: none; /* 모바일은 ♥ 버튼으로 대체 */
+        }
+
+        /* ----- 찜 하트 버튼 (목록 카드 / 미리보기 카드) ----- */
+        .card-fav {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          width: 36px;
+          height: 36px;
+          border: none;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.92);
+          color: #222;
+          font-size: 1.15rem;
+          line-height: 1;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+          cursor: pointer;
+        }
+        .card-fav.active {
+          color: #ff385c;
+        }
+
+        /* ----- 마커 탭 → 하단 미리보기 카드 (좌우로 넘기기) ----- */
+        #previewStrip {
+          display: flex;
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+          z-index: 25;
+          gap: 10px;
+          padding: 14px 16px 8px; /* 위쪽: 겹친 카드 모양이 잘리지 않게 */
+          overflow-x: auto;
+          scroll-snap-type: x mandatory;
+          scrollbar-width: none;
+          transform: translateY(160%);
+          opacity: 0;
+          pointer-events: none;
+          transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s;
+        }
+        #previewStrip::-webkit-scrollbar {
+          display: none;
+        }
+        #previewStrip.show {
+          transform: none;
+          opacity: 1;
+          pointer-events: auto;
+        }
+        .preview-card {
+          position: relative;
+          flex: 0 0 min(86%, 420px);
+          display: flex;
+          height: 116px;
+          overflow: hidden;
+          border-radius: 16px;
+          background: #fff;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+          scroll-snap-align: center;
+          cursor: pointer;
+        }
+        .preview-card img {
+          flex: none;
+          width: 116px;
+          height: 100%;
+          object-fit: cover;
+          background: #eee;
+        }
+        /* 같은 장소에 행사가 여러 개 → 뒤에 카드가 쌓인 모양 + 'n/전체' 표시 */
+        .preview-card.stacked {
+          box-shadow:
+            0 -11px 0 -6px #fff,
+            0 -11px 0 -5px #d4d4d4,
+            0 -20px 0 -12px #f4f4f4,
+            0 -20px 0 -11px #d4d4d4,
+            0 4px 16px rgba(0, 0, 0, 0.18);
+        }
+        .preview-stack {
+          position: absolute;
+          left: 6px;
+          bottom: 6px;
+          padding: 3px 8px;
+          border-radius: 999px;
+          background: rgba(0, 0, 0, 0.72);
+          color: #fff;
+          font-size: 0.72rem;
+          font-weight: 600;
+          white-space: nowrap;
+        }
+        .preview-body {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+          padding: 12px 44px 12px 12px;
+        }
+        .preview-title {
+          font-size: 0.95rem;
+          font-weight: 600;
+          line-height: 1.3;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .preview-date,
+        .preview-place {
+          font-size: 0.8rem;
+          color: #717171;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .preview-card .card-fav {
+          top: 6px;
+          right: 6px;
+          background: transparent;
+          box-shadow: none;
+        }
+
+        /* ----- 목록 전체일 때 '지도 보기' 버튼 ----- */
+        #mapViewBtn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          position: absolute;
+          left: 50%;
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+          z-index: 26;
+          padding: 12px 20px;
+          border: none;
+          border-radius: 999px;
+          background: #222;
+          color: #fff;
+          font-size: 0.95rem;
+          font-weight: 600;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+          transform: translate(-50%, 200%);
+          opacity: 0;
+          pointer-events: none;
+          transition: transform 0.25s, opacity 0.2s;
+          cursor: pointer;
+        }
+        #mapViewBtn.show {
+          transform: translate(-50%, 0);
+          opacity: 1;
+          pointer-events: auto;
+        }
+
+        /* ----- 상세정보: 전체 화면 페이지처럼 ----- */
+        .modal-overlay {
+          align-items: stretch;
+        }
+        .modal-card {
+          width: 100%;
+          max-width: 100%;
+          height: 100%;
+          max-height: 100%;
+          border-radius: 0;
+          animation: sheetUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .modal-close {
+          position: fixed;
+          top: calc(env(safe-area-inset-top, 0px) + 12px);
+          left: 12px;
+          right: auto;
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.95);
+          color: #222;
+          font-size: 1.4rem;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
         .modal-image {
-          height: 160px;
+          height: auto;
+          aspect-ratio: 4 / 3;
+          max-height: 45vh;
+        }
+        .modal-body {
+          padding: 20px 20px calc(env(safe-area-inset-bottom, 0px) + 100px);
+        }
+        .modal-title {
+          font-size: 1.35rem;
+        }
+        .modal-info {
+          font-size: 0.95rem;
+        }
+        /* 즐겨찾기 · 원문 보기 버튼은 화면 하단에 고정 */
+        .modal-actions {
+          position: fixed;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 3;
+          padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 12px);
+          background: #fff;
+          border-top: 1px solid #eee;
+        }
+        .favorite-btn,
+        .modal-link-btn {
+          flex: 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          box-sizing: border-box; /* 버튼(button)과 링크(a)의 높이를 똑같이 */
+          height: 48px;
+          font-size: 1rem;
+        }
+      }
+
+      @keyframes sheetUp {
+        from {
+          transform: translateY(100%);
+        }
+        to {
+          transform: translateY(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #sidebar,
+        #previewStrip,
+        #mapViewBtn,
+        .modal-card {
+          transition: none !important;
+          animation: none !important;
         }
       }
     </style>
@@ -326,27 +796,41 @@
       <select id="categorySelect">
         <option value="all">전체 카테고리</option>
       </select>
-      <input type="text" id="searchInput" placeholder="행사 이름 검색" />
-      <label style="display: flex; align-items: center; gap: 0.25rem; white-space: nowrap;">
+      <input type="text" id="searchInput" placeholder="행사 이름 검색" enterkeyhint="search" />
+      <label class="past-toggle">
         <input type="checkbox" id="showPastCheckbox" />
         지난 행사 보기
       </label>
-      <span id="authStatus">로그인 확인 중...</span>
-      <a id="loginPageBtn" class="login-btn login" href="login.html">로그인</a>
-      <a id="mypageBtn" class="login-btn login" href="mypage.html" style="display: none">마이페이지</a>
-      <button id="syncBtn" class="login-btn sync">행사 동기화</button>
-      <button id="logoutBtn" class="login-btn logout" style="display: none">
-        로그아웃
-      </button>
+      <div id="topbarActions">
+        <span id="authStatus">로그인 확인 중...</span>
+        <a id="loginPageBtn" class="login-btn login" href="login.html">로그인</a>
+        <a id="mypageBtn" class="login-btn login" href="mypage.html" style="display: none">마이페이지</a>
+        <button id="syncBtn" class="login-btn sync">행사 동기화</button>
+        <button id="logoutBtn" class="login-btn logout" style="display: none">
+          로그아웃
+        </button>
+      </div>
+      <!-- 모바일 전용: ☰ 메뉴 버튼 + 카테고리 칩 -->
+      <button id="mobileMenuBtn" type="button" aria-label="메뉴">☰</button>
+      <div id="categoryChips"></div>
     </div>
 
     <div id="app">
       <div id="map"></div>
       <button id="sidebarToggleBtn">›</button>
       <aside id="sidebar">
+        <!-- 모바일 전용: 바텀시트 손잡이 + 결과 개수 (끌어올리기) -->
+        <div id="sheetHeader">
+          <div class="sheet-handle"></div>
+          <div id="resultCount">행사 불러오는 중…</div>
+        </div>
         <div id="list"></div>
       </aside>
+      <!-- 모바일 전용: 마커 탭 시 하단 미리보기 카드 / 목록 전체일 때 지도 버튼 -->
+      <div id="previewStrip"></div>
+      <button id="mapViewBtn" type="button">🗺 지도 보기</button>
     </div>
+    <div id="safeAreaProbe" aria-hidden="true"></div>
 
     <!-- ===== 상세정보 큰 팝업창 ===== -->
     <div id="detailModal" class="modal-overlay" style="display: none">
@@ -371,6 +855,13 @@
       var markerList = [];
       var currentInfowindow = null;
 
+      // ===== 모바일 레이아웃 상태값 (아래 '모바일 레이아웃' 영역에서 사용) =====
+      var mobileQuery = window.matchMedia("(max-width: 1024px)");
+      var sheetState = "peek"; // "peek"(살짝) | "half"(절반) | "full"(전체) | "hidden"(미리보기 카드 표시 중)
+      var sheetY = 0; // 바텀시트의 현재 위치 (위에서부터 px)
+      var previewEventId = null; // 미리보기 카드로 보고 있는 행사 id
+      var selectedLocMarker = null; // 크게 표시 중인 장소 마커
+
       // ===== 카테고리별 마커 아이콘 =====
       var CATEGORY_STYLE = {
         행사: { color: "#4A90D9", emoji: "📅" },
@@ -383,7 +874,7 @@
       function createMarkerIcon(category) {
         var style = CATEGORY_STYLE[category] || CATEGORY_STYLE["기타"];
         var svg =
-          '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36">' +
+          '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">' + // viewBox: 선택된 마커를 크게 그릴 때 비율 유지
           '<circle cx="18" cy="18" r="16" fill="' +
           style.color +
           '" stroke="#fff" stroke-width="2"/>' +
@@ -397,7 +888,7 @@
       // ===== 같은 좌표에 행사가 여러 개일 때 쓰는 "개수 뱃지" 마커 아이콘 =====
       function createClusterMarkerIcon(count) {
         var svg =
-          '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">' +
+          '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">' +
           '<circle cx="18" cy="20" r="16" fill="#34495E" stroke="#fff" stroke-width="2"/>' +
           '<text x="18" y="26" font-size="15" text-anchor="middle">📍</text>' +
           '<circle cx="31" cy="9" r="9" fill="#E74C3C" stroke="#fff" stroke-width="2"/>' +
@@ -463,22 +954,36 @@
           var first = group[0].event;
           var position = new kakao.maps.LatLng(first.latitude, first.longitude);
 
-          var markerImage =
+          // 마커 그림 + 크기 (모바일에서 선택되면 1.33배로 키워서 강조)
+          var iconSrc =
             group.length === 1
-              ? new kakao.maps.MarkerImage(
-                  createMarkerIcon(first.category),
-                  new kakao.maps.Size(36, 36),
-                )
-              : new kakao.maps.MarkerImage(
-                  createClusterMarkerIcon(group.length),
-                  new kakao.maps.Size(40, 40),
-                );
+              ? createMarkerIcon(first.category)
+              : createClusterMarkerIcon(group.length);
+          var iconSize = group.length === 1 ? 36 : 40;
+          var markerImage = new kakao.maps.MarkerImage(
+            iconSrc,
+            new kakao.maps.Size(iconSize, iconSize),
+          );
+          var bigSize = Math.round((iconSize * 4) / 3);
+          var selectedImage = new kakao.maps.MarkerImage(
+            iconSrc,
+            new kakao.maps.Size(bigSize, bigSize),
+          );
 
           var marker = new kakao.maps.Marker({
             position: position,
             image: markerImage,
+            clickable: true, // 마커 클릭이 지도 클릭(미리보기 닫기)으로 번지지 않게
           });
           marker.setMap(map);
+
+          // (모바일 미리보기 카드용) 같은 장소 행사들을 시작일 순으로 번호 매기기 → '같은 장소 1/3'
+          var groupByDate = group.slice().sort(compareStartDate);
+          groupByDate.forEach(function (item, i) {
+            item.group = groupByDate;
+            item.groupIndex = i;
+            item.groupSize = groupByDate.length;
+          });
 
           var infowindowContent;
           if (group.length === 1) {
@@ -535,15 +1040,35 @@
 
           var infowindow = new kakao.maps.InfoWindow({ content: infowindowContent });
           kakao.maps.event.addListener(marker, "click", function () {
-            toggleInfowindow(infowindow, marker);
+            if (mobileQuery.matches) {
+              showPreview(groupByDate[0].event.id); // 모바일: 하단 미리보기 카드 (같은 장소면 첫 번째부터)
+            } else {
+              toggleInfowindow(infowindow, marker); // PC: 기존 말풍선/목록 팝업
+            }
           });
 
-          locationMarkers.push({
+          var locMarker = {
             marker: marker,
             infowindow: infowindow,
             key: first.latitude + "," + first.longitude,
+            normalImage: markerImage,
+            selectedImage: selectedImage,
+          };
+          locationMarkers.push(locMarker);
+          group.forEach(function (item) {
+            item.locMarker = locMarker; // 행사 → 그 행사가 있는 장소 마커
           });
         });
+      }
+
+      // 시작일 오름차순 비교 (날짜 없는 행사는 뒤로)
+      function compareStartDate(a, b) {
+        var da = a.event.startDate;
+        var db = b.event.startDate;
+        if (!da && !db) return 0;
+        if (!da) return 1;
+        if (!db) return -1;
+        return da.localeCompare(db);
       }
 
       kakao.maps.load(function () {
@@ -553,6 +1078,11 @@
           level: 6,
         };
         map = new kakao.maps.Map(mapContainer, mapOption);
+
+        // (모바일) 지도 빈 곳을 탭하면 미리보기 카드 닫기
+        kakao.maps.event.addListener(map, "click", function () {
+          hidePreview();
+        });
 
         fetch("/api/events")
           .then((response) => response.json())
@@ -598,6 +1128,8 @@
             select.appendChild(option);
           }
         });
+
+        renderCategoryChips(); // 모바일용 칩도 같은 목록으로 생성
       }
 
       // ===== 지난 행사 판별 (endDate가 오늘보다 이전이면 지난 행사) =====
@@ -612,6 +1144,8 @@
         var keyword = document.getElementById("searchInput").value.trim();
         var selectedCategory = document.getElementById("categorySelect").value;
         var showPast = document.getElementById("showPastCheckbox").checked;
+
+        updateChipActive(); // 모바일 칩 선택 표시 동기화
 
         if (currentInfowindow) {
           currentInfowindow.close();
@@ -707,8 +1241,9 @@
           div.innerHTML =
             '<img class="event-thumb" src="' +
             imgSrc +
-            '" onerror="this.style.visibility=\'hidden\'">' +
+            '" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
             (isFavorited ? '<span class="favorite-badge">★</span>' : "") + // 찜한 행사만 별 표시
+            favButtonHtml(isFavorited) + // 모바일: 사진 위 ♥ 버튼
             '<div class="event-body">' +
             '<div class="date">' +
             dateText +
@@ -732,15 +1267,36 @@
             var locMarker = locationMarkers.find(function (lm) {
               return lm.key === key;
             });
-            if (locMarker) {
+            // (모바일은 상세가 전체 화면이라 지도 팝업은 띄우지 않음)
+            if (locMarker && !mobileQuery.matches) {
               toggleInfowindow(locMarker.infowindow, locMarker.marker);
             }
 
             openDetailModal(item.event);
           });
 
+          // ♥ 버튼은 상세창을 열지 않고 찜만 토글
+          div.querySelector(".card-fav").addEventListener("click", function (e) {
+            e.stopPropagation();
+            toggleFavorite(item.event.id);
+          });
+
           list.appendChild(div);
         });
+
+        // ===== (모바일) 결과 개수 + 미리보기 카드도 같은 목록으로 갱신 =====
+        document.getElementById("resultCount").textContent =
+          "행사 " + sorted.length + "개";
+        renderPreviewStrip(sorted);
+        if (previewEventId !== null) {
+          var previewCard = findPreviewCard(previewEventId);
+          if (previewCard) {
+            scrollStripTo(previewCard); // 보던 카드 위치 유지
+            selectMarker(previewEventId, false); // 마커는 새로 그려졌으니 강조도 다시
+          } else {
+            hidePreview(); // 필터로 사라진 행사면 닫기
+          }
+        }
       }
 
       document
@@ -815,8 +1371,8 @@
       // ===== 사이드바 접기/펼치기 토글 =====
       var sidebarToggleBtn = document.getElementById("sidebarToggleBtn");
       var sidebarEl = document.getElementById("sidebar");
-      // 모바일 화면(768px 이하)에서는 사이드바가 지도를 전부 가려버리니 처음엔 접어둠
-      var sidebarCollapsed = window.innerWidth <= 768;
+      // 모바일(1024px 이하)은 사이드바가 바텀시트로 바뀌어서 접을 필요 없음 → 처음엔 펼침
+      var sidebarCollapsed = false;
       sidebarEl.classList.toggle("collapsed", sidebarCollapsed);
       sidebarToggleBtn.classList.toggle("collapsed", sidebarCollapsed);
       sidebarToggleBtn.textContent = sidebarCollapsed ? "‹" : "›";
@@ -942,6 +1498,395 @@
             closeDetailModal(); // 배경 클릭하면 닫힘
           }
         });
+
+      // =====================================================
+      // 모바일 레이아웃 (에어비앤비 스타일)
+      // - 화면 폭 1024px 이하에서만 동작 (PC 화면은 기존 그대로)
+      // - 카테고리 칩 / 바텀시트 목록 / 마커 미리보기 카드 / ☰ 메뉴
+      // =====================================================
+
+      // ----- 공통 도우미 -----
+      function formatDateRange(event) {
+        if (!event.startDate) return "기간 정보 없음";
+        return (
+          event.startDate +
+          (event.endDate && event.endDate !== event.startDate
+            ? " ~ " + event.endDate
+            : "")
+        );
+      }
+
+
+      function favButtonHtml(isFavorited) {
+        return (
+          '<button type="button" class="card-fav' +
+          (isFavorited ? " active" : "") +
+          '" aria-label="찜">' +
+          (isFavorited ? "♥" : "♡") +
+          "</button>"
+        );
+      }
+
+      // ----- 카테고리 칩 (드롭다운 대신 가로로 넘기는 버튼) -----
+      function chipLabel(value) {
+        if (value === "all") return "전체";
+        if (value === "찜") return "♥ 찜";
+        var style = CATEGORY_STYLE[value];
+        return style ? style.emoji + " " + value : value;
+      }
+
+      function renderCategoryChips() {
+        var select = document.getElementById("categorySelect");
+        var pastCheckbox = document.getElementById("showPastCheckbox");
+        var chips = document.getElementById("categoryChips");
+        chips.innerHTML = "";
+
+        // 드롭다운 옵션과 같은 순서로 칩 생성 → 누르면 드롭다운 값을 바꾸고 필터 실행
+        Array.from(select.options).forEach(function (option) {
+          var chip = document.createElement("button");
+          chip.type = "button";
+          chip.className = "chip";
+          chip.dataset.value = option.value;
+          chip.textContent = chipLabel(option.value);
+          chip.addEventListener("click", function () {
+            select.value = option.value;
+            filterMarkers();
+          });
+          chips.appendChild(chip);
+        });
+
+        // '지난 행사' 칩은 기존 체크박스를 대신 눌러줌
+        var pastChip = document.createElement("button");
+        pastChip.type = "button";
+        pastChip.className = "chip";
+        pastChip.dataset.value = "__past";
+        pastChip.textContent = "🕘 지난 행사";
+        pastChip.addEventListener("click", function () {
+          pastCheckbox.checked = !pastCheckbox.checked;
+          filterMarkers();
+        });
+        chips.appendChild(pastChip);
+
+        updateChipActive();
+      }
+
+      function updateChipActive() {
+        var selected = document.getElementById("categorySelect").value;
+        var showPast = document.getElementById("showPastCheckbox").checked;
+        document
+          .querySelectorAll("#categoryChips .chip")
+          .forEach(function (chip) {
+            var active =
+              chip.dataset.value === "__past"
+                ? showPast
+                : chip.dataset.value === selected;
+            chip.classList.toggle("active", active);
+          });
+      }
+
+      // ----- 바텀시트 (사이드바 목록을 아래에서 끌어올리는 방식) -----
+      // 상태별 시트 윗변 위치(px)를 화면 크기에 맞춰 계산
+      function getSheetPositions() {
+        var appHeight = document.getElementById("app").clientHeight;
+        var headerHeight = document.getElementById("sheetHeader").offsetHeight;
+        var safeBottom = document.getElementById("safeAreaProbe").offsetHeight;
+        var topbarHeight = document.getElementById("topbar").offsetHeight;
+        return {
+          full: topbarHeight, // 검색창 바로 아래까지
+          half: Math.round(appHeight * 0.5),
+          peek: appHeight - headerHeight - safeBottom - 8, // 손잡이 + 개수만 보이게
+          hidden: appHeight, // 완전히 내려감
+        };
+      }
+
+      function setSheetY(y, animate) {
+        var sidebar = document.getElementById("sidebar");
+        sheetY = y;
+        sidebar.style.transition = animate ? "" : "none";
+        sidebar.style.transform = "translateY(" + y + "px)";
+      }
+
+      function setSheetState(state) {
+        if (!mobileQuery.matches) return;
+        sheetState = state;
+        var y = getSheetPositions()[state];
+        setSheetY(y, true);
+        // 시트가 내려가 있는 만큼 목록 아래 여백 → 마지막 카드까지 스크롤 가능
+        document.getElementById("list").style.paddingBottom = y + 24 + "px";
+        document
+          .getElementById("mapViewBtn")
+          .classList.toggle("show", state === "full");
+        document.body.classList.toggle("sheet-full", state === "full");
+      }
+
+      function nearestSheetState(y) {
+        var pos = getSheetPositions();
+        return ["full", "half", "peek"].reduce(function (best, s) {
+          return Math.abs(pos[s] - y) < Math.abs(pos[best] - y) ? s : best;
+        }, "peek");
+      }
+
+      // 손잡이 부분을 끌어서 올리고 내리기 (탭하면 살짝 ↔ 절반)
+      (function setupSheetDrag() {
+        var header = document.getElementById("sheetHeader");
+        var ORDER = ["full", "half", "peek"];
+        var dragging = false;
+        var startY = 0;
+        var startSheetY = 0;
+        var lastY = 0;
+        var lastTime = 0;
+        var velocity = 0; // px/ms (+는 아래 방향)
+
+        header.addEventListener("pointerdown", function (e) {
+          if (!mobileQuery.matches) return;
+          dragging = true;
+          startY = lastY = e.clientY;
+          lastTime = Date.now();
+          startSheetY = sheetY;
+          velocity = 0;
+          header.setPointerCapture(e.pointerId);
+        });
+
+        header.addEventListener("pointermove", function (e) {
+          if (!dragging) return;
+          var pos = getSheetPositions();
+          var y = startSheetY + (e.clientY - startY);
+          y = Math.max(pos.full, Math.min(pos.peek, y)); // 위·아래 끝 제한
+          var now = Date.now();
+          velocity = (e.clientY - lastY) / Math.max(1, now - lastTime);
+          lastY = e.clientY;
+          lastTime = now;
+          setSheetY(y, false); // 손가락을 바로 따라오게 애니메이션 없이
+        });
+
+        function endDrag(e) {
+          if (!dragging) return;
+          dragging = false;
+
+          // 거의 안 움직였으면 '탭'으로 처리
+          if (e.type === "pointerup" && Math.abs(e.clientY - startY) < 6) {
+            setSheetState(sheetState === "peek" ? "half" : "peek");
+            return;
+          }
+
+          var from = ORDER.indexOf(nearestSheetState(startSheetY));
+          var target;
+          if (velocity < -0.4) {
+            target = ORDER[Math.max(0, from - 1)]; // 위로 튕기면 한 단계 위
+          } else if (velocity > 0.4) {
+            target = ORDER[Math.min(2, from + 1)]; // 아래로 튕기면 한 단계 아래
+          } else {
+            target = nearestSheetState(sheetY); // 천천히 놓으면 가까운 위치로
+          }
+          setSheetState(target);
+        }
+        header.addEventListener("pointerup", endDrag);
+        header.addEventListener("pointercancel", endDrag);
+      })();
+
+      document
+        .getElementById("mapViewBtn")
+        .addEventListener("click", function () {
+          setSheetState("peek");
+        });
+
+      // ----- 마커 미리보기 카드 (마커 탭 → 하단 카드, 좌우로 넘기면 다음 행사) -----
+      function renderPreviewStrip(sortedItems) {
+        var strip = document.getElementById("previewStrip");
+        strip.innerHTML = "";
+
+        // 같은 장소 행사끼리 붙여서 배치 → 넘기면 '같은 장소 1/3 → 2/3 → 3/3' 순서
+        var ordered = [];
+        var added = new Set();
+        sortedItems.forEach(function (item) {
+          (item.group || [item]).forEach(function (member) {
+            if (!added.has(member)) {
+              added.add(member);
+              ordered.push(member);
+            }
+          });
+        });
+
+        ordered.forEach(function (item) {
+          var stacked = item.groupSize > 1;
+          var card = document.createElement("div");
+          card.className = "preview-card" + (stacked ? " stacked" : "");
+          card.dataset.eventId = item.event.id;
+          card.innerHTML =
+            '<img src="' +
+            (item.event.imageUrl || "") +
+            '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
+            (stacked
+              ? '<span class="preview-stack">같은 장소 ' +
+                (item.groupIndex + 1) +
+                "/" +
+                item.groupSize +
+                "</span>"
+              : "") +
+            '<div class="preview-body">' +
+            '<div class="preview-title">' +
+            item.event.title +
+            "</div>" +
+            '<div class="preview-date">' +
+            formatDateRange(item.event) +
+            "</div>" +
+            '<div class="preview-place">' +
+            (extractPlaceName(item.event.info) || "") + // 장소명 (9/28 함수 재사용)
+            "</div>" +
+            "</div>" +
+            favButtonHtml(favoriteEventIds.has(item.event.id));
+
+          card.addEventListener("click", function () {
+            openDetailModal(item.event);
+          });
+          card.querySelector(".card-fav").addEventListener("click", function (e) {
+            e.stopPropagation();
+            toggleFavorite(item.event.id);
+          });
+
+          strip.appendChild(card);
+        });
+      }
+
+      function findPreviewCard(eventId) {
+        return document.querySelector(
+          '#previewStrip [data-event-id="' + eventId + '"]',
+        );
+      }
+
+      // 카드가 화면 가운데 오도록 가로 스크롤
+      function scrollStripTo(card) {
+        var strip = document.getElementById("previewStrip");
+        strip.scrollLeft =
+          card.offsetLeft - (strip.clientWidth - card.offsetWidth) / 2;
+      }
+
+      function showPreview(eventId) {
+        var card = findPreviewCard(eventId);
+        if (!card) return;
+        previewEventId = eventId;
+        document.getElementById("previewStrip").classList.add("show");
+        setSheetState("hidden"); // 목록은 내려서 카드가 잘 보이게
+        scrollStripTo(card);
+        selectMarker(eventId, true);
+      }
+
+      function hidePreview() {
+        if (previewEventId === null) return;
+        previewEventId = null;
+        document.getElementById("previewStrip").classList.remove("show");
+        selectMarker(null);
+        setSheetState("peek");
+      }
+
+      // 선택된 행사가 있는 장소 마커만 크게 + 맨 위로
+      function selectMarker(eventId, pan) {
+        if (selectedLocMarker) {
+          selectedLocMarker.marker.setImage(selectedLocMarker.normalImage);
+          selectedLocMarker.marker.setZIndex(0);
+          selectedLocMarker = null;
+        }
+        if (eventId === null) return;
+
+        var item = markerList.find(function (it) {
+          return it.event.id === eventId;
+        });
+        if (!item || !item.locMarker) return;
+        var target = item.locMarker; // 같은 장소 행사들은 마커 1개를 같이 씀
+        target.marker.setImage(target.selectedImage);
+        target.marker.setZIndex(10);
+        selectedLocMarker = target;
+        if (pan) map.panTo(target.marker.getPosition());
+      }
+
+      // 카드를 좌우로 넘기고 멈추면 → 가운데 카드의 마커로 지도 이동
+      var stripScrollTimer = null;
+      document
+        .getElementById("previewStrip")
+        .addEventListener("scroll", function () {
+          clearTimeout(stripScrollTimer);
+          stripScrollTimer = setTimeout(function () {
+            if (previewEventId === null) return;
+            var strip = document.getElementById("previewStrip");
+            var center = strip.scrollLeft + strip.clientWidth / 2;
+            var closest = null;
+            var closestDist = Infinity;
+            Array.from(strip.children).forEach(function (card) {
+              var dist = Math.abs(
+                card.offsetLeft + card.offsetWidth / 2 - center,
+              );
+              if (dist < closestDist) {
+                closestDist = dist;
+                closest = card;
+              }
+            });
+            if (!closest) return;
+            var id = Number(closest.dataset.eventId);
+            if (id !== previewEventId) {
+              previewEventId = id;
+              selectMarker(id, true);
+            }
+          }, 120);
+        });
+
+      // ----- 검색창 (모바일) -----
+      var searchInputEl = document.getElementById("searchInput");
+      searchInputEl.addEventListener("input", function () {
+        // 검색하면 결과가 보이도록 목록을 절반까지 올림
+        if (mobileQuery.matches && sheetState === "peek") {
+          setSheetState("half");
+        }
+      });
+      searchInputEl.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") searchInputEl.blur(); // 키보드 닫기
+      });
+
+      // ----- ☰ 메뉴 열기/닫기 -----
+      document
+        .getElementById("mobileMenuBtn")
+        .addEventListener("click", function (e) {
+          e.stopPropagation();
+          document.getElementById("topbar").classList.toggle("menu-open");
+        });
+      document.addEventListener("click", function (e) {
+        var topbar = document.getElementById("topbar");
+        if (
+          topbar.classList.contains("menu-open") &&
+          !document.getElementById("topbarActions").contains(e.target)
+        ) {
+          topbar.classList.remove("menu-open");
+        }
+      });
+
+      // ----- 화면 크기 변경 (회전, PC 창 크기 조절) 대응 -----
+      function applyLayout() {
+        if (mobileQuery.matches) {
+          if (currentInfowindow) {
+            currentInfowindow.close();
+            currentInfowindow = null;
+          }
+          setSheetState(previewEventId !== null ? "hidden" : sheetState === "hidden" ? "peek" : sheetState);
+        } else {
+          // PC로 돌아가면 모바일용 위치·상태를 모두 원래대로
+          hidePreview();
+          var sidebar = document.getElementById("sidebar");
+          sidebar.style.transform = "";
+          sidebar.style.transition = "";
+          document.getElementById("list").style.paddingBottom = "";
+          document.getElementById("mapViewBtn").classList.remove("show");
+          document.body.classList.remove("sheet-full");
+          document.getElementById("topbar").classList.remove("menu-open");
+        }
+        if (map) map.relayout(); // 카카오맵은 크기가 바뀌면 다시 계산시켜야 함
+      }
+
+      var resizeTimer = null;
+      window.addEventListener("resize", function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(applyLayout, 150);
+      });
+
+      applyLayout();
     </script>
   </body>
 </html>

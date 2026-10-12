@@ -2,6 +2,7 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>마이페이지 - 수원 문화 프로그램 지도</title>
     <style>
       body {
@@ -20,6 +21,7 @@
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
         padding: 2.25rem 2rem;
         width: 380px;
+        max-width: calc(100vw - 6rem); /* 폰에서 화면 밖으로 안 넘치게 (좌우 여백 1rem + 안쪽 여백 2rem씩) */
       }
 
       .page-card h1 {
