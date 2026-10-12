@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -82,11 +83,13 @@ public class EventSyncService {
       // 이미 저장된 행사인데
       // ① 재단 쪽 내용이 수정됐거나 (pubDate가 더 최신)
       // ② 예전에 저장할 때 link가 비어 있었는데 지금은 값이 있으면 (link 컬럼 추가 전에 저장된 행사)
-      // → 최신 값으로 갱신. 둘 다 아니면 그대로 건너뜀
+      // ③ 저장된 제목이 지금 제목과 다르면 (htmlUnescape 적용 전에 &#39; 그대로 저장된 행사)
+      // → 최신 값으로 갱신. 셋 다 아니면 그대로 건너뜀
       boolean changed = latest.getPubDate().isAfter(existing.getPubDate());
       boolean linkMissing = existing.getLink() == null && latest.getLink() != null;
+      boolean titleFixed = !Objects.equals(existing.getTitle(), latest.getTitle());
 
-      if (changed || linkMissing) {
+      if (changed || linkMissing || titleFixed) {
         existing.updateFrom(latest);
         eventRepository.save(existing);
         updatedCount++;
