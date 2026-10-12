@@ -87,4 +87,19 @@ public class Event {
     this.endDate = endDate;
     this.link = link;
   }
+
+  // 재단 원본이 바뀌었거나, 예전에 저장할 때 빠진 값(link 등)이 있으면 최신 값으로 덮어씀
+  // (idx·id는 그대로 → 찜 목록 연결이 끊기지 않음)
+  public void updateFrom(Event latest) {
+    this.title = latest.title;
+    this.category = latest.category;
+    this.latitude = latest.latitude;
+    this.longitude = latest.longitude;
+    this.imageUrl = latest.imageUrl;
+    this.info = latest.info;
+    this.pubDate = latest.pubDate;
+    this.startDate = latest.startDate;
+    this.endDate = latest.endDate;
+    this.link = latest.link;
+  }
 }

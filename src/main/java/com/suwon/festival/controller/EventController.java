@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.suwon.festival.dto.EventResponse;
+import com.suwon.festival.dto.SyncResult;
 import com.suwon.festival.service.EventService;
 import com.suwon.festival.service.EventSyncService;
 import com.suwon.festival.dto.xml.EventItem;
@@ -44,7 +45,7 @@ public class EventController {
 
   @PostMapping("/sync")
   public String sync() throws Exception {
-    int count = eventSyncService.syncEvents();
-    return count + "개 행사 저장 완료";
+    SyncResult result = eventSyncService.syncEvents();
+    return "새 행사 " + result.saved() + "개 저장 · 기존 행사 " + result.updated() + "개 갱신 완료";
   }
 }
