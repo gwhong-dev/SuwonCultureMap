@@ -89,7 +89,7 @@ public class EventSyncService {
 
   private String extractInfo(EventItem item) {
     if (item.contentInfo == null || item.contentInfo.contentInfoDetail == null) {
-      return item.description;
+      return null; // description은 매핑 안 하기로 함 (EventItem.java 주석 참고)
     }
     return item.contentInfo.contentInfoDetail.stream()
         .map(detail -> detail.infoItem + ": " + detail.infoContent)

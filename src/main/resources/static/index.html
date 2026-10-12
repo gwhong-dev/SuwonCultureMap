@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <title>수원 문화 프로그램 지도</title>
     <style>
+      :root {
+        --sidebar-width: 450px; /* 모바일 미디어쿼리에서 100vw로 덮어씀 */
+      }
+
       body {
         margin: 0;
         font-family: sans-serif;
@@ -15,8 +19,8 @@
       #topbar {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 8px 14px;
+        gap: 0.5rem;
+        padding: 0.5rem 0.875rem;
         background: #222;
         color: #fff;
         font-size: 0.85rem;
@@ -24,16 +28,16 @@
       }
       #topbar input,
       #topbar select {
-        padding: 6px;
+        padding: 0.375rem;
         border-radius: 6px;
         border: 1px solid #ccc;
       }
       #authStatus {
         margin-left: auto;
-        margin-right: 4px;
+        margin-right: 0.25rem;
       }
       .login-btn {
-        padding: 6px 12px;
+        padding: 0.375rem 0.75rem;
         border-radius: 6px;
         text-decoration: none;
         font-size: 0.8rem;
@@ -76,7 +80,7 @@
       }
 
       #sidebar {
-        width: 450px;
+        width: var(--sidebar-width);
         flex: none;
         display: flex;
         flex-direction: column;
@@ -94,7 +98,7 @@
       #sidebarToggleBtn {
         position: absolute;
         top: 50%;
-        right: 450px;
+        right: var(--sidebar-width);
         transform: translate(50%, -50%);
         width: 28px;
         height: 48px;
@@ -121,8 +125,8 @@
       .event-item {
         position: relative; /* 별 배지 위치 잡으려고 추가 */
         display: flex;
-        gap: 10px;
-        padding: 10px 14px;
+        gap: 0.625rem;
+        padding: 0.625rem 0.875rem;
         border-bottom: 1px solid #f0f0f0;
         cursor: pointer;
       }
@@ -143,15 +147,15 @@
       }
       .event-item .title {
         font-size: 0.9rem;
-        margin-top: 2px;
+        margin-top: 0.125rem;
       }
 
       /* ===== Side-bar 이벤트 카드 ===== */
       .event-item {
         display: flex;
         position: relative; /* ← 이 줄 추가 */
-        gap: 10px;
-        padding: 10px 14px;
+        gap: 0.625rem;
+        padding: 0.625rem 0.875rem;
         border-bottom: 1px solid #f0f0f0;
         cursor: pointer;
       }
@@ -176,13 +180,13 @@
       }
       .event-body .title {
         font-size: 0.9rem;
-        margin-top: 2px;
+        margin-top: 0.125rem;
         font-weight: 600;
       }
       .event-body .info {
         font-size: 0.78rem;
         color: #666;
-        margin-top: 4px;
+        margin-top: 0.25rem;
         white-space: pre-line; /* info의 \n을 실제 줄바꿈으로 표시 (모달과 동일) */
         display: -webkit-box;
         -webkit-line-clamp: 5;
@@ -231,7 +235,7 @@
         background: #ddd;
       }
       .modal-body {
-        padding: 16px 20px;
+        padding: 1rem 1.25rem;
       }
       .modal-date {
         font-size: 0.8rem;
@@ -239,17 +243,17 @@
       }
       .modal-title {
         font-size: 1.15rem;
-        margin: 6px 0 10px;
+        margin: 0.375rem 0 0.625rem;
       }
       .modal-info {
         font-size: 0.88rem;
         color: #444;
         white-space: pre-line;
         line-height: 1.6;
-        margin-bottom: 16px;
+        margin-bottom: 1rem;
       }
       .favorite-btn {
-        padding: 8px 16px;
+        padding: 0.5rem 1rem;
         border-radius: 8px;
         border: 1px solid #f5a623;
         background: #fff;
@@ -263,10 +267,10 @@
       }
       .modal-actions {
         display: flex;
-        gap: 8px;
+        gap: 0.5rem;
       }
       .modal-link-btn {
-        padding: 8px 16px;
+        padding: 0.5rem 1rem;
         border-radius: 8px;
         border: 1px solid #4a90d9;
         background: #fff;
@@ -280,7 +284,7 @@
 
       /* ===== 마커 InfoWindow 제목 (클릭 가능) ===== */
       .infowindow-title {
-        padding: 6px 8px;
+        padding: 0.375rem 0.5rem;
         cursor: pointer;
         color: #2f6f6b;
         text-decoration: underline;
@@ -288,6 +292,32 @@
         max-width: 400px;
         white-space: normal;
         word-break: break-word;
+      }
+
+      /* ===== 모바일 대응 (2단계: 모바일 / 데스크톱) ===== */
+      @media (max-width: 768px) {
+        :root {
+          --sidebar-width: 100vw;
+        }
+
+        #topbar {
+          font-size: 0.78rem;
+          padding: 0.375rem 0.625rem;
+          gap: 0.375rem;
+        }
+
+        /* 사이드바가 지도를 밀어내지 않고, 지도 위에 덮어씌워지는 오버레이로 동작 */
+        #sidebar {
+          position: absolute;
+          top: 0;
+          right: 0;
+          height: 100%;
+          box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-image {
+          height: 160px;
+        }
       }
     </style>
   </head>
@@ -297,12 +327,13 @@
         <option value="all">전체 카테고리</option>
       </select>
       <input type="text" id="searchInput" placeholder="행사 이름 검색" />
-      <label style="display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+      <label style="display: flex; align-items: center; gap: 0.25rem; white-space: nowrap;">
         <input type="checkbox" id="showPastCheckbox" />
         지난 행사 보기
       </label>
       <span id="authStatus">로그인 확인 중...</span>
       <a id="loginPageBtn" class="login-btn login" href="login.html">로그인</a>
+      <a id="mypageBtn" class="login-btn login" href="mypage.html" style="display: none">마이페이지</a>
       <button id="syncBtn" class="login-btn sync">행사 동기화</button>
       <button id="logoutBtn" class="login-btn logout" style="display: none">
         로그아웃
@@ -363,6 +394,158 @@
         return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
       }
 
+      // ===== 같은 좌표에 행사가 여러 개일 때 쓰는 "개수 뱃지" 마커 아이콘 =====
+      function createClusterMarkerIcon(count) {
+        var svg =
+          '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">' +
+          '<circle cx="18" cy="20" r="16" fill="#34495E" stroke="#fff" stroke-width="2"/>' +
+          '<text x="18" y="26" font-size="15" text-anchor="middle">📍</text>' +
+          '<circle cx="31" cy="9" r="9" fill="#E74C3C" stroke="#fff" stroke-width="2"/>' +
+          '<text x="31" y="13" font-size="11" font-weight="bold" fill="#fff" text-anchor="middle">' +
+          count +
+          "</text>" +
+          "</svg>";
+        return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
+      }
+
+      // ===== info 텍스트에서 "장소" 값만 뽑기 (목록 팝업 제목용) =====
+      // 라벨이 "장소" 하나로만 안 오고 "행사장소", "공연장소" 등으로도 와서
+      // 포함 여부로 찾음. "장소" 계열이 아예 없으면 "주소/소재지"로 대체
+      function extractPlaceName(infoText) {
+        if (!infoText) return null;
+        var lines = infoText.split("\n");
+        var addressFallback = null;
+
+        for (var i = 0; i < lines.length; i++) {
+          var idx = lines[i].indexOf(":");
+          if (idx === -1) continue;
+          var label = lines[i].substring(0, idx).trim();
+          var value = lines[i].substring(idx + 1).trim();
+
+          if (label.indexOf("장소") !== -1) {
+            return value;
+          }
+          if (!addressFallback && label.indexOf("주소") !== -1) {
+            addressFallback = value;
+          }
+        }
+
+        return addressFallback;
+      }
+
+      // ===== 이벤트 배열을 좌표(위치)별로 묶기 =====
+      function groupByLocation(items) {
+        var groups = {};
+        var order = [];
+        items.forEach(function (item) {
+          var key = item.event.latitude + "," + item.event.longitude;
+          if (!groups[key]) {
+            groups[key] = [];
+            order.push(key);
+          }
+          groups[key].push(item);
+        });
+        return order.map(function (key) {
+          return groups[key];
+        });
+      }
+
+      // ===== 현재 지도에 떠 있는 "장소별 마커"들 (필터 바뀔 때마다 새로 그림) =====
+      var locationMarkers = [];
+
+      function renderLocationMarkers(visibleItems) {
+        locationMarkers.forEach(function (lm) {
+          lm.marker.setMap(null);
+        });
+        locationMarkers = [];
+
+        groupByLocation(visibleItems).forEach(function (group) {
+          var first = group[0].event;
+          var position = new kakao.maps.LatLng(first.latitude, first.longitude);
+
+          var markerImage =
+            group.length === 1
+              ? new kakao.maps.MarkerImage(
+                  createMarkerIcon(first.category),
+                  new kakao.maps.Size(36, 36),
+                )
+              : new kakao.maps.MarkerImage(
+                  createClusterMarkerIcon(group.length),
+                  new kakao.maps.Size(40, 40),
+                );
+
+          var marker = new kakao.maps.Marker({
+            position: position,
+            image: markerImage,
+          });
+          marker.setMap(map);
+
+          var infowindowContent;
+          if (group.length === 1) {
+            var singlePlaceName = extractPlaceName(first.info);
+            infowindowContent =
+              '<div style="width:260px;">' +
+              (singlePlaceName
+                ? '<div style="padding: 0.5rem 0.625rem; font-size:0.8rem; font-weight:700; color:#1f4e79; background:#e8f0fa; border-bottom:1px solid #cddcee; text-align:center;">' +
+                  singlePlaceName +
+                  "</div>"
+                : "") +
+              '<div style="padding: 0.25rem 0.5rem 0.5rem; cursor:pointer; color:#2f6f6b; text-decoration:underline; font-size:0.85rem; white-space:normal; word-break:break-word; text-align:center;" onclick="openDetailFromMarker(' +
+              first.id +
+              ')">' +
+              first.title +
+              "</div>" +
+              "</div>";
+          } else {
+            // 공연일(startDate) 빠른 순으로 정렬하되, 제일 빠른 게 목록 맨 아래(스택 아래쪽)에 오도록 뒤집음
+            var sorted = group.slice().sort(function (a, b) {
+              var da = a.event.startDate;
+              var db = b.event.startDate;
+              if (!da && !db) return 0;
+              if (!da) return 1;
+              if (!db) return -1;
+              return da.localeCompare(db);
+            });
+            sorted.reverse();
+
+            var rows = sorted
+              .map(function (item, i) {
+                // 위에서부터 순서대로 흰색/회색 번갈아 표시 (첫 줄은 항상 흰색이라 헤더랑 안 붙음)
+                var stripeStyle = i % 2 === 1 ? "background:#f2f2f2;" : "";
+                return (
+                  '<div onclick="openDetailFromMarker(' +
+                  item.event.id +
+                  ')" style="padding: 0.5rem 0.375rem; border-top:1px solid #eee; cursor:pointer; font-size:0.85rem; color:#2f6f6b; ' +
+                  stripeStyle +
+                  '">' +
+                  item.event.title +
+                  "</div>"
+                );
+              })
+              .join("");
+            var placeName = extractPlaceName(first.info) || first.title;
+            infowindowContent =
+              '<div style="width:230px; max-height:220px; overflow-y:auto;">' +
+              '<div style="padding: 0.5rem 0.625rem; font-size:0.8rem; font-weight:700; color:#1f4e79; background:#e8f0fa; border-bottom:1px solid #cddcee; text-align:center;">' +
+              placeName +
+              "</div>" +
+              rows +
+              "</div>";
+          }
+
+          var infowindow = new kakao.maps.InfoWindow({ content: infowindowContent });
+          kakao.maps.event.addListener(marker, "click", function () {
+            toggleInfowindow(infowindow, marker);
+          });
+
+          locationMarkers.push({
+            marker: marker,
+            infowindow: infowindow,
+            key: first.latitude + "," + first.longitude,
+          });
+        });
+      }
+
       kakao.maps.load(function () {
         var mapContainer = document.getElementById("map");
         var mapOption = {
@@ -376,40 +559,10 @@
           .then((events) => {
             setupCategoryOptions(events);
 
+            // 이 시점엔 마커를 만들지 않음. 실제 마커는 filterMarkers() -> renderLocationMarkers()에서
+            // "장소별로 묶어서" 그림 (같은 좌표에 행사가 여러 개면 개수 뱃지 마커로)
             events.forEach(function (event) {
-              var markerPosition = new kakao.maps.LatLng(
-                event.latitude,
-                event.longitude,
-              );
-
-              var markerImage = new kakao.maps.MarkerImage(
-                createMarkerIcon(event.category),
-                new kakao.maps.Size(36, 36),
-              );
-              var marker = new kakao.maps.Marker({
-                position: markerPosition,
-                image: markerImage,
-              });
-
-              marker.setMap(map);
-
-              var infowindow = new kakao.maps.InfoWindow({
-                content:
-                  '<div style="padding:6px 8px; cursor:pointer; color:#2f6f6b; text-decoration:underline; font-size:0.85rem; width:260px; white-space:normal; word-break:break-word; text-align:center;" onclick="openDetailFromMarker(' +
-                  event.id +
-                  ')">' +
-                  event.title +
-                  "</div>",
-              });
-              kakao.maps.event.addListener(marker, "click", function () {
-                toggleInfowindow(infowindow, marker);
-              });
-
-              markerList.push({
-                marker: marker,
-                event: event,
-                infowindow: infowindow,
-              });
+              markerList.push({ event: event });
             });
 
             filterMarkers();
@@ -483,13 +636,12 @@
 
           var visible = matchesKeyword && matchesCategory && matchesPast;
 
-          item.marker.setMap(visible ? map : null);
-
           if (visible) {
             visibleItems.push(item);
           }
         });
 
+        renderLocationMarkers(visibleItems); // 장소별로 묶어서 마커 다시 그리기
         renderSidebar(visibleItems);
       }
 
@@ -570,8 +722,20 @@
             "</div>";
 
           div.addEventListener("click", function () {
-            map.setCenter(item.marker.getPosition());
+            map.setCenter(
+              new kakao.maps.LatLng(item.event.latitude, item.event.longitude),
+            );
             map.setLevel(5);
+
+            // 사이드바에서 클릭해도 지도의 해당 마커를 실제로 클릭한 것처럼 InfoWindow를 띄움
+            var key = item.event.latitude + "," + item.event.longitude;
+            var locMarker = locationMarkers.find(function (lm) {
+              return lm.key === key;
+            });
+            if (locMarker) {
+              toggleInfowindow(locMarker.infowindow, locMarker.marker);
+            }
+
             openDetailModal(item.event);
           });
 
@@ -610,17 +774,20 @@
 
             var status = document.getElementById("authStatus");
             var loginPageBtn = document.getElementById("loginPageBtn");
+            var mypageBtn = document.getElementById("mypageBtn");
             var logoutBtn = document.getElementById("logoutBtn");
 
             if (isLoggedIn) {
               status.textContent =
                 "로그인됨 (회원 번호: " + data.memberId + ")";
               loginPageBtn.style.display = "none";
+              mypageBtn.style.display = "inline-block";
               logoutBtn.style.display = "inline-block";
               return fetch("/api/favorites").then((r) => r.json()); // 로그인 상태면 즐겨찾기 목록도 받아옴
             } else {
               status.textContent = "로그인 안 됨";
               loginPageBtn.style.display = "inline-block";
+              mypageBtn.style.display = "none";
               logoutBtn.style.display = "none";
               return [];
             }
@@ -648,7 +815,11 @@
       // ===== 사이드바 접기/펼치기 토글 =====
       var sidebarToggleBtn = document.getElementById("sidebarToggleBtn");
       var sidebarEl = document.getElementById("sidebar");
-      var sidebarCollapsed = false;
+      // 모바일 화면(768px 이하)에서는 사이드바가 지도를 전부 가려버리니 처음엔 접어둠
+      var sidebarCollapsed = window.innerWidth <= 768;
+      sidebarEl.classList.toggle("collapsed", sidebarCollapsed);
+      sidebarToggleBtn.classList.toggle("collapsed", sidebarCollapsed);
+      sidebarToggleBtn.textContent = sidebarCollapsed ? "‹" : "›";
 
       sidebarToggleBtn.addEventListener("click", function () {
         sidebarCollapsed = !sidebarCollapsed;
@@ -708,6 +879,17 @@
       function closeDetailModal() {
         document.getElementById("detailModal").style.display = "none";
       }
+
+      // ===== ESC 키로 상세 모달 + 마커 팝업(InfoWindow) 닫기 =====
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+          closeDetailModal();
+          if (currentInfowindow) {
+            currentInfowindow.close();
+            currentInfowindow = null;
+          }
+        }
+      });
 
       // ===== 즐겨찾기 버튼 상태/토글 =====
       function updateFavoriteButton(eventId) {
