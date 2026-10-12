@@ -13,6 +13,7 @@ import org.springframework.web.util.HtmlUtils;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.suwon.festival.dto.SyncResult;
 import com.suwon.festival.dto.xml.EventItem;
 import com.suwon.festival.dto.xml.SwcfRssResponse;
 import com.suwon.festival.entity.Event;
@@ -46,20 +47,17 @@ public class EventSyncService {
     return response.channel.item;
   }
 
-  public int syncEvents() throws Exception {
+  public SyncResult syncEvents() throws Exception {
     List<EventItem> items = fetchEventItems();
     int savedCount = 0;
+    int updatedCount = 0;
 
     for (EventItem item : items) {
-      if (eventRepository.existsByIdx(item.idx)) {
-        continue; // 이미 저장된 행사는 건너뜀
-      }
-
       if (item.coordinate == null || item.coordinate.lat == null || item.coordinate.lng == null) {
         continue; // 좌표 정보가 불완전한 행사는 건너뜀
       }
 
-      Event event = Event.builder()
+      Event latest = Event.builder()
           .idx(item.idx)
           .title(HtmlUtils.htmlUnescape(item.title)) // &#39; 같은 이중 인코딩된 엔티티 복원
           .category("전체".equals(item.category) ? "기타" : item.category)
@@ -73,11 +71,29 @@ public class EventSyncService {
           .link(item.link)
           .build();
 
-      eventRepository.save(event);
-      savedCount++;
+      Event existing = eventRepository.findByIdx(item.idx).orElse(null);
+
+      if (existing == null) {
+        eventRepository.save(latest); // 처음 보는 행사 → 새로 저장
+        savedCount++;
+        continue;
+      }
+
+      // 이미 저장된 행사인데
+      // ① 재단 쪽 내용이 수정됐거나 (pubDate가 더 최신)
+      // ② 예전에 저장할 때 link가 비어 있었는데 지금은 값이 있으면 (link 컬럼 추가 전에 저장된 행사)
+      // → 최신 값으로 갱신. 둘 다 아니면 그대로 건너뜀
+      boolean changed = latest.getPubDate().isAfter(existing.getPubDate());
+      boolean linkMissing = existing.getLink() == null && latest.getLink() != null;
+
+      if (changed || linkMissing) {
+        existing.updateFrom(latest);
+        eventRepository.save(existing);
+        updatedCount++;
+      }
     }
 
-    return savedCount;
+    return new SyncResult(savedCount, updatedCount);
   }
 
   private String extractImageUrl(EventItem item) {
