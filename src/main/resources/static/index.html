@@ -92,6 +92,7 @@
       }
       #map {
         flex: 1;
+        touch-action: none; /* 핀치·드래그를 브라우저가 가로채지 않고 지도에 바로 전달 */
       }
 
       #sidebar {
@@ -251,6 +252,29 @@
       }
       .modal-body {
         padding: 1rem 1.25rem;
+      }
+      /* 상세창 '★ 찜한 행사' 표시 */
+      .modal-fav-badge {
+        display: inline-block;
+        margin-bottom: 0.375rem;
+        padding: 0.125rem 0.5rem;
+        border-radius: 999px;
+        background: #fff4e0;
+        color: #c77d00;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      .modal-fav-badge[hidden] {
+        display: none;
+      }
+      /* 목록 구분 제목 (찜한 행사 / 전체 행사) */
+      .list-section-title {
+        padding: 0.625rem 0.875rem 0.375rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #666;
+        background: #fafafa;
+        border-bottom: 1px solid #f0f0f0;
       }
       .modal-date {
         font-size: 0.8rem;
@@ -555,6 +579,11 @@
         .favorite-badge {
           display: none; /* 모바일은 ♥ 버튼으로 대체 */
         }
+        .list-section-title {
+          grid-column: 1 / -1; /* 태블릿 2열에서도 한 줄 전체 */
+          margin: 0 -16px;
+          padding: 8px 16px;
+        }
 
         /* ----- 찜 하트 버튼 (목록 카드 / 미리보기 카드) ----- */
         .card-fav {
@@ -838,6 +867,7 @@
         <button id="modalCloseBtn" class="modal-close">×</button>
         <img id="modalImage" class="modal-image" src="" alt="" />
         <div class="modal-body">
+          <div id="modalFavBadge" class="modal-fav-badge" hidden>★ 찜한 행사</div>
           <div id="modalDate" class="modal-date"></div>
           <h2 id="modalTitle" class="modal-title"></h2>
           <div id="modalInfo" class="modal-info"></div>
@@ -851,6 +881,40 @@
 
     <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=7e3b2a42df77bc183241db2bcc6c3cbb&autoload=false"></script>
     <script>
+      // ===== 텍스트 정리 / 안전하게 화면에 넣기 =====
+      // 재단 데이터 제목에 "<일월동행>" 같은 꺾쇠가 들어 있어서,
+      // innerHTML에 그대로 넣으면 태그로 해석돼 글자가 사라짐 → 항상 이스케이프해서 넣음
+      function escapeHtml(text) {
+        return String(text == null ? "" : text)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      // "&#39;" 같은 HTML 엔티티를 원래 글자로 (textarea는 태그를 실행하지 않아 안전)
+      function decodeEntities(text) {
+        var t = document.createElement("textarea");
+        t.innerHTML = text;
+        return t.value;
+      }
+
+      // 행사 데이터 한 번만 정리: 제목은 엔티티 복원, 정보는 <br />를 줄바꿈으로
+      function cleanEventText(event) {
+        if (event.title) event.title = decodeEntities(event.title);
+        if (event.info) {
+          event.info = decodeEntities(event.info.replace(/<br\s*\/?>/gi, "\n"));
+        }
+      }
+
+      // PC 팝업에서 찜한 행사 앞에 붙는 ★
+      function favoriteMark(eventId) {
+        return favoriteEventIds.has(eventId)
+          ? '<span style="color:#F5A623;">★ </span>'
+          : "";
+      }
+
       var map;
       var markerList = [];
       var currentInfowindow = null;
@@ -871,22 +935,35 @@
         기타: { color: "#7F8C8D", emoji: "📌" },
       };
 
-      function createMarkerIcon(category) {
+      // 찜 표시용 ★ 뱃지 (마커 왼쪽 위, 금색 — 목록·상세창의 ★과 같은 색)
+      function favoriteBadgeSvg(cx, cy) {
+        return (
+          '<circle cx="' + cx + '" cy="' + cy + '" r="8" fill="#F5A623" stroke="#fff" stroke-width="2"/>' +
+          '<text x="' + cx + '" y="' + (cy + 4) + '" font-size="10" fill="#fff" text-anchor="middle">★</text>'
+        );
+      }
+
+      // hasFavorite: 찜한 행사면 ★ 뱃지를 붙인 큰 그림판(40x40) 사용
+      function createMarkerIcon(category, hasFavorite) {
         var style = CATEGORY_STYLE[category] || CATEGORY_STYLE["기타"];
+        var w = hasFavorite ? 40 : 36;
+        var cx = hasFavorite ? 22 : 18; // ★ 뱃지 자리만큼 원을 오른쪽 아래로
+        var cy = hasFavorite ? 22 : 18;
         var svg =
-          '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">' + // viewBox: 선택된 마커를 크게 그릴 때 비율 유지
-          '<circle cx="18" cy="18" r="16" fill="' +
+          '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + w + '" viewBox="0 0 ' + w + " " + w + '">' + // viewBox: 선택된 마커를 크게 그릴 때 비율 유지
+          '<circle cx="' + cx + '" cy="' + cy + '" r="16" fill="' +
           style.color +
           '" stroke="#fff" stroke-width="2"/>' +
-          '<text x="18" y="24" font-size="16" text-anchor="middle">' +
+          '<text x="' + cx + '" y="' + (cy + 6) + '" font-size="16" text-anchor="middle">' +
           style.emoji +
           "</text>" +
+          (hasFavorite ? favoriteBadgeSvg(9, 9) : "") +
           "</svg>";
         return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
       }
 
       // ===== 같은 좌표에 행사가 여러 개일 때 쓰는 "개수 뱃지" 마커 아이콘 =====
-      function createClusterMarkerIcon(count) {
+      function createClusterMarkerIcon(count, hasFavorite) {
         var svg =
           '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">' +
           '<circle cx="18" cy="20" r="16" fill="#34495E" stroke="#fff" stroke-width="2"/>' +
@@ -895,6 +972,7 @@
           '<text x="31" y="13" font-size="11" font-weight="bold" fill="#fff" text-anchor="middle">' +
           count +
           "</text>" +
+          (hasFavorite ? favoriteBadgeSvg(8, 31) : "") + // 묶음 안에 찜한 행사가 있으면 왼쪽 아래 ★
           "</svg>";
         return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
       }
@@ -955,11 +1033,14 @@
           var position = new kakao.maps.LatLng(first.latitude, first.longitude);
 
           // 마커 그림 + 크기 (모바일에서 선택되면 1.33배로 키워서 강조)
+          var groupHasFavorite = group.some(function (item) {
+            return favoriteEventIds.has(item.event.id);
+          });
           var iconSrc =
             group.length === 1
-              ? createMarkerIcon(first.category)
-              : createClusterMarkerIcon(group.length);
-          var iconSize = group.length === 1 ? 36 : 40;
+              ? createMarkerIcon(first.category, groupHasFavorite)
+              : createClusterMarkerIcon(group.length, groupHasFavorite);
+          var iconSize = group.length === 1 && !groupHasFavorite ? 36 : 40;
           var markerImage = new kakao.maps.MarkerImage(
             iconSrc,
             new kakao.maps.Size(iconSize, iconSize),
@@ -992,13 +1073,14 @@
               '<div style="width:260px;">' +
               (singlePlaceName
                 ? '<div style="padding: 0.5rem 0.625rem; font-size:0.8rem; font-weight:700; color:#1f4e79; background:#e8f0fa; border-bottom:1px solid #cddcee; text-align:center;">' +
-                  singlePlaceName +
+                  escapeHtml(singlePlaceName) +
                   "</div>"
                 : "") +
               '<div style="padding: 0.25rem 0.5rem 0.5rem; cursor:pointer; color:#2f6f6b; text-decoration:underline; font-size:0.85rem; white-space:normal; word-break:break-word; text-align:center;" onclick="openDetailFromMarker(' +
               first.id +
               ')">' +
-              first.title +
+              favoriteMark(first.id) +
+              escapeHtml(first.title) +
               "</div>" +
               "</div>";
           } else {
@@ -1023,7 +1105,8 @@
                   ')" style="padding: 0.5rem 0.375rem; border-top:1px solid #eee; cursor:pointer; font-size:0.85rem; color:#2f6f6b; ' +
                   stripeStyle +
                   '">' +
-                  item.event.title +
+                  favoriteMark(item.event.id) +
+                  escapeHtml(item.event.title) +
                   "</div>"
                 );
               })
@@ -1032,7 +1115,7 @@
             infowindowContent =
               '<div style="width:230px; max-height:220px; overflow-y:auto;">' +
               '<div style="padding: 0.5rem 0.625rem; font-size:0.8rem; font-weight:700; color:#1f4e79; background:#e8f0fa; border-bottom:1px solid #cddcee; text-align:center;">' +
-              placeName +
+              escapeHtml(placeName) +
               "</div>" +
               rows +
               "</div>";
@@ -1091,6 +1174,7 @@
 
             // 이 시점엔 마커를 만들지 않음. 실제 마커는 filterMarkers() -> renderLocationMarkers()에서
             // "장소별로 묶어서" 그림 (같은 좌표에 행사가 여러 개면 개수 뱃지 마커로)
+            events.forEach(cleanEventText); // &#39; 복원, <br /> → 줄바꿈
             events.forEach(function (event) {
               markerList.push({ event: event });
             });
@@ -1211,19 +1295,37 @@
 
       // ===== Side-bar 카드 렌더링 (이미지 + 제목 + info 요약) =====
       function renderSidebar(items) {
-        var sorted = items.slice().sort(function (a, b) {
-          var da = a.event.startDate;
-          var db = b.event.startDate;
-          if (!da && !db) return 0;
-          if (!da) return 1;
-          if (!db) return -1;
-          return da.localeCompare(db);
-        });
+        // 찜한 행사는 맨 위에 이름순, 나머지는 시작일 순
+        var favorites = items
+          .filter(function (item) {
+            return favoriteEventIds.has(item.event.id);
+          })
+          .sort(function (a, b) {
+            return a.event.title.localeCompare(b.event.title, "ko");
+          });
+        var others = items
+          .filter(function (item) {
+            return !favoriteEventIds.has(item.event.id);
+          })
+          .sort(compareStartDate);
+        var sorted = favorites.concat(others);
 
         var list = document.getElementById("list");
         list.innerHTML = "";
 
-        sorted.forEach(function (item) {
+        // 찜한 행사가 있을 때만 구분 제목 표시
+        function addSectionTitle(text) {
+          var h = document.createElement("div");
+          h.className = "list-section-title";
+          h.textContent = text;
+          list.appendChild(h);
+        }
+        if (favorites.length > 0) addSectionTitle("★ 찜한 행사 " + favorites.length + "개 (이름순)");
+
+        sorted.forEach(function (item, index) {
+          if (favorites.length > 0 && index === favorites.length) {
+            addSectionTitle("전체 행사 (날짜순)");
+          }
           var div = document.createElement("div");
           div.className = "event-item";
 
@@ -1240,19 +1342,19 @@
 
           div.innerHTML =
             '<img class="event-thumb" src="' +
-            imgSrc +
+            escapeHtml(imgSrc) +
             '" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
             (isFavorited ? '<span class="favorite-badge">★</span>' : "") + // 찜한 행사만 별 표시
             favButtonHtml(isFavorited) + // 모바일: 사진 위 ♥ 버튼
             '<div class="event-body">' +
             '<div class="date">' +
-            dateText +
+            escapeHtml(dateText) +
             "</div>" +
             '<div class="title">' +
-            item.event.title +
+            escapeHtml(item.event.title) +
             "</div>" +
             '<div class="info">' +
-            infoText +
+            escapeHtml(infoText) +
             "</div>" +
             "</div>";
 
@@ -1449,6 +1551,8 @@
 
       // ===== 즐겨찾기 버튼 상태/토글 =====
       function updateFavoriteButton(eventId) {
+        // 상세창 위쪽 '★ 찜한 행사' 표시
+        document.getElementById("modalFavBadge").hidden = !favoriteEventIds.has(eventId);
         var btn = document.getElementById("modalFavoriteBtn");
         if (favoriteEventIds.has(eventId)) {
           btn.textContent = "★ 즐겨찾기됨";
@@ -1714,7 +1818,7 @@
           card.dataset.eventId = item.event.id;
           card.innerHTML =
             '<img src="' +
-            (item.event.imageUrl || "") +
+            escapeHtml(item.event.imageUrl || "") +
             '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
             (stacked
               ? '<span class="preview-stack">같은 장소 ' +
@@ -1725,13 +1829,13 @@
               : "") +
             '<div class="preview-body">' +
             '<div class="preview-title">' +
-            item.event.title +
+            escapeHtml(item.event.title) +
             "</div>" +
             '<div class="preview-date">' +
             formatDateRange(item.event) +
             "</div>" +
             '<div class="preview-place">' +
-            (extractPlaceName(item.event.info) || "") + // 장소명 (9/28 함수 재사용)
+            escapeHtml(extractPlaceName(item.event.info) || "") + // 장소명 (9/28 함수 재사용)
             "</div>" +
             "</div>" +
             favButtonHtml(favoriteEventIds.has(item.event.id));
