@@ -105,25 +105,25 @@
     </div>
 
     <script>
-      // ===== 3개 소셜 제공자 정보 (login.html과 동일한 인증 URL 재사용) =====
+      // ===== 3개 소셜 제공자 정보 (로그인 시작 주소 — 실제 인증 URL은 서버가 만듦) =====
       var PROVIDERS = [
         {
           key: "kakao",
           label: "카카오",
           authUrl:
-            "https://kauth.kakao.com/oauth/authorize?client_id=e9da4327b7be240f13ddd639379fe1fc&redirect_uri=http://localhost:8080/api/auth/kakao/callback&response_type=code",
+            "/api/auth/kakao/login",
         },
         {
           key: "google",
           label: "구글",
           authUrl:
-            "https://accounts.google.com/o/oauth2/v2/auth?client_id=440681864198-k826a7epdj47stfnp7omhufp6rm7dbg7.apps.googleusercontent.com&redirect_uri=http://localhost:8080/api/auth/google/callback&response_type=code&scope=email%20profile",
+            "/api/auth/google/login",
         },
         {
           key: "naver",
           label: "네이버",
           authUrl:
-            "https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=Q7X7EYInh1P5DiiyuSy0&redirect_uri=http://localhost:8080/api/auth/naver/callback&state=test123",
+            "/api/auth/naver/login",
         },
       ];
 

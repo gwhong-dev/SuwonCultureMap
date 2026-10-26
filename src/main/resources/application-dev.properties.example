@@ -1,0 +1,31 @@
+# =====================================================
+#  개발(dev) 설정 견본
+#  사용법: 이 파일을 복사해서 application-dev.properties 로 이름을 바꾸고
+#          실제 값을 채우기 (application-dev.properties 는 Git에 안 올라감)
+# =====================================================
+
+app.base-url=http://localhost:8080
+
+# DB (내 PC의 MySQL)
+spring.datasource.url=jdbc:mysql://localhost:3306/suwon_culture_map
+spring.datasource.username=root
+spring.datasource.password=여기에_비밀번호
+
+# 개발 중엔 엔티티가 바뀌면 테이블도 자동 수정 + SQL 로그 보기
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+
+# 수원문화재단 API
+swcf.api.key.event=여기에_키
+
+# 카카오
+kakao.rest-api-key=여기에_키
+kakao.client-secret=여기에_키
+
+# 구글
+google.client-id=여기에_키
+google.client-secret=여기에_키
+
+# 네이버
+naver.client-id=여기에_키
+naver.client-secret=여기에_키

@@ -100,36 +100,36 @@ erDiagram
 | POST | `/api/events/sync` | 재단 API 동기화 (신규 저장 + 변경 갱신) |
 | GET | `/api/favorites` | 내 찜 목록 |
 | POST / DELETE | `/api/favorites/{eventId}` | 찜 추가 / 해제 |
+| GET | `/api/auth/{kakao·google·naver}/login` | 소셜 로그인 시작 (인증 페이지로 이동) |
 | GET | `/api/auth/{kakao·google·naver}/callback` | 소셜 로그인 콜백 |
 | GET | `/api/auth/me` | 로그인 상태 |
 | POST | `/api/auth/logout` | 로그아웃 |
 
 ## 실행 방법
 
+설정 파일을 **개발(dev) / 운영(prod)** 으로 나눠 두었습니다.
+
+| 파일 | 내용 | Git |
+|---|---|---|
+| `application.properties` | 공통 설정 (비밀값 없음) | ✅ 올림 |
+| `application-dev.properties` | 내 PC용 실제 키·DB 비밀번호 | ❌ 안 올림 |
+| `application-prod.properties` | 운영용 — 값은 전부 환경변수에서 읽음 | ✅ 올림 |
+
+### 개발 환경 (내 PC)
+
 1. MySQL에 `suwon_culture_map` 데이터베이스 생성
-2. `src/main/resources/application.properties` 작성 (키 값은 저장소에 올리지 않음)
-
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/suwon_culture_map
-spring.datasource.username=root
-spring.datasource.password=<비밀번호>
-spring.jpa.hibernate.ddl-auto=update
-
-swcf.api.key.event=<수원문화재단 API 키>
-
-kakao.rest-api-key=<카카오 REST API 키>
-kakao.client-secret=<카카오 시크릿>
-kakao.redirect-uri=http://localhost:8080/api/auth/kakao/callback
-google.client-id=<구글 클라이언트 ID>
-google.client-secret=<구글 시크릿>
-google.redirect-uri=http://localhost:8080/api/auth/google/callback
-naver.client-id=<네이버 클라이언트 ID>
-naver.client-secret=<네이버 시크릿>
-```
-
+2. `src/main/resources/application-dev.properties.example` 을 복사해 `application-dev.properties` 로 이름 변경 → 실제 값 채우기
 3. `./mvnw spring-boot:run` → http://localhost:8080 → **행사 동기화** 버튼
 
-> 소셜 로그인 리다이렉트 주소가 `localhost` 기준이라, 로그인은 PC에서만 테스트할 수 있습니다.
+> 프로필을 따로 정하지 않으면 자동으로 `dev` 로 실행됩니다.
+
+### 운영 환경 (서버)
+
+`SPRING_PROFILES_ACTIVE=prod` 와 아래 환경변수를 서버에 설정한 뒤 실행합니다.
+
+`APP_BASE_URL` · `DB_URL` · `DB_USERNAME` · `DB_PASSWORD` · `SWCF_API_KEY_EVENT` · `KAKAO_REST_API_KEY` · `KAKAO_CLIENT_SECRET` · `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` · `NAVER_CLIENT_ID` · `NAVER_CLIENT_SECRET`
+
+> 소셜 로그인 콜백 주소는 `APP_BASE_URL` 기준으로 자동 생성됩니다. 각 개발자 콘솔(카카오·구글·네이버)에 운영 주소의 콜백 URL도 등록해야 합니다.
 
 ## 트러블슈팅
 
