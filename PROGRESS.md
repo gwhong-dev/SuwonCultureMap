@@ -17,6 +17,13 @@
 - [ ] 자기소개서 작성
 - [ ] 입사 지원 🚀
 
+## ✨ 기능 추가
+
+- [x] 지도 기본 위치 → 정조테마공연장 (PR #19)
+- [ ] 행사 캘린더 저장 A안 — 종일 일정(제목·날짜·메모·원문 링크), 아이폰 `.ics` + 구글 캘린더 링크
+- [ ] 캘린더 B안 — 동기화 때 `infoItem`/`infoContent`에서 장소·시간 분리 (모르면 null, 원문 보관)
+- [ ] 인스타 게시글 연동 — 공식 API(Business Discovery) + AI로 캡션 정리 + 카카오 장소 검색 (크롤링 X)
+
 ## 🔜 다음 로드맵 (지원 후)
 
 - [ ] 4단계 — AWS EC2 운영 배포 + 도메인 + HTTPS
@@ -40,12 +47,16 @@
 | 10/30 | 작업 세션 | 노션에 1~3단계 "문제 → 해결" 8건 정리 |
 | 10/30 | 작업 세션 | 보안 — OAuth state(CSRF 방지) 3종 적용, 콜백 검증·1회용·취소 처리, 테스트 추가 |
 | 10/30 | 작업 세션 | 포트폴리오 대표자료 v2(15장) 작성 — 리뷰에서 보류한 지적 3건 + 자체 발견 1건을 "나중에 할 일"에 추가 |
+| 10/30 | 사용자 PC | 폰(같은 Wi-Fi) 접속 테스트 — dev 파일의 `kakao`·`google.redirect-uri` 줄이 `app.base-url`을 덮어써 콜백이 localhost로 감 → 실행 인자로 덮어써서 카카오 로그인 ✅ |
+| 10/30 | 작업 세션 | 지도 기본 위치 → 정조테마공연장 (PR #19) — 검증 리뷰 ⚠️ 1건(테스트 비교 완화) 반영, CI 통과 → 머지 |
 
 ## ⚠️ 막힌 것 / 메모
 
 - 클라우드엔 MySQL·비밀값이 없음 → DB가 필요한 실행·로그인 확인은 사용자 PC에서
 - `git pull` 후 `scripts\setup-dev.cmd` 를 먼저 실행 (비밀값 파일 이름 변경·커밋 방지 자동 처리)
 - Docker 실행: `scripts\setup-docker.cmd`(최초 1회) → `docker compose up --build`. 컨테이너 DB는 새 DB라 처음 한 번 **행사 동기화** 필요
+- 폰 테스트: PC IP로 접속 + 카카오·네이버 콘솔에 IP 주소 등록. 구글은 사설 IP 불가. dev 파일의 `redirect-uri` 줄을 지우기 전엔 실행 인자로 `--kakao.redirect-uri=...` 를 같이 넘겨야 함
+- 새 PC에서 `dubious ownership` 오류 → `scripts\setup-dev.cmd` 1번 실행 (설정이 USB가 아니라 PC에 저장되므로 PC마다 1번)
 - PC에서 `Connection refused` 가 나면 MySQL 서비스가 꺼진 것 → `services.msc` 에서 MySQL80 시작 (관리자 권한)
 
 ## 🧰 나중에 할 일 (발견 사항)
@@ -57,3 +68,4 @@
 - [ ] 개발 확인용 `/api/events/sync/raw` · `/sync/parsed` 정리, `POST /api/events/sync` 도 로그인 없이 호출 가능 — 운영 배포 전에 제거하거나 관리자 전용으로 (자체 발견 + PR #18 리뷰)
 - [ ] prod `spring.jpa.hibernate.ddl-auto=update` → DB 마이그레이션 도구(Flyway 등) 도입 후 `validate` (PR #8 리뷰)
 - [ ] `setup-docker.ps1` 의 properties 특수 표기(`\=` `\:` `\uXXXX`, 줄 끝 `\` 이어쓰기) 미처리 — 현재 dev 견본 형식엔 해당 없음 (PR #14 리뷰)
+- [ ] 행사 제목에 HTML 엔티티가 그대로 남음 (예: `&#39;어울야락(夜樂)&#39;`) — `info`만 `htmlUnescape` 하고 `title`은 안 함 (`EventSyncService`, 폰 테스트 중 발견)
