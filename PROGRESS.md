@@ -1,6 +1,6 @@
 # PROGRESS.md — 진행 현황판
 
-> 두 세션(claude.ai 채팅 · Claude Code)이 **지금 어디까지 했는지** 맞추는 파일.
+> 작업 세션 · 검증 에이전트 · 사용자가 **지금 어디까지 했는지** 맞추는 파일.
 > 작업 하나 끝날 때마다 체크하고, 아래 "작업 로그"에 한 줄 추가.
 
 ## 🎯 최종 목표
@@ -41,6 +41,6 @@
 ## 🧰 나중에 할 일 (발견 사항)
 
 - [ ] `mvnw` 실행 권한 없음(100644) → 2단계 Docker 전에 `chore` PR로 수정
-- [ ] `FestivalApplicationTests` 가 DB 없으면 실패 → 3단계 CI 전에 테스트용 설정 분리
+- [ ] `FestivalApplicationTests` 가 `@Test` 없는 빈 클래스 → 3단계 CI 전에 실제 테스트 추가 (DB 없이 도는 테스트용 설정 포함)
 - [ ] 네이버 로그인 `state=test123` 고정값 → 매번 무작위 값 생성·검증 (CSRF 방지)
 - [ ] PR #8 머지 후 dev 파일의 `kakao.redirect-uri`·`google.redirect-uri` 줄 삭제 (`app.base-url`로 자동 생성되게)
