@@ -32,6 +32,7 @@ build/
 ### VS Code ###
 .vscode/
 .env
-application.properties
+# 개발용 비밀값 파일 (견본은 application-dev.properties.example)
+application-dev.properties
 
 .dev
