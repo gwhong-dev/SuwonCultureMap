@@ -40,9 +40,10 @@ class DefaultMapCenterTest {
     assertThat(res.getStatus()).isEqualTo(200);
 
     String html = res.getContentAsString(StandardCharsets.UTF_8);
-    assertThat(html).contains("var DEFAULT_CENTER = { lat: " + LAT + ", lng: " + LNG + " };");
-    assertThat(html).contains("new kakao.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng)");
+    // 코드 모양(var/const, 공백)이 바뀌어도 깨지지 않게 "값"과 "사용 여부"만 확인
+    assertThat(html).contains(LAT).contains(LNG);
+    assertThat(html).contains("DEFAULT_CENTER.lat, DEFAULT_CENTER.lng");
     // 예전 기본 위치(37.2636, 127.0286)가 남아 있으면 안 됨
-    assertThat(html).doesNotContain("37.2636, 127.0286");
+    assertThat(html).doesNotContain("37.2636").doesNotContain("127.0286");
   }
 }
