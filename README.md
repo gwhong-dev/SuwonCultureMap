@@ -1,5 +1,7 @@
 # 수원 문화지도 — Spring Boot 원본 버전
 
+[![CI](https://github.com/gwhong-dev/SuwonCultureMap/actions/workflows/ci.yml/badge.svg)](https://github.com/gwhong-dev/SuwonCultureMap/actions/workflows/ci.yml)
+
 수원문화재단 공공 API(XML)의 행사 정보를 **DB에 동기화**하고, 카카오맵 위에 보여주는 웹 서비스의 **백엔드 포함 원본**입니다.
 
 - 🌐 **배포 버전(바로 써보기)**: https://gwhong-dev.github.io/suwon-culture-map/

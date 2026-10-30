@@ -57,7 +57,8 @@ src/main/resources/
 - **원본은 GitHub 하나.** 검증 기록도 PR 댓글에 남겨서 어느 PC에서든 확인 가능하게
 - 클라우드 세션은 USB 파일을 직접 못 건드림 → USB 반영이 필요하면 `scripts/`에 스크립트를 넣고 `git pull` 후 더블클릭 1번으로 끝나게
 - 클라우드에는 MySQL·비밀값이 없음 → DB가 필요한 실행·테스트는 사용자 PC에서
-- 클라우드 세션마다 Maven 저장소 접속이 막혀 있을 수 있음 → 컴파일이 안 되면 "컴파일 미검증"으로 PR에 명시하고 사용자 PC 실행 단계에서 확인
+- **CI(GitHub Actions)가 PR마다 빌드·테스트·Docker 빌드를 자동 실행** → CI 통과가 머지 조건 (작업 세션이 지키는 규칙. GitHub 브랜치 보호로 강제할지는 사용자 결정). 클라우드 세션에서 Maven 접속이 막혀도 CI 결과로 컴파일·테스트를 확인
+- 테스트는 `test` 프로필(H2 메모리 DB + 가짜 키)로 실행 → MySQL·비밀값 없이 돈다. 새 기능엔 테스트를 같이 추가
 - 작업을 끝내면 `PROGRESS.md`의 체크박스와 "작업 로그"를 갱신
 
 ## 6. Git 규칙
@@ -71,7 +72,8 @@ src/main/resources/
 ```bash
 ./mvnw spring-boot:run          # 로컬 실행 → http://localhost:8080
 ./mvnw -DskipTests package      # jar 빌드 (target/*.jar)
-./mvnw test                     # 테스트
+./mvnw test                     # 테스트 (test 프로필, H2 — MySQL 불필요)
+docker compose up --build       # Docker 로 앱 + MySQL 실행 (.env 는 scripts/setup-docker.cmd)
 ```
 
 ## 8. 사용자 정보 (설명 방식)
