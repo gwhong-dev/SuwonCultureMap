@@ -1,6 +1,6 @@
 # PROGRESS.md — 진행 현황판
 
-> 두 세션(claude.ai 채팅 · Claude Code)이 **지금 어디까지 했는지** 맞추는 파일.
+> 작업 세션 · 검증 에이전트 · 사용자가 **지금 어디까지 했는지** 맞추는 파일.
 > 작업 하나 끝날 때마다 체크하고, 아래 "작업 로그"에 한 줄 추가.
 
 ## 🎯 최종 목표
@@ -31,9 +31,16 @@
 | 10/26 | 채팅 | PR #8 — 개발/운영 프로필 분리, OAuth `localhost` 하드코딩 제거 (빌드 미검증) |
 | 10/30 | 채팅 | `CLAUDE.md` · `PROGRESS.md` 추가 (두 세션 공통 안내서) |
 | 10/30 | Claude Code | `scripts/setup-dev.cmd` 추가 — PR #8 머지 전 비밀값 파일 이름 변경·커밋 방지 자동화 |
+| 10/30 | 작업 세션 | 작업 방식 변경 — 단일 세션 + 검증 에이전트 + PR 댓글 기록 (사용자 중계 없음) |
 
 ## ⚠️ 막힌 것 / 메모
 
-- 채팅 환경에선 Maven 빌드 불가 → 빌드·실행 확인은 Claude Code에서
-- PR #8 머지 전 로컬 준비: 기존 `application.properties` → `application-dev.properties` 로 이름 변경 + `app.base-url=http://localhost:8080` 추가
-- git pull 후 `scripts\setup-dev.cmd` 를 먼저 실행
+- 클라우드엔 MySQL·비밀값이 없음 → DB가 필요한 실행·로그인 확인은 사용자 PC에서
+- `git pull` 후 `scripts\setup-dev.cmd` 를 먼저 실행 (비밀값 파일 이름 변경·커밋 방지 자동 처리)
+
+## 🧰 나중에 할 일 (발견 사항)
+
+- [ ] `mvnw` 실행 권한 없음(100644) → 2단계 Docker 전에 `chore` PR로 수정
+- [ ] `FestivalApplicationTests` 가 `@Test` 없는 빈 클래스 → 3단계 CI 전에 실제 테스트 추가 (DB 없이 도는 테스트용 설정 포함)
+- [ ] 네이버 로그인 `state=test123` 고정값 → 매번 무작위 값 생성·검증 (CSRF 방지)
+- [ ] PR #8 머지 후 dev 파일의 `kakao.redirect-uri`·`google.redirect-uri` 줄 삭제 (`app.base-url`로 자동 생성되게)
