@@ -11,7 +11,7 @@
 
 - [x] 1단계 설계 — Spring 프로필 분리 PR 생성 (#8)
 - [x] 1단계 검증 — PR #8 로컬 실행 + 소셜 로그인 3종 + 계정 연결 확인 → 머지
-- [ ] 2단계 — Docker화 (`Dockerfile` + `docker-compose.yml`, 앱 + MySQL)
+- [x] 2단계 — Docker화 (`Dockerfile` + `docker-compose.yml`, 앱 + MySQL)
 - [ ] 3단계 — CI (GitHub Actions: PR마다 빌드 + 테스트)
 - [ ] 포트폴리오에 1~3단계 "문제 → 해결" 추가
 - [ ] 자기소개서 작성
@@ -33,12 +33,14 @@
 | 10/30 | Claude Code | `scripts/setup-dev.cmd` 추가 — PR #8 머지 전 비밀값 파일 이름 변경·커밋 방지 자동화 |
 | 10/30 | 작업 세션 | 작업 방식 변경 — 단일 세션 + 검증 에이전트 + PR 댓글 기록 (사용자 중계 없음) |
 | 10/30 | 사용자 PC | PR #8 검증 — dev 프로필 적용, MySQL 기동, 로그인 3종·계정 연결 모두 ✅ → 머지 |
-| 10/30 | 작업 세션 | 2단계 Docker — `Dockerfile`(2단계 빌드) · `docker-compose.yml`(앱+MySQL) · `scripts/setup-docker.cmd`(.env 자동 생성) PR (빌드 미검증) |
+| 10/30 | 작업 세션 | 2단계 Docker — `Dockerfile`(2단계 빌드) · `docker-compose.yml`(앱+MySQL) · `scripts/setup-docker.cmd`(.env 자동 생성) PR #14 |
+| 10/30 | 사용자 PC | PR #14 검증 — 빌드 87초, prod 프로필·MySQL 컨테이너 연결, 동기화 후 마커·사이드바, 로그인 3종·계정 연결 모두 ✅ → 머지 |
 
 ## ⚠️ 막힌 것 / 메모
 
 - 클라우드엔 MySQL·비밀값이 없음 → DB가 필요한 실행·로그인 확인은 사용자 PC에서
 - `git pull` 후 `scripts\setup-dev.cmd` 를 먼저 실행 (비밀값 파일 이름 변경·커밋 방지 자동 처리)
+- Docker 실행: `scripts\setup-docker.cmd`(최초 1회) → `docker compose up --build`. 컨테이너 DB는 새 DB라 처음 한 번 **행사 동기화** 필요
 - PC에서 `Connection refused` 가 나면 MySQL 서비스가 꺼진 것 → `services.msc` 에서 MySQL80 시작 (관리자 권한)
 
 ## 🧰 나중에 할 일 (발견 사항)
