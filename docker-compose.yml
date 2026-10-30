@@ -18,7 +18,8 @@ services:
     volumes:
       - db-data:/var/lib/mysql   # 컨테이너를 지워도 데이터는 유지
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      # 127.0.0.1(TCP)로 확인 → 첫 기동 때 잠깐 뜨는 임시 서버(네트워크 꺼짐)에 속지 않음
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -26,6 +27,7 @@ services:
 
   app:
     build: .
+    restart: on-failure   # DB가 늦게 준비돼 접속에 실패하면 자동으로 다시 시작
     depends_on:
       db:
         condition: service_healthy   # MySQL 이 준비된 뒤에 앱 시작

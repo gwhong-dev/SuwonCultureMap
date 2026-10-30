@@ -55,8 +55,14 @@ function New-Password {
     -join (1..24 | ForEach-Object { $chars | Get-Random })
 }
 
-# compose 는 .env 값의 $ 를 변수로 해석하므로 $$ 로 바꿔 둠
-function Escape-Value([string]$v) { $v -replace '\$', '$$$$' }
+# .env 값을 따옴표로 감싸서 compose 가 그대로 읽게 함
+#  - 작은따옴표: $ 변수 해석·' #' 주석 처리가 모두 꺼짐 (보통 이쪽)
+#  - 값에 작은따옴표가 있으면 큰따옴표로 감싸고 \ " $ 를 이스케이프
+function Escape-Value([string]$v) {
+    if ($v -notmatch "'") { return "'" + $v + "'" }
+    $e = $v -replace '\\', '\\' -replace '"', '\"' -replace '\$', '$$$$'
+    return '"' + $e + '"'
+}
 
 $lines = @(
     '# docker compose 용 비밀값 - Git에 올라가지 않음 (scripts\setup-docker.cmd 가 생성)'

@@ -11,7 +11,8 @@ WORKDIR /app
 # 의존성 목록(pom.xml)이 안 바뀌면 이 층은 캐시를 재사용 → 다시 빌드할 때 빠름
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
-RUN chmod +x mvnw && ./mvnw -q -B dependency:go-offline
+# Windows에서 받은 mvnw 가 CRLF 줄바꿈이면 리눅스에서 실행이 안 되므로 LF 로 바꿔 둠
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw && ./mvnw -q -B dependency:go-offline
 
 # 소스 복사 후 jar 빌드 (테스트는 CI 단계에서 따로 실행)
 COPY src/ src/
