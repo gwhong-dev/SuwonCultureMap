@@ -29,6 +29,66 @@ class EventCalendarServiceTest {
     return e;
   }
 
+  // 캘린더 B안: 장소·시간 원문이 있는 행사
+  private Event eventB(LocalDate start, LocalDate end, String place, String timeText) {
+    Event e = Event.builder()
+        .idx(2L).title("정조 K 스테이지").category("공연")
+        .latitude(37.2810212008746).longitude(127.016215843564)
+        .info("시간: " + timeText).pubDate(LocalDateTime.of(2026, 10, 1, 0, 0))
+        .startDate(start).endDate(end).place(place).timeText(timeText)
+        .build();
+    ReflectionTestUtils.setField(e, "id", 8L);
+    return e;
+  }
+
+  private static final LocalDate DAY = LocalDate.of(2026, 11, 7);
+
+  @Test
+  void 하루짜리_행사에_시작끝_시간이_있으면_시간_지정_일정() {
+    String ics = service.toIcs(eventB(DAY, DAY, "정조테마공연장", "19:00~19:40"), NOW);
+    // 한국 19:00 = UTC 10:00
+    assertThat(ics).contains("DTSTART:20261107T100000Z\r\n").contains("DTEND:20261107T104000Z\r\n");
+    assertThat(ics).doesNotContain("VALUE=DATE");
+  }
+
+  @Test
+  void 시작_시간만_있으면_2시간_일정() {
+    String ics = service.toIcs(eventB(DAY, null, "정조테마공연장", "14:00"), NOW);
+    assertThat(ics).contains("DTSTART:20261107T050000Z\r\n").contains("DTEND:20261107T070000Z\r\n");
+  }
+
+  @Test
+  void 여러_날_행사는_시간이_있어도_종일_유지() {
+    String ics = service.toIcs(eventB(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 10, 31), "수원전통문화관", "10:00~17:00"), NOW);
+    assertThat(ics).contains("DTSTART;VALUE=DATE:20260501\r\n").contains("DTEND;VALUE=DATE:20261101\r\n");
+  }
+
+  @Test
+  void 여러_회차_시간은_종일_유지() {
+    String ics = service.toIcs(eventB(DAY, DAY, "정조테마공연장", "14:00, 17:00"), NOW);
+    assertThat(ics).contains("DTSTART;VALUE=DATE:20261107\r\n");
+  }
+
+  @Test
+  void 장소명이_있으면_LOCATION_에_들어감() {
+    String ics = service.toIcs(eventB(DAY, DAY, "수원전통문화관 및 수원화성 일대, 야외", null), NOW);
+    assertThat(ics).contains("LOCATION:수원전통문화관 및 수원화성 일대\\, 야외\r\n"); // 쉼표는 \, 로
+  }
+
+  @Test
+  void 장소명이_없으면_LOCATION_생략() {
+    String ics = service.toIcs(eventB(DAY, DAY, null, null), NOW);
+    assertThat(ics).doesNotContain("LOCATION:");
+  }
+
+  @Test
+  void 구글도_시간_지정과_장소명을_씀() {
+    String url = service.toGoogleUrl(eventB(DAY, DAY, "정조테마공연장 대공연장", "19:00~19:40"));
+    assertThat(url).contains("&dates=20261107T100000Z/20261107T104000Z");
+    assertThat(url).contains("&location=%EC%A0%95%EC%A1%B0"); // "정조..." 로 시작 (좌표 아님)
+    assertThat(url).doesNotContain("37.281");
+  }
+
   @Test
   void 종일_일정은_종료일_다음날로_끝남() {
     String ics = service.toIcs(event("공연", "장소: 정조테마공연장", LocalDate.of(2026, 11, 7),

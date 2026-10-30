@@ -15,6 +15,7 @@ import org.springframework.web.util.HtmlUtils;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.suwon.festival.dto.SyncResult;
+import com.suwon.festival.dto.xml.ContentInfoDetail;
 import com.suwon.festival.dto.xml.EventItem;
 import com.suwon.festival.dto.xml.SwcfRssResponse;
 import com.suwon.festival.entity.Event;
@@ -65,11 +66,13 @@ public class EventSyncService {
           .latitude(item.coordinate.lng) // lat/lng 뒤바뀜 주의!
           .longitude(item.coordinate.lat)
           .imageUrl(extractImageUrl(item))
-          .info(HtmlUtils.htmlUnescape(extractInfo(item)))
+          .info(InfoParser.clean(extractInfo(item))) // 엔티티 복원 + <br> 등 HTML 태그 제거
           .pubDate(LocalDateTime.parse(item.pubDate, PUB_DATE_FORMAT))
           .startDate(item.eventDate != null ? LocalDate.parse(item.eventDate.sdate) : null)
           .endDate(item.eventDate != null ? LocalDate.parse(item.eventDate.edate) : null)
           .link(item.link)
+          .place(InfoParser.findPlace(details(item))) // 캘린더 B안: 장소·시간은 합치기 전 XML 쌍에서 바로 꺼냄
+          .timeText(InfoParser.findTimeText(details(item)))
           .build();
 
       Event existing = eventRepository.findByIdx(item.idx).orElse(null);
@@ -84,12 +87,16 @@ public class EventSyncService {
       // ① 재단 쪽 내용이 수정됐거나 (pubDate가 더 최신)
       // ② 예전에 저장할 때 link가 비어 있었는데 지금은 값이 있으면 (link 컬럼 추가 전에 저장된 행사)
       // ③ 저장된 제목이 지금 제목과 다르면 (htmlUnescape 적용 전에 &#39; 그대로 저장된 행사)
-      // → 최신 값으로 갱신. 셋 다 아니면 그대로 건너뜀
+      // ④ 정리 방식이 바뀌어 info·장소·시간이 달라졌으면 (태그 제거 적용 전 / 장소·시간 칸 추가 전에 저장된 행사)
+      // → 최신 값으로 갱신. 모두 아니면 그대로 건너뜀
       boolean changed = latest.getPubDate().isAfter(existing.getPubDate());
       boolean linkMissing = existing.getLink() == null && latest.getLink() != null;
       boolean titleFixed = !Objects.equals(existing.getTitle(), latest.getTitle());
+      boolean detailFixed = !Objects.equals(existing.getInfo(), latest.getInfo())
+          || !Objects.equals(existing.getPlace(), latest.getPlace())
+          || !Objects.equals(existing.getTimeText(), latest.getTimeText());
 
-      if (changed || linkMissing || titleFixed) {
+      if (changed || linkMissing || titleFixed || detailFixed) {
         existing.updateFrom(latest);
         eventRepository.save(existing);
         updatedCount++;
@@ -104,6 +111,10 @@ public class EventSyncService {
       return null;
     }
     return item.photos.photoInfo.get(0).photoUrl;
+  }
+
+  private List<ContentInfoDetail> details(EventItem item) {
+    return item.contentInfo == null ? null : item.contentInfo.contentInfoDetail;
   }
 
   private String extractInfo(EventItem item) {
