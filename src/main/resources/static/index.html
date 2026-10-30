@@ -1154,10 +1154,14 @@
         return da.localeCompare(db);
       }
 
+      // 지도를 처음 열었을 때의 기본 위치: 정조테마공연장 (팔달구 정조로 817)
+      // 좌표는 재단 API(XML)가 정조테마공연장 행사에 주는 값과 같게 맞춤 → 기본 위치가 그 장소 마커와 정확히 겹침
+      var DEFAULT_CENTER = { lat: 37.2810212008746, lng: 127.016215843564 };
+
       kakao.maps.load(function () {
         var mapContainer = document.getElementById("map");
         var mapOption = {
-          center: new kakao.maps.LatLng(37.2636, 127.0286),
+          center: new kakao.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng),
           level: 6,
         };
         map = new kakao.maps.Map(mapContainer, mapOption);
