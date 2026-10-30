@@ -55,7 +55,7 @@
 - 클라우드엔 MySQL·비밀값이 없음 → DB가 필요한 실행·로그인 확인은 사용자 PC에서
 - `git pull` 후 `scripts\setup-dev.cmd` 를 먼저 실행 (비밀값 파일 이름 변경·커밋 방지 자동 처리)
 - Docker 실행: `scripts\setup-docker.cmd`(최초 1회) → `docker compose up --build`. 컨테이너 DB는 새 DB라 처음 한 번 **행사 동기화** 필요
-- 폰 테스트: PC IP로 접속 + 카카오·네이버 콘솔에 IP 주소 등록. 구글은 사설 IP 불가. dev 파일의 `redirect-uri` 줄을 지우기 전엔 실행 인자로 `--kakao.redirect-uri=...` 를 같이 넘겨야 함
+- 폰 테스트: PC IP로 접속 + 카카오·네이버 콘솔에 IP 주소 등록. 구글은 사설 IP 불가. dev 파일의 `redirect-uri` 줄을 지우기 전엔 실행 인자로 `--kakao.redirect-uri=...` 를 같이 넘겨야 함 (구글은 사설 IP 등록 불가라 폰 테스트에서 제외 → 넘길 필요 없음)
 - 새 PC에서 `dubious ownership` 오류 → `scripts\setup-dev.cmd` 1번 실행 (설정이 USB가 아니라 PC에 저장되므로 PC마다 1번)
 - PC에서 `Connection refused` 가 나면 MySQL 서비스가 꺼진 것 → `services.msc` 에서 MySQL80 시작 (관리자 권한)
 
@@ -68,4 +68,4 @@
 - [ ] 개발 확인용 `/api/events/sync/raw` · `/sync/parsed` 정리, `POST /api/events/sync` 도 로그인 없이 호출 가능 — 운영 배포 전에 제거하거나 관리자 전용으로 (자체 발견 + PR #18 리뷰)
 - [ ] prod `spring.jpa.hibernate.ddl-auto=update` → DB 마이그레이션 도구(Flyway 등) 도입 후 `validate` (PR #8 리뷰)
 - [ ] `setup-docker.ps1` 의 properties 특수 표기(`\=` `\:` `\uXXXX`, 줄 끝 `\` 이어쓰기) 미처리 — 현재 dev 견본 형식엔 해당 없음 (PR #14 리뷰)
-- [ ] 행사 제목에 HTML 엔티티가 그대로 남음 (예: `&#39;어울야락(夜樂)&#39;`) — `info`만 `htmlUnescape` 하고 `title`은 안 함 (`EventSyncService`, 폰 테스트 중 발견)
+- [ ] 행사 제목에 `&#39;`가 그대로 보임 (예: `&#39;어울야락(夜樂)&#39;`, 폰 테스트 중 발견) — `title`은 이미 `htmlUnescape` 함(`EventSyncService.java:63`). 사용자 PC에서 **재동기화 후에도 남는지** 확인 → 남으면 원문 XML 인코딩 횟수(이중 이상) 확인 (PR #20 리뷰)
