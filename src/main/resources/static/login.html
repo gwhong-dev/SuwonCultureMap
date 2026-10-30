@@ -63,11 +63,22 @@
         color: #888;
         text-decoration: none;
       }
+      .login-error {
+        margin: 0 0 1rem;
+        padding: 0.625rem 0.75rem;
+        border-radius: 8px;
+        background: #fdecec;
+        color: #b42318;
+        font-size: 0.9rem;
+      }
     </style>
   </head>
   <body>
     <div class="login-card">
       <h1>소셜 계정으로 로그인</h1>
+
+      <!-- 로그인 실패 안내 (서버가 /login.html?error=... 로 보냈을 때만 표시) -->
+      <p id="loginError" class="login-error" hidden></p>
 
       <!-- ===== 소셜 로그인 버튼 3종 (서버의 /api/auth/{제공자}/login 으로 이동) ===== -->
       <a
@@ -88,5 +99,21 @@
 
       <a class="back-link" href="index.html">← 지도로 돌아가기</a>
     </div>
+    <script>
+      // ?error=state     : 보안 확인(state) 실패 — 오래된 탭·다른 사이트에서 연 로그인 등
+      // ?error=cancelled : 동의 화면에서 취소
+      (function () {
+        var messages = {
+          state: "보안 확인에 실패했어요. 다시 로그인해 주세요.",
+          cancelled: "로그인이 취소됐어요.",
+        };
+        var code = new URLSearchParams(location.search).get("error");
+        if (code && messages[code]) {
+          var el = document.getElementById("loginError");
+          el.textContent = messages[code];
+          el.hidden = false;
+        }
+      })();
+    </script>
   </body>
 </html>
