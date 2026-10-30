@@ -40,7 +40,7 @@ class EventCalendarServiceTest {
     assertThat(ics).contains("UID:event-7@suwonculturemap\r\n");
     assertThat(ics).contains("DTSTAMP:20261030T140000Z\r\n");
     assertThat(ics).contains("URL:https://example.com/1\r\n");
-    assertThat(ics).contains("GEO:37.2810212008746;127.016215843564\r\n");
+    assertThat(ics).contains("GEO:37.281021;127.016216\r\n");
   }
 
   @Test
@@ -82,9 +82,34 @@ class EventCalendarServiceTest {
   }
 
   @Test
-  void 구글_메모가_너무_길면_자름() {
-    String url = service.toGoogleUrl(event("공연", "가".repeat(3000), LocalDate.of(2026, 11, 7), null, null));
-    // "가" 1글자 = %EA%B0%80 (9자) → 1000글자 + "…" 이하
-    assertThat(url.length()).isLessThan(1000 * 9 + 500);
+  void 구글_메모가_너무_길면_info만_자르고_원문_링크는_남김() {
+    String url = service.toGoogleUrl(event("공연", "가".repeat(3000), LocalDate.of(2026, 11, 7), null,
+        "https://example.com/1"));
+    // "가" 1글자 = %EA%B0%80 (9자) → 500글자 + 나머지 여유
+    assertThat(url.length()).isLessThan(500 * 9 + 600);
+    assertThat(url).contains("https://example.com/1"); // 링크는 잘리지 않음
+  }
+
+  @Test
+  void 이모지가_반으로_잘리지_않음() {
+    String text = "가".repeat(499) + "😀" + "나";
+    String cut = EventCalendarService.cut(text, 500);
+    assertThat(cut).isEqualTo("가".repeat(499) + "…"); // 이모지 반쪽 대신 그 앞에서 자름
+    assertThat(EventCalendarService.cut("짧음", 500)).isEqualTo("짧음");
+  }
+
+  @Test
+  void 종료일이_시작일보다_빠르면_시작일_하루짜리() {
+    String ics = service.toIcs(event("공연", null, LocalDate.of(2026, 11, 7), LocalDate.of(2026, 11, 1), null), NOW);
+    assertThat(ics).contains("DTEND;VALUE=DATE:20261108\r\n");
+  }
+
+  @Test
+  void 링크에_줄바꿈이_섞이면_URL_항목을_뺌() {
+    String ics = service.toIcs(event("공연", null, LocalDate.of(2026, 11, 7), null,
+        "https://example.com/1\r\nATTENDEE:mailto:x@y.z"), NOW);
+    assertThat(ics).doesNotContain("URL:").doesNotContain("\r\nATTENDEE");
+    assertThat(EventCalendarService.safeLink("  https://example.com/a?b=1  ")).isEqualTo("https://example.com/a?b=1");
+    assertThat(EventCalendarService.safeLink("javascript:alert(1)")).isNull();
   }
 }

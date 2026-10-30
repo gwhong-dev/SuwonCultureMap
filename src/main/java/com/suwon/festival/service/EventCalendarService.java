@@ -28,7 +28,7 @@ public class EventCalendarService {
   private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'")
       .withZone(ZoneOffset.UTC);
   private static final String GOOGLE_BASE = "https://calendar.google.com/calendar/render?action=TEMPLATE";
-  private static final int GOOGLE_DETAILS_MAX = 1000; // 주소가 너무 길면 브라우저·구글이 거부할 수 있어 메모를 자름
+  private static final int GOOGLE_INFO_MAX = 500; // 주소가 너무 길면 브라우저·구글이 거부할 수 있어 메모(info)를 자름 (한글 1글자 = 주소 9자)
   private static final int ICS_LINE_MAX_BYTES = 75; // .ics 규칙: 한 줄 최대 75바이트(한글은 1글자 3바이트)
 
   private final EventRepository eventRepository;
@@ -61,9 +61,10 @@ public class EventCalendarService {
     line(sb, "DTEND;VALUE=DATE:" + DATE.format(endExclusive));
     line(sb, "SUMMARY:" + escape(event.getTitle()));
     line(sb, "DESCRIPTION:" + escape(description(event)));
-    line(sb, "GEO:" + event.getLatitude() + ";" + event.getLongitude());
-    if (event.getLink() != null && !event.getLink().isBlank()) {
-      line(sb, "URL:" + event.getLink());
+    line(sb, "GEO:" + coord(event.getLatitude()) + ";" + coord(event.getLongitude()));
+    String link = safeLink(event.getLink());
+    if (link != null) {
+      line(sb, "URL:" + link);
     }
     line(sb, "END:VEVENT");
     line(sb, "END:VCALENDAR");
@@ -73,10 +74,8 @@ public class EventCalendarService {
   // ===== 구글 캘린더 "일정 추가" 주소 =====
   public String toGoogleUrl(Event event) {
     String dates = DATE.format(event.getStartDate()) + "/" + DATE.format(endExclusive(event));
-    String details = description(event);
-    if (details.length() > GOOGLE_DETAILS_MAX) {
-      details = details.substring(0, GOOGLE_DETAILS_MAX) + "…";
-    }
+    // info만 자르고 원문 링크는 항상 끝에 남김
+    String details = joinDescription(cut(info(event), GOOGLE_INFO_MAX), event.getLink());
     return GOOGLE_BASE
         + "&text=" + encode(event.getTitle())
         + "&dates=" + dates
@@ -95,11 +94,40 @@ public class EventCalendarService {
 
   // 메모: 행사 정보(시간·장소 포함) + 원문 링크
   private String description(Event event) {
-    String info = event.getInfo() != null ? event.getInfo().strip() : "";
-    String link = event.getLink() != null && !event.getLink().isBlank() ? "원문: " + event.getLink() : "";
-    if (info.isEmpty()) return link;
-    if (link.isEmpty()) return info;
-    return info + "\n\n" + link;
+    return joinDescription(info(event), event.getLink());
+  }
+
+  private String info(Event event) {
+    return event.getInfo() != null ? event.getInfo().strip() : "";
+  }
+
+  private String joinDescription(String info, String rawLink) {
+    String link = safeLink(rawLink);
+    String linkLine = link != null ? "원문: " + link : "";
+    if (info.isEmpty()) return linkLine;
+    if (linkLine.isEmpty()) return info;
+    return info + "\n\n" + linkLine;
+  }
+
+  // 원문 링크 검사: 앞뒤 공백 제거, 줄바꿈·공백이 섞였거나 http(s) 주소가 아니면 버림
+  // (.ics 에 줄바꿈이 그대로 들어가면 다른 항목이 끼어들 수 있음)
+  static String safeLink(String link) {
+    if (link == null) return null;
+    String v = link.strip();
+    if (v.isEmpty() || !v.matches("(?i)https?://\\S+")) return null;
+    return v;
+  }
+
+  // 글자 수 제한: 이모지처럼 2칸짜리 글자(서로게이트 쌍)가 반으로 잘리지 않게
+  static String cut(String value, int max) {
+    if (value.length() <= max) return value;
+    int end = Character.isHighSurrogate(value.charAt(max - 1)) ? max - 1 : max;
+    return value.substring(0, end) + "…";
+  }
+
+  // 좌표는 소수 6자리(약 10cm)면 충분
+  private static String coord(Double value) {
+    return String.format(java.util.Locale.ROOT, "%.6f", value);
   }
 
   private String encode(String value) {

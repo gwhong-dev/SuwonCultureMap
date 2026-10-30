@@ -799,6 +799,13 @@
           height: 48px;
           font-size: 1rem;
         }
+        /* 하단 바 버튼 3개(즐겨찾기 · 캘린더 · 원문)가 좁은 폰에서 2줄로 접히지 않게 */
+        .modal-actions .favorite-btn,
+        .modal-actions .modal-link-btn {
+          padding: 0 8px;
+          white-space: nowrap;
+          min-width: 0;
+        }
         /* 모바일은 기기 기본 캘린더(.ics)만 — 구글 캘린더 버튼은 PC에서만 */
         .modal-google-btn {
           display: none !important;
