@@ -306,6 +306,7 @@
       }
       .modal-actions {
         display: flex;
+        flex-wrap: wrap; /* 버튼이 늘어나도 좁은 창에서 다음 줄로 */
         gap: 0.5rem;
       }
       .modal-link-btn {
@@ -798,6 +799,10 @@
           height: 48px;
           font-size: 1rem;
         }
+        /* 모바일은 기기 기본 캘린더(.ics)만 — 구글 캘린더 버튼은 PC에서만 */
+        .modal-google-btn {
+          display: none !important;
+        }
       }
 
       @keyframes sheetUp {
@@ -873,6 +878,8 @@
           <div id="modalInfo" class="modal-info"></div>
           <div class="modal-actions">
             <button id="modalFavoriteBtn" class="favorite-btn">☆ 즐겨찾기</button>
+            <a id="modalIcsBtn" class="modal-link-btn" href="#">📅 캘린더</a>
+            <a id="modalGoogleBtn" class="modal-link-btn modal-google-btn" href="#" target="_blank" rel="noopener">구글 캘린더</a>
             <a id="modalLinkBtn" class="modal-link-btn" href="#" target="_blank" rel="noopener">원문 보기 →</a>
           </div>
         </div>
@@ -1517,6 +1524,21 @@
           linkBtn.style.display = "inline-flex";
         } else {
           linkBtn.style.display = "none";
+        }
+
+        // ===== 캘린더 저장 버튼: 날짜 없는 행사는 일정을 만들 수 없어서 숨김 =====
+        // 📅 캘린더 = .ics 파일 (아이폰은 "캘린더에 추가" 화면, PC는 파일 받기)
+        // 구글 캘린더 = 제목·날짜가 채워진 구글 "일정 추가" 화면 (PC에서만 보임)
+        var icsBtn = document.getElementById("modalIcsBtn");
+        var googleBtn = document.getElementById("modalGoogleBtn");
+        if (event.startDate) {
+          icsBtn.href = "/api/events/" + event.id + "/calendar.ics";
+          googleBtn.href = "/api/events/" + event.id + "/calendar/google";
+          icsBtn.style.display = "inline-flex";
+          googleBtn.style.display = "inline-flex";
+        } else {
+          icsBtn.style.display = "none";
+          googleBtn.style.display = "none";
         }
 
         updateFavoriteButton(event.id);
