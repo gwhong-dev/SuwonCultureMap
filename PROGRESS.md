@@ -35,7 +35,7 @@
 | 10/30 | 사용자 PC | PR #8 검증 — dev 프로필 적용, MySQL 기동, 로그인 3종·계정 연결 모두 ✅ → 머지 |
 | 10/30 | 작업 세션 | 2단계 Docker — `Dockerfile`(2단계 빌드) · `docker-compose.yml`(앱+MySQL) · `scripts/setup-docker.cmd`(.env 자동 생성) PR #14 |
 | 10/30 | 사용자 PC | PR #14 검증 — 빌드 87초, prod 프로필·MySQL 컨테이너 연결, 동기화 후 마커·사이드바, 로그인 3종·계정 연결 모두 ✅ → 머지 |
-| 10/30 | 작업 세션 | 3단계 CI — GitHub Actions(빌드+테스트, Docker 빌드), test 프로필(H2), 테스트 4개(컨텍스트 로드 + 소셜 로그인 리다이렉트 3종) |
+| 10/30 | 작업 세션 | 3단계 CI — GitHub Actions(빌드+테스트, Docker 빌드), test 프로필(H2), 테스트 5개(컨텍스트 로드 + 테이블 생성 확인 + 소셜 로그인 리다이렉트 3종) |
 
 ## ⚠️ 막힌 것 / 메모
 
@@ -46,6 +46,6 @@
 
 ## 🧰 나중에 할 일 (발견 사항)
 
-- [ ] `mvnw` 실행 권한 없음(100644) → 2단계 Docker 전에 `chore` PR로 수정
+- [x] `mvnw` 실행 권한 없음(100644) → PR #13 으로 수정
 - [ ] 네이버 로그인 `state=test123` 고정값 → 매번 무작위 값 생성·검증 (CSRF 방지)
 - [ ] PR #8 머지 후 dev 파일의 `kakao.redirect-uri`·`google.redirect-uri` 줄 삭제 (`app.base-url`로 자동 생성되게)
