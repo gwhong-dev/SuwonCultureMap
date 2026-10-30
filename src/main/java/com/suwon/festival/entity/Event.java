@@ -71,10 +71,19 @@ public class Event {
   @Column(length = 1000)
   private String link; // 재단 원문 상세 페이지 URL
 
+  @Column(length = 500)
+  private String place;
+  // 장소명 (XML "장소" 항목). 캘린더 위치에 사용. 없으면 null
+
+  @Column(length = 1000)
+  private String timeText;
+  // 시간 원문 (XML "시간" 항목). 형식이 제각각이라 원문 그대로 보관,
+  // 캘린더는 확실한 형식일 때만 시간 지정 일정으로 씀 (InfoParser.parseTime)
+
   @Builder
   public Event(Long idx, String title, String category, Double latitude,
       Double longitude, String imageUrl, String info, LocalDateTime pubDate, LocalDate startDate, LocalDate endDate,
-      String link) {
+      String link, String place, String timeText) {
     this.idx = idx;
     this.title = title;
     this.category = category;
@@ -86,6 +95,8 @@ public class Event {
     this.startDate = startDate;
     this.endDate = endDate;
     this.link = link;
+    this.place = place;
+    this.timeText = timeText;
   }
 
   // 재단 원본이 바뀌었거나, 예전에 저장할 때 빠진 값(link 등)이 있으면 최신 값으로 덮어씀
@@ -101,5 +112,7 @@ public class Event {
     this.startDate = latest.startDate;
     this.endDate = latest.endDate;
     this.link = latest.link;
+    this.place = latest.place;
+    this.timeText = latest.timeText;
   }
 }

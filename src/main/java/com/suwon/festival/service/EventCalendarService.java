@@ -3,7 +3,10 @@ package com.suwon.festival.service;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.Optional;
 import java.time.format.DateTimeFormatter;
 
 import org.springframework.http.HttpStatus;
@@ -16,20 +19,29 @@ import com.suwon.festival.repository.EventRepository;
 
 import lombok.RequiredArgsConstructor;
 
-// 행사 1건 → 캘린더 일정으로 바꿔주는 서비스 (A안: 종일 일정)
+// 행사 1건 → 캘린더 일정으로 바꿔주는 서비스
 // - 아이폰 기본 캘린더: .ics 파일 (캘린더 공용 형식, RFC 5545)
 // - 구글 캘린더: "일정 추가" 화면 주소 (제목·날짜가 미리 채워짐)
-// 시간·장소명은 아직 따로 저장하지 않으므로 info(메모)에 그대로 담음
+// A안: 기본은 종일 일정
+// B안: 장소명이 있으면 위치에 장소명, 하루짜리 행사 + 확실한 시간 1개면 시간 지정 일정
+//      (시작만 있으면 2시간으로 가정, 시간 원문은 info(메모)에 그대로 남음)
 @Service
 @RequiredArgsConstructor
 public class EventCalendarService {
 
   private static final DateTimeFormatter DATE = DateTimeFormatter.BASIC_ISO_DATE; // 20261107
+  // UTC 시각 형식 (20261107T050000Z) — DTSTAMP·시간 지정 일정·구글 dates 에 공용
   private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'")
       .withZone(ZoneOffset.UTC);
   private static final String GOOGLE_BASE = "https://calendar.google.com/calendar/render?action=TEMPLATE";
   private static final int GOOGLE_INFO_MAX = 500; // 주소가 너무 길면 브라우저·구글이 거부할 수 있어 메모(info)를 자름 (한글 1글자 = 주소 9자)
   private static final int ICS_LINE_MAX_BYTES = 75; // .ics 규칙: 한 줄 최대 75바이트(한글은 1글자 3바이트)
+  private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+  private static final int DEFAULT_HOURS = 2; // 시작 시간만 있을 때 가정하는 길이 (사용자 결정 1A)
+
+  // 시간 지정 일정의 시작·끝 (한국 시간 → UTC로 적어서 시간대 정보 없이도 정확)
+  record Timed(ZonedDateTime start, ZonedDateTime end) {
+  }
 
   private final EventRepository eventRepository;
 
@@ -45,9 +57,6 @@ public class EventCalendarService {
 
   // ===== .ics 파일 내용 =====
   public String toIcs(Event event, Instant now) {
-    LocalDate start = event.getStartDate();
-    LocalDate endExclusive = endExclusive(event); // 종일 일정의 끝 날짜는 "다음 날"로 적는 게 규칙
-
     StringBuilder sb = new StringBuilder();
     line(sb, "BEGIN:VCALENDAR");
     line(sb, "VERSION:2.0");
@@ -57,13 +66,23 @@ public class EventCalendarService {
     line(sb, "BEGIN:VEVENT");
     line(sb, "UID:event-" + event.getId() + "@suwonculturemap");
     line(sb, "DTSTAMP:" + STAMP.format(now));
-    line(sb, "DTSTART;VALUE=DATE:" + DATE.format(start));
-    line(sb, "DTEND;VALUE=DATE:" + DATE.format(endExclusive));
+    Optional<Timed> timed = timed(event);
+    if (timed.isPresent()) {
+      line(sb, "DTSTART:" + STAMP.format(timed.get().start()));
+      line(sb, "DTEND:" + STAMP.format(timed.get().end()));
+    } else {
+      // 종일 일정의 끝 날짜는 "다음 날"로 적는 게 규칙
+      line(sb, "DTSTART;VALUE=DATE:" + DATE.format(event.getStartDate()));
+      line(sb, "DTEND;VALUE=DATE:" + DATE.format(endExclusive(event)));
+    }
     line(sb, "SUMMARY:" + escape(event.getTitle()));
     // .ics 는 원문 링크를 URL 칸에 따로 넣으므로 메모에는 info만 (아이폰에서 링크가 두 번 보이는 문제 방지)
     String info = info(event);
     if (!info.isEmpty()) {
       line(sb, "DESCRIPTION:" + escape(info));
+    }
+    if (hasText(event.getPlace())) {
+      line(sb, "LOCATION:" + escape(event.getPlace())); // 아이폰 "위치"에 장소명 (없으면 메모 속 전화번호가 뜸)
     }
     line(sb, "GEO:" + coord(event.getLatitude()) + ";" + coord(event.getLongitude()));
     String link = safeLink(event.getLink());
@@ -77,14 +96,36 @@ public class EventCalendarService {
 
   // ===== 구글 캘린더 "일정 추가" 주소 =====
   public String toGoogleUrl(Event event) {
-    String dates = DATE.format(event.getStartDate()) + "/" + DATE.format(endExclusive(event));
+    Optional<Timed> timed = timed(event);
+    String dates = timed.isPresent()
+        ? STAMP.format(timed.get().start()) + "/" + STAMP.format(timed.get().end())
+        : DATE.format(event.getStartDate()) + "/" + DATE.format(endExclusive(event));
+    String location = hasText(event.getPlace())
+        ? event.getPlace()
+        : event.getLatitude() + "," + event.getLongitude();
     // info만 자르고 원문 링크는 항상 끝에 남김
     String details = joinDescription(cut(info(event), GOOGLE_INFO_MAX), event.getLink());
     return GOOGLE_BASE
         + "&text=" + encode(event.getTitle())
         + "&dates=" + dates
         + "&details=" + encode(details)
-        + "&location=" + encode(event.getLatitude() + "," + event.getLongitude());
+        + "&location=" + encode(location);
+  }
+
+  // 시간 지정 일정이 되는 조건: ① 하루짜리 행사 ② 시간 원문이 확실한 형식 1개
+  // 여러 날 행사에 시간을 넣으면 "첫날 10시 ~ 마지막 날 17시"로 이어진 일정 1개가 되므로 종일 유지
+  Optional<Timed> timed(Event event) {
+    LocalDate day = event.getStartDate();
+    if (event.getEndDate() != null && !event.getEndDate().equals(day)) return Optional.empty();
+    return InfoParser.parseTime(event.getTimeText()).map(t -> {
+      ZonedDateTime start = day.atTime(t.start()).atZone(SEOUL);
+      ZonedDateTime end = t.end() != null ? day.atTime(t.end()).atZone(SEOUL) : start.plusHours(DEFAULT_HOURS);
+      return new Timed(start, end);
+    });
+  }
+
+  private static boolean hasText(String value) {
+    return value != null && !value.isBlank();
   }
 
   // 종료일이 없으면 하루짜리 일정
