@@ -123,6 +123,17 @@ erDiagram
 
 > 프로필을 따로 정하지 않으면 자동으로 `dev` 로 실행됩니다.
 
+### Docker로 실행 (MySQL 설치 없이)
+
+[Docker Desktop](https://www.docker.com/products/docker-desktop/) 만 있으면 앱 + MySQL 을 한 번에 띄웁니다.
+
+1. `scripts\setup-docker.cmd` 더블클릭 → `application-dev.properties` 를 읽어 `.env` 자동 생성 (Git 제외)
+2. `docker compose up --build` → http://localhost:8080 → **행사 동기화** 버튼
+3. 끄기: `Ctrl + C` 또는 `docker compose down` (DB 데이터는 볼륨에 유지, 완전 삭제는 `docker compose down -v`)
+
+> Docker 안에서는 `prod` 프로필로 실행됩니다. DB는 새로 만들어지므로 처음 한 번은 동기화가 필요합니다.
+> 컨테이너 MySQL 은 내 PC MySQL(3306)과 겹치지 않게 `localhost:3307` 로 열립니다.
+
 ### 운영 환경 (서버)
 
 `SPRING_PROFILES_ACTIVE=prod` 와 아래 환경변수를 서버에 설정한 뒤 실행합니다.

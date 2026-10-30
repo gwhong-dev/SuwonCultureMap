@@ -1,0 +1,15 @@
+# 이미지에 들어가면 안 되는 것들 (특히 비밀값!)
+**/application-dev.properties
+.env
+.env.*
+!.env.example
+
+# 빌드 결과물·도구 설정·문서 (이미지 안에서 새로 빌드하므로 불필요)
+target/
+.git/
+.github/
+.vscode/
+.idea/
+.dev
+scripts/
+*.md

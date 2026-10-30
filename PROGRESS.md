@@ -33,6 +33,7 @@
 | 10/30 | Claude Code | `scripts/setup-dev.cmd` 추가 — PR #8 머지 전 비밀값 파일 이름 변경·커밋 방지 자동화 |
 | 10/30 | 작업 세션 | 작업 방식 변경 — 단일 세션 + 검증 에이전트 + PR 댓글 기록 (사용자 중계 없음) |
 | 10/30 | 사용자 PC | PR #8 검증 — dev 프로필 적용, MySQL 기동, 로그인 3종·계정 연결 모두 ✅ → 머지 |
+| 10/30 | 작업 세션 | 2단계 Docker — `Dockerfile`(2단계 빌드) · `docker-compose.yml`(앱+MySQL) · `scripts/setup-docker.cmd`(.env 자동 생성) PR (빌드 미검증) |
 
 ## ⚠️ 막힌 것 / 메모
 
