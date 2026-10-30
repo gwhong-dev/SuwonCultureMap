@@ -60,7 +60,11 @@ public class EventCalendarService {
     line(sb, "DTSTART;VALUE=DATE:" + DATE.format(start));
     line(sb, "DTEND;VALUE=DATE:" + DATE.format(endExclusive));
     line(sb, "SUMMARY:" + escape(event.getTitle()));
-    line(sb, "DESCRIPTION:" + escape(description(event)));
+    // .ics 는 원문 링크를 URL 칸에 따로 넣으므로 메모에는 info만 (아이폰에서 링크가 두 번 보이는 문제 방지)
+    String info = info(event);
+    if (!info.isEmpty()) {
+      line(sb, "DESCRIPTION:" + escape(info));
+    }
     line(sb, "GEO:" + coord(event.getLatitude()) + ";" + coord(event.getLongitude()));
     String link = safeLink(event.getLink());
     if (link != null) {
@@ -92,15 +96,11 @@ public class EventCalendarService {
     return end.plusDays(1);
   }
 
-  // 메모: 행사 정보(시간·장소 포함) + 원문 링크
-  private String description(Event event) {
-    return joinDescription(info(event), event.getLink());
-  }
-
   private String info(Event event) {
     return event.getInfo() != null ? event.getInfo().strip() : "";
   }
 
+  // 구글 메모: 행사 정보(시간·장소 포함) + 원문 링크 (구글 "일정 추가" 화면엔 링크 칸이 없음)
   private String joinDescription(String info, String rawLink) {
     String link = safeLink(rawLink);
     String linkLine = link != null ? "원문: " + link : "";

@@ -41,6 +41,8 @@ class EventCalendarServiceTest {
     assertThat(ics).contains("DTSTAMP:20261030T140000Z\r\n");
     assertThat(ics).contains("URL:https://example.com/1\r\n");
     assertThat(ics).contains("GEO:37.281021;127.016216\r\n");
+    // 링크는 URL 칸에만 → 메모(DESCRIPTION)에는 "원문:" 줄이 없어야 함
+    assertThat(ics).contains("DESCRIPTION:장소: 정조테마공연장\r\n").doesNotContain("원문:");
   }
 
   @Test
@@ -48,6 +50,7 @@ class EventCalendarServiceTest {
     String ics = service.toIcs(event("공연", null, LocalDate.of(2026, 11, 7), null, null), NOW);
     assertThat(ics).contains("DTEND;VALUE=DATE:20261108\r\n");
     assertThat(ics).doesNotContain("URL:");
+    assertThat(ics).doesNotContain("DESCRIPTION:"); // info 도 없으면 메모 항목 생략
   }
 
   @Test
