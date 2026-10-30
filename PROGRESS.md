@@ -39,7 +39,7 @@
 | 10/30 | 사용자 | `main` 브랜치 보호 설정 — CI 2개 통과 필수, 관리자 예외 없음 |
 | 10/30 | 작업 세션 | 노션에 1~3단계 "문제 → 해결" 8건 정리 |
 | 10/30 | 작업 세션 | 보안 — OAuth state(CSRF 방지) 3종 적용, 콜백 검증·1회용·취소 처리, 테스트 추가 |
-| 10/30 | 작업 세션 | 포트폴리오 대표자료 v2(15장) 작성 — 검증 리뷰에서 보류한 지적 4건을 "나중에 할 일"에 추가 |
+| 10/30 | 작업 세션 | 포트폴리오 대표자료 v2(15장) 작성 — 리뷰에서 보류한 지적 3건 + 자체 발견 1건을 "나중에 할 일"에 추가 |
 
 ## ⚠️ 막힌 것 / 메모
 
@@ -54,6 +54,6 @@
 - [x] 네이버 로그인 `state=test123` 고정값 → 카카오·구글·네이버 모두 무작위 state 생성·검증 (CSRF 방지)
 - [ ] PR #8 머지 후 dev 파일의 `kakao.redirect-uri`·`google.redirect-uri` 줄 삭제 (`app.base-url`로 자동 생성되게)
 - [ ] 네이버 토큰 요청 URL에 `code`를 인코딩 없이 붙임 (`NaverAuthService.java:29-34`) — state 검증 뒤라 위험 낮아 보류 (PR #17 리뷰)
-- [ ] 개발 확인용 `/api/events/sync/raw` · `/sync/parsed` 정리 — 운영 배포 전에 제거하거나 관리자 전용으로
+- [ ] 개발 확인용 `/api/events/sync/raw` · `/sync/parsed` 정리, `POST /api/events/sync` 도 로그인 없이 호출 가능 — 운영 배포 전에 제거하거나 관리자 전용으로 (자체 발견 + PR #18 리뷰)
 - [ ] prod `spring.jpa.hibernate.ddl-auto=update` → DB 마이그레이션 도구(Flyway 등) 도입 후 `validate` (PR #8 리뷰)
 - [ ] `setup-docker.ps1` 의 properties 특수 표기(`\=` `\:` `\uXXXX`, 줄 끝 `\` 이어쓰기) 미처리 — 현재 dev 견본 형식엔 해당 없음 (PR #14 리뷰)
