@@ -30,8 +30,10 @@
 |---|---|---|
 | 10/26 | 채팅 | PR #8 — 개발/운영 프로필 분리, OAuth `localhost` 하드코딩 제거 (빌드 미검증) |
 | 10/30 | 채팅 | `CLAUDE.md` · `PROGRESS.md` 추가 (두 세션 공통 안내서) |
+| 10/30 | Claude Code | `scripts/setup-dev.cmd` 추가 — PR #8 머지 전 비밀값 파일 이름 변경·커밋 방지 자동화 |
 
 ## ⚠️ 막힌 것 / 메모
 
 - 채팅 환경에선 Maven 빌드 불가 → 빌드·실행 확인은 Claude Code에서
 - PR #8 머지 전 로컬 준비: 기존 `application.properties` → `application-dev.properties` 로 이름 변경 + `app.base-url=http://localhost:8080` 추가
+- git pull 후 `scripts\setup-dev.cmd` 를 먼저 실행
