@@ -14,7 +14,7 @@ services:
       TZ: Asia/Seoul
     command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
     ports:
-      - "3307:3306"   # 내 PC의 MySQL80(3306)과 안 겹치게 3307 로 노출 (Workbench 접속용)
+      - "${DB_PORT:-3307}:3306"   # Workbench 접속용 (앱 동작엔 불필요). 3307 이 사용 중이면 .env 에 DB_PORT=3308 처럼 변경
     volumes:
       - db-data:/var/lib/mysql   # 컨테이너를 지워도 데이터는 유지
     healthcheck:
