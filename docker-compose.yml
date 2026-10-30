@@ -1,0 +1,52 @@
+# =====================================================
+#  docker compose up --build  → 앱 + MySQL 을 한 번에 실행
+#  비밀값은 같은 폴더의 .env 에서 읽음 (Git 제외)
+#  .env 는 scripts\setup-docker.cmd 가 application-dev.properties 를 보고 자동 생성
+# =====================================================
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-suwon_culture_map}
+      MYSQL_USER: ${DB_USERNAME:?.env 에 DB_USERNAME 이 없음 - scripts\setup-docker.cmd 실행}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?.env 에 DB_PASSWORD 가 없음}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?.env 에 MYSQL_ROOT_PASSWORD 가 없음}
+      TZ: Asia/Seoul
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    ports:
+      - "3307:3306"   # 내 PC의 MySQL80(3306)과 안 겹치게 3307 로 노출 (Workbench 접속용)
+    volumes:
+      - db-data:/var/lib/mysql   # 컨테이너를 지워도 데이터는 유지
+    healthcheck:
+      # 127.0.0.1(TCP)로 확인 → 첫 기동 때 잠깐 뜨는 임시 서버(네트워크 꺼짐)에 속지 않음
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  app:
+    build: .
+    restart: on-failure   # DB가 늦게 준비돼 접속에 실패하면 자동으로 다시 시작
+    depends_on:
+      db:
+        condition: service_healthy   # MySQL 이 준비된 뒤에 앱 시작
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      TZ: Asia/Seoul
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+      DB_URL: jdbc:mysql://db:3306/${MYSQL_DATABASE:-suwon_culture_map}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      SWCF_API_KEY_EVENT: ${SWCF_API_KEY_EVENT:?.env 에 SWCF_API_KEY_EVENT 가 없음}
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY:?.env 에 KAKAO_REST_API_KEY 가 없음}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:?.env 에 KAKAO_CLIENT_SECRET 가 없음}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?.env 에 GOOGLE_CLIENT_ID 가 없음}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?.env 에 GOOGLE_CLIENT_SECRET 가 없음}
+      NAVER_CLIENT_ID: ${NAVER_CLIENT_ID:?.env 에 NAVER_CLIENT_ID 가 없음}
+      NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET:?.env 에 NAVER_CLIENT_SECRET 가 없음}
+    ports:
+      - "8080:8080"
+
+volumes:
+  db-data:
