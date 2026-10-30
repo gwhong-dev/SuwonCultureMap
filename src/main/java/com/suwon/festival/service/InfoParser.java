@@ -26,14 +26,23 @@ public final class InfoParser {
   private static final String TIME_LABEL = "시간";
 
   // 알려진 HTML 태그만 지움 → "<파랑새>" 같은 작품명 꺾쇠는 남김
-  private static final Pattern BR_TAG = Pattern.compile("(?i)<br\\s*/?>");
+  // <br>, <br/>, <br clear="all"> 등
+  private static final Pattern BR_TAG = Pattern.compile("(?i)<br\\b[^<>]*>");
+  // 속성은 "이름=값" 모양일 때만 태그로 인정 → "<A Christmas Carol>", "<I Love Suwon>" 같은 영어 작품명은 남김
   private static final Pattern HTML_TAG = Pattern.compile(
-      "(?i)</?(?:p|div|span|b|strong|i|em|u|font|a|img|table|tbody|thead|tr|td|th|ul|ol|li|h[1-6])(?:\\s[^<>]*)?/?>");
+      "(?i)</?(?:p|div|span|b|strong|i|em|u|s|sup|sub|font|a|img|hr|center|table|tbody|thead|tr|td|th|ul|ol|li|h[1-6])"
+          + "(?:\\s+[^<>]*=[^<>]*)?\\s*/?>");
+  private static final Pattern HTML_COMMENT = Pattern.compile("(?s)<!--.*?-->");
 
-  // 시간이 "딱 한 개"일 때만 인정: 14:00 / 19:00~19:40 / 16:30-18:00 / 10:00~ / 14:00~15:00 (60분)
+  // DB 칸 길이 (Event.place / Event.timeText) — 넘으면 저장 실패하므로 미리 자름
+  static final int PLACE_MAX = 500;
+  static final int TIME_TEXT_MAX = 1000;
+
+  // 시간이 "딱 한 개"일 때만 인정: 14:00 / 19:00~19:40 / 16:30-18:00 / 10:00~ / 14:00~15:00 (60분) / 14:00 (60분)
   // 여러 회차(14:00, 17:00), 요일별, 부가설명이 붙은 것은 일부러 인정하지 않음
+  // 구분 기호: ~ - – － ～ 〜 (반각·전각)
   private static final Pattern SINGLE_TIME = Pattern.compile(
-      "^(\\d{1,2}):(\\d{2})\\s*(?:[~\\-–－]\\s*(?:(\\d{1,2}):(\\d{2}))?)?\\s*(?:\\(\\s*\\d+\\s*(?:분|시간)\\s*\\))?$");
+      "^(\\d{1,2}):(\\d{2})\\s*(?:[~\\-–－～〜]\\s*(?:(\\d{1,2}):(\\d{2}))?)?\\s*(?:\\(\\s*(\\d+)\\s*(분|시간)\\s*\\))?$");
 
   // 시작·끝 시간 (끝은 없을 수 있음)
   public record TimeRange(LocalTime start, LocalTime end) {
@@ -43,6 +52,7 @@ public final class InfoParser {
   public static String clean(String value) {
     if (value == null) return null;
     String v = HtmlUtils.htmlUnescape(value);
+    v = HTML_COMMENT.matcher(v).replaceAll("");
     v = BR_TAG.matcher(v).replaceAll("\n");
     v = HTML_TAG.matcher(v).replaceAll("");
     v = v.replace(" ", " "); // &nbsp;
@@ -53,13 +63,20 @@ public final class InfoParser {
   public static String findPlace(List<ContentInfoDetail> details) {
     for (String label : PLACE_LABELS) {
       String v = find(details, label);
-      if (v != null) return v;
+      if (v != null) return limit(v, PLACE_MAX);
     }
     return null;
   }
 
   public static String findTimeText(List<ContentInfoDetail> details) {
-    return find(details, TIME_LABEL);
+    return limit(find(details, TIME_LABEL), TIME_TEXT_MAX);
+  }
+
+  // 글자 수 제한 (이모지처럼 2칸짜리 글자가 반으로 잘리지 않게)
+  static String limit(String value, int max) {
+    if (value == null || value.length() <= max) return value;
+    int end = Character.isHighSurrogate(value.charAt(max - 1)) ? max - 1 : max;
+    return value.substring(0, end);
   }
 
   // 항목 이름이 정확히 같은 첫 번째 값 (정리 후 비어 있으면 없는 것으로)
@@ -85,7 +102,17 @@ public final class InfoParser {
 
     LocalTime start = toTime(m.group(1), m.group(2));
     if (start == null) return Optional.empty();
-    if (m.group(3) == null) return Optional.of(new TimeRange(start, null));
+    if (m.group(3) == null) {
+      // 끝 시간이 없을 때 "(60분)"·"(1시간)" 이 있으면 그 길이로 끝 시간 계산 (자정 넘으면 모르는 것으로)
+      if (m.group(5) != null) {
+        int amount = Integer.parseInt(m.group(5));
+        int minutes = "시간".equals(m.group(6)) ? amount * 60 : amount;
+        if (minutes > 0 && start.toSecondOfDay() / 60 + minutes < 24 * 60) {
+          return Optional.of(new TimeRange(start, start.plusMinutes(minutes)));
+        }
+      }
+      return Optional.of(new TimeRange(start, null));
+    }
 
     LocalTime end = toTime(m.group(3), m.group(4));
     if (end == null || !end.isAfter(start)) return Optional.empty(); // 자정 넘김·역전 등은 확실하지 않음

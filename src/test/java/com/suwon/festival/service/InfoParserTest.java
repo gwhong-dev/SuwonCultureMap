@@ -43,6 +43,26 @@ class InfoParserTest {
     assertThat(InfoParser.clean(null)).isNull();
   }
 
+  @Test
+  void 영어_작품명_꺾쇠도_남김() {
+    assertThat(InfoParser.clean("뮤지컬 <A Christmas Carol>")).isEqualTo("뮤지컬 <A Christmas Carol>");
+    assertThat(InfoParser.clean("<I Love Suwon> 축제")).isEqualTo("<I Love Suwon> 축제");
+    assertThat(InfoParser.clean("<a href=\"https://x.y\">링크</a>")).isEqualTo("링크");
+  }
+
+  @Test
+  void 속성_있는_br과_주석도_정리() {
+    assertThat(InfoParser.clean("10:00<br clear=\"all\">입장")).isEqualTo("10:00\n입장");
+    assertThat(InfoParser.clean("무료<!-- 메모 -->")).isEqualTo("무료");
+  }
+
+  @Test
+  void 너무_긴_장소와_시간은_칸_길이에_맞춰_자름() {
+    String longPlace = "가".repeat(600);
+    assertThat(InfoParser.findPlace(details("장소", longPlace))).hasSize(InfoParser.PLACE_MAX);
+    assertThat(InfoParser.findTimeText(details("시간", "1".repeat(1200)))).hasSize(InfoParser.TIME_TEXT_MAX);
+  }
+
   // ===== 장소·시간 꺼내기 =====
 
   @Test
@@ -78,6 +98,20 @@ class InfoParserTest {
   void 시작만_있는_형식() {
     assertThat(InfoParser.parseTime("14:00")).contains(new TimeRange(LocalTime.of(14, 0), null));
     assertThat(InfoParser.parseTime("10:00~")).contains(new TimeRange(LocalTime.of(10, 0), null));
+  }
+
+  @Test
+  void 시작과_길이만_있으면_길이로_끝_시간_계산() {
+    assertThat(InfoParser.parseTime("14:00 (60분)")).contains(new TimeRange(LocalTime.of(14, 0), LocalTime.of(15, 0)));
+    assertThat(InfoParser.parseTime("19:00(1시간)")).contains(new TimeRange(LocalTime.of(19, 0), LocalTime.of(20, 0)));
+    // 자정을 넘기면 끝 시간은 모르는 것으로 (→ 캘린더는 기본 2시간)
+    assertThat(InfoParser.parseTime("23:30 (60분)")).contains(new TimeRange(LocalTime.of(23, 30), null));
+  }
+
+  @Test
+  void 전각_물결도_구분_기호로_인정() {
+    assertThat(InfoParser.parseTime("19:00～20:00")).contains(new TimeRange(LocalTime.of(19, 0), LocalTime.of(20, 0)));
+    assertThat(InfoParser.parseTime("19:00〜20:00")).contains(new TimeRange(LocalTime.of(19, 0), LocalTime.of(20, 0)));
   }
 
   @ParameterizedTest
