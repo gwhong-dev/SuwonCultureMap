@@ -36,7 +36,8 @@ src/main/resources/
 ## 4. 설정 파일 규칙 (중요)
 
 - 비밀값(DB 비밀번호, API 키, client-secret)은 **절대 커밋하지 않는다**
-- 개발/운영 설정 분리는 PR #8에서 진행 중 → 머지 후 구조:
+- 프로필을 지정하지 않으면 `dev` 로 실행됨 (`spring.profiles.default=dev`), 운영은 `SPRING_PROFILES_ACTIVE=prod`
+- 개발/운영 설정 분리 (PR #8, 머지 완료) 구조:
   - `application.properties` — 공통, 비밀값 없음
   - `application-dev.properties` — 로컬 실제 값 (gitignore)
   - `application-prod.properties` — 값은 전부 환경변수 `${...}`
