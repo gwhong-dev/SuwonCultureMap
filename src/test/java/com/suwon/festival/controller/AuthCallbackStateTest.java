@@ -116,6 +116,42 @@ class AuthCallbackStateTest {
     verifyNoLogin();
   }
 
+  @Test
+  void emptyState_isRejected() throws Exception {
+    MockHttpServletResponse res = callback("naver", sessionWithState("naver", "good-state"), "auth-code", "");
+    assertThat(res.getHeader("Location")).isEqualTo("/login.html?error=state");
+    verifyNoLogin();
+  }
+
+  @Test
+  void otherProvidersState_isRejected() throws Exception {
+    // 카카오 로그인 때 받은 state 를 구글 콜백에 쓰는 경우
+    MockHttpSession session = sessionWithState("kakao", "kakao-state");
+    MockHttpServletResponse res = callback("google", session, "auth-code", "kakao-state");
+    assertThat(res.getHeader("Location")).isEqualTo("/login.html?error=state");
+    verifyNoLogin();
+  }
+
+  @Test
+  void linkingFailure_whileLoggedIn_goesBackToMypage() throws Exception {
+    // 마이페이지에서 계정 연결 중 취소 → 로그인 화면이 아니라 마이페이지로
+    MockHttpSession session = sessionWithState("google", "good-state");
+    session.setAttribute("memberId", 7L);
+    MockHttpServletResponse res = callback("google", session, null, "good-state");
+    assertThat(res.getHeader("Location")).isEqualTo("/mypage.html?error=cancelled");
+    assertThat(session.getAttribute("memberId")).isEqualTo(7L); // 로그인 상태 유지
+    verifyNoLogin();
+  }
+
+  @Test
+  void successfulLogin_changesSessionId() throws Exception {
+    MockHttpSession session = sessionWithState("kakao", "good-state");
+    String before = session.getId();
+    callback("kakao", session, "auth-code", "good-state");
+    assertThat(session.getId()).isNotEqualTo(before);
+    assertThat(session.getAttribute("memberId")).isEqualTo(1L);
+  }
+
   private void verifyNoLogin() {
     verify(authService, never()).kakaoLogin(anyString(), any());
     verify(authService, never()).googleLogin(anyString(), any());

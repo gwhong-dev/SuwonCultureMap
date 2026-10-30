@@ -13,6 +13,7 @@ import com.suwon.festival.repository.LoginMethodRepository;
 import com.suwon.festival.security.OAuthStateManager;
 import com.suwon.festival.service.AuthService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
@@ -90,11 +91,13 @@ public class AuthController {
   //   code 가 없으면(사용자가 동의 화면에서 취소 등) 로그인 페이지로 돌려보냄
   @GetMapping("/kakao/callback")
   public ResponseEntity<Void> kakaoCallback(@RequestParam(required = false) String code,
-      @RequestParam(required = false) String state, HttpSession session) {
+      @RequestParam(required = false) String state, HttpSession session,
+      HttpServletRequest request) {
     ResponseEntity<Void> rejected = rejectIfInvalid("kakao", code, state, session);
     if (rejected != null) return rejected;
     Long currentMemberId = (Long) session.getAttribute("memberId"); // 로그인 상태면 연동, 아니면 신규/일반 로그인
     Member member = authService.kakaoLogin(code, currentMemberId);
+    request.changeSessionId(); // 로그인 성공 시 세션 ID 교체 (세션 고정 공격 방지, 저장된 값은 유지)
     session.setAttribute("memberId", member.getId());
     return redirect("/");
   }
@@ -102,11 +105,13 @@ public class AuthController {
   // 구글 콜백
   @GetMapping("/google/callback")
   public ResponseEntity<Void> googleCallback(@RequestParam(required = false) String code,
-      @RequestParam(required = false) String state, HttpSession session) {
+      @RequestParam(required = false) String state, HttpSession session,
+      HttpServletRequest request) {
     ResponseEntity<Void> rejected = rejectIfInvalid("google", code, state, session);
     if (rejected != null) return rejected;
     Long currentMemberId = (Long) session.getAttribute("memberId");
     Member member = authService.googleLogin(code, currentMemberId);
+    request.changeSessionId(); // 로그인 성공 시 세션 ID 교체 (세션 고정 공격 방지, 저장된 값은 유지)
     session.setAttribute("memberId", member.getId());
     return redirect("/");
   }
@@ -114,20 +119,26 @@ public class AuthController {
   // 네이버 콜백
   @GetMapping("/naver/callback")
   public ResponseEntity<Void> naverCallback(@RequestParam(required = false) String code,
-      @RequestParam(required = false) String state, HttpSession session) {
+      @RequestParam(required = false) String state, HttpSession session,
+      HttpServletRequest request) {
     ResponseEntity<Void> rejected = rejectIfInvalid("naver", code, state, session);
     if (rejected != null) return rejected;
     Long currentMemberId = (Long) session.getAttribute("memberId");
     Member member = authService.naverLogin(code, state, currentMemberId);
+    request.changeSessionId(); // 로그인 성공 시 세션 ID 교체 (세션 고정 공격 방지, 저장된 값은 유지)
     session.setAttribute("memberId", member.getId());
     return redirect("/");
   }
 
-  /** state 가 틀리면 login.html?error=state, code 가 없으면 ?error=cancelled 로 보냄. 통과하면 null. */
+  /**
+   * state 가 틀리면 ?error=state, code 가 없으면(동의 취소) ?error=cancelled 로 보냄. 통과하면 null.
+   * 이미 로그인된 상태(마이페이지에서 계정 연결 중)면 login.html 대신 mypage.html 로 돌려보냄.
+   */
   private ResponseEntity<Void> rejectIfInvalid(String provider, String code, String state, HttpSession session) {
     boolean stateOk = stateManager.verify(session, provider, state); // 성공·실패 상관없이 1회용으로 소모
-    if (!stateOk) return redirect("/login.html?error=state");
-    if (code == null || code.isBlank()) return redirect("/login.html?error=cancelled");
+    String backPage = session.getAttribute("memberId") != null ? "/mypage.html" : "/login.html";
+    if (!stateOk) return redirect(backPage + "?error=state");
+    if (code == null || code.isBlank()) return redirect(backPage + "?error=cancelled");
     return null;
   }
 
