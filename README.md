@@ -134,7 +134,7 @@ erDiagram
 3. 끄기: `Ctrl + C` 또는 `docker compose down` (DB 데이터는 볼륨에 유지, 완전 삭제는 `docker compose down -v`)
 
 > Docker 안에서는 `prod` 프로필로 실행됩니다. DB는 새로 만들어지므로 처음 한 번은 동기화가 필요합니다.
-> 컨테이너 MySQL 은 내 PC MySQL(3306)과 겹치지 않게 `localhost:3307` 로 열립니다.
+> 컨테이너 MySQL 은 내 PC MySQL(3306)과 겹치지 않게 `localhost:3307` 로 열립니다. `port is already allocated` 가 나면 `.env` 에 `DB_PORT=3308` 처럼 다른 번호를 넣으세요.
 > 로컬에서 `mvnw spring-boot:run` 으로 앱을 켜 둔 상태면 8080 이 겹치니 먼저 끄세요.
 > 루트에 예전 `.env` 가 있으면 스크립트가 건너뛰므로, 지우고 다시 실행하세요.
 

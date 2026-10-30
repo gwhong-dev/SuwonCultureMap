@@ -163,5 +163,20 @@
           });
         });
     </script>
-  </body>
+      <script>
+      // 계정 연결 실패 안내 (서버가 /mypage.html?error=... 로 보냈을 때)
+      (function () {
+        var messages = {
+          state: "보안 확인에 실패해서 계정을 연결하지 못했어요. 다시 시도해 주세요.",
+          cancelled: "계정 연결이 취소됐어요.",
+        };
+        var params = new URLSearchParams(location.search);
+        var code = params.get("error");
+        if (code && messages[code]) {
+          alert(messages[code]);
+          history.replaceState(null, "", location.pathname); // 새로고침 때 다시 안 뜨게 주소 정리
+        }
+      })();
+    </script>
+</body>
 </html>
