@@ -48,7 +48,8 @@ Write-Host ''
 # 1) 입력 확인 — 형식이 틀리면 요청을 보내기 전에 멈춤
 $igId = $env:INSTAGRAM_USER_ID
 if ([string]::IsNullOrWhiteSpace($igId)) {
-    Write-Host '(계정 ID = 토큰 점검 결과의 granular_scopes 에 있는 인스타 계정 숫자 · docs/instagram-integration.md 3번)'
+    Write-Host '(계정 ID 찾는 법: Graph API 탐색기 주소칸에 debug_token?input_token=토큰 을 넣고 제출 → 결과의 granular_scopes 중 instagram_basic 의 target_ids 숫자)'
+    Write-Host '(보통 17841 로 시작하는 17자리 안팎. 페이지 ID(pages_show_list 쪽)나 만료 시각 숫자는 계정 ID가 아님)'
     $igId = Read-Host '내 인스타 계정 ID (숫자)'
 }
 $igId = ([string]$igId).Trim()
@@ -123,6 +124,8 @@ catch {
         $code = [int]$err.code
         if ($code -eq 190) {
             Write-Host '  → 토큰이 만료됐거나 잘못됐을 수 있음. 새 토큰으로도 같으면 헤더 방식(Authorization) 전달이 거부된 것일 수 있으니 이 화면 내용을 알려주기'
+        } elseif ($code -eq 100 -and ([string]$err.message) -match 'nonexisting field|Unsupported get request') {
+            Write-Host '  → 입력한 "내 인스타 계정 ID"가 인스타 계정 ID가 아닌 듯함 (페이스북 페이지 ID · 만료 시각 등 다른 숫자). instagram_basic 의 target_ids 숫자를 다시 확인'
         } elseif ($code -in 4, 17, 32, 613) {
             Write-Host '  → 호출 제한에 걸림. 잠시 뒤 다시 실행'
         } elseif ($code -eq 10 -or ($code -ge 200 -and $code -le 299)) {
