@@ -14,9 +14,13 @@ public enum CaptionLabel {
   private static final List<String> TIME_EMOJI = List.of("⏰", "🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🕚", "🕛", "⌚");
   private static final List<String> OTHER_EMOJI = List.of("💰", "💸", "🎫", "🎟", "☎", "📞", "📱", "🔗", "🙋", "👥");
 
-  // "일시: ..." 처럼 글자 라벨 + 콜론
+  // "일시: ..." 처럼 글자 라벨 + 구분자(콜론 · 세로선)
+  // - 앞에 "공연 · 전시 · 행사 …"가 붙은 라벨도 인식 (예: "공연장소 | 수원SK아트리움", "전시기간 : …")
+  // - group(1) 은 붙은 말을 뺀 기본 라벨 → 종류 판단에 씀
   private static final Pattern TEXT_LABEL = Pattern.compile(
-      "^(일시|기간|날짜|일정|장소|위치|시간|대상|문의|참가비|관람료|입장료|요금|신청|접수|주최|주관)\\s*[:：]\\s*");
+      "^(?:공연|전시|행사|교육|체험|관람|상영|운영)?"
+          + "(일시|기간|날짜|일정|장소|위치|시간|대상|문의|참가비|관람료|입장료|요금|신청|접수|주최|주관)"
+          + "\\s*[:：|｜]\\s*");
 
   // 라벨이 아니면 null
   public static CaptionLabel of(String line) {
