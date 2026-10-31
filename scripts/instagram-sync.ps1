@@ -8,7 +8,10 @@ Write-Host ''
 Write-Host ('===== 인스타 동기화 실행 (http://localhost:' + $Port + ') =====')
 Write-Host '(계정 수 · 게시물 수에 따라 1~2분 걸릴 수 있음)'
 try {
-    $r = Invoke-RestMethod -Method Post -Uri ('http://localhost:' + $Port + '/api/instagram/sync') -TimeoutSec 600
+    # Windows PowerShell 5.1 의 Invoke-RestMethod 는 charset 없는 JSON 을 ISO-8859-1 로 읽어 한글이 깨짐
+    #  → 응답 바이트를 직접 UTF-8 로 풀고 JSON 변환
+    $w = Invoke-WebRequest -UseBasicParsing -Method Post -Uri ('http://localhost:' + $Port + '/api/instagram/sync') -TimeoutSec 600
+    $r = [Text.Encoding]::UTF8.GetString($w.RawContentStream.ToArray()) | ConvertFrom-Json
 } catch {
     Write-Host ('[오류] 요청 실패: ' + $_.Exception.Message)
     Write-Host '→ 앱이 켜져 있나요? IntelliJ 실행 창에 "Started FestivalApplication" 이 보여야 함'
