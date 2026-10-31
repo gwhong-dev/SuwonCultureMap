@@ -154,6 +154,40 @@ class CaptionParserTest {
   }
 
   @Test
+  void 한_블록에_날짜_줄이_여러_개면_규칙이_고르지_않음() {
+    FakeAi ai = new FakeAi(null);
+    CaptionParser parser = new CaptionParser(ai);
+    // 신청 기간 + 행사일
+    String apply = "가을 음악회\n🗓️ 신청: 2026. 10. 1. ~ 10. 20.\n🗓️ 행사: 2026. 11. 5.(목)\n📍 가상 아트홀";
+    // 회차별 날짜
+    String rounds = "가을 음악회\n🗓️ 1회차 2026. 11. 5.(목)\n🗓️ 2회차 2026. 11. 12.(목)\n📍 가상 아트홀";
+    // 빈 줄 없이 붙은 두 행사
+    String glued = "가을 음악회\n🗓️ 2026. 11. 5.(목)\n📍 가상 아트홀\n🗓️ 2026. 11. 7.(토)\n📍 가상 광장";
+    for (String c : List.of(apply, rounds, glued)) {
+      List<BlockResult> rs = parser.parse(c);
+      assertThat(rs).hasSize(1);
+      assertThat(rs.get(0).source()).isEqualTo(Source.AI);
+      assertThat(rs.get(0).status()).isNotEqualTo(CandidateStatus.PARSED);
+    }
+    assertThat(ai.received).hasSize(3);
+  }
+
+  @Test
+  void 본문의_통제_낱말이나_해시태그_공지는_행사를_미루지_않음() {
+    String c = "겨울 빛 축제\n🗓️ 2026. 11. 5.(목)\n📍 가상 광장\n행사 당일 주변 도로 교통 통제\n#공지";
+    BlockResult r = new CaptionParser(null).parse(c).get(0);
+    assertThat(r.source()).isEqualTo(Source.RULE);
+    assertThat(r.status()).isEqualTo(CandidateStatus.PARSED);
+  }
+
+  @Test
+  void 연도는_있는데_모양이_다른_날짜는_AI에_넘김() {
+    FakeAi ai = new FakeAi(null);
+    new CaptionParser(ai).parse("가을 음악회\n🗓️ 2026년 11월 5일(목)\n📍 가상 아트홀");
+    assertThat(ai.received).hasSize(1);
+  }
+
+  @Test
   void 제목_앞_이모지와_번호는_떼고_카테고리는_낱말로() {
     assertThat(RuleCaptionParser.cleanTitle("🎤 1. 가을 음악회")).isEqualTo("가을 음악회");
     assertThat(RuleCaptionParser.cleanTitle("<가상 작품> 전시")).isEqualTo("<가상 작품> 전시");

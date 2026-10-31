@@ -92,9 +92,27 @@ class CaptionDateParserTest {
   }
 
   @Test
-  void 범위가_아닌_날짜가_여러_개면_고르지_않음() {
+  void 범위가_아닌_날짜가_여러_개면_고르지_않고_AI_몫() {
     Result r = CaptionDateParser.parse("2026. 11. 5.(목), 11. 12.(목) 14:00");
-    assertThat(r.kind()).isEqualTo(Kind.NO_DATE);
+    assertThat(r.kind()).isEqualTo(Kind.UNREADABLE);
     assertThat(r.reason()).contains("여러");
+  }
+
+  @Test
+  void 물결_뒤_종료일_모양을_못_읽으면_하루짜리로_두지_않음() {
+    // "~ 7.(토)" 를 무시하면 11/5 하루짜리로 잘못 올라감
+    assertThat(CaptionDateParser.parse("2026. 11. 5.(목) ~ 7.(토)").kind()).isEqualTo(Kind.UNREADABLE);
+    assertThat(CaptionDateParser.parse("2026. 11. 5. ~ 7.").kind()).isEqualTo(Kind.UNREADABLE);
+  }
+
+  @Test
+  void 연도는_있는데_모양이_다르면_AI_몫() {
+    assertThat(CaptionDateParser.parse("2026년 11월 5일(목)").kind()).isEqualTo(Kind.UNREADABLE);
+    assertThat(CaptionDateParser.parse("2026-11-05").kind()).isEqualTo(Kind.UNREADABLE);
+  }
+
+  @Test
+  void 시간_앞_슬래시는_떼고_보관() {
+    assertThat(CaptionDateParser.parse("2026. 11. 5.(목) / 19:00").timeText()).isEqualTo("19:00");
   }
 }

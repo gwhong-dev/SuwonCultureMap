@@ -19,7 +19,9 @@ public final class CaptionDateParser {
   private CaptionDateParser() {
   }
 
-  public enum Kind { OK, NO_DATE, INVALID }
+  // NO_DATE   : 날짜가 정말 없음 (반복 · 일 없음 · 시작일 없음 · 연도 없음) → 보류
+  // UNREADABLE: 날짜가 있어 보이는데 규칙이 못 읽음 (다른 모양 · 여러 회차 · 종료일 모양) → AI 몫
+  public enum Kind { OK, NO_DATE, UNREADABLE, INVALID }
 
   public record Result(Kind kind, LocalDate start, LocalDate end, String timeText, String reason) {
   }
@@ -35,6 +37,7 @@ public final class CaptionDateParser {
   // 연도 없는 "M. D." (시작일 없는 줄 판단 · 날짜 여러 개 판단용)
   private static final Pattern MONTH_DAY = Pattern.compile("(?<![\\d:])(\\d{1,2})\\s*\\.\\s*(\\d{1,2})(?![\\d:])");
   private static final Pattern TIME = Pattern.compile("\\d{1,2}:\\d{2}");
+  private static final Pattern YEAR = Pattern.compile("(?<!\\d)(?:19|20)\\d{2}(?!\\d)");
 
   private static final Map<String, DayOfWeek> WEEKDAYS = Map.of(
       "월", DayOfWeek.MONDAY, "화", DayOfWeek.TUESDAY, "수", DayOfWeek.WEDNESDAY,
@@ -47,11 +50,11 @@ public final class CaptionDateParser {
 
     Matcher full = FULL.matcher(v);
     if (!full.find()) {
-      String reason = v.contains("매주") ? "반복 일정 (날짜 없음)"
-          : v.matches(".*\\d{4}\\s*\\.\\s*\\d{1,2}\\s*월.*") ? "일(日) 없음"
-          : v.startsWith("~") ? "시작일 없음"
-          : "연도가 있는 시작일을 못 찾음";
-      return noDate(v, reason);
+      if (v.contains("매주")) return noDate(v, "반복 일정 (날짜 없음)");
+      if (v.matches(".*\\d{4}\\s*\\.\\s*\\d{1,2}\\s*월.*")) return noDate(v, "일(日) 없음");
+      if (v.startsWith("~")) return noDate(v, "시작일 없음");
+      if (!YEAR.matcher(v).find()) return noDate(v, "연도 없음 (추측하지 않음)");
+      return unreadable(v, "연도는 있는데 날짜 모양을 못 읽음");
     }
     // "~ 2026. 11. 30.까지" 처럼 연도 있는 날짜가 "~" 뒤에만 있으면 그건 종료일 → 시작일 없음
     if (v.substring(0, full.start()).contains("~")) return noDate(v, "시작일 없음");
@@ -67,7 +70,12 @@ public final class CaptionDateParser {
     LocalDate end = start;
     String rest = v.substring(full.end());
     Matcher endM = RANGE_END.matcher(rest);
-    if (endM.find()) {
+    boolean hasTilde = rest.stripLeading().startsWith("~");
+    if (hasTilde && !endM.find()) {
+      // "~ 7.(토)" 처럼 종료일 모양을 못 읽음 → 하루짜리로 두면 틀린 기간이 지도에 오름
+      return unreadable(v, "종료일 모양을 못 읽음");
+    }
+    if (hasTilde) {
       boolean yearGiven = endM.group(1) != null;
       int year = yearGiven ? num(endM.group(1)) : start.getYear();
       try {
@@ -89,10 +97,10 @@ public final class CaptionDateParser {
 
     // 범위가 아닌 날짜가 더 있으면(여러 회차) 규칙으로 하나를 고르지 않음
     if (FULL.matcher(rest).find() || MONTH_DAY.matcher(rest).find()) {
-      return noDate(v, "날짜가 여러 개 (여러 회차)");
+      return unreadable(v, "날짜가 여러 개 (여러 회차)");
     }
 
-    String timeText = TIME.matcher(rest).find() ? CaptionText.blankToNull(rest.replaceFirst("^[\\s,·]+", "")) : null;
+    String timeText = TIME.matcher(rest).find() ? CaptionText.blankToNull(rest.replaceFirst("^[\\s,·/]+", "")) : null;
     return new Result(Kind.OK, start, end, timeText, null);
   }
 
@@ -106,6 +114,10 @@ public final class CaptionDateParser {
 
   private static Result noDate(String timeText, String reason) {
     return new Result(Kind.NO_DATE, null, null, timeText, reason);
+  }
+
+  private static Result unreadable(String timeText, String reason) {
+    return new Result(Kind.UNREADABLE, null, null, timeText, reason);
   }
 
   private static Result invalid(String reason) {

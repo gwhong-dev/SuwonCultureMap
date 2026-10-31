@@ -46,6 +46,27 @@ class ParsedEventValidatorTest {
   }
 
   @Test
+  void 본문의_다른_연도와_월일을_짜_맞추면_FAILED() {
+    String text = BLOCK + "\n2025년 수상작 재공연 #2025수원";
+    var r = ParsedEventValidator.validate(event(LocalDate.of(2025, 11, 5), null, null), text);
+    assertThat(r.status()).isEqualTo(CandidateStatus.FAILED);
+  }
+
+  @Test
+  void 소수는_날짜로_인정하지_않음() {
+    String text = "2026년 공연, 러닝타임 1.5시간, 참가비 3.5만원";
+    assertThat(ParsedEventValidator.monthDayInText(text, LocalDate.of(2026, 1, 5))).isFalse();
+    assertThat(ParsedEventValidator.monthDayInText(text, LocalDate.of(2026, 3, 5))).isFalse();
+    assertThat(ParsedEventValidator.monthDayInText("2026.11.05", LocalDate.of(2026, 11, 5))).isTrue();
+  }
+
+  @Test
+  void 장소는_원문과_같은_정리를_거친_뒤_비교() {
+    var nbsp = event(LocalDate.of(2026, 11, 5), null, "가상\u00A0아트홀");
+    assertThat(ParsedEventValidator.validate(nbsp, BLOCK).event().placeName()).isEqualTo("가상 아트홀");
+  }
+
+  @Test
   void 해_넘김_종료_연도는_원문에_없어도_인정() {
     String text = "겨울 빛 축제\n🗓 2026. 12. 28.(월) ~ 1. 3.(일)";
     var r = ParsedEventValidator.validate(event(LocalDate.of(2026, 12, 28), LocalDate.of(2027, 1, 3), null), text);
@@ -78,6 +99,7 @@ class ParsedEventValidatorTest {
     var no = new ParsedEvent(false, null, null, null, null, null, null);
     var unknown = new ParsedEvent(null, "x", null, null, null, null, null);
     assertThat(ParsedEventValidator.validate(no, BLOCK).status()).isEqualTo(CandidateStatus.SKIPPED);
+    assertThat(ParsedEventValidator.validate(no, BLOCK).event()).isNull(); // 검사 안 된 값은 넘기지 않음
     assertThat(ParsedEventValidator.validate(unknown, BLOCK).status()).isEqualTo(CandidateStatus.FAILED);
   }
 

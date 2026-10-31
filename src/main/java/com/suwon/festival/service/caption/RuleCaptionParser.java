@@ -1,6 +1,7 @@
 package com.suwon.festival.service.caption;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 // 규칙 기반 파서: 🗓️ · 📍 라벨 줄이 있는 블록을 읽는다 (설계 문서 5번 "규칙 기반 파서가 먼저")
@@ -31,7 +32,7 @@ public final class RuleCaptionParser {
   private static final List<String> NOTICE_WORDS = List.of(
       "운행", "파업", "통제", "휴관", "휴무", "운영 중단", "운영중단", "공지", "안내드립니다", "변경 안내", "모집 마감");
 
-  // 제목 앞 머리표: "1. " "① " "▶" "■" 이모지 등
+  // 제목 앞 번호: "1. " "① " (이모지 · ▶ ■ 같은 기호는 cleanTitle 의 반복문이 뗌)
   private static final Pattern TITLE_PREFIX = Pattern.compile("^(?:\\d{1,2}[.)]\\s+|[①-⑳]\\s*)");
 
   public static Outcome parse(CaptionBlock block) {
@@ -41,13 +42,21 @@ public final class RuleCaptionParser {
     String placeLine = first(block, CaptionLabel.PLACE);
     String timeLine = first(block, CaptionLabel.TIME);
 
+    // 날짜 줄이 2개 이상(신청 기간 + 행사일, 회차별, 빈 줄 없이 붙은 두 행사) → 규칙이 고르지 않음
+    if (block.labelLines().stream().filter(l -> CaptionLabel.of(l) == CaptionLabel.DATE).count() > 1) {
+      return new Unsure("날짜 줄이 여러 개");
+    }
     String title = cleanTitle(block.title());
     if (title == null) return new Unsure("제목 줄 없음");
-    if (containsNotice(block.text())) return new Unsure("공지로 보이는 낱말");
+    // 공지 낱말은 제목 + 라벨 줄에서만 찾음 (본문의 "교통 통제" · 해시태그 "#공지" 때문에 행사를 미루지 않게)
+    if (containsNotice(block.title() + "\n" + String.join("\n", block.labelLines()))) {
+      return new Unsure("공지로 보이는 낱말");
+    }
     if (placeLine == null) return new Unsure("장소 줄 없음");
 
     CaptionDateParser.Result date = CaptionDateParser.parse(CaptionLabel.content(dateLine));
     if (date.kind() == CaptionDateParser.Kind.INVALID) return new Invalid(date.reason());
+    if (date.kind() == CaptionDateParser.Kind.UNREADABLE) return new Unsure(date.reason());
 
     String timeText = date.timeText();
     if (timeLine != null) {
@@ -93,7 +102,7 @@ public final class RuleCaptionParser {
   }
 
   private static boolean hasAny(String text, String... words) {
-    String lower = text.toLowerCase();
+    String lower = text.toLowerCase(Locale.ROOT);
     for (String w : words) {
       if (lower.contains(w)) return true;
     }
