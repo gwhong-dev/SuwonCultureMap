@@ -32,10 +32,10 @@
     - [x] 2단계 장소 → 좌표 (`service/place/`, 카카오 키워드 검색 + 수원 범위 · 이름 확인 · 1건 좁히기)
     - [x] 2단계 카카오맵 API 활성화 확인 (사용자, 10/31 — 사용 설정 ON)
     - [ ] 3단계 데이터 모델 — ① Flyway 도입 ② B안(`Event` 출처 칸 · `instagram_media` · `instagram_block`)
-      - [ ] Flyway 사용자 PC 확인: `git pull` → `scripts\use-flyway-dev.cmd` → 앱 실행 → 로그 `Successfully baselined schema with version: 1` · 정상 시작 → 지도 · 로그인 · 찜 동작
+      - [x] Flyway 사용자 PC 확인: `git pull` → `scripts\use-flyway-dev.cmd` → 앱 실행 → 로그 `Successfully baselined schema with version: 1` · 정상 시작 → 지도 · 로그인 · 찜 동작
       - [x] B안 V2 — `event.source` · `source_key` 추가, `idx` NULL 허용, `instagram_media` · `instagram_block` 표 (#32 위에 얹은 PR)
-      - [ ] V2 사용자 PC 확인: 앱 실행 → 로그 `Migrating schema ... to version "2"` · 정상 시작 → 지도 · 찜 그대로
-        - 1차 시도(10/31) ❌ `Duplicate column name 'source'` — Flyway 도입 전 ddl-auto=update 로 Hibernate 가 source 칸 · 인스타 표를 먼저 만들어 둔 상태. `scripts\repair-flyway-v2.cmd`(검사 → Y 확인 → 빈 표 · 빈 칸 · 실패 기록만 삭제)로 되돌린 뒤 재실행
+      - [x] V2 사용자 PC 확인: 앱 실행 → 로그 `Migrating schema ... to version "2"` · 정상 시작 → 지도 · 찜 그대로
+        - 1차 시도(10/31) ❌ `Duplicate column name 'source'` — Flyway 도입 전 ddl-auto=update 로 Hibernate 가 source 칸 · 인스타 표를 먼저 만들어 둔 상태. `scripts\repair-flyway-v2.cmd`(검사 → Y 확인 → 빈 표 · 빈 칸 · 실패 기록만 삭제)로 되돌린 뒤 재실행 → 2차 ✅ (V2 적용 · 재단 행사 141건 유지 · 화면 정상)
     - [x] 4단계 게시물 수집 클라이언트 (`service/instagram/`, 가짜 서버 테스트) — 실제 Meta 호출 · 장기 토큰 · 호출 제한 · 삭제 감지는 5단계에서
 
 ## 🔜 다음 로드맵 (지원 후)
