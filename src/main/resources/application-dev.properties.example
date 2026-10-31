@@ -11,8 +11,8 @@ spring.datasource.url=jdbc:mysql://localhost:3306/suwon_culture_map
 spring.datasource.username=root
 spring.datasource.password=여기에_비밀번호
 
-# 개발 중엔 엔티티가 바뀌면 테이블도 자동 수정 + SQL 로그 보기
-spring.jpa.hibernate.ddl-auto=update
+# 테이블은 Flyway 가 만들고 바꿈 (db/migration/V*.sql) → JPA 는 검사만. SQL 로그 보기
+spring.jpa.hibernate.ddl-auto=validate
 spring.jpa.show-sql=true
 
 # 수원문화재단 API

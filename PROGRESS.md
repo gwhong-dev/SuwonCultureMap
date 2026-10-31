@@ -30,7 +30,9 @@
   - [ ] 1~6단계 구현 (설계 문서 6번 순서)
     - [x] 1단계 캡션 정리기 (`service/caption/`, 가상 캡션 단위 테스트)
     - [x] 2단계 장소 → 좌표 (`service/place/`, 카카오 키워드 검색 + 수원 범위 · 이름 확인 · 1건 좁히기)
-    - [ ] 2단계 실제 카카오 호출 확인 (사용자 PC — 카카오맵 API 활성화 여부)
+    - [x] 2단계 카카오맵 API 활성화 확인 (사용자, 10/31 — 사용 설정 ON)
+    - [ ] 3단계 데이터 모델 — ① Flyway 도입 ② B안(`Event` 출처 칸 · `instagram_post`)
+      - [ ] Flyway 사용자 PC 확인: `git pull` → `scripts\use-flyway-dev.cmd` → 앱 실행 → 로그 `Successfully baselined schema with version: 1` · 정상 시작 → 지도 · 로그인 · 찜 동작
     - [x] 4단계 게시물 수집 클라이언트 (`service/instagram/`, 가짜 서버 테스트) — 실제 Meta 호출 · 장기 토큰 · 호출 제한 · 삭제 감지는 5단계에서
 
 ## 🔜 다음 로드맵 (지원 후)
@@ -71,6 +73,8 @@
 | 10/31 | 작업 세션 | 인스타 1단계 캡션 정리기 — 행사 블록 나누기(날짜 라벨 묶음 기준) · 규칙 파서(🗓️·📍, `YYYY. M. D.(요일)`, 해 넘김 +1, 요일 검증) · AI 인터페이스(가짜 구현은 테스트만) · 다시 검사(블록 단위 `M. D.` 원문 대조, 원문에 없는 장소는 비움). AI 미연결이면 `PENDING` |
 | 10/31 | 작업 세션 | 인스타 2단계 장소 → 좌표 — 카카오 로컬 키워드 검색(`KakaoAK` 헤더, 수원시청 반경 20km), 수원 판정(주소 `경기 수원시` + 좌표 범위), 이름 확인(결과 이름 = 검색어 또는 검색어 ⊇ 결과 이름), 다음 페이지가 있으면 정확히 같은 이름만, 넓은 말 · 여러 장소 · 동/구/시 이름뿐 → 검색 안 함. 리뷰 ❌ 1건(1건이면 이름 확인 없이 찍힘) 반영 |
 | 10/31 | 작업 세션 | 인스타 4단계 수집 클라이언트 — Business Discovery(`v25.0`, 토큰은 Bearer 헤더로만, `fields` 엄격 인코딩), 계정 이름 · 개수(1~25) · 토큰 글자 검사, 오류는 종류 + Graph 번호만(원문 · 토큰 X), 게시물 `toString` 에 캡션 원문 안 남김. 리뷰 ⚠️ 반영(토큰에 줄바꿈 섞이면 예외 메시지에 토큰 노출 → 호출 전 차단) |
+| 10/31 | 사용자 | 3단계 결정 — 데이터 모델 B(행사는 `Event` 한 표, 출처별 상태 표 따로), 캡션 원문 저장 안 함, 사람 확인 없이 엄격한 검사 후 자동 노출, Flyway 도입 |
+| 10/31 | 작업 세션 | Flyway 도입 — `V1__init.sql`(현재 테이블 4개), 기존 DB는 baseline(버전 1로 표시 · V1 건너뜀), `ddl-auto=validate`, 테스트도 같은 스크립트로 테이블 생성, 내 PC 설정 변경 스크립트 `scripts/use-flyway-dev.cmd` |
 
 ## ⚠️ 막힌 것 / 메모
 
@@ -88,7 +92,7 @@
 - [ ] PR #8 머지 후 dev 파일의 `kakao.redirect-uri`·`google.redirect-uri` 줄 삭제 (`app.base-url`로 자동 생성되게)
 - [ ] 네이버 토큰 요청 URL에 `code`를 인코딩 없이 붙임 (`NaverAuthService.java:29-34`) — state 검증 뒤라 위험 낮아 보류 (PR #17 리뷰)
 - [ ] 개발 확인용 `/api/events/sync/raw` · `/sync/parsed` 정리, `POST /api/events/sync` 도 로그인 없이 호출 가능 — 운영 배포 전에 제거하거나 관리자 전용으로 (자체 발견 + PR #18 리뷰)
-- [ ] prod `spring.jpa.hibernate.ddl-auto=update` → DB 마이그레이션 도구(Flyway 등) 도입 후 `validate` (PR #8 리뷰)
+- [x] prod `spring.jpa.hibernate.ddl-auto=update` → DB 마이그레이션 도구(Flyway 등) 도입 후 `validate` (PR #8 리뷰) → Flyway 도입 PR
 - [ ] `setup-docker.ps1` 의 properties 특수 표기(`\=` `\:` `\uXXXX`, 줄 끝 `\` 이어쓰기) 미처리 — 현재 dev 견본 형식엔 해당 없음 (PR #14 리뷰)
 - [ ] 행사 제목에 `&#39;`가 그대로 보임 (예: `&#39;어울야락(夜樂)&#39;`, 폰 테스트 중 발견) — `title`은 이미 `htmlUnescape` 함(`EventSyncService.java:63`). 사용자 PC에서 **재동기화 후에도 남는지** 확인 → 남으면 원문 XML 인코딩 횟수(이중 이상) 확인 (PR #20 리뷰)
 - [ ] 캘린더: 안드로이드는 `.ics`를 파일로만 받는 경우가 많음 → 모바일에서도 구글 캘린더 버튼 노출 검토 (테스트 기기 없음, PR #21 리뷰)
