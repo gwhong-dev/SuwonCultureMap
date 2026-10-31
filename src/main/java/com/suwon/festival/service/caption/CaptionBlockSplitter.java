@@ -1,7 +1,11 @@
 package com.suwon.festival.service.caption;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 // 캡션을 행사 블록으로 나눈다 (월간 모음 글 = 한 글에 행사 여러 개)
 //
@@ -11,7 +15,14 @@ import java.util.List;
 // 2) 제목 = 묶음 바로 위의 (빈 줄 건너뛴) 첫 번째 일반 줄
 // 3) 블록 원문 = 제목 줄부터 다음 블록 제목 줄 직전까지 (첫 제목 위 머리말은 제외)
 // 4) 날짜 묶음이 하나도 없으면 캡션 전체가 블록 1개 (규칙으로는 못 읽음 → AI 몫)
+// 5) 단일 행사 글(날짜 묶음 1개)에서 제목 줄에 작품명 괄호가 없고, 머리말에 작품명(<…> 〈…〉 《…》)이
+//    딱 1종류 있으면 그 이름을 제목으로 (시설 계정 글은 라벨 위 줄이 소개 문장인 경우가 많음, 10/31 실측)
+//    - 모음 글은 머리말 작품명이 "모음 제목"일 수 있어 적용 안 함
+//    - 2종류 이상이면 어느 쪽인지 모름 → 기존 제목 줄 유지
 public final class CaptionBlockSplitter {
+
+  // 같은 줄 안에서 짝이 맞는 작품명 괄호. 안쪽 2~50자
+  static final Pattern WORK_NAME = Pattern.compile("<([^<>\\n]{2,50})>|〈([^〈〉\\n]{2,50})〉|《([^《》\\n]{2,50})》");
 
   private CaptionBlockSplitter() {
   }
@@ -63,10 +74,26 @@ public final class CaptionBlockSplitter {
         to = lines.size();
       }
       String title = titleIdx[r] >= 0 ? lines.get(titleIdx[r]).strip() : null;
+      if (runs.size() == 1 && title != null && workNames(title).isEmpty()) {
+        Set<String> names = workNames(String.join("\n", lines.subList(0, titleIdx[r])));
+        if (names.size() == 1) title = names.iterator().next();
+      }
       List<String> labels = lines.subList(run[0], run[1]).stream().map(String::strip).toList();
       String text = String.join("\n", lines.subList(from, to)).strip();
       blocks.add(new CaptionBlock(title, labels, text));
     }
     return blocks;
+  }
+
+  // 글 안의 작품명(괄호 안쪽, 앞뒤 공백 정리) — 나온 순서대로, 중복 없이
+  static Set<String> workNames(String text) {
+    Set<String> names = new LinkedHashSet<>();
+    Matcher m = WORK_NAME.matcher(text);
+    while (m.find()) {
+      String g = m.group(1) != null ? m.group(1) : m.group(2) != null ? m.group(2) : m.group(3);
+      String name = g.strip().replaceAll("\\s+", " ");
+      if (name.codePoints().anyMatch(Character::isLetterOrDigit)) names.add(name);
+    }
+    return names;
   }
 }
