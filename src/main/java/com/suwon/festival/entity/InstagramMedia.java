@@ -74,6 +74,14 @@ public class InstagramMedia {
     this.status = Status.COLLECTED;
   }
 
+  // 다시 수집했을 때 바뀔 수 있는 값만 갱신 (링크 · 게시 시각). 상태는 정리를 다시 거쳐야 하므로 COLLECTED 로
+  public void recollect(String permalink, LocalDateTime postedAt, LocalDateTime at) {
+    this.permalink = permalink;
+    this.postedAt = postedAt;
+    this.collectedAt = at;
+    this.status = Status.COLLECTED;
+  }
+
   public void markProcessed(LocalDateTime at) {
     this.status = Status.PROCESSED;
     this.reason = null;

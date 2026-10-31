@@ -73,6 +73,16 @@ $lines = @(
     ('MYSQL_ROOT_PASSWORD=' + (New-Password))
 )
 foreach ($e in $map.GetEnumerator()) { $lines += ($e.Key + '=' + (Escape-Value $props[$e.Value])) }
+# 인스타 수집은 선택 → dev 파일에 값이 있을 때만 넣음 (없으면 compose 기본값 = 빈 값 → 수집 안 함)
+$optional = [ordered]@{
+    INSTAGRAM_ACCESS_TOKEN = 'instagram.access-token'
+    INSTAGRAM_USER_ID      = 'instagram.user-id'
+}
+foreach ($e in $optional.GetEnumerator()) {
+    if ($props.ContainsKey($e.Value) -and -not [string]::IsNullOrWhiteSpace($props[$e.Value])) {
+        $lines += ($e.Key + '=' + (Escape-Value $props[$e.Value]))
+    }
+}
 
 [System.IO.File]::WriteAllLines($envFile, $lines, (New-Object System.Text.UTF8Encoding $false))
 Write-Host '[완료] .env 생성'
