@@ -233,4 +233,35 @@ class PlaceGeocoderTest {
     assertThat(r.status()).isEqualTo(Status.ERROR);
     assertThat(r.reason()).doesNotContain("secret");
   }
+
+  @Test
+  void 마지막_단어가_방_층_모양이_아니면_떼지_않음() {
+    // "가상문" 은 독립된 장소일 수 있음 → "가상성" 대표 좌표에 찍지 않음
+    MapSearch s = new MapSearch().on("가상성", suwon("가상성"));
+    var r = new PlaceGeocoder(s).geocode("가상성 가상문");
+    assertThat(r.status()).isEqualTo(Status.NO_COORD);
+    assertThat(s.queries).containsExactly("가상성 가상문");
+    assertThat(r.reason()).doesNotContain("줄여도");
+  }
+
+  @Test
+  void 줄인_말이_생활권_이름이면_멈춤() {
+    MapSearch s = new MapSearch().on("서수원", suwon("서수원"));
+    assertThat(new PlaceGeocoder(s).geocode("서수원 야외무대").status()).isEqualTo(Status.NO_COORD);
+    assertThat(s.queries).containsExactly("서수원 야외무대");
+  }
+
+  @Test
+  void 다음_페이지가_있어도_줄인_검색어가_정확히_같으면_FOUND() {
+    var r = new PlaceGeocoder(new FakeSearch(suwon("가상 아트홀")).more()).geocode("가상 아트홀 2층");
+    assertThat(r.status()).isEqualTo(Status.FOUND);
+    assertThat(r.place().name()).isEqualTo("가상 아트홀");
+  }
+
+  @Test
+  void 줄여서도_못_찾으면_이유에_표시() {
+    var r = new PlaceGeocoder(new MapSearch()).geocode("가상센터 대강당");
+    assertThat(r.status()).isEqualTo(Status.NO_COORD);
+    assertThat(r.reason()).contains("수원 안 검색 결과 없음").endsWith("(줄여도 없음)");
+  }
 }

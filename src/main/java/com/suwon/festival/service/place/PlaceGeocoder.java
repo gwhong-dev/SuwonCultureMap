@@ -20,7 +20,10 @@ import org.springframework.web.client.RestClientResponseException;
 // 6) 검색 호출 실패는 ERROR (다음 실행에서 다시 시도). 예외 내용(키가 섞일 수 있음)은 남기지 않고 HTTP 상태 번호만
 // 7) 검색 전 다듬기: 괄호 부연 "(1F)" "(1층 전시홀, 3층 컨벤션홀)" 과 앞 라벨 "집결지:" 를 지움 (괄호 속 쉼표로 "여러 곳" 오판 방지)
 // 8) 못 찾으면 뒤 단어를 하나씩 떼고 다시 검색 (최대 2번): "수원시청 본관 로비" → "수원시청 본관" → "수원시청"
-//    줄인 검색어는 결과 이름과 "정확히 같을 때만" 인정, 3글자 미만 · 지역 이름뿐이면 멈춤 → 방 · 층 대신 건물 좌표에 찍힘
+//    - 떼는 단어는 방 · 층 모양(숫자 포함, "로비" "홀" "강당" "극장" "체육관" …)일 때만 → "수원화성 장안문" 처럼 독립된 장소는 안 뗌
+//    - 줄인 검색어는 결과 이름과 "정확히 같을 때만" 인정
+//    - 3글자 미만 · 지역 이름뿐 · 생활권 이름(서수원 · 영통 …) · 범위가 넓은 말이면 멈춤
+//    → 방 · 층 대신 건물 좌표에 찍힘
 @Service
 public class PlaceGeocoder {
 
@@ -51,6 +54,14 @@ public class PlaceGeocoder {
   // 앞 라벨: "집결지:" "장소 :" (한글 2~5자 + 콜론)
   private static final Pattern LEAD_LABEL = Pattern.compile("^[가-힣]{2,5}\\s*[:：]\\s*");
 
+  // 떼어도 되는 마지막 단어: 숫자가 있거나(홀1 · 1층 · 401호) 방 · 층 · 부속 시설 이름으로 끝남
+  // "관" "장" 처럼 짧은 끝말은 넣지 않음 (박물관 · 도서관 · 시장 같은 독립된 장소를 떼어 버림)
+  private static final Pattern ROOM_WORD = Pattern.compile(
+      ".*\\d.*|.*(층|본관|별관|신관|상영관|체육관|교육관|홀|로비|라운지|극장|구장|강당|무대|광장|마당|입구|앞|주차장|회의실|강의실|세미나실|교육실|전시실)");
+  // 동 · 구 접미사가 없는 생활권 이름 (줄인 검색어가 이것이면 멈춤)
+  private static final java.util.Set<String> AREA_NAMES = java.util.Set.of(
+      "서수원", "북수원", "남수원", "동수원", "호매실", "광교", "영통", "행궁", "인계", "매탄", "권선", "장안", "팔달", "수원");
+
   private final PlaceSearchClient client;
 
   public PlaceGeocoder(PlaceSearchClient client) {
@@ -72,11 +83,15 @@ public class PlaceGeocoder {
 
     // 못 찾음 → 뒤 단어를 떼고 다시 (정확히 같은 이름만)
     String shorter = q;
+    boolean tried = false;
     for (int i = 0; i < SHORTEN_MAX; i++) {
+      String last = lastWord(shorter);
+      if (last == null || !ROOM_WORD.matcher(last).matches()) break; // 방 · 층 모양이 아니면 떼지 않음
       shorter = dropLastWord(shorter);
-      if (shorter == null) break;
       String sq = squash(shorter);
-      if (sq.length() < SHORTENED_MIN || REGION_ONLY.matcher(sq).matches() || VAGUE.matcher(shorter).find()) break;
+      if (sq.length() < SHORTENED_MIN || REGION_ONLY.matcher(sq).matches() || AREA_NAMES.contains(sq)
+          || VAGUE.matcher(shorter).find()) break;
+      tried = true;
       PlaceSearchClient.Page page;
       try {
         page = client.search(shorter);
@@ -90,7 +105,7 @@ public class PlaceGeocoder {
       if (exact.size() == 1) return new Result(Status.FOUND, exact.get(0), null);
       if (exact.size() > 1) return noCoord(AMBIGUOUS + " 이름이 같은 곳 " + exact.size() + "건 (줄인 검색어)");
     }
-    return first;
+    return tried ? noCoord(first.reason() + " (줄여도 없음)") : first;
   }
 
   // 검색 1번 + 수원 · 이름 확인 (1~4번 규칙)
@@ -128,6 +143,12 @@ public class PlaceGeocoder {
       q = PAREN.matcher(q).replaceAll(" ");
     } while (!q.equals(before));
     return q.replaceAll("\\s+", " ").strip();
+  }
+
+  // "수원시청 본관 로비" → "로비", 한 단어면 null
+  static String lastWord(String q) {
+    int i = q.lastIndexOf(' ');
+    return i <= 0 ? null : q.substring(i + 1);
   }
 
   // "수원시청 본관 로비" → "수원시청 본관", 한 단어면 null
