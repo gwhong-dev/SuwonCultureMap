@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -34,6 +36,8 @@ import com.suwon.festival.service.place.PlaceGeocoder;
 //  - 이미 READY 인 블록은 키(제목 + 시작일 + 장소)가 같으므로 좌표를 다시 찾지 않고 나머지 값만 갱신 → 카카오 호출 절약
 @Component
 public class InstagramPostProcessor {
+
+  private static final Logger BLOCK_LOG = LoggerFactory.getLogger(BlockLog.LOGGER_NAME);
 
   static final ZoneId KST = ZoneId.of("Asia/Seoul");
   private static final Pattern MEDIA_ID = Pattern.compile("^[0-9]{1,64}$");
@@ -163,6 +167,7 @@ public class InstagramPostProcessor {
         block.update(status, reason, event, now);
       }
       counts.merge(status, 1, Integer::sum);
+      BLOCK_LOG.info(BlockLog.line(post.id(), r, status, reason));
     }
 
     media.markProcessed(now);
