@@ -31,7 +31,7 @@
     - [x] 1단계 캡션 정리기 (`service/caption/`, 가상 캡션 단위 테스트)
     - [x] 2단계 장소 → 좌표 (`service/place/`, 카카오 키워드 검색 + 수원 범위 · 이름 확인 · 1건 좁히기)
     - [x] 2단계 카카오맵 API 활성화 확인 (사용자, 10/31 — 사용 설정 ON)
-    - [ ] 3단계 데이터 모델 — ① Flyway 도입 ② B안(`Event` 출처 칸 · `instagram_post`)
+    - [ ] 3단계 데이터 모델 — ① Flyway 도입 ② B안(`Event` 출처 칸 · `instagram_media` · `instagram_block`)
       - [ ] Flyway 사용자 PC 확인: `git pull` → `scripts\use-flyway-dev.cmd` → 앱 실행 → 로그 `Successfully baselined schema with version: 1` · 정상 시작 → 지도 · 로그인 · 찜 동작
       - [x] B안 V2 — `event.source` · `source_key` 추가, `idx` NULL 허용, `instagram_media` · `instagram_block` 표 (#32 위에 얹은 PR)
       - [ ] V2 사용자 PC 확인: 앱 실행 → 로그 `Migrating schema ... to version "2"` · 정상 시작 → 지도 · 찜 그대로
@@ -114,6 +114,7 @@
 - [ ] 인스타 캡션 정리기(PR #30 리뷰 보류): 시간 원문은 `HH:MM` 이 있을 때만 보관 → `오후 7시` 같은 표기는 빠짐 (사소)
 - [ ] 인스타 장소 → 좌표(PR #31 리뷰 보류): 영구 오류(4xx, 예: 카카오맵 API 꺼짐 403)도 매번 재시도됨 → 5단계(저장 · 동기화 연결)에서 재시도 정책
 - [ ] 인스타 수집(PR #33 리뷰 보류 → 5단계): 장기 토큰(60일) 교환 · 갱신, Live 모드 검수 여부, 호출 제한 수치, 삭제 · 비공개 게시물 감지(설계 7번 #7), 사용자 PC 에서 실제 `fetchRecent` 1회 실행 방법, docker-compose 에 `INSTAGRAM_*` 환경변수 전달
+- [ ] 인스타 저장(PR #34 리뷰 → 5단계): 인스타 행사를 지울 때 `instagram_block.event_id` · 찜 FK 순서 정하기, 저장 전에 `sourceKey` 가 꼭 있는지 검사(NULL 이면 unique 가 중복을 못 막음), `/api/events` 응답에 출처를 넣을지(6단계)
 - [ ] 인스타 장소 → 좌표(PR #31 리뷰 보류): "·" "/" 가 들어간 실제 장소명 · 괄호 부연("(우천 시 실내)")은 지금 `NO_COORD` (안전한 쪽 손해) → 실제 수집 결과 보고 괄호 제거 등 검토
 - [ ] 인스타 스크립트: 콘솔에서 한글 프롬프트가 두 번씩 보이는 현상(출력 복사 텍스트에서 확인) — 기능에는 영향 없음, 원인 미확인(`chcp 65001` + `Read-Host` 추정)
 - [ ] 인스타: 다른 계정에서도 5개 필드가 오는지, 현재 앱 모드(개발/Live) 확인

@@ -50,11 +50,20 @@ public class EventSyncService {
   }
 
   public SyncResult syncEvents() throws Exception {
-    List<EventItem> items = fetchEventItems();
+    return syncItems(fetchEventItems());
+  }
+
+  // 받아 온 재단 행사 목록을 DB 에 반영 (테스트에서 목록을 직접 넣을 수 있게 분리)
+  SyncResult syncItems(List<EventItem> items) {
     int savedCount = 0;
     int updatedCount = 0;
 
     for (EventItem item : items) {
+      // 재단 번호가 없으면 건너뜀. V2 에서 idx 가 NULL 허용이 되어(인스타 행사용) DB 가 더는 막아 주지 않음
+      // → 그대로 두면 findByIdx(null) 이 인스타 행사와 맞물려 덮어쓰거나 동기화가 멈출 수 있음
+      if (item.idx == null) {
+        continue;
+      }
       if (item.coordinate == null || item.coordinate.lat == null || item.coordinate.lng == null) {
         continue; // 좌표 정보가 불완전한 행사는 건너뜀
       }

@@ -23,7 +23,7 @@ import com.suwon.festival.entity.InstagramMedia;
 import com.suwon.festival.entity.LoginMethod;
 import com.suwon.festival.entity.Member;
 
-// 테이블이 Flyway 스크립트(V*.sql)로 만들어지고, 엔티티 4개의 모든 칸이 그 테이블과 맞는지 확인
+// 테이블이 Flyway 스크립트(V*.sql)로 만들어지고, 엔티티(행사 · 회원 · 로그인 · 찜 · 인스타 게시물 · 블록)의 칸이 그 테이블과 맞는지 확인
 //  - 칸 이름 · NOT NULL · 길이가 틀리면 저장이나 조회에서 바로 깨짐
 @SpringBootTest
 @ActiveProfiles("test")

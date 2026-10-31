@@ -5,11 +5,14 @@
 -- - 캡션 원문은 저장하지 않음 (설계 문서 8번 결정)
 -- - 작성 원칙(설계 문서 4번): 기존 제약 이름을 직접 지정해 지우거나 바꾸지 않음 → 칸 단위 변경만, 새 제약만 이름 붙임
 --
--- 되돌리기(필요할 때 수동, 인스타 행사가 아직 없을 때만):
+-- 되돌리기(필요할 때 수동, 인스타 행사가 아직 없을 때만). 순서 중요:
 --   DROP TABLE instagram_block; DROP TABLE instagram_media;
---   ALTER TABLE event DROP COLUMN source_key; ALTER TABLE event DROP COLUMN source;
+--   ALTER TABLE event DROP INDEX uk_event_source_key;   -- 먼저 지움 (칸부터 지우면 MySQL 이 source 하나짜리 unique 로 남겨 실패)
+--   ALTER TABLE event DROP COLUMN source_key, DROP COLUMN source;
 --   ALTER TABLE event MODIFY COLUMN idx BIGINT NOT NULL;
 --   DELETE FROM flyway_schema_history WHERE version = '2';
+-- 중간 실패 시: MySQL 의 DDL 은 하나씩 바로 반영됨 → 이미 적용된 문장만 위 순서로 되돌리고,
+--   flyway_schema_history 에서 success = 0 인 version '2' 행을 지운 뒤 다시 실행
 
 ALTER TABLE event MODIFY COLUMN idx BIGINT NULL;
 ALTER TABLE event ADD COLUMN source VARCHAR(20) NOT NULL DEFAULT 'SWCF';
