@@ -194,4 +194,20 @@ class CaptionParserTest {
     assertThat(RuleCaptionParser.category("가상시 체육대회")).isEqualTo("스포츠");
     assertThat(RuleCaptionParser.category("가상 기념식")).isEqualTo("행사");
   }
+
+  @Test
+  void 작품명_제목이어도_카테고리는_원래_제목_줄까지_봄() {
+    String c = "〈가상의 밤〉\n공연도 즐기고 가을밤도 즐기는 시간!\n🗓️ 2026. 11. 5.(목) 19:30\n📍 장소: 가상 아트홀";
+    BlockResult r = new CaptionParser(null).parse(c).get(0);
+    assertThat(r.status()).isEqualTo(CandidateStatus.PARSED);
+    assertThat(r.event().title()).isEqualTo("가상의 밤");
+    assertThat(r.event().category()).isEqualTo("공연");
+  }
+
+  @Test
+  void 작품명_제목이어도_원래_제목_줄의_공지_낱말은_걸러냄() {
+    String c = "<가상 공연>\n공연 일정 변경 안내\n🗓️ 2026. 11. 5.(목)\n📍 가상 아트홀";
+    BlockResult r = new CaptionParser(null).parse(c).get(0);
+    assertThat(r.status()).isEqualTo(CandidateStatus.PENDING);
+  }
 }
