@@ -113,7 +113,7 @@ public class InstagramPostProcessor {
           Event linked = block != null && block.getStatus() == InstagramBlock.Status.READY ? block.getEvent() : null;
           if (linked != null) {
             // 키가 같으면 장소도 같음 → 좌표는 그대로 두고 나머지만 갱신
-            linked.updateFrom(toEvent(e, linked.getLatitude(), linked.getLongitude(), post, postedAt, sourceKey));
+            linked.updateFrom(toEvent(e, linked.getLatitude(), linked.getLongitude(), post, postedAt, now, sourceKey));
             event = linked;
             status = InstagramBlock.Status.READY;
             reason = null;
@@ -122,7 +122,7 @@ public class InstagramPostProcessor {
             PlaceGeocoder.Result geo = geocoder.geocode(e.placeName());
             switch (geo.status()) {
               case FOUND -> {
-                Event latest = toEvent(e, geo.place().lat(), geo.place().lng(), post, postedAt, sourceKey);
+                Event latest = toEvent(e, geo.place().lat(), geo.place().lng(), post, postedAt, now, sourceKey);
                 Event found = eventRepository.findBySourceAndSourceKey(Event.SOURCE_INSTAGRAM, sourceKey).orElse(null);
                 if (found == null) {
                   event = eventRepository.save(latest);
@@ -170,14 +170,14 @@ public class InstagramPostProcessor {
   }
 
   private static Event toEvent(ParsedEvent e, double lat, double lng, InstagramPost post, LocalDateTime postedAt,
-      String sourceKey) {
+      LocalDateTime now, String sourceKey) {
     return Event.builder()
         .idx(null)
         .title(cut(e.title(), 255))
         .category(e.category() == null ? "기타" : e.category())
         .latitude(lat)
         .longitude(lng)
-        .pubDate(postedAt != null ? postedAt : LocalDateTime.now(KST))
+        .pubDate(postedAt != null ? postedAt : now) // 게시 시각이 없으면 처리 시각
         .startDate(e.startDate())
         .endDate(e.endDate())
         .link(cut(post.permalink(), 1000))

@@ -76,7 +76,10 @@ public class InstagramSyncService {
           duplicates += o.duplicateBlocks();
         } catch (RuntimeException e) {
           postErrors++;
-          log.warn("인스타 게시물 처리 실패 account={} mediaId={} {}", account, post.id(), e.getClass().getSimpleName());
+          // 메시지는 남기지 않음 (DB 오류 메시지에 값이 섞일 수 있음) → 예외 종류와 원인 종류만
+          Throwable cause = e.getCause();
+          log.warn("인스타 게시물 처리 실패 account={} mediaId={} {}{}", account, post.id(), e.getClass().getSimpleName(),
+              cause == null ? "" : " ← " + cause.getClass().getSimpleName());
         }
       }
     }
