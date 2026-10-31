@@ -48,8 +48,10 @@ public final class RuleCaptionParser {
     }
     String title = cleanTitle(block.title());
     if (title == null) return new Unsure("제목 줄 없음");
+    // 원래 제목 줄 (머리말 작품명이 제목이 된 경우에도 공지 낱말 · 카테고리는 이 줄까지 봄)
+    String titleLine = block.text().lines().findFirst().orElse("");
     // 공지 낱말은 제목 + 라벨 줄에서만 찾음 (본문의 "교통 통제" · 해시태그 "#공지" 때문에 행사를 미루지 않게)
-    if (containsNotice(block.title() + "\n" + String.join("\n", block.labelLines()))) {
+    if (containsNotice(block.title() + "\n" + titleLine + "\n" + String.join("\n", block.labelLines()))) {
       return new Unsure("공지로 보이는 낱말");
     }
     if (placeLine == null) return new Unsure("장소 줄 없음");
@@ -65,7 +67,7 @@ public final class RuleCaptionParser {
     }
 
     String place = CaptionText.blankToNull(CaptionLabel.content(placeLine));
-    ParsedEvent event = new ParsedEvent(true, title, category(title), date.start(), date.end(), timeText, place);
+    ParsedEvent event = new ParsedEvent(true, title, category(title + "\n" + titleLine), date.start(), date.end(), timeText, place);
     return new Confident(event, date.kind() == CaptionDateParser.Kind.NO_DATE ? date.reason() : null);
   }
 
