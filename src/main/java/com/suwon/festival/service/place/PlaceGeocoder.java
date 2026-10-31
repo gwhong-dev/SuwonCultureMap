@@ -18,6 +18,9 @@ import org.springframework.web.client.RestClientResponseException;
 //    (다음 페이지가 있으면 이름이 정확히 같은 1건일 때만)
 // 5) "행궁동" "팔달구" 처럼 동 · 구 · 시 이름뿐인 검색어는 지역명 → 검색 안 함
 // 6) 검색 호출 실패는 ERROR (다음 실행에서 다시 시도). 예외 내용(키가 섞일 수 있음)은 남기지 않고 HTTP 상태 번호만
+// 7) 검색 전 다듬기: 괄호 부연 "(1F)" "(1층 전시홀, 3층 컨벤션홀)" 과 앞 라벨 "집결지:" 를 지움 (괄호 속 쉼표로 "여러 곳" 오판 방지)
+// 8) 못 찾으면 뒤 단어를 하나씩 떼고 다시 검색 (최대 2번): "수원시청 본관 로비" → "수원시청 본관" → "수원시청"
+//    줄인 검색어는 결과 이름과 "정확히 같을 때만" 인정, 3글자 미만 · 지역 이름뿐이면 멈춤 → 방 · 층 대신 건물 좌표에 찍힘
 @Service
 public class PlaceGeocoder {
 
@@ -27,6 +30,9 @@ public class PlaceGeocoder {
   }
 
   static final int QUERY_MAX = 100;
+  static final int SHORTEN_MAX = 2; // 뒤 단어를 떼고 다시 검색하는 최대 횟수 (카카오 호출 수 제한)
+  static final int SHORTENED_MIN = 3; // 줄인 검색어 최소 글자 수 (공백 제외)
+  static final String AMBIGUOUS = "여러 곳 중 못 고름:"; // 이유 앞머리 (줄여서 다시 검색하지 않는 경우)
 
   // 수원시 좌표 범위 (넉넉하게). 주소 검사와 함께 씀
   static final double LAT_MIN = 37.20, LAT_MAX = 37.36;
@@ -40,6 +46,10 @@ public class PlaceGeocoder {
   static final int CONTAINED_NAME_MIN = 3;
   // 장소 여러 곳: "A, B" / "A · B" / "A / B" / "A 및 B"
   private static final Pattern MULTI = Pattern.compile("[,，·/]|\\s및\\s");
+  // 괄호 부연 (안쪽에 괄호가 없는 것만, 여러 개면 모두)
+  private static final Pattern PAREN = Pattern.compile("[(（][^()（）]*[)）]");
+  // 앞 라벨: "집결지:" "장소 :" (한글 2~5자 + 콜론)
+  private static final Pattern LEAD_LABEL = Pattern.compile("^[가-힣]{2,5}\\s*[:：]\\s*");
 
   private final PlaceSearchClient client;
 
@@ -48,19 +58,48 @@ public class PlaceGeocoder {
   }
 
   public Result geocode(String placeName) {
-    String q = placeName == null ? "" : placeName.strip().replaceAll("\\s+", " ");
+    String q = tidy(placeName);
     if (q.length() < 2) return noCoord("장소 없음");
     if (VAGUE.matcher(q).find()) return noCoord("범위가 넓은 장소");
     if (MULTI.matcher(q).find()) return noCoord("장소가 여러 곳");
     if (q.length() > QUERY_MAX) return noCoord("장소 이름이 너무 김");
     if (REGION_ONLY.matcher(squash(q)).matches()) return noCoord("지역 이름뿐");
 
+    Result first = searchAndMatch(q);
+    if (first.status() != Status.NO_COORD) return first;
+    // 후보가 이미 여러 개였다면 줄여 봐야 더 넓어질 뿐 → 줄이지 않음
+    if (first.reason() != null && first.reason().startsWith(AMBIGUOUS)) return first;
+
+    // 못 찾음 → 뒤 단어를 떼고 다시 (정확히 같은 이름만)
+    String shorter = q;
+    for (int i = 0; i < SHORTEN_MAX; i++) {
+      shorter = dropLastWord(shorter);
+      if (shorter == null) break;
+      String sq = squash(shorter);
+      if (sq.length() < SHORTENED_MIN || REGION_ONLY.matcher(sq).matches() || VAGUE.matcher(shorter).find()) break;
+      PlaceSearchClient.Page page;
+      try {
+        page = client.search(shorter);
+      } catch (RuntimeException e) {
+        return error(e);
+      }
+      if (page == null) continue;
+      final String name = shorter;
+      List<PlaceCandidate> exact = page.places().stream()
+          .filter(PlaceGeocoder::inSuwon).filter(c -> sameName(c.name(), name)).toList();
+      if (exact.size() == 1) return new Result(Status.FOUND, exact.get(0), null);
+      if (exact.size() > 1) return noCoord(AMBIGUOUS + " 이름이 같은 곳 " + exact.size() + "건 (줄인 검색어)");
+    }
+    return first;
+  }
+
+  // 검색 1번 + 수원 · 이름 확인 (1~4번 규칙)
+  private Result searchAndMatch(String q) {
     PlaceSearchClient.Page page;
     try {
       page = client.search(q);
     } catch (RuntimeException e) {
-      String status = e instanceof RestClientResponseException r ? " (HTTP " + r.getStatusCode().value() + ")" : "";
-      return new Result(Status.ERROR, null, "장소 검색 실패: " + e.getClass().getSimpleName() + status);
+      return error(e);
     }
     if (page == null) page = new PlaceSearchClient.Page(List.of(), true);
 
@@ -69,13 +108,38 @@ public class PlaceGeocoder {
 
     List<PlaceCandidate> exact = inSuwon.stream().filter(c -> sameName(c.name(), q)).toList();
     if (exact.size() == 1) return new Result(Status.FOUND, exact.get(0), null);
-    if (exact.size() > 1) return noCoord("이름이 같은 곳이 여러 개 (" + exact.size() + "건)");
+    if (exact.size() > 1) return noCoord(AMBIGUOUS + " 이름이 같은 곳 " + exact.size() + "건");
     if (!page.complete()) return noCoord("결과가 더 있어 1건으로 못 좁힘");
 
     List<PlaceCandidate> named = inSuwon.stream().filter(c -> queryContainsName(q, c.name())).toList();
     if (named.size() == 1) return new Result(Status.FOUND, named.get(0), null);
     if (named.isEmpty()) return noCoord("이름이 맞는 결과 없음");
-    return noCoord("후보가 여러 개 (" + named.size() + "건)");
+    return noCoord(AMBIGUOUS + " 후보 " + named.size() + "건");
+  }
+
+  // 공백 정리 + 괄호 부연 · 앞 라벨 제거
+  static String tidy(String placeName) {
+    if (placeName == null) return "";
+    String q = placeName.strip();
+    q = LEAD_LABEL.matcher(q).replaceFirst("");
+    String before;
+    do { // 괄호가 여러 개면 모두
+      before = q;
+      q = PAREN.matcher(q).replaceAll(" ");
+    } while (!q.equals(before));
+    return q.replaceAll("\\s+", " ").strip();
+  }
+
+  // "수원시청 본관 로비" → "수원시청 본관", 한 단어면 null
+  static String dropLastWord(String q) {
+    int i = q.lastIndexOf(' ');
+    return i <= 0 ? null : q.substring(0, i).strip();
+  }
+
+  // 예외 내용(키가 섞일 수 있음)은 남기지 않고 HTTP 상태 번호만
+  private static Result error(RuntimeException e) {
+    String status = e instanceof RestClientResponseException r ? " (HTTP " + r.getStatusCode().value() + ")" : "";
+    return new Result(Status.ERROR, null, "장소 검색 실패: " + e.getClass().getSimpleName() + status);
   }
 
   // "가상 아트홀 2층" ⊇ "가상아트홀" (결과 이름이 너무 짧으면 불인정)
