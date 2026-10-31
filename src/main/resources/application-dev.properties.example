@@ -29,3 +29,8 @@ google.client-secret=여기에_키
 # 네이버
 naver.client-id=여기에_키
 naver.client-secret=여기에_키
+
+# 인스타그램 게시물 수집 (선택). 비워 두면 수집하지 않음
+#  - user-id: 내 인스타 계정 ID (17841… 숫자, Graph API 탐색기 debug_token 의 granular_scopes → instagram_basic)
+instagram.access-token=
+instagram.user-id=
