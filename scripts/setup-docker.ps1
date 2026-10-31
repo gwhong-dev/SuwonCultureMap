@@ -13,7 +13,29 @@ Write-Host '===== 수원 문화지도 · Docker 준비 (.env 생성) ====='
 Write-Host ''
 
 if (Test-Path -LiteralPath $envFile) {
-    Write-Host '[건너뜀] .env 가 이미 있음 - 덮어쓰지 않음 (새로 만들려면 .env 를 지우고 다시 실행)'
+    # 이미 있는 .env 는 덮어쓰지 않음 (DB 비밀번호가 바뀌면 기존 MySQL 볼륨에 접속 못 함)
+    # 단, 나중에 생긴 선택 항목(인스타)이 dev 파일에 있고 .env 에 없으면 그 줄만 끝에 보충
+    $added = @()
+    if (Test-Path -LiteralPath $dev) {
+        $devProps = @{}
+        foreach ($l in Get-Content -LiteralPath $dev -Encoding UTF8) {
+            if ($l -match '^\s*([^#!\s=:][^=:]*?)\s*[=:]\s*(.*)$') { $devProps[$Matches[1].Trim()] = $Matches[2].Trim() }
+        }
+        $existing = Get-Content -LiteralPath $envFile -Encoding UTF8
+        $supplement = [ordered]@{ INSTAGRAM_ACCESS_TOKEN = 'instagram.access-token'; INSTAGRAM_USER_ID = 'instagram.user-id' }
+        foreach ($e in $supplement.GetEnumerator()) {
+            $inEnv = @($existing | Where-Object { $_ -match ('^\s*' + $e.Key + '\s*=') }).Count -gt 0
+            $v = $devProps[$e.Value]
+            if (-not $inEnv -and -not [string]::IsNullOrWhiteSpace($v)) {
+                # 값에 작은따옴표가 없으면 작은따옴표로 감쌈 (토큰 · 숫자 ID 는 해당 없음)
+                if ($v -match "'") { Write-Host ('[건너뜀] ' + $e.Key + ' 값 형식이 예상과 다름'); continue }
+                Add-Content -LiteralPath $envFile -Value ($e.Key + "='" + $v + "'") -Encoding UTF8
+                $added += $e.Key
+            }
+        }
+    }
+    if ($added.Count -gt 0) { Write-Host ('[보충] .env 에 추가한 항목: ' + ($added -join ', ') + ' (값은 출력 안 함, 나머지 줄은 그대로)') }
+    else { Write-Host '[건너뜀] .env 가 이미 있음 - 덮어쓰지 않음 (새로 만들려면 .env 를 지우고 다시 실행)' }
     exit 0
 }
 if (-not (Test-Path -LiteralPath $dev)) {
@@ -73,6 +95,16 @@ $lines = @(
     ('MYSQL_ROOT_PASSWORD=' + (New-Password))
 )
 foreach ($e in $map.GetEnumerator()) { $lines += ($e.Key + '=' + (Escape-Value $props[$e.Value])) }
+# 인스타 수집은 선택 → dev 파일에 값이 있을 때만 넣음 (없으면 compose 기본값 = 빈 값 → 수집 안 함)
+$optional = [ordered]@{
+    INSTAGRAM_ACCESS_TOKEN = 'instagram.access-token'
+    INSTAGRAM_USER_ID      = 'instagram.user-id'
+}
+foreach ($e in $optional.GetEnumerator()) {
+    if ($props.ContainsKey($e.Value) -and -not [string]::IsNullOrWhiteSpace($props[$e.Value])) {
+        $lines += ($e.Key + '=' + (Escape-Value $props[$e.Value]))
+    }
+}
 
 [System.IO.File]::WriteAllLines($envFile, $lines, (New-Object System.Text.UTF8Encoding $false))
 Write-Host '[완료] .env 생성'

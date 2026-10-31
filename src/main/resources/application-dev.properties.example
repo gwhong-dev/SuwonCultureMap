@@ -34,3 +34,7 @@ naver.client-secret=여기에_키
 #  - user-id: 내 인스타 계정 ID (17841… 숫자, Graph API 탐색기 debug_token 의 granular_scopes → instagram_basic)
 instagram.access-token=
 instagram.user-id=
+#  - 값 넣기: scripts\set-instagram-dev.cmd (토큰은 화면에 안 보임)
+#  - 대상 계정 · 개수를 바꾸려면 (기본값 suwon_city · 10개)
+# instagram.accounts=suwon_city
+# instagram.fetch-limit=10
