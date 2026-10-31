@@ -1,5 +1,7 @@
 ﻿# use-flyway-dev.ps1 — 내 PC 의 application-dev.properties 를 Flyway 방식으로 바꾼다
-#  - spring.jpa.hibernate.ddl-auto=update  →  validate  (한 줄만 바꿈, 다른 줄 · 비밀값은 그대로)
+#  - spring.jpa.hibernate.ddl-auto=update  →  validate  (내용은 이 한 줄만 바뀜, 다른 줄 · 비밀값은 그대로)
+#    저장할 때 줄바꿈은 Windows 방식(CRLF)으로 통일되고 끝에 줄바꿈이 붙음 — Spring 은 상관없음
+#  - 실행 전에 저장소를 최신으로(git pull) 받아 두기
 #  - 비밀값은 화면에 출력하지 않음
 #  - 이미 validate 면 아무것도 안 함
 $ErrorActionPreference = 'Stop'

@@ -12,6 +12,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
+
 import com.suwon.festival.entity.Event;
 import com.suwon.festival.entity.Favorite;
 import com.suwon.festival.entity.LoginMethod;
@@ -29,6 +31,7 @@ class RepositorySchemaTest {
   @Autowired private LoginMethodRepository loginMethodRepository;
   @Autowired private FavoriteRepository favoriteRepository;
   @Autowired private Flyway flyway;
+  @Autowired private EntityManager em;
 
   @Test
   void Flyway가_V1을_적용함() {
@@ -60,9 +63,13 @@ class RepositorySchemaTest {
     favoriteRepository.saveAndFlush(Favorite.builder()
         .member(member).event(event).createdAt(LocalDateTime.of(2026, 10, 31, 12, 0)).build());
 
+    // 메모리(1차 캐시)를 비워야 findById 가 DB 에서 다시 읽음 → 진짜 저장 · 조회 왕복
+    em.flush();
+    em.clear();
     assertThat(eventRepository.findById(event.getId())).get()
         .satisfies(e -> {
           assertThat(e.getPlace()).hasSize(500);
+          assertThat(e.getInfo()).hasSize("긴 설명 ".length() * 200);
           assertThat(e.getEndDate()).isEqualTo(LocalDate.of(2026, 11, 7));
         });
     assertThat(memberRepository.count()).isEqualTo(members + 1);

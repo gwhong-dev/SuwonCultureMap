@@ -32,6 +32,7 @@
     - [x] 2단계 장소 → 좌표 (`service/place/`, 카카오 키워드 검색 + 수원 범위 · 이름 확인 · 1건 좁히기)
     - [x] 2단계 카카오맵 API 활성화 확인 (사용자, 10/31 — 사용 설정 ON)
     - [ ] 3단계 데이터 모델 — ① Flyway 도입 ② B안(`Event` 출처 칸 · `instagram_post`)
+      - [ ] Flyway 사용자 PC 확인: `git pull` → `scripts\use-flyway-dev.cmd` → 앱 실행 → 로그 `Successfully baselined schema with version: 1` · 정상 시작 → 지도 · 로그인 · 찜 동작
 
 ## 🔜 다음 로드맵 (지원 후)
 

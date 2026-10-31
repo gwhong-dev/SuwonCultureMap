@@ -80,7 +80,7 @@
 | 안 | 내용 | 장점 | 단점 |
 |---|---|---|---|
 | A | 별도 테이블 `instagram_event`, `/api/events` 응답에서 합쳐 내려줌 | `Event`를 안 건드림 | **찜이 안 붙음** (`Favorite`이 `Event`만 가리킴) |
-| B | `Event`에 `source` · `sourceKey` 추가, `idx`를 nullable로 변경 | 한 곳에 모임, 찜 그대로 동작 | 이미 있는 NOT NULL을 푸는 변경이 `ddl-auto=update`(JPA가 테이블을 자동 변경하는 설정, 운영도 이 값 `application-prod.properties:16`)로는 안 될 가능성이 큼 → **Flyway**(DB 구조 변경을 파일로 관리하는 도구) 먼저 (`PROGRESS.md` "나중에 할 일"과 연결) |
+| B | `Event`에 `source` · `sourceKey` 추가, `idx`를 nullable로 변경 | 한 곳에 모임, 찜 그대로 동작 | 이미 있는 NOT NULL을 푸는 변경이 `ddl-auto=update`(JPA가 테이블을 자동 변경하는 설정, Flyway 도입 전 운영 값)로는 안 될 가능성이 큼 → **Flyway**(DB 구조 변경을 파일로 관리하는 도구) 먼저 (PR #32) |
 | C | `Event`에 `source` · `sourceKey` 추가, 인스타 행사의 `idx`는 임시 음수값 | 스키마 변경 최소 | 의미 없는 값이 unique 칸에 들어가 지저분함 (비추천) |
 
 - 어느 안이든 **원본 게시물 처리 상태**는 별도 테이블 `instagram_post`에 둔다. 게시물 `id`를 unique로 해서 재실행해도 중복되지 않게 한다.
@@ -89,6 +89,11 @@
 - `Event`로 승격할 때 NOT NULL 칸 채우는 규칙: `category`는 파서(규칙 또는 AI)가 정한 값, 비면 `"기타"`(재단 `"전체"` → `"기타"` 처리와 같은 방식, `EventSyncService.java:65`) / `pubDate`는 게시물 `timestamp`를 한국 시간으로 변환
 - **결정: B** (2026-10-31). 출처마다 표를 따로 두면 찜이 여러 표를 가리켜야 해서 DB가 연결을 지켜 주지 못하고(외래 키 불가), 찜 · 캘린더 · 지도 코드가 출처마다 반복됨 → 화면에 보이는 행사는 `Event` 한 표, 출처별 처리 상태만 따로(`instagram_post` 등). Flyway 도입(PR #32)이 먼저.
 - `ddl-auto=update`가 기존 컬럼의 NOT NULL을 풀지 않는다는 점은 일반적으로 알려진 동작이며, 착수 때 실제로 확인한다.
+- **Flyway V2 이후 작성 원칙** (PR #32 리뷰)
+  - 기존 DB는 `ddl-auto=update`로 만들어져 unique · FK 이름이 Hibernate 자동 이름(`UK…` · `FK…`)이고, V1의 이름(`uk_event_idx` 등)은 빈 DB에서만 쓰임 → **V2에서 제약 이름을 직접 지정해 지우거나 바꾸지 않는다** (CI의 H2는 통과하고 사용자 DB에서만 실패함). 칸 단위 변경(`ALTER TABLE … MODIFY/ADD COLUMN`)으로 쓴다
+  - 나중에 `nullable=false`를 붙인 칸은 기존 DB에서 NULL 허용으로 남아 있을 수 있음 → NOT NULL을 기대하는 V2는 쓰지 않거나 먼저 값을 채운다
+  - 되돌리기: Community 판은 자동 되돌리기(undo)가 없음 → 위험한 V2는 되돌리는 SQL을 PR 본문에 같이 적는다. 급할 땐 내 PC `application-dev.properties`에 `spring.flyway.enabled=false`
+  - 앱이 "표 없음"(validate 실패)으로 멈추면: 일부 표만 있는 DB가 baseline된 경우 → 그 DB를 비우고(데이터 백업 후) 다시 실행하면 V1부터 만들어짐
 - 현재 동기화는 삭제 로직이 없어서 (`EventSyncService.java:78-103`) B안에서도 기존 재단 동기화가 인스타 행사를 지우지는 않는다.
 
 ## 5. 정리 단계의 약속 (규칙 기반 파서 + AI)
