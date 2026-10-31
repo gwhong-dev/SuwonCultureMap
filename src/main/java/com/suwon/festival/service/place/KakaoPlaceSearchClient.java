@@ -16,7 +16,8 @@ import com.suwon.festival.dto.kakao.KakaoLocalSearchResponse;
 
 // 카카오 로컬 API "키워드로 장소 검색" 호출
 // - 인증: Authorization: KakaoAK {REST 키} (로그인에 쓰는 kakao.rest-api-key 와 같은 키)
-// - 수원시청 근처(반경 20km)를 우선으로 정확도순 검색. 수원 밖 결과는 PlaceGeocoder 가 다시 거름
+// - 수원시청 반경 20km 안에서 정확도순 검색 (반경 밖은 결과에서 빠짐). 수원 밖 결과는 PlaceGeocoder 가 다시 거름
+// - 장소명은 URI 변수로 넣고 엄격 인코딩 → "{ }" "+" 같은 글자도 그대로 전달
 @Component
 public class KakaoPlaceSearchClient implements PlaceSearchClient {
 
@@ -36,16 +37,16 @@ public class KakaoPlaceSearchClient implements PlaceSearchClient {
   }
 
   @Override
-  public List<PlaceCandidate> search(String query) {
+  public Page search(String query) {
     URI uri = UriComponentsBuilder.fromUriString(URL)
-        .queryParam("query", query)
+        .queryParam("query", "{query}")
         .queryParam("x", CENTER_X)
         .queryParam("y", CENTER_Y)
         .queryParam("radius", RADIUS_M)
         .queryParam("sort", "accuracy")
         .queryParam("size", SIZE)
         .encode()
-        .build()
+        .buildAndExpand(query)
         .toUri();
 
     HttpHeaders headers = new HttpHeaders();
@@ -56,14 +57,16 @@ public class KakaoPlaceSearchClient implements PlaceSearchClient {
         .getBody();
 
     List<PlaceCandidate> result = new ArrayList<>();
-    if (body == null || body.documents == null) return result;
+    if (body == null || body.documents == null) return new Page(result, true);
     for (KakaoLocalSearchResponse.Document d : body.documents) {
       Double lat = parse(d.y);
       Double lng = parse(d.x);
       if (lat == null || lng == null) continue; // 좌표가 이상한 건 버림
       result.add(new PlaceCandidate(d.place_name, d.address_name, d.road_address_name, lat, lng));
     }
-    return result;
+    // is_end 를 모르면 "전부"라고 보지 않음 (안전한 쪽)
+    boolean complete = body.meta != null && Boolean.TRUE.equals(body.meta.is_end);
+    return new Page(result, complete);
   }
 
   private static Double parse(String v) {

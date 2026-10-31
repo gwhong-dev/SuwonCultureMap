@@ -6,5 +6,13 @@ import java.util.List;
 // 네트워크 · 응답 오류는 RuntimeException 으로 던짐 (PlaceGeocoder 가 ERROR 로 바꿈)
 public interface PlaceSearchClient {
 
-  List<PlaceCandidate> search(String query);
+  // complete: 받은 목록이 결과 전부인지 (false 면 다음 페이지에 더 있음 → "1건으로 좁혀짐"이라 볼 수 없음)
+  record Page(List<PlaceCandidate> places, boolean complete) {
+
+    public Page {
+      places = places == null ? List.of() : List.copyOf(places);
+    }
+  }
+
+  Page search(String query);
 }

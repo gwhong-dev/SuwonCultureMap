@@ -16,15 +16,21 @@ class PlaceGeocoderTest {
   static class FakeSearch implements PlaceSearchClient {
     final List<String> queries = new ArrayList<>();
     final List<PlaceCandidate> answer;
+    boolean complete = true; // 다음 페이지 없음
 
     FakeSearch(PlaceCandidate... answer) {
       this.answer = List.of(answer);
     }
 
+    FakeSearch more() {
+      complete = false;
+      return this;
+    }
+
     @Override
-    public List<PlaceCandidate> search(String query) {
+    public Page search(String query) {
       queries.add(query);
-      return answer;
+      return new Page(answer, complete);
     }
   }
 
@@ -71,7 +77,7 @@ class PlaceGeocoderTest {
     assertThat(exactOne.status()).isEqualTo(Status.FOUND);
     assertThat(exactOne.place().name()).isEqualTo("가상공원");
 
-    var ambiguous = new PlaceGeocoder(new FakeSearch(suwon("가상 공원 1"), suwon("가상 공원 2"))).geocode("가상 공원");
+    var ambiguous = new PlaceGeocoder(new FakeSearch(suwon("가상 공원"), suwon("가상공원"))).geocode("가상 공원");
     assertThat(ambiguous.status()).isEqualTo(Status.NO_COORD);
     assertThat(ambiguous.reason()).contains("여러");
   }
@@ -87,6 +93,43 @@ class PlaceGeocoderTest {
     assertThat(g.geocode(null).status()).isEqualTo(Status.NO_COORD);
     assertThat(g.geocode(" ").status()).isEqualTo(Status.NO_COORD);
     assertThat(s.queries).isEmpty(); // 호출 수(한도) 아끼기
+  }
+
+  @Test
+  void 후보가_1건이어도_이름이_다르면_NO_COORD() {
+    // 검색어보다 긴 다른 곳("○○ 공방거리")이 1건 나와도 찍지 않음
+    var r = new PlaceGeocoder(new FakeSearch(suwon("가상 광장 공방거리"))).geocode("가상 광장");
+    assertThat(r.status()).isEqualTo(Status.NO_COORD);
+    assertThat(r.reason()).contains("이름");
+  }
+
+  @Test
+  void 검색어가_결과_이름을_품으면_FOUND_짧은_이름은_불인정() {
+    var floor = new PlaceGeocoder(new FakeSearch(suwon("가상아트홀"))).geocode("가상 아트홀 2층 소극장");
+    assertThat(floor.status()).isEqualTo(Status.FOUND);
+    var shortName = new PlaceGeocoder(new FakeSearch(suwon("공원"))).geocode("가상 시민 공원");
+    assertThat(shortName.status()).isEqualTo(Status.NO_COORD);
+  }
+
+  @Test
+  void 결과가_다음_페이지에_더_있으면_정확히_같은_이름만_FOUND() {
+    var notExact = new PlaceGeocoder(new FakeSearch(suwon("가상아트홀")).more()).geocode("가상 아트홀 2층");
+    assertThat(notExact.status()).isEqualTo(Status.NO_COORD);
+    assertThat(notExact.reason()).contains("더 있어");
+    var exact = new PlaceGeocoder(new FakeSearch(suwon("가상 아트홀")).more()).geocode("가상 아트홀");
+    assertThat(exact.status()).isEqualTo(Status.FOUND);
+  }
+
+  @Test
+  void 동_구_시_이름뿐이면_검색하지_않음() {
+    FakeSearch s = new FakeSearch(suwon("가상동"));
+    PlaceGeocoder g = new PlaceGeocoder(s);
+    assertThat(g.geocode("가상동").status()).isEqualTo(Status.NO_COORD);
+    assertThat(g.geocode("가상구").status()).isEqualTo(Status.NO_COORD);
+    assertThat(g.geocode("가상1동").status()).isEqualTo(Status.NO_COORD);
+    assertThat(g.geocode("가상 시내").status()).isEqualTo(Status.NO_COORD);
+    assertThat(g.geocode("관내 도서관").status()).isEqualTo(Status.NO_COORD);
+    assertThat(s.queries).isEmpty();
   }
 
   @Test

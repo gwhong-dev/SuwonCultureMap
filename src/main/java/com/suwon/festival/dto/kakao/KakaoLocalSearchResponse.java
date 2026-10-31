@@ -9,6 +9,12 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class KakaoLocalSearchResponse {
   public List<Document> documents;
+  public Meta meta;
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  public static class Meta {
+    public Boolean is_end; // 마지막 페이지인지 (false 면 결과가 더 있음)
+  }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static class Document {
