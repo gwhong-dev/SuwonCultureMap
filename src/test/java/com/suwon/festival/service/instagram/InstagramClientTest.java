@@ -5,9 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
@@ -117,6 +119,8 @@ class InstagramClientTest {
     assertThat(InstagramClient.kindOf(613)).isEqualTo(Kind.RATE_LIMIT);
     assertThat(InstagramClient.kindOf(10)).isEqualTo(Kind.PERMISSION);
     assertThat(InstagramClient.kindOf(250)).isEqualTo(Kind.PERMISSION);
+    assertThat(InstagramClient.kindOf(102)).isEqualTo(Kind.TOKEN_INVALID);
+    assertThat(InstagramClient.kindOf(80002)).isEqualTo(Kind.RATE_LIMIT);
     assertThat(InstagramClient.kindOf(null)).isEqualTo(Kind.OTHER);
   }
 
@@ -127,8 +131,10 @@ class InstagramClientTest {
       assertThatThrownBy(() -> client.fetchRecent(bad, 5))
           .isInstanceOfSatisfying(InstagramFetchException.class, e -> assertThat(e.kind()).isEqualTo(Kind.INVALID_INPUT));
     }
-    assertThatThrownBy(() -> client.fetchRecent("gasang_city", 0)).isInstanceOf(InstagramFetchException.class);
-    assertThatThrownBy(() -> client.fetchRecent("gasang_city", 51)).isInstanceOf(InstagramFetchException.class);
+    for (int badLimit : new int[] { 0, InstagramClient.LIMIT_MAX + 1 }) {
+      assertThatThrownBy(() -> client.fetchRecent("gasang_city", badLimit))
+          .isInstanceOfSatisfying(InstagramFetchException.class, e -> assertThat(e.kind()).isEqualTo(Kind.INVALID_INPUT));
+    }
     server.verify(); // 요청이 한 번도 안 나감
   }
 
@@ -141,6 +147,38 @@ class InstagramClientTest {
     // 버전 · ID 모양이 틀려도 설정 안 된 것으로 봄
     assertThat(new InstagramClient(restTemplate, TOKEN, "abc", "v25.0").isConfigured()).isFalse();
     assertThat(new InstagramClient(restTemplate, TOKEN, USER_ID, "25").isConfigured()).isFalse();
+  }
+
+  @Test
+  void 토큰에_줄바꿈_같은_글자가_섞이면_호출하지_않음() {
+    // 그대로 보내면 HTTP 라이브러리가 "Bearer <토큰>" 을 예외 메시지에 넣음
+    InstagramClient broken = new InstagramClient(restTemplate, "abc\ndef", USER_ID, "v25.0");
+    assertThat(broken.isConfigured()).isFalse();
+    assertThatThrownBy(() -> broken.fetchRecent("gasang_city", 5))
+        .isInstanceOfSatisfying(InstagramFetchException.class, e -> {
+          assertThat(e.kind()).isEqualTo(Kind.NOT_CONFIGURED);
+          assertThat(e.getMessage()).doesNotContain("abc");
+        });
+  }
+
+  @Test
+  void 연결_실패는_OTHER_200인데_본문을_못_읽으면_BAD_RESPONSE() {
+    server.expect(requestTo(Matchers.startsWith("https://graph.facebook.com/")))
+        .andRespond(withException(new IOException("connection reset")));
+    assertThatThrownBy(() -> client.fetchRecent("gasang_city", 5))
+        .isInstanceOfSatisfying(InstagramFetchException.class, e -> assertThat(e.kind()).isEqualTo(Kind.OTHER));
+
+    server.reset();
+    server.expect(requestTo(Matchers.startsWith("https://graph.facebook.com/")))
+        .andRespond(withSuccess("{not json", MediaType.APPLICATION_JSON));
+    assertThatThrownBy(() -> client.fetchRecent("gasang_city", 5))
+        .isInstanceOfSatisfying(InstagramFetchException.class, e -> assertThat(e.kind()).isEqualTo(Kind.BAD_RESPONSE));
+  }
+
+  @Test
+  void 게시물_toString_에_캡션_원문이_없음() {
+    var post = new InstagramPost("1", "가상 캡션 원문", "https://www.instagram.com/p/AAA/", null, "IMAGE");
+    assertThat(post.toString()).doesNotContain("가상 캡션").contains("captionLength=8");
   }
 
   @Test

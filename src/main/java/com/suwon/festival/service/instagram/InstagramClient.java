@@ -14,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -32,12 +33,14 @@ public class InstagramClient {
 
   static final String BASE_URL = "https://graph.facebook.com";
   static final String MEDIA_FIELDS = "id,caption,permalink,timestamp,media_type";
-  static final int LIMIT_MAX = 50;
+  static final int LIMIT_MAX = 25; // 캡션 확인 스크립트와 같은 상한 (실제로 확인한 건 5개)
 
   // 인스타 계정 이름 규칙: 영문 · 숫자 · 마침표 · 밑줄, 30자 이하 (fields 문자열에 그대로 들어가므로 엄격히 검사)
   private static final Pattern USERNAME = Pattern.compile("^[A-Za-z0-9._]{1,30}$");
   private static final Pattern USER_ID = Pattern.compile("^[0-9]{5,30}$");
   private static final Pattern VERSION = Pattern.compile("^v\\d+\\.\\d+$");
+  // 토큰 글자 (instagram-peek.ps1 과 같은 규칙). 줄바꿈 등이 섞이면 HTTP 라이브러리가 토큰을 예외 메시지에 넣어 버림
+  private static final Pattern TOKEN = Pattern.compile("^[A-Za-z0-9_\\-.|]+$");
   // Graph 의 시간 모양: 2026-10-30T09:00:00+0000 (콜론 없는 시간대)
   private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ");
 
@@ -58,7 +61,8 @@ public class InstagramClient {
 
   // 토큰 · 내 계정 ID · 버전이 모두 올바른 모양일 때만 true
   public boolean isConfigured() {
-    return !accessToken.isEmpty() && USER_ID.matcher(userId).matches() && VERSION.matcher(graphVersion).matches();
+    return TOKEN.matcher(accessToken).matches() && USER_ID.matcher(userId).matches()
+        && VERSION.matcher(graphVersion).matches();
   }
 
   public List<InstagramPost> fetchRecent(String username, int limit) {
@@ -86,8 +90,10 @@ public class InstagramClient {
     } catch (RestClientResponseException e) {
       Integer code = graphCode(e);
       throw new InstagramFetchException(kindOf(code), code);
+    } catch (ResourceAccessException e) {
+      throw new InstagramFetchException(Kind.OTHER, null); // 연결 실패 · 시간 초과
     } catch (RestClientException e) {
-      throw new InstagramFetchException(Kind.OTHER, null);
+      throw new InstagramFetchException(Kind.BAD_RESPONSE, null); // 200 인데 본문을 못 읽음
     }
 
     if (body == null || body.business_discovery == null) throw new InstagramFetchException(Kind.BAD_RESPONSE, null);
@@ -102,10 +108,11 @@ public class InstagramClient {
 
   static Kind kindOf(Integer code) {
     if (code == null) return Kind.OTHER;
-    if (code == 190) return Kind.TOKEN_INVALID;
+    if (code == 190 || code == 102) return Kind.TOKEN_INVALID;
+    // 100 은 "잘못된 요청" 전반이지만, Business Discovery 에선 계정 이름 · 내 계정 ID 가 틀릴 때 주로 나옴 (0단계 실제 경험)
     if (code == 100 || code == 110) return Kind.NOT_FOUND;
-    if (code == 4 || code == 17 || code == 32 || code == 613) return Kind.RATE_LIMIT;
-    if (code == 10 || (code >= 200 && code <= 299)) return Kind.PERMISSION;
+    if (code == 4 || code == 17 || code == 32 || code == 341 || code == 613 || code == 80002) return Kind.RATE_LIMIT;
+    if (code == 3 || code == 10 || (code >= 200 && code <= 299)) return Kind.PERMISSION;
     return Kind.OTHER;
   }
 
