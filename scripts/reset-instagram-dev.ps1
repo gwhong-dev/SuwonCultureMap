@@ -116,6 +116,8 @@ try {
     Write-Host '  DELETE FROM instagram_media'
     Write-Host "  DELETE FROM event WHERE source = 'INSTAGRAM'"
     Write-Host ''
+    Write-Host '[주의] 다시 동기화하면 계정마다 최근 게시물(기본 10개)만 다시 들어옴 → 더 오래된 글 · 목록에서 뺀 계정의 행사는 돌아오지 않음'
+    Write-Host '[주의] 앱(서버)을 끈 상태에서 진행해 주세요 (동기화 중이면 섞일 수 있음)'
     Write-Host '(창을 X 로 닫지 말고 Y 또는 다른 글자 + Enter 로 답해 주세요)'
     $answer = Read-Host '진행할까요? (Y 입력 후 Enter, 그 외는 취소)'
     if ($answer -ne 'Y' -and $answer -ne 'y') { Write-Host '[취소] 아무것도 바꾸지 않음'; exit 0 }
