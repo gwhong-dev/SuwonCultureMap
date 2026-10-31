@@ -35,6 +35,7 @@
       - [ ] Flyway 사용자 PC 확인: `git pull` → `scripts\use-flyway-dev.cmd` → 앱 실행 → 로그 `Successfully baselined schema with version: 1` · 정상 시작 → 지도 · 로그인 · 찜 동작
       - [x] B안 V2 — `event.source` · `source_key` 추가, `idx` NULL 허용, `instagram_media` · `instagram_block` 표 (#32 위에 얹은 PR)
       - [ ] V2 사용자 PC 확인: 앱 실행 → 로그 `Migrating schema ... to version "2"` · 정상 시작 → 지도 · 찜 그대로
+        - 1차 시도(10/31) ❌ `Duplicate column name 'source'` — Flyway 도입 전 ddl-auto=update 로 Hibernate 가 source 칸 · 인스타 표를 먼저 만들어 둔 상태. `scripts\repair-flyway-v2.cmd`(검사 → Y 확인 → 빈 표 · 빈 칸 · 실패 기록만 삭제)로 되돌린 뒤 재실행
     - [x] 4단계 게시물 수집 클라이언트 (`service/instagram/`, 가짜 서버 테스트) — 실제 Meta 호출 · 장기 토큰 · 호출 제한 · 삭제 감지는 5단계에서
 
 ## 🔜 다음 로드맵 (지원 후)
