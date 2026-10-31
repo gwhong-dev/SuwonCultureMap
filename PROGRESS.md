@@ -31,8 +31,11 @@
     - [x] 1단계 캡션 정리기 (`service/caption/`, 가상 캡션 단위 테스트)
     - [x] 2단계 장소 → 좌표 (`service/place/`, 카카오 키워드 검색 + 수원 범위 · 이름 확인 · 1건 좁히기)
     - [x] 2단계 카카오맵 API 활성화 확인 (사용자, 10/31 — 사용 설정 ON)
-    - [ ] 3단계 데이터 모델 — ① Flyway 도입 ② B안(`Event` 출처 칸 · `instagram_post`)
-      - [ ] Flyway 사용자 PC 확인: `git pull` → `scripts\use-flyway-dev.cmd` → 앱 실행 → 로그 `Successfully baselined schema with version: 1` · 정상 시작 → 지도 · 로그인 · 찜 동작
+    - [ ] 3단계 데이터 모델 — ① Flyway 도입 ② B안(`Event` 출처 칸 · `instagram_media` · `instagram_block`)
+      - [x] Flyway 사용자 PC 확인: `git pull` → `scripts\use-flyway-dev.cmd` → 앱 실행 → 로그 `Successfully baselined schema with version: 1` · 정상 시작 → 지도 · 로그인 · 찜 동작
+      - [x] B안 V2 — `event.source` · `source_key` 추가, `idx` NULL 허용, `instagram_media` · `instagram_block` 표 (#32 위에 얹은 PR)
+      - [x] V2 사용자 PC 확인: 앱 실행 → 로그 `Migrating schema ... to version "2"` · 정상 시작 → 지도 · 찜 그대로
+        - 1차 시도(10/31) ❌ `Duplicate column name 'source'` — Flyway 도입 전 ddl-auto=update 로 Hibernate 가 source 칸 · 인스타 표를 먼저 만들어 둔 상태. `scripts\repair-flyway-v2.cmd`(검사 → Y 확인 → 빈 표 · 빈 칸 · 실패 기록만 삭제)로 되돌린 뒤 재실행 → 2차 ✅ (V2 적용 · 재단 행사 141건 유지 · 화면 정상)
     - [x] 4단계 게시물 수집 클라이언트 (`service/instagram/`, 가짜 서버 테스트) — 실제 Meta 호출 · 장기 토큰 · 호출 제한 · 삭제 감지는 5단계에서
 
 ## 🔜 다음 로드맵 (지원 후)
@@ -75,6 +78,7 @@
 | 10/31 | 작업 세션 | 인스타 4단계 수집 클라이언트 — Business Discovery(`v25.0`, 토큰은 Bearer 헤더로만, `fields` 엄격 인코딩), 계정 이름 · 개수(1~25) · 토큰 글자 검사, 오류는 종류 + Graph 번호만(원문 · 토큰 X), 게시물 `toString` 에 캡션 원문 안 남김. 리뷰 ⚠️ 반영(토큰에 줄바꿈 섞이면 예외 메시지에 토큰 노출 → 호출 전 차단) |
 | 10/31 | 사용자 | 3단계 결정 — 데이터 모델 B(행사는 `Event` 한 표, 출처별 상태 표 따로), 캡션 원문 저장 안 함, 사람 확인 없이 엄격한 검사 후 자동 노출, Flyway 도입 |
 | 10/31 | 작업 세션 | Flyway 도입 — `V1__init.sql`(현재 테이블 4개), 기존 DB는 baseline(버전 1로 표시 · V1 건너뜀), `ddl-auto=validate`, 테스트도 같은 스크립트로 테이블 생성, 내 PC 설정 변경 스크립트 `scripts/use-flyway-dev.cmd` |
+| 10/31 | 작업 세션 | 3단계 데이터 모델 B안 — Flyway `V2`(event 에 출처 칸 · 인스타 행사 중복 키, idx NULL 허용, 게시물 · 블록 상태 표), 상태 enum 은 VARCHAR 로 저장, 기존 재단 동기화 코드는 그대로(출처 기본값 SWCF) |
 
 ## ⚠️ 막힌 것 / 메모
 
@@ -111,6 +115,7 @@
 - [ ] 인스타 캡션 정리기(PR #30 리뷰 보류): 시간 원문은 `HH:MM` 이 있을 때만 보관 → `오후 7시` 같은 표기는 빠짐 (사소)
 - [ ] 인스타 장소 → 좌표(PR #31 리뷰 보류): 영구 오류(4xx, 예: 카카오맵 API 꺼짐 403)도 매번 재시도됨 → 5단계(저장 · 동기화 연결)에서 재시도 정책
 - [ ] 인스타 수집(PR #33 리뷰 보류 → 5단계): 장기 토큰(60일) 교환 · 갱신, Live 모드 검수 여부, 호출 제한 수치, 삭제 · 비공개 게시물 감지(설계 7번 #7), 사용자 PC 에서 실제 `fetchRecent` 1회 실행 방법, docker-compose 에 `INSTAGRAM_*` 환경변수 전달
+- [ ] 인스타 저장(PR #34 리뷰 → 5단계): 인스타 행사를 지울 때 `instagram_block.event_id` · 찜 FK 순서 정하기, 저장 전에 `sourceKey` 가 꼭 있는지 검사(NULL 이면 unique 가 중복을 못 막음), `/api/events` 응답에 출처를 넣을지(6단계)
 - [ ] 인스타 장소 → 좌표(PR #31 리뷰 보류): "·" "/" 가 들어간 실제 장소명 · 괄호 부연("(우천 시 실내)")은 지금 `NO_COORD` (안전한 쪽 손해) → 실제 수집 결과 보고 괄호 제거 등 검토
 - [ ] 인스타 스크립트: 콘솔에서 한글 프롬프트가 두 번씩 보이는 현상(출력 복사 텍스트에서 확인) — 기능에는 영향 없음, 원인 미확인(`chcp 65001` + `Read-Host` 추정)
 - [ ] 인스타: 다른 계정에서도 5개 필드가 오는지, 현재 앱 모드(개발/Live) 확인
