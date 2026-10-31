@@ -22,6 +22,10 @@ import java.util.regex.Pattern;
 public final class CaptionBlockSplitter {
 
   // 같은 줄 안에서 짝이 맞는 작품명 괄호. 안쪽 2~50자
+  // 작품명이 아닌 괄호: HTML 태그(<br> </b> <a href=…>), 화살표(<- … ->), 링크 안내(<<프로필 링크>>)
+  static final Pattern NOT_WORK_NAME = Pattern.compile(
+      "^/?(?:br|b|i|u|a|p|em|strong|span|div|img|font|h[1-6])(?:\\s[\\x20-\\x7E]*)?/?$|^[-=~]|[-=~]$|링크|프로필|http", Pattern.CASE_INSENSITIVE);
+
   static final Pattern WORK_NAME = Pattern.compile("<([^<>\\n]{2,50})>|〈([^〈〉\\n]{2,50})〉|《([^《》\\n]{2,50})》");
 
   private CaptionBlockSplitter() {
@@ -92,7 +96,9 @@ public final class CaptionBlockSplitter {
     while (m.find()) {
       String g = m.group(1) != null ? m.group(1) : m.group(2) != null ? m.group(2) : m.group(3);
       String name = g.strip().replaceAll("\\s+", " ");
-      if (name.codePoints().anyMatch(Character::isLetterOrDigit)) names.add(name);
+      if (name.codePoints().anyMatch(Character::isLetterOrDigit) && !NOT_WORK_NAME.matcher(name).find()) {
+        names.add(name);
+      }
     }
     return names;
   }

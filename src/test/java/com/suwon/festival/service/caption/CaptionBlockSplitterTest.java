@@ -120,4 +120,12 @@ class CaptionBlockSplitterTest {
     assertThat(blocks.get(0).title()).isEqualTo("가을 음악회");
     assertThat(blocks.get(1).title()).isEqualTo("겨울 축제");
   }
+
+  @Test
+  void HTML_태그_화살표_링크_안내는_작품명이_아님() {
+    assertThat(CaptionBlockSplitter.workNames("<br> </b> <a href=x> <- 아래 참고 -> <<프로필 링크>> <http://x>")).isEmpty();
+    // 영문 · 숫자 섞인 작품명은 인정 (HTML 태그 이름만 거름)
+    assertThat(CaptionBlockSplitter.workNames("<가상 2026> 《Jazz 가상밤》 <Blue Night>"))
+        .containsExactly("가상 2026", "Jazz 가상밤", "Blue Night");
+  }
 }
