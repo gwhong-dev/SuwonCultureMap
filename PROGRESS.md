@@ -33,6 +33,8 @@
     - [x] 2단계 카카오맵 API 활성화 확인 (사용자, 10/31 — 사용 설정 ON)
     - [ ] 3단계 데이터 모델 — ① Flyway 도입 ② B안(`Event` 출처 칸 · `instagram_post`)
       - [ ] Flyway 사용자 PC 확인: `git pull` → `scripts\use-flyway-dev.cmd` → 앱 실행 → 로그 `Successfully baselined schema with version: 1` · 정상 시작 → 지도 · 로그인 · 찜 동작
+      - [x] B안 V2 — `event.source` · `source_key` 추가, `idx` NULL 허용, `instagram_media` · `instagram_block` 표 (#32 위에 얹은 PR)
+      - [ ] V2 사용자 PC 확인: 앱 실행 → 로그 `Migrating schema ... to version "2"` · 정상 시작 → 지도 · 찜 그대로
     - [x] 4단계 게시물 수집 클라이언트 (`service/instagram/`, 가짜 서버 테스트) — 실제 Meta 호출 · 장기 토큰 · 호출 제한 · 삭제 감지는 5단계에서
 
 ## 🔜 다음 로드맵 (지원 후)
@@ -75,6 +77,7 @@
 | 10/31 | 작업 세션 | 인스타 4단계 수집 클라이언트 — Business Discovery(`v25.0`, 토큰은 Bearer 헤더로만, `fields` 엄격 인코딩), 계정 이름 · 개수(1~25) · 토큰 글자 검사, 오류는 종류 + Graph 번호만(원문 · 토큰 X), 게시물 `toString` 에 캡션 원문 안 남김. 리뷰 ⚠️ 반영(토큰에 줄바꿈 섞이면 예외 메시지에 토큰 노출 → 호출 전 차단) |
 | 10/31 | 사용자 | 3단계 결정 — 데이터 모델 B(행사는 `Event` 한 표, 출처별 상태 표 따로), 캡션 원문 저장 안 함, 사람 확인 없이 엄격한 검사 후 자동 노출, Flyway 도입 |
 | 10/31 | 작업 세션 | Flyway 도입 — `V1__init.sql`(현재 테이블 4개), 기존 DB는 baseline(버전 1로 표시 · V1 건너뜀), `ddl-auto=validate`, 테스트도 같은 스크립트로 테이블 생성, 내 PC 설정 변경 스크립트 `scripts/use-flyway-dev.cmd` |
+| 10/31 | 작업 세션 | 3단계 데이터 모델 B안 — Flyway `V2`(event 에 출처 칸 · 인스타 행사 중복 키, idx NULL 허용, 게시물 · 블록 상태 표), 상태 enum 은 VARCHAR 로 저장, 기존 재단 동기화 코드는 그대로(출처 기본값 SWCF) |
 
 ## ⚠️ 막힌 것 / 메모
 
