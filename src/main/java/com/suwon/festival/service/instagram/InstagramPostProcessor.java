@@ -17,6 +17,8 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.suwon.festival.entity.Event;
 import com.suwon.festival.entity.InstagramBlock;
@@ -97,6 +99,7 @@ public class InstagramPostProcessor {
     Map<InstagramBlock.Status, Integer> counts = new EnumMap<>(InstagramBlock.Status.class);
     Set<String> seen = new HashSet<>();
     int saved = 0, updated = 0, duplicates = 0;
+    List<String> logLines = new java.util.ArrayList<>();
 
     List<BlockResult> results = parser.parse(post.caption());
     for (BlockResult r : results) {
@@ -167,11 +170,27 @@ public class InstagramPostProcessor {
         block.update(status, reason, event, now);
       }
       counts.merge(status, 1, Integer::sum);
-      BLOCK_LOG.info(BlockLog.line(post.id(), r, status, reason));
+      logLines.add(BlockLog.line(post.id(), key, r, status, reason));
     }
 
     media.markProcessed(now);
+    logAfterCommit(logLines);
     return new Outcome(isNew, counts, saved, updated, duplicates);
+  }
+
+  // 블록 로그는 커밋된 뒤에 찍음 → 롤백된 게시물의 "저장 안 된 상태"가 로그에 남지 않게
+  private static void logAfterCommit(List<String> lines) {
+    if (!BLOCK_LOG.isInfoEnabled() || lines.isEmpty()) return;
+    if (TransactionSynchronizationManager.isSynchronizationActive()) {
+      TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+        @Override
+        public void afterCommit() {
+          lines.forEach(BLOCK_LOG::info);
+        }
+      });
+    } else {
+      lines.forEach(BLOCK_LOG::info);
+    }
   }
 
   private static Event toEvent(ParsedEvent e, double lat, double lng, InstagramPost post, LocalDateTime postedAt,
