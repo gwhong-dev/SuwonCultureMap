@@ -3,7 +3,9 @@ package com.suwon.festival.service.place;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -113,7 +115,8 @@ class PlaceGeocoderTest {
 
   @Test
   void 결과가_다음_페이지에_더_있으면_정확히_같은_이름만_FOUND() {
-    var notExact = new PlaceGeocoder(new FakeSearch(suwon("가상아트홀")).more()).geocode("가상 아트홀 2층");
+    // "가상홀 2층" → 줄여도 "가상홀" ≠ "가상아트홀" 이라 못 고름
+    var notExact = new PlaceGeocoder(new FakeSearch(suwon("가상아트홀")).more()).geocode("가상홀 2층");
     assertThat(notExact.status()).isEqualTo(Status.NO_COORD);
     assertThat(notExact.reason()).contains("더 있어");
     var exact = new PlaceGeocoder(new FakeSearch(suwon("가상 아트홀")).more()).geocode("가상 아트홀");
@@ -140,5 +143,125 @@ class PlaceGeocoderTest {
     var r = new PlaceGeocoder(broken).geocode("가상 아트홀");
     assertThat(r.status()).isEqualTo(Status.ERROR);
     assertThat(r.reason()).doesNotContain("secret");
+  }
+
+  // 검색어마다 다른 결과를 돌려주는 가짜 검색기 (정해 두지 않은 검색어는 결과 0건)
+  static class MapSearch implements PlaceSearchClient {
+    final List<String> queries = new ArrayList<>();
+    final Map<String, List<PlaceCandidate>> answers = new HashMap<>();
+
+    MapSearch on(String query, PlaceCandidate... result) {
+      answers.put(query, List.of(result));
+      return this;
+    }
+
+    @Override
+    public Page search(String query) {
+      queries.add(query);
+      return new Page(answers.getOrDefault(query, List.of()), true);
+    }
+  }
+
+  @Test
+  void 방_층_이름이_붙어_못_찾으면_뒤_단어를_떼고_건물_이름으로_찾음() {
+    MapSearch s = new MapSearch().on("가상시청", suwon("가상시청"));
+    var r = new PlaceGeocoder(s).geocode("가상시청 본관 로비");
+    assertThat(r.status()).isEqualTo(Status.FOUND);
+    assertThat(r.place().name()).isEqualTo("가상시청");
+    assertThat(s.queries).containsExactly("가상시청 본관 로비", "가상시청 본관", "가상시청");
+  }
+
+  @Test
+  void 줄인_검색어는_이름이_정확히_같을_때만_인정() {
+    // "가상공원" 으로 줄였는데 결과가 "가상공원 주차장" 하나뿐 → 다른 곳일 수 있어 안 찍음
+    MapSearch s = new MapSearch().on("가상공원", suwon("가상공원 주차장"));
+    var r = new PlaceGeocoder(s).geocode("가상공원 다목적체육관");
+    assertThat(r.status()).isEqualTo(Status.NO_COORD);
+  }
+
+  @Test
+  void 줄이는_횟수는_2번까지_3글자_미만_지역_이름이면_멈춤() {
+    MapSearch s = new MapSearch().on("가상센터", suwon("가상센터"));
+    // 단어 4개: 2번 줄여도 "가상센터 1층" 까지 → 3번째("가상센터")는 안 함
+    assertThat(new PlaceGeocoder(s).geocode("가상센터 1층 대강당 앞").status()).isEqualTo(Status.NO_COORD);
+    assertThat(s.queries).containsExactly("가상센터 1층 대강당 앞", "가상센터 1층 대강당", "가상센터 1층");
+
+    MapSearch region = new MapSearch().on("가상동", suwon("가상동"));
+    assertThat(new PlaceGeocoder(region).geocode("가상동 마당").status()).isEqualTo(Status.NO_COORD);
+    assertThat(region.queries).containsExactly("가상동 마당"); // "가상동" 은 지역 이름 → 검색 안 함
+
+    MapSearch tiny = new MapSearch().on("가상", suwon("가상"));
+    new PlaceGeocoder(tiny).geocode("가상 홀");
+    assertThat(tiny.queries).containsExactly("가상 홀"); // 2글자로는 줄이지 않음
+  }
+
+  @Test
+  void 후보가_여러_개였으면_줄여서_다시_찾지_않음() {
+    MapSearch s = new MapSearch().on("가상 홀 2관", suwon("가상 홀 2관"), suwon("가상홀2관"));
+    var r = new PlaceGeocoder(s).geocode("가상 홀 2관");
+    assertThat(r.status()).isEqualTo(Status.NO_COORD);
+    assertThat(s.queries).containsExactly("가상 홀 2관");
+  }
+
+  @Test
+  void 괄호_부연과_앞_라벨은_지우고_검색() {
+    assertThat(PlaceGeocoder.tidy("가상센터 전시홀(1F)")).isEqualTo("가상센터 전시홀");
+    assertThat(PlaceGeocoder.tidy("가상센터(1층 전시홀, 3층 컨벤션홀)")).isEqualTo("가상센터");
+    assertThat(PlaceGeocoder.tidy("집결지: 가상공원 마당극장")).isEqualTo("가상공원 마당극장");
+    assertThat(PlaceGeocoder.tidy("가상홀 (A) (B)")).isEqualTo("가상홀");
+    assertThat(PlaceGeocoder.tidy(null)).isEmpty();
+
+    // 괄호 속 쉼표 때문에 "여러 곳"으로 보지 않음
+    MapSearch s = new MapSearch().on("가상센터", suwon("가상센터"));
+    assertThat(new PlaceGeocoder(s).geocode("가상센터(1층 전시홀, 3층 컨벤션홀)").status()).isEqualTo(Status.FOUND);
+    // 괄호 밖 쉼표는 여전히 여러 곳
+    assertThat(new PlaceGeocoder(s).geocode("가상센터, 가상공원").status()).isEqualTo(Status.NO_COORD);
+  }
+
+  @Test
+  void 줄여서_다시_찾다가_호출이_실패하면_ERROR() {
+    PlaceSearchClient flaky = new PlaceSearchClient() {
+      int n = 0;
+
+      @Override
+      public Page search(String query) {
+        if (n++ == 0) return new Page(List.of(), true);
+        throw new IllegalStateException("KakaoAK secret-key");
+      }
+    };
+    var r = new PlaceGeocoder(flaky).geocode("가상센터 대강당");
+    assertThat(r.status()).isEqualTo(Status.ERROR);
+    assertThat(r.reason()).doesNotContain("secret");
+  }
+
+  @Test
+  void 마지막_단어가_방_층_모양이_아니면_떼지_않음() {
+    // "가상문" 은 독립된 장소일 수 있음 → "가상성" 대표 좌표에 찍지 않음
+    MapSearch s = new MapSearch().on("가상성", suwon("가상성"));
+    var r = new PlaceGeocoder(s).geocode("가상성 가상문");
+    assertThat(r.status()).isEqualTo(Status.NO_COORD);
+    assertThat(s.queries).containsExactly("가상성 가상문");
+    assertThat(r.reason()).doesNotContain("줄여도");
+  }
+
+  @Test
+  void 줄인_말이_생활권_이름이면_멈춤() {
+    MapSearch s = new MapSearch().on("서수원", suwon("서수원"));
+    assertThat(new PlaceGeocoder(s).geocode("서수원 야외무대").status()).isEqualTo(Status.NO_COORD);
+    assertThat(s.queries).containsExactly("서수원 야외무대");
+  }
+
+  @Test
+  void 다음_페이지가_있어도_줄인_검색어가_정확히_같으면_FOUND() {
+    var r = new PlaceGeocoder(new FakeSearch(suwon("가상 아트홀")).more()).geocode("가상 아트홀 2층");
+    assertThat(r.status()).isEqualTo(Status.FOUND);
+    assertThat(r.place().name()).isEqualTo("가상 아트홀");
+  }
+
+  @Test
+  void 줄여서도_못_찾으면_이유에_표시() {
+    var r = new PlaceGeocoder(new MapSearch()).geocode("가상센터 대강당");
+    assertThat(r.status()).isEqualTo(Status.NO_COORD);
+    assertThat(r.reason()).contains("수원 안 검색 결과 없음").endsWith("(줄여도 없음)");
   }
 }
