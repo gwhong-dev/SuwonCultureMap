@@ -6,12 +6,6 @@
 - 앱 8080 · DB 3307 은 서버 안에서만 접속 가능
 - 동기화는 앱이 자동 실행 (매일 06시 · 18시, 재단 행사가 없는 새 DB 는 시작 직후)
 
-아래 명령의 `dc` 는 다음을 줄인 것이다. 서버에서 한 번 등록해 둔다.
-
-```bash
-echo "alias dc='docker compose -f docker-compose.yml -f docker-compose.prod.yml'" >> ~/.bash_aliases
-```
-
 ## 1. 서버 만들기 (AWS 콘솔, 서울 리전)
 
 | 항목 | 값 |
@@ -27,6 +21,15 @@ echo "alias dc='docker compose -f docker-compose.yml -f docker-compose.prod.yml'
 
 서버를 만든 뒤 **탄력적 IP** 를 하나 받아 연결한다. 재시작해도 주소가 바뀌지 않게 하기 위함.
 
+**접속** (내 IP 가 바뀌어 접속이 안 되면 보안 그룹의 SSH 를 현재 IP 로 고친다)
+
+```powershell
+icacls 키파일.pem /inheritance:r /grant:r "${env:USERNAME}:R"
+ssh -i 키파일.pem ubuntu@탄력적IP
+```
+
+**비용:** 서버 · 디스크 · 공인 IP 합계가 월 약 20달러로 추정되어(공식 단가 미확인) 크레딧 100달러로는 182일을 못 버틸 수 있다. 크레딧이 먼저 바닥나도 Free 플랜이 끝나 서버가 멈춘다. 서버를 만들 때 단가를 확인하고, 잔액은 월 1회 EC2 대시보드에서 확인하며, 추가 크레딧 활동도 해 둔다. 예산 경보(월 20달러)는 설정 완료.
+
 ## 2. 도메인 연결 (Cloudflare → DNS)
 
 | 유형 | 이름 | 값 | 프록시 |
@@ -34,7 +37,7 @@ echo "alias dc='docker compose -f docker-compose.yml -f docker-compose.prod.yml'
 | A | `@` | 탄력적 IP | DNS 전용(회색 구름) |
 | A | `www` | 탄력적 IP | DNS 전용(회색 구름) |
 
-- 프록시를 끄는 이유: HTTPS 인증서는 Caddy 가 직접 발급 · 갱신한다
+- 프록시를 끄는 이유: HTTPS 인증서는 Caddy 가 직접 발급 · 갱신한다. 주황 구름이면 인증서 발급이나 접속이 실패할 수 있으니 먼저 회색인지 확인한다
 - 메일 전달용 MX · SPF(TXT) 레코드는 건드리지 않는다
 
 ## 3. 처리방침 먼저 완성 (PR)
@@ -75,11 +78,15 @@ openssl rand -hex 24   # DB_PASSWORD, MYSQL_ROOT_PASSWORD 에 각각 새로 만�
 SITE_DOMAIN=suwonbible.com
 APP_BASE_URL=https://suwonbible.com
 SESSION_COOKIE_SECURE=true
+COMPOSE_PROJECT_NAME=suwon
+COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml
 ```
 
 - `APP_BASE_URL` 을 localhost 그대로 두면 소셜 로그인이 실패한다
 - `KAKAO_ADMIN_KEY` 는 운영에서 필수 (탈퇴 때 카카오 연결 해제)
+- `COMPOSE_FILE` · `COMPOSE_PROJECT_NAME` 덕분에 이후 `docker compose` 만 입력하면 된다. 폴더 이름이 바뀌어도 같은 DB 를 쓴다
 - 비밀번호에는 특수문자를 쓰지 않는다 (`$` 등을 compose 가 다르게 해석)
+- DB 비밀번호는 첫 실행 때 DB 에 저장된다. 나중에 `.env` 만 고치면 접속이 실패한다. `docker compose down -v` 는 **DB 를 통째로 삭제**하므로 운영에서 쓰지 않는다
 - 인스타 수집을 쓰면 `INSTAGRAM_*` 도 넣는다
 
 ## 6. 소셜 로그인 · 지도 콘솔
@@ -96,8 +103,8 @@ SESSION_COOKIE_SECURE=true
 ## 7. 실행과 공개 전 확인
 
 ```bash
-dc up -d --build
-dc logs -f app
+docker compose up -d --build
+docker compose logs -f app
 ```
 
 첫 실행 로그에서 `재단 동기화` · `자동 동기화 완료` 를 확인한다. `일부 실패` 가 나오면 원인을 확인한다. 재배포 때는 이 로그가 다음 예약 시각까지 나오지 않는다.
@@ -108,9 +115,9 @@ dc logs -f app
 - [ ] 외부에서 3307 · 8080 접속 불가
 - [ ] 지도 · 행사 이미지 표시 (브라우저 콘솔에 혼합 콘텐츠 차단 없음)
 - [ ] 로그인 3종 · 찜 · 탈퇴, **테스터로 등록하지 않은 계정**으로도 로그인
-- [ ] `bash deploy/backup-db.sh` 후 `~/backups` 에 파일 생성
+- [ ] `bash deploy/backup-db.sh` 후 `~/backups` 에 파일 생성, 아래 절차로 복원까지 한 번 시험 (회원이 생기기 전)
 - [ ] `docker stats --no-stream` · `free -h` · `df -h` 로 메모리 · 디스크 여유 확인. 메모리가 부족하면 DB 에 `--performance-schema=OFF` 를 먼저 시도
-- [ ] `dc stop app` 후 사이트 요청 → `dc logs caddy` 에 방문자 IP 가 남는지 확인 → 결과를 처리방침에 반영 → `dc start app`
+- [ ] `docker compose stop app` 후 사이트 요청 → `docker compose logs caddy` 에 방문자 IP 가 남는지 확인 → 결과를 처리방침에 반영 → `docker compose start app`
 
 ## 운영
 
@@ -118,7 +125,7 @@ dc logs -f app
 
 ```bash
 git pull
-dc up -d --build
+docker compose up -d --build
 docker image prune -f
 docker builder prune -f
 ```
@@ -140,10 +147,10 @@ scp -i 키파일.pem ubuntu@서버IP:~/backups/백업파일.sql.gz .
 앱을 켠 채 복원하면 Flyway 기록이 어긋나 다음 시작이 실패할 수 있으므로 이 순서를 지킨다.
 
 ```bash
-dc stop app
-dc exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot -e "DROP DATABASE $MYSQL_DATABASE"'
-gzip -dc ~/backups/백업파일.sql.gz | dc exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot'
-dc start app
+docker compose stop app
+docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot -e "DROP DATABASE $MYSQL_DATABASE"'
+gzip -dc ~/backups/백업파일.sql.gz | docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot'
+docker compose start app
 ```
 
 **AWS Free 플랜 종료:** 2027-05-02 또는 크레딧 소진 중 먼저 오는 때. 그 뒤 계정이 닫혀 서비스와 DB 접근이 끊긴다. 잔액을 매달 EC2 대시보드에서 확인하고, **2027-03-01** 까지 Oracle 이전 또는 Paid 전환을 결정한다. 종료 전에 백업을 내 PC 로 받아 둔다.
