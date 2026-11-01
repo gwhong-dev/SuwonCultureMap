@@ -108,7 +108,7 @@ public final class ScheduleExtractor {
 
     Reading weeklyFound = first(weekly(weekday, start, end), oneOf(labeled, l -> weekly(content(l), l, start, end), "매주"));
 
-    Reading listed = first(dateList(time, time, start, end), labeledList(labeled, start, end));
+    Reading listed = first(dateList(time, time, start, end), labeledList(labeled, bodyLines, start, end));
     if (listed != null) {
       // 나열과 매주 문구가 같이 있으면 어느 쪽이 전체 일정인지 모름
       if (listed.failReason() == null && weeklyFound != null) return ScheduleResult.unknown("날짜 나열과 매주 문구가 함께 있음");
@@ -181,9 +181,17 @@ public final class ScheduleExtractor {
   }
 
   // 본문의 나열 줄끼리 다르거나, 날짜 하나짜리 라벨 줄이 같이 있으면 어느 쪽이 전체인지 모름
-  private static Reading labeledList(List<String> labeled, LocalDate start, LocalDate end) {
+  private static Reading labeledList(List<String> labeled, List<String> bodyLines, LocalDate start, LocalDate end) {
     Reading found = oneOf(labeled, l -> dateList(content(l), l, start, end), "날짜 나열");
     if (found == null || found.failReason() != null) return found;
+    // 라벨 줄 다음 줄이 날짜로 시작하면 나열이 이어지는 것 → 라벨 줄만 읽으면 빠진 날을 "안 함"으로 안내하게 됨
+    for (int i = 0; i + 1 < bodyLines.size(); i++) {
+      String line = bodyLines.get(i);
+      if (isAllowedLine(line) && dateList(content(line), line, start, end) != null
+          && DATE_TOKEN.matcher(bodyLines.get(i + 1)).lookingAt()) {
+        return Reading.fail("날짜 나열이 다음 줄로 이어짐");
+      }
+    }
     for (String line : labeled) {
       String t = TIME_RANGE.matcher(content(line)).replaceAll(" ");
       Matcher m = DATE_TOKEN.matcher(t);

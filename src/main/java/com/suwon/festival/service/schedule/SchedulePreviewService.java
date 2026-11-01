@@ -35,27 +35,33 @@ public class SchedulePreviewService {
     int oneDay = 0;
     int dates = 0;
     int unknown = 0;
+    int noBody = 0;
 
     for (EventItem item : EventSyncService.parseItems(xml)) {
       if (item.idx == null) continue; // 동기화도 건너뜀
       List<ContentInfoDetail> details = item.contentInfo == null ? null : item.contentInfo.contentInfoDetail;
       LocalDate start = item.eventDate == null ? null : date(item.eventDate.sdate);
       LocalDate end = item.eventDate == null ? null : date(item.eventDate.edate);
-      String timeText = InfoParser.findTimeText(details);
-      ScheduleResult r = ScheduleExtractor.extract(new ScheduleInput(start, end, timeText,
-          InfoParser.findWeekdayText(details), bodies.get(item.idx)));
+      String timeText = InfoParser.findFullTimeText(details);
+      String body = bodies.get(item.idx);
+      // 시작일만 읽히면 추출기는 하루짜리로 보지만, 재단 데이터는 종료일이 늘 있음 → 못 읽은 것은 이상 데이터로 드러냄
+      ScheduleResult r = start != null && end == null
+          ? ScheduleResult.unknown("종료일을 못 읽음")
+          : ScheduleExtractor.extract(new ScheduleInput(start, end, timeText, InfoParser.findWeekdayText(details), body));
 
       total++;
+      if (body == null) noBody++;
       if (r.status() == ScheduleResult.Status.DATES) dates++; else unknown++;
-      if (start != null && (end == null || end.equals(start))) {
+      if (start != null && start.equals(end)) {
         oneDay++;
         continue;
       }
       boolean onMap = item.coordinate != null && item.coordinate.lat != null && item.coordinate.lng != null;
-      items.add(new SchedulePreviewResult.Item(item.idx, HtmlUtils.htmlUnescape(String.valueOf(item.title)), onMap,
+      String title = item.title == null ? null : HtmlUtils.htmlUnescape(item.title);
+      items.add(new SchedulePreviewResult.Item(item.idx, title, onMap,
           start, end, r.status(), r.dates(), r.holidayNote(), r.sourceText(), r.reason(), timeText));
     }
-    return new SchedulePreviewResult(total, oneDay, dates, unknown, items);
+    return new SchedulePreviewResult(total, oneDay, dates, unknown, noBody, items);
   }
 
   private static LocalDate date(String value) {
