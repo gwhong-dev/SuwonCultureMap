@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -159,24 +161,45 @@ class EventMergeServiceTest {
     assertThat(mergedIntoOf(roundup)).isEqualTo(single.getId());
   }
 
-  @Test
-  void 행사가_아닌_블록은_모음_글_판단에_세지_않음() {
-    Event onePost = instagram("합치기시험 공지섞인 공연");
-    Event laterRoundup = instagram("합치기시험 공지섞인 공연");
-    Event laterOther = instagram("합치기시험 또 다른 전시");
-    InstagramMedia noticePost = media("m-notice");
-    block(noticePost, "k1", InstagramBlock.Status.READY, onePost);
-    block(noticePost, "k2", InstagramBlock.Status.SKIPPED, null); // 공지 → 행사 1개짜리 글
+  // 모음 글을 먼저 저장 → 판단이 틀리면 같은 순위가 되어 id 작은 모음 글이 대표가 되어 실패함
+  @ParameterizedTest
+  @EnumSource(value = InstagramBlock.Status.class, names = { "NO_COORD", "ERROR", "NO_DATE" })
+  void 지도에_못_올라간_행사_블록도_모음_글로_세고_공지는_안_셈(InstagramBlock.Status status) {
+    Event roundup = instagram("합치기시험 공지섞인 공연");
+    Event single = instagram("합치기시험 공지섞인 공연");
     InstagramMedia roundupPost = media("m-roundup2");
-    block(roundupPost, "k1", InstagramBlock.Status.READY, laterRoundup);
-    block(roundupPost, "k2", InstagramBlock.Status.NO_COORD, null); // 좌표만 못 찾은 행사 → 모음 글
-    block(roundupPost, "k3", InstagramBlock.Status.READY, laterOther);
+    block(roundupPost, "k1", InstagramBlock.Status.READY, roundup);
+    block(roundupPost, "k2", status, null);
+    InstagramMedia noticePost = media("m-notice");
+    block(noticePost, "k1", InstagramBlock.Status.READY, single);
+    block(noticePost, "k2", InstagramBlock.Status.SKIPPED, null); // 공지 → 행사 1개짜리 글
 
     mergeService.recompute();
     reload();
 
-    assertThat(mergedIntoOf(onePost)).isNull();
-    assertThat(mergedIntoOf(laterRoundup)).isEqualTo(onePost.getId());
+    assertThat(mergedIntoOf(single)).isNull();
+    assertThat(mergedIntoOf(roundup)).isEqualTo(single.getId());
+  }
+
+  @Test
+  void 재단이_기준에서_벗어나면_남은_인스타끼리_새_대표를_뽑음() {
+    Event foundation = foundation(70009L, "합치기시험 새대표 공연");
+    Event first = instagram("합치기시험 새대표 공연");
+    Event second = instagram("합치기시험 새대표 공연");
+    mergeService.recompute();
+    em.flush();
+    assertThat(first.getMergedIntoId()).isEqualTo(foundation.getId());
+
+    foundation.updateFrom(Event.builder()
+        .idx(70009L).title("합치기시험 새대표 공연").category("공연").latitude(37.5).longitude(127.5)
+        .pubDate(LocalDateTime.of(2031, 1, 2, 0, 0))
+        .startDate(DAY.plusMonths(2)).endDate(DAY.plusMonths(2)).place("다른 곳").build());
+    em.flush();
+    mergeService.recompute();
+    reload();
+
+    assertThat(mergedIntoOf(first)).isNull();
+    assertThat(mergedIntoOf(second)).isEqualTo(first.getId());
   }
 
   @Test

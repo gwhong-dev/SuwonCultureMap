@@ -36,17 +36,64 @@ class EventGrouperTest {
 
   @Test
   void 사슬로_이어지면_한_묶음() {
-    // A(11/1~3) = B(11/3~5) = C(11/5) 지만 A 와 C 는 날짜가 안 겹침 → 그래도 한 묶음
-    var a = insta(1, "가을 음악회", "2026-11-01", "2026-11-03", true);
-    var b = insta(2, "가을 음악회", "2026-11-03", "2026-11-05", true);
-    var c = insta(3, "가을 음악회", "2026-11-05", null, true);
-    assertThat(EventMatcher.isSameEvent(a, c)).isFalse();
+    // F(11/1~11/10) = A(11/2 "가을 음악회") = B(11/2 "음악회 가을 음악회 특별전") 처럼 제목은 A 를 거쳐 이어져도 한 묶음
+    var f = swcf(1, "가을 음악회 특별전", "2026-11-01", "2026-11-10");
+    var a = insta(2, "가을 음악회", "2026-11-02", null, false);
+    var b = insta(3, "수원 가을 음악회 안내", "2026-11-02", null, false);
+    assertThat(EventMatcher.isSameEvent(f, b)).isFalse();
 
-    Result r = EventGrouper.group(List.of(a, b, c));
+    Result r = EventGrouper.group(List.of(f, a, b));
 
     assertThat(r.merged()).hasSize(1);
-    assertThat(r.merged().get(0).representative()).isEqualTo(a);
-    assertThat(r.merged().get(0).hidden()).containsExactly(b, c);
+    assertThat(r.merged().get(0).representative()).isEqualTo(f);
+    assertThat(r.merged().get(0).hidden()).containsExactly(a, b);
+  }
+
+  @Test
+  void 대표보다_기간이_긴_글은_숨기지_않음() {
+    // 대표(개별 글)가 11/1 하루면, 숨겨진 모음 글(~12/31)의 남은 기간에 행사가 지도에서 사라짐
+    var roundup = insta(1, "수원 사진전", "2026-11-01", "2026-12-31", true);
+    var single = insta(2, "수원 사진전", "2026-11-01", null, false);
+
+    Result r = EventGrouper.group(List.of(roundup, single));
+
+    assertThat(r.merged()).isEmpty();
+  }
+
+  @Test
+  void 긴_글이_회차를_이어_붙여도_다른_회차는_숨기지_않음() {
+    var first = insta(1, "가을 음악회", "2026-11-05", null, false);
+    var second = insta(2, "가을 음악회", "2026-11-19", null, false);
+    var roundup = insta(3, "가을 음악회", "2026-11-01", "2026-11-30", true);
+
+    Result r = EventGrouper.group(List.of(first, second, roundup));
+
+    assertThat(r.merged()).isEmpty();
+  }
+
+  @Test
+  void 대표_기간_안의_회차는_숨김() {
+    var foundation = swcf(9, "가을 음악회", "2026-11-01", "2026-11-30");
+    var first = insta(1, "가을 음악회", "2026-11-05", null, false);
+    var second = insta(2, "가을 음악회", "2026-11-19", null, false);
+
+    Result r = EventGrouper.group(List.of(first, second, foundation));
+
+    assertThat(r.merged()).hasSize(1);
+    assertThat(r.merged().get(0).representative()).isEqualTo(foundation);
+    assertThat(r.merged().get(0).hidden()).containsExactly(first, second);
+  }
+
+  @Test
+  void 대표_기간을_벗어난_행만_남기고_나머지는_숨김() {
+    var foundation = swcf(9, "가을 음악회", "2026-11-05", "2026-11-07");
+    var inside = insta(1, "가을 음악회", "2026-11-06", null, false);
+    var longer = insta(2, "가을 음악회", "2026-11-01", "2026-11-30", true);
+
+    Result r = EventGrouper.group(List.of(foundation, inside, longer));
+
+    assertThat(r.merged()).hasSize(1);
+    assertThat(r.merged().get(0).hidden()).containsExactly(inside);
   }
 
   @Test
@@ -103,7 +150,7 @@ class EventGrouperTest {
         swcf(1, "가을 음악회", "2026-11-05", null),
         insta(2, "가을음악회", "2026-11-05", null, true),
         insta(3, "겨울 빛 축제", "2026-12-24", null, false),
-        insta(4, "겨울빛축제", "2026-12-24", "2026-12-31", true)));
+        insta(4, "겨울빛축제", "2026-12-24", null, true)));
     Result first = EventGrouper.group(list);
     Collections.reverse(list);
     assertThat(EventGrouper.group(list)).isEqualTo(first);

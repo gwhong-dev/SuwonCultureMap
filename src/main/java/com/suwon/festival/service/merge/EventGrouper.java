@@ -11,6 +11,7 @@ import com.suwon.festival.entity.Event;
 // 같은 행사끼리 묶고 대표를 고름 (설계 3번 "묶음과 대표")
 // - A=B, B=C 면 A·B·C 한 묶음 (이어 붙이기)
 // - 대표 우선순위: 재단 → 인스타 개별 글 → 인스타 모음 글 → 그 밖의 출처, 같으면 id 작은 쪽
+// - 대표 기간을 벗어난 행은 숨기지 않고 그대로 둠 (긴 글이 회차들을 이어 붙여도 다른 회차가 사라지지 않음)
 // - 묶음에 재단 행사가 2개 이상이면 합치지 않음 (기준이 너무 느슨하다는 신호 → conflicts 로 돌려줘 로그에 남김)
 // - DB 를 건드리지 않는 순수 계산. 같은 입력이면 항상 같은 결과 (입력 순서와도 무관)
 public final class EventGrouper {
@@ -64,7 +65,14 @@ public final class EventGrouper {
       }
       List<MergeCandidate> sorted = new ArrayList<>(members);
       sorted.sort(PRIORITY);
-      merged.add(new MergeGroup(sorted.get(0), List.copyOf(sorted.subList(1, sorted.size()))));
+      MergeCandidate representative = sorted.get(0);
+      // 대표 기간을 벗어난 행은 숨기지 않음: 화면은 대표 날짜로 지난 행사를 거르므로, 숨기면 남은 기간 · 다른 회차가 지도에서 사라짐
+      List<MergeCandidate> hidden = sorted.subList(1, sorted.size()).stream()
+          .filter(c -> EventMatcher.periodWithin(c, representative))
+          .toList();
+      if (!hidden.isEmpty()) {
+        merged.add(new MergeGroup(representative, hidden));
+      }
     }
     return new Result(List.copyOf(merged), List.copyOf(conflicts));
   }

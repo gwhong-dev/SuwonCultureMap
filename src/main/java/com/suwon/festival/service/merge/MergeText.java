@@ -28,9 +28,13 @@ public final class MergeText {
       return "";
     }
     String t = unescapeHtml(s);
-    t = HASHTAG.matcher(t).replaceAll("$1");
-    t = NOT_LETTER_OR_DIGIT.matcher(t).replaceAll("");
-    return t.toLowerCase(Locale.ROOT);
+    String withoutTags = clean(HASHTAG.matcher(t).replaceAll("$1"));
+    // `2026 #뷰티썸수원` 처럼 태그가 곧 제목이면 숫자만 남아 다른 제목과 잘못 일치함 → 태그 글자를 살림
+    return !withoutTags.isEmpty() && withoutTags.chars().allMatch(Character::isDigit) ? clean(t) : withoutTags;
+  }
+
+  private static String clean(String s) {
+    return NOT_LETTER_OR_DIGIT.matcher(s).replaceAll("").toLowerCase(Locale.ROOT);
   }
 
   // `&#39;` · `&#x27;` · `&amp;` 같은 HTML 표기 풀기

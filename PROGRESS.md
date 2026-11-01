@@ -49,8 +49,8 @@
         - [x] 결정 3건 (11/1): 기준 3개 모두 · 숨김 칸 · 인스타 링크는 나중에 → 실사용 피드백으로 기준 조정
         - [x] 1번 PR `EventMatcher` 규칙 + 단위 테스트 (PR #47, `service/merge/`, DB 변경 없음)
         - [x] 2번 PR V3 `merged_into_id` + 엔티티 + `/api/events` · 찜 조회 반영 (설계 7번, M · 로컬 확인: 임시 DB 에서 로그 `version "3"` · 화면 정상)
-        - [x] 3번 PR `EventMergeService` + 미리보기 API (L · 임시 DB 실데이터: 묶음 8 · 숨김 13 · 잘못 합친 쌍 없음 → 기준 유지). 2번 PR 검증 지적 2건 포함: `reset-instagram-dev.ps1` 의 인스타 행 삭제 전에 `merged_into_id` 비우기(칸 존재 확인 포함) · 대표는 항상 `merged_into_id` NULL 임을 테스트로 고정(사슬 · 자기 자신 금지)
-        - [ ] 4번 PR 동기화 끝 자동 실행 + 결과 JSON (M · 같은 자리 마커 2개 → 1개)
+        - [x] 3번 PR `EventMergeService` + 미리보기 API (L · 임시 DB 실데이터: 묶음 8 · 숨김 13 · 충돌 3 · 잘못 합친 쌍 없음 → 기준 숫자 유지, 규칙 3가지 추가). 2번 PR 검증 지적 2건 포함: `reset-instagram-dev.ps1` 의 인스타 행 삭제 전에 `merged_into_id` 비우기(칸 존재 확인 포함) · 대표는 항상 `merged_into_id` NULL 임을 테스트로 고정(사슬 · 자기 자신 금지)
+        - [ ] 4번 PR 동기화 끝 자동 실행 + 결과 JSON (M · 같은 자리 마커 2개 → 1개). 체크(3번 PR 검증): `recompute` 실패 시 동기화는 이미 커밋됨 → 잡아서 결과에 표시 · 재단 동기화 중간 예외 · 인스타 `break` 뒤에도 호출 · `InstagramSyncService.sync` 에 바깥 `@Transactional` 금지 · 동시 실행 시 옛 값 덮어쓰기 · 트랜잭션 없는 테스트 1개 · 실제 MySQL 반영 확인
 
   - [x] 장기 토큰(60일) — `set-instagram-dev` 가 교환 · 만료일 저장, 만료 7일 전부터 동기화 결과에 ⚠️ 알림 (앱 시크릿은 매번 입력 · 저장 X)
     - [x] 사용자 PC 확인(11/1, 만료일 2026-12-31): `git pull` → `scripts\set-instagram-dev.cmd` (Y → 앱 ID · 시크릿) → `[완료] 장기 토큰 저장 · 만료일 2026-12-…` → 앱 재실행 → `scripts\instagram-sync.cmd` 성공
@@ -113,7 +113,7 @@
 | 11/1 | 작업 세션 | 합치기 2번 PR — V3 `merged_into_id`, `/api/events` 숨긴 행 제외, 찜은 대표 기준(조회 · 추가 · 취소). 설계에 없던 취소 처리 추가: 숨긴 행을 찜한 경우 화면이 보낸 대표 id 로도 취소되게. 검증 지적 반영 후 테스트 +16(전체 235). 실제 MySQL 은 임시 DB 로 확인(V1~V3 · 동기화 118건 · 숨김 1건 → API 117건 · 지도 정상) 후 삭제 |
 | 11/1 | 작업 세션 | D: PC 개발 DB 발견 — Flyway 기록 없고 `place` · `time_text` 칸 없는 옛 구조(행사 125건)인데, 앱 실행으로 baseline · V2 · V3 가 적용됨(칸 추가만, 행사 125건 유지). `place` 칸이 없어 앱 시작 실패 → 두 칸을 수동 추가해 복구(정상 구조와 비교해 빠진 칸은 이 둘뿐, 앱 시작 · 125건 조회 확인). 기존 125건의 두 칸은 비어 있음 |
 | 11/1 | 작업 세션 | PR #49 찜 실사용 확인 (임시 DB · 카카오 로그인, 행사 하나를 임시로 숨김) — 추가 · 취소 ✅, 찜한 행사를 숨기면 대표에 ★ 로 옮겨감 ✅(목록 118→117), 대표 id 로 취소하면 찜 행 삭제 ✅. 임시 DB 삭제 |
-| 11/1 | 작업 세션 | 합치기 3번 PR — `EventMergeService`(미리보기 · 다시 계산) · `GET /api/events/merge/preview`. 테스트 +10(전체 245). 임시 DB 실데이터(재단 118 + 인스타 READY 45): 묶음 8 · 숨김 13 · 충돌 4, 결과는 `docs/event-merge.md` 8번. `recompute` 의 실제 MySQL 반영은 4번 PR 에서 확인 |
+| 11/1 | 작업 세션 | 합치기 3번 PR — `EventMergeService`(미리보기 · 다시 계산) · `GET /api/events/merge/preview`. 테스트 +20(전체 255). 임시 DB 실데이터(재단 118 + 인스타 READY 45): 묶음 8 · 숨김 13 · 충돌 3, 결과는 `docs/event-merge.md` 8번. 검증 지적 반영: 대표 기간을 벗어난 행은 숨기지 않음(행사가 지도에서 사라지는 문제) · 앞부분만 같은 제목 구분 · 자체 발견: 숫자만 남는 제목(`2026`) 처리. `recompute` 의 실제 MySQL 반영은 4번 PR 에서 확인 |
 | 11/1 | 작업 세션 | Claude in Chrome 의 `localhost:8080` 이 앱과 다르게 응답한 원인 조사 — 노트북 8080 이 비어 있어도 Chrome 은 Spring 404 를 받고, 노트북에만 띄운 시험 서버(8765)에는 못 닿음 → 연결된 Chrome 은 다른 PC 로 판단. PR 코드와 무관. 로컬 앱 확인은 내장 브라우저, GitHub 작업만 Chrome |
 
 ## ⚠️ 막힌 것 / 메모
@@ -137,7 +137,7 @@
 - [x] 네이버 로그인 `state=test123` 고정값 → 카카오·구글·네이버 모두 무작위 state 생성·검증 (CSRF 방지)
 - [ ] PR #8 머지 후 dev 파일의 `kakao.redirect-uri`·`google.redirect-uri` 줄 삭제 (`app.base-url`로 자동 생성되게)
 - [ ] 네이버 토큰 요청 URL에 `code`를 인코딩 없이 붙임 (`NaverAuthService.java:29-34`) — state 검증 뒤라 위험 낮아 보류 (PR #17 리뷰)
-- [ ] 개발 확인용 `/api/events/sync/raw` · `/sync/parsed` 정리, `POST /api/events/sync` 도 로그인 없이 호출 가능 — 운영 배포 전에 제거하거나 관리자 전용으로 (자체 발견 + PR #18 리뷰)
+- [ ] 개발 확인용 `/api/events/sync/raw` · `/sync/parsed` 정리, `POST /api/events/sync` · `GET /api/events/merge/preview` 도 로그인 없이 호출 가능 — 운영 배포 전에 제거하거나 관리자 전용으로 (자체 발견 + PR #18 리뷰)
 - [x] prod `spring.jpa.hibernate.ddl-auto=update` → DB 마이그레이션 도구(Flyway 등) 도입 후 `validate` (PR #8 리뷰) → Flyway 도입 PR
 - [ ] `setup-docker.ps1` 의 properties 특수 표기(`\=` `\:` `\uXXXX`, 줄 끝 `\` 이어쓰기) 미처리 — 현재 dev 견본 형식엔 해당 없음 (PR #14 리뷰)
 - [ ] 행사 제목에 `&#39;`가 그대로 보임 (예: `&#39;어울야락(夜樂)&#39;`, 폰 테스트 중 발견) — `title`은 이미 `htmlUnescape` 함(`EventSyncService.java:63`). 사용자 PC에서 **재동기화 후에도 남는지** 확인 → 남으면 원문 XML 인코딩 횟수(이중 이상) 확인 (PR #20 리뷰)
