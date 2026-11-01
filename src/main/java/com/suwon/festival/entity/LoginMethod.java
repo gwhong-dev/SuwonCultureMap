@@ -31,22 +31,14 @@ public class LoginMethod {
   @Column(name = "provider_id", nullable = false)
   private String providerId;
 
-  @Column
-  private String email;
-
-  @Column
-  private String password;
-
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "member_id")
   private Member member;
 
   @Builder
-  public LoginMethod(String provider, String providerId, String email, String password, Member member) {
+  public LoginMethod(String provider, String providerId, Member member) {
     this.provider = provider;
     this.providerId = providerId;
-    this.email = email;
-    this.password = password;
     this.member = member;
   }
 }

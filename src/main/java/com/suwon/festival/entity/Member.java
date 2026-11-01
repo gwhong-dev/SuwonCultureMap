@@ -13,14 +13,13 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /*
 회원번호 id
-닉네임 nickname
 가입일 createdAt
+로그인 정보는 소셜에게 맡기고 개인정보를 보관하지 않음 (V4)
 */
 
 @Entity
@@ -34,12 +33,8 @@ public class Member {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id; // 회원번호
 
-    @Column(unique = true, nullable = false)
-    private String nickname; // 닉네임
-
-    @Builder
-    public Member(String nickname) {
-        this.nickname = nickname;
+    public static Member create() {
+        return new Member();
     }
 
     @CreatedDate // 저장될때 자동으로 시간 기입

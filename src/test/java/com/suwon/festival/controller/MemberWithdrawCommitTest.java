@@ -13,6 +13,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,11 +60,13 @@ class MemberWithdrawCommitTest {
   private MockMvc mockMvc;
   private Member member;
   private Event event;
+  private final List<Long> createdMemberIds = new ArrayList<>();
 
   @BeforeEach
   void setUp() {
     mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
-    member = memberRepository.save(Member.builder().nickname("탈퇴커밋_회원").build());
+    member = memberRepository.save(Member.create());
+    createdMemberIds.add(member.getId());
     event = eventRepository.save(Event.builder()
         .idx(73101L).title("탈퇴커밋 행사").category("공연").latitude(37.4).longitude(126.5)
         .pubDate(LocalDateTime.of(2034, 1, 1, 0, 0))
@@ -81,9 +85,7 @@ class MemberWithdrawCommitTest {
     loginMethodRepository.findAll().stream()
         .filter(l -> l.getProviderId().equals("730001") || l.getProviderId().startsWith("탈퇴커밋"))
         .forEach(loginMethodRepository::delete);
-    memberRepository.findAll().stream()
-        .filter(m -> m.getNickname().contains("탈퇴커밋"))
-        .forEach(memberRepository::delete);
+    createdMemberIds.forEach(id -> { if (memberRepository.existsById(id)) memberRepository.deleteById(id); });
     eventRepository.delete(event);
   }
 
@@ -131,18 +133,17 @@ class MemberWithdrawCommitTest {
 
   @Test
   void 탈퇴한_회원의_세션이_남아_있어도_소셜_로그인이_새_회원으로_진행() {
-    Long deletedId = memberRepository.save(Member.builder().nickname("탈퇴커밋_지워질회원").build()).getId();
+    Long deletedId = memberRepository.save(Member.create()).getId();
     memberRepository.deleteById(deletedId);
     GoogleUserResponse googleUser = new GoogleUserResponse();
     googleUser.id = "탈퇴커밋-새구글";
-    googleUser.email = "new@example.com";
     when(googleAuthService.getAccessToken("code")).thenReturn("token");
     when(googleAuthService.getUserInfo("token")).thenReturn(googleUser);
     Member created = authService.googleLogin("code", deletedId);
 
     assertThat(created.getId()).isNotEqualTo(deletedId);
     assertThat(memberRepository.findById(created.getId())).isPresent();
-    assertThat(created.getNickname()).contains("탈퇴커밋");
+    createdMemberIds.add(created.getId());
   }
 
   private static MockHttpSession sessionOf(Member m) {
@@ -152,6 +153,6 @@ class MemberWithdrawCommitTest {
   }
 
   private static LoginMethod login(String provider, String providerId, Member m) {
-    return LoginMethod.builder().provider(provider).providerId(providerId).email("a@example.com").member(m).build();
+    return LoginMethod.builder().provider(provider).providerId(providerId).member(m).build();
   }
 }

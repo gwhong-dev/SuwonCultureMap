@@ -55,8 +55,8 @@ class MemberWithdrawTest {
   @BeforeEach
   void setUp() {
     mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
-    member = memberRepository.saveAndFlush(Member.builder().nickname("탈퇴시험_회원").build());
-    other = memberRepository.saveAndFlush(Member.builder().nickname("탈퇴시험_다른회원").build());
+    member = memberRepository.saveAndFlush(Member.create());
+    other = memberRepository.saveAndFlush(Member.create());
     event = eventRepository.saveAndFlush(Event.builder()
         .idx(73001L).title("탈퇴시험 행사").category("공연").latitude(37.4).longitude(126.6)
         .pubDate(LocalDateTime.of(2034, 1, 1, 0, 0))
@@ -145,7 +145,7 @@ class MemberWithdrawTest {
 
   private void saveLogin(String provider, String providerId, Member m) {
     loginMethodRepository.saveAndFlush(LoginMethod.builder()
-        .provider(provider).providerId(providerId).email(providerId + "@example.com").member(m).build());
+        .provider(provider).providerId(providerId).member(m).build());
   }
 
   private void saveFavorite(Member m) {
