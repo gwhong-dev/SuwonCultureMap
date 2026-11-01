@@ -136,7 +136,7 @@ erDiagram
 3. 끄기: `Ctrl + C` 또는 `docker compose down` (DB 데이터는 볼륨에 유지, 완전 삭제는 `docker compose down -v`)
 
 > Docker 안에서는 `prod` 프로필로 실행됩니다. 재단 행사가 없는 새 DB는 앱이 뜬 직후 자동으로 동기화하고, 이후 매일 06시 · 18시에 다시 실행합니다.
-> 컨테이너 MySQL 은 내 PC MySQL(3306)과 겹치지 않게 `localhost:3307` 로 열립니다. `port is already allocated` 가 나면 `.env` 에 `DB_PORT=3308` 처럼 다른 번호를 넣으세요.
+> 컨테이너 MySQL 은 내 PC MySQL(3306)과 겹치지 않게 `localhost:3307` 로 열리며, 앱 · DB 포트 모두 그 컴퓨터 안에서만 접속할 수 있습니다. `port is already allocated` 가 나면 `.env` 에 `DB_PORT=3308` 처럼 다른 번호를 넣으세요.
 > 로컬에서 `mvnw spring-boot:run` 으로 앱을 켜 둔 상태면 8080 이 겹치니 먼저 끄세요.
 > 루트에 예전 `.env` 가 있으면 스크립트가 건너뛰므로, 지우고 다시 실행하세요.
 
@@ -146,7 +146,7 @@ erDiagram
 
 `APP_BASE_URL` · `DB_URL` · `DB_USERNAME` · `DB_PASSWORD` · `SWCF_API_KEY_EVENT` · `KAKAO_REST_API_KEY` · `KAKAO_CLIENT_SECRET` · `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` · `NAVER_CLIENT_ID` · `NAVER_CLIENT_SECRET`
 
-선택 항목: `KAKAO_ADMIN_KEY`(탈퇴 때 카카오 연결 해제) · `INSTAGRAM_ACCESS_TOKEN` · `INSTAGRAM_USER_ID` · `INSTAGRAM_TOKEN_EXPIRES_AT` · `INSTAGRAM_ACCOUNTS`(인스타 수집) · `APP_SYNC_CRON`(자동 동기화 시각, 기본 매일 06시 · 18시)
+선택 항목: `KAKAO_ADMIN_KEY`(탈퇴 때 카카오 연결 해제) · `INSTAGRAM_ACCESS_TOKEN` · `INSTAGRAM_USER_ID` · `INSTAGRAM_TOKEN_EXPIRES_AT` · `INSTAGRAM_ACCOUNTS`(인스타 수집) · `APP_SYNC_CRON`(자동 동기화 시각, 기본 매일 06시 · 18시) · `SESSION_COOKIE_SECURE`(기본 true, HTTPS 없이 시험할 때만 false)
 
 > 운영에는 Docker 이미지를 쓰세요. 내 PC 에서 `mvnw package` 로 만든 jar 에는 `application-dev.properties` 가 들어갈 수 있습니다.
 > 소셜 로그인 콜백 주소는 `APP_BASE_URL` 기준으로 자동 생성됩니다. 각 개발자 콘솔(카카오·구글·네이버)에 운영 주소의 콜백 URL도 등록해야 합니다.

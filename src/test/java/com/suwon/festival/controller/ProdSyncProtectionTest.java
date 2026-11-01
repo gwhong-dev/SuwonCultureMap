@@ -7,6 +7,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.scheduling.config.CronTask;
 import org.springframework.scheduling.config.ScheduledTaskHolder;
@@ -66,6 +67,15 @@ class ProdSyncProtectionTest {
         .andReturn().getResponse().getStatus();
 
     assertThat(status).isEqualTo(200);
+  }
+
+  @Test
+  void 운영_세션_쿠키는_HTTPS_전용_설정() {
+    Environment env = context.getEnvironment();
+
+    assertThat(env.getProperty("server.servlet.session.cookie.secure")).isEqualTo("true");
+    assertThat(env.getProperty("server.servlet.session.cookie.http-only")).isEqualTo("true");
+    assertThat(env.getProperty("server.servlet.session.cookie.same-site")).isEqualTo("lax");
   }
 
   @Test
