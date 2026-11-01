@@ -47,7 +47,8 @@
       - [ ] 같은 행사 합치기 (모음 글 ↔ 개별 글, 재단 ↔ 인스타) — 위 수정으로 같은 자리 마커 2개가 생길 수 있음
         - [x] 설계 문서 (`docs/event-merge.md`) — 기준(날짜 겹침 · 300m/장소명 · 제목) 3개 모두, V3 `merged_into_id` 숨김, 테스트 계획, 4개 PR 순서
         - [x] 결정 3건 (11/1): 기준 3개 모두 · 숨김 칸 · 인스타 링크는 나중에 → 실사용 피드백으로 기준 조정
-        - [ ] 1번 PR `EventMatcher` 규칙 + 단위 테스트 (설계 7번)
+        - [x] 1번 PR `EventMatcher` 규칙 + 단위 테스트 (PR #47, `service/merge/`, DB 변경 없음)
+        - [ ] 2번 PR V3 `merged_into_id` + 엔티티 + `/api/events` · 찜 조회 반영 (설계 7번, M · 사용자 PC: 로그 `version "3"` · 화면 그대로)
 
   - [x] 장기 토큰(60일) — `set-instagram-dev` 가 교환 · 만료일 저장, 만료 7일 전부터 동기화 결과에 ⚠️ 알림 (앱 시크릿은 매번 입력 · 저장 X)
     - [x] 사용자 PC 확인(11/1, 만료일 2026-12-31): `git pull` → `scripts\set-instagram-dev.cmd` (Y → 앱 ID · 시크릿) → `[완료] 장기 토큰 저장 · 만료일 2026-12-…` → 앱 재실행 → `scripts\instagram-sync.cmd` 성공
@@ -105,6 +106,7 @@
 | 11/1 | 작업 세션 | 인스타 장기 토큰 — Meta 문서 확인(교환 1회 · 서버 갱신 API 없음 · 페이지 토큰은 미검증), `set-instagram-dev` 교환 단계 · `instagram.token-expires-at` · `InstagramTokenExpiry`(7일 전 알림) · 테스트 +7 |
 | 11/1 | 사용자 PC | 장기 토큰 확인 ✅ (만료일 2026-12-31, 5계정 sync 성공). 1차 TOKEN_INVALID(190) — 앱이 저장 전에 복사된 `target\classes` 설정(옛 단기 토큰)을 읽음 → 앱 재시작으로 해결. 노트북: USB가 `D:` → git `dubious ownership` → `safe.directory` 등록 |
 | 11/1 | 작업 세션 | `instagram-sync` 에 옛 설정 감지(src ↔ target 토큰 줄 비교, 값 출력 X) · TOKEN_INVALID 안내 추가, `set-instagram-dev` 끝 안내에 "켜져 있으면 끄고 다시" |
+| 11/1 | 작업 세션 | PR #47 — 같은 행사 판단 규칙(`EventMatcher` · `EventGrouper` · `MergeText`) + 단위 테스트 28개. 검증 지적 반영: HTML 표기 풀이 순서 고정(실행마다 결과가 바뀌던 문제) · 단어 중간 `#` 보존 |
 
 ## ⚠️ 막힌 것 / 메모
 
