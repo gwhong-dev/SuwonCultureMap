@@ -1,4 +1,5 @@
 # 접속 기록(log)은 켜지 않음. 켜면 처리방침의 접속 기록 항목도 함께 고칠 것
+# 앱 재시작 중의 오류 로그에는 방문자 IP 가 남을 수 있음 → docs/deploy-ec2.md 공개 전 확인
 {$SITE_DOMAIN} {
 	encode gzip
 	reverse_proxy app:8080

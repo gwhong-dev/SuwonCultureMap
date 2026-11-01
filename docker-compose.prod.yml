@@ -14,11 +14,16 @@ services:
   db:
     restart: unless-stopped   # 서버를 재시작해도 자동으로 다시 시작
     logging: *logging
+    # --skip-log-bin: 변경 기록(기본 30일 보관)을 남기지 않음 → 탈퇴 회원 값이 처리방침의 보관 기간을 넘겨 남지 않게
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--skip-log-bin"]
 
   app:
     restart: unless-stopped
     logging: *logging
     environment:
+      # 빠지면 소셜 로그인 복귀 주소와 탈퇴 때 카카오 연결 해제가 동작하지 않으므로 운영에선 필수
+      APP_BASE_URL: ${APP_BASE_URL:?.env 에 APP_BASE_URL 이 없음}
+      KAKAO_ADMIN_KEY: ${KAKAO_ADMIN_KEY:?.env 에 KAKAO_ADMIN_KEY 가 없음}
       # 2GB 서버에서 MySQL 과 메모리를 나눠 쓰도록 앱 메모리 상한을 둠
       JAVA_TOOL_OPTIONS: -Xmx700m
 
@@ -33,7 +38,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "443:443/udp"
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data       # 인증서 보관 (지우면 다시 발급받음)

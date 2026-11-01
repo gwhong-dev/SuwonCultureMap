@@ -11,6 +11,7 @@ fi
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 RUN_USER="${SUDO_USER:-ubuntu}"
 
+export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y docker.io docker-compose-v2 unattended-upgrades
 systemctl enable --now docker
@@ -31,6 +32,7 @@ dpkg-reconfigure -f noninteractive unattended-upgrades
 
 # 매일 04:00(한국 시간) DB 백업
 timedatectl set-timezone Asia/Seoul
+systemctl restart cron   # 재시작해야 바뀐 시간대를 cron 이 사용
 install -d -o "$RUN_USER" -g "$RUN_USER" "/home/$RUN_USER/backups"
 cat > /etc/cron.d/suwon-db-backup <<EOF
 0 4 * * * $RUN_USER bash $REPO_DIR/deploy/backup-db.sh >> /home/$RUN_USER/backups/backup.log 2>&1

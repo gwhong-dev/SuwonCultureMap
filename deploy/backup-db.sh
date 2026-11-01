@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# DB 전체를 압축해 서버의 ~/backups 에 저장하고 14일 지난 파일은 삭제 (처리방침의 백업 항목과 맞출 것)
-# 서버 디스크에만 있으므로, 서버를 지우기 전에는 내 PC 로 받아 둘 것 (docs/deploy-ec2.md)
+# DB 전체를 압축해 서버의 ~/backups 에 저장하고 14일이 지난 파일은 삭제 (처리방침의 백업 항목과 맞출 것)
+# 서버 디스크에만 있으므로 주기적으로 내 PC 로 복사할 것 (docs/deploy-ec2.md)
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BACKUP_DIR="${BACKUP_DIR:-$HOME/backups}"
-KEEP_DAYS=14
+KEEP_DAYS=13   # find -mtime +13 은 만 14일 이상을 고름
 FILE="$BACKUP_DIR/db-$(date +%Y%m%d-%H%M%S).sql.gz"
 TMP="$FILE.tmp"
 
