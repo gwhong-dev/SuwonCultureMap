@@ -12,7 +12,7 @@
 #
 # 건드리지 않는 것: 재단(SWCF) 행사 · 회원 · 로그인 · 찜, 표 구조, Flyway 기록
 # 중단 조건: 인스타 행사에 찜이 1개라도 있으면 아무것도 지우지 않음 (사용자 데이터 보호)
-# 비밀값: application-dev.properties 의 DB 비밀번호를 임시 설정 파일로만 넘기고, 끝나면 지움. 화면에 출력하지 않음
+# 비밀값: application-dev.properties 의 DB 비밀번호를 이 프로세스의 환경 변수로만 넘기고, 끝나면 지움. 화면에 출력하지 않음
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $root
@@ -60,17 +60,14 @@ if (-not $mysql) {
 }
 Write-Host ('[도구] ' + $mysql)
 
-# 비밀번호는 명령줄에 넣지 않고 임시 설정 파일로 (작업 끝나면 삭제)
-$cnf = Join-Path $env:TEMP ('swcm-reset-ig-' + [guid]::NewGuid().ToString('N') + '.cnf')
-$escaped = $dbPass.Replace('\', '\\').Replace('"', '\"')
-$escUser = $dbUser.Replace('\', '\\').Replace('"', '\"')
-$utf8 = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($cnf, "[client]`r`nuser=`"$escUser`"`r`npassword=`"$escaped`"`r`n", $utf8)
+# 비밀번호는 명령줄에 넣지 않고 이 프로세스의 환경 변수로만 넘김 (창이 닫히면 사라짐)
+# 임시 설정 파일은 쓰지 않음: 사용자 이름이 한글이면 mysql 이 %TEMP% 경로의 파일을 못 엶
+$env:MYSQL_PWD = $dbPass
 
 function Sql([string]$q) {
     # Windows PowerShell 5.1 은 Stop 상태에서 mysql 의 경고(stderr) 한 줄에도 멈춤 → 이 호출만 Continue, 성공 여부는 종료 코드로 판단
     $ErrorActionPreference = 'Continue'
-    $out = & $mysql "--defaults-extra-file=$cnf" --protocol=TCP -h $dbHost -P $dbPort -D $dbName --default-character-set=utf8mb4 -N -B -e $q 2>&1
+    $out = & $mysql -u $dbUser --protocol=TCP -h $dbHost -P $dbPort -D $dbName --default-character-set=utf8mb4 -N -B -e $q 2>&1
     if ($LASTEXITCODE -ne 0) {
         $msg = ($out | ForEach-Object { "$_" }) -join ' '
         throw ('SQL 실패: ' + $msg)
@@ -149,5 +146,5 @@ catch {
     exit 1
 }
 finally {
-    Remove-Item -LiteralPath $cnf -Force -ErrorAction SilentlyContinue
+    Remove-Item Env:MYSQL_PWD -ErrorAction SilentlyContinue
 }

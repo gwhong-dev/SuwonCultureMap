@@ -90,7 +90,7 @@ public class InstagramSyncService {
     }
 
     InstagramSyncResult result = new InstagramSyncResult(true, null, accounts.size(), okAccounts, accountErrors,
-        posts, newPosts, postErrors, blocks, saved, updated, duplicates, tokenWarning);
+        posts, newPosts, postErrors, blocks, saved, updated, duplicates, tokenWarning, null);
     log.info("인스타 동기화 끝: 계정 {}/{} · 게시물 {} (새 {} · 실패 {}) · 행사 저장 {} · 갱신 {} · 블록 {}",
         okAccounts, accounts.size(), posts, newPosts, postErrors, saved, updated, blocks);
     return result;

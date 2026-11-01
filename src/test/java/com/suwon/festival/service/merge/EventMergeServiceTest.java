@@ -88,6 +88,20 @@ class EventMergeServiceTest {
   }
 
   @Test
+  void 숨긴_행이_동기화로_갱신돼도_숨김이_유지됨() {
+    Event foundation = foundation(70010L, "합치기시험 갱신 공연");
+    Event insta = instagram("합치기시험 갱신 공연");
+    mergeService.recompute();
+    em.flush();
+
+    insta.updateFrom(base("합치기시험 갱신 공연").info("새 설명").build());
+    reload();
+
+    assertThat(mergedIntoOf(insta)).isEqualTo(foundation.getId());
+    assertThat(eventRepository.findById(insta.getId()).orElseThrow().getInfo()).isEqualTo("새 설명");
+  }
+
+  @Test
   void 숨겨져_있던_대표에_재단이_새로_붙으면_모두_재단을_가리킴_사슬_없음() {
     Event first = instagram("합치기시험 사슬 공연");
     Event second = instagram("합치기시험 사슬 공연");
