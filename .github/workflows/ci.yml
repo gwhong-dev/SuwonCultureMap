@@ -65,3 +65,73 @@ jobs:
       - uses: actions/checkout@v5
       - name: docker build
         run: docker build -t suwonculturemap-app:ci .
+
+  deploy-check:
+    name: 배포 파일 확인
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: 가짜 값으로 .env 만들기
+        run: |
+          cat > .env <<'EOF'
+          SITE_DOMAIN=example.com
+          APP_BASE_URL=https://example.com
+          DB_USERNAME=ci
+          DB_PASSWORD=ci-password
+          MYSQL_ROOT_PASSWORD=ci-root-password
+          SWCF_API_KEY_EVENT=x
+          KAKAO_REST_API_KEY=x
+          KAKAO_ADMIN_KEY=x
+          KAKAO_CLIENT_SECRET=x
+          GOOGLE_CLIENT_ID=x
+          GOOGLE_CLIENT_SECRET=x
+          NAVER_CLIENT_ID=x
+          NAVER_CLIENT_SECRET=x
+          EOF
+
+      - name: compose 설정 · 스크립트 문법
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
+          bash -n deploy/setup-server.sh
+          bash -n deploy/backup-db.sh
+
+      - name: Caddyfile 검사
+        run: >
+          docker run --rm -e SITE_DOMAIN=example.com
+          -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2
+          caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      # H2 테스트로는 못 보는 것: 빈 MySQL 위의 Flyway · ddl-auto=validate · prod 프로필 설정
+      # 빈 DB 에서 먼저 실행 (표가 있으면 Flyway 가 기존 DB 로 보고 V1 을 건너뜀)
+      - name: 앱 실행 후 문서 절차대로 백업 · 복원
+        run: |
+          COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+          sql() { $COMPOSE exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot -N "$@"' sh "$@"; }
+          wait_app() {
+            for i in $(seq 1 60); do
+              if curl -fsS -o /dev/null http://127.0.0.1:8080/api/events; then
+                echo "앱 응답 확인"
+                return 0
+              fi
+              sleep 5
+            done
+            # 앱이 재시작을 반복하면 첫 오류가 앞쪽에 있으므로 처음부터 출력 (자바 호출 경로 줄 제외)
+            $COMPOSE logs --no-color app | grep -v -E '^\S+\s+\|\s+(at |\.\.\. )' | head -n 120 || true
+            return 1
+          }
+
+          $COMPOSE up -d --build db app
+          wait_app
+
+          COUNT_SQL='SELECT COUNT(*) FROM suwon_culture_map.flyway_schema_history WHERE success = 1;'
+          BEFORE="$(sql -e "$COUNT_SQL")"
+          test "$BEFORE" -ge 4
+          BACKUP_DIR="$PWD/ci-backups" bash deploy/backup-db.sh
+
+          $COMPOSE stop app
+          sql -e "DROP DATABASE suwon_culture_map;"
+          gzip -dc ci-backups/db-*.sql.gz | sql
+          test "$(sql -e "$COUNT_SQL")" = "$BEFORE"
+          $COMPOSE start app
+          wait_app
