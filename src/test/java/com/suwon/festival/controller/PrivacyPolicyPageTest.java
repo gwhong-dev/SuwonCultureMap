@@ -38,7 +38,7 @@ class PrivacyPolicyPageTest {
     assertThat(res.getStatus()).isEqualTo(200);
     assertThat(res.getContentAsString(StandardCharsets.UTF_8)).contains(
         "처리하는 개인정보 항목", "보유 기간", "파기", "제3자 제공", "위탁", "국외 이전",
-        "권리", "법정대리인", "자동 수집 장치", "안전성 확보", "개인정보 보호책임자", "삭제 요청");
+        "권리", "법정대리인", "자동 수집 장치", "안전성 확보", "개인정보 보호책임자", "삭제 요청", "문의 메일");
   }
 
   @Test
