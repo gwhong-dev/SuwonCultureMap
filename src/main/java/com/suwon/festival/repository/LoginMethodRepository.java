@@ -11,4 +11,6 @@ public interface LoginMethodRepository extends JpaRepository<LoginMethod, Long> 
   Optional<LoginMethod> findByProviderAndProviderId(String provider, String providerId);
 
   List<LoginMethod> findByMemberId(Long memberId); // 마이페이지에서 "연동된 소셜 계정 목록" 보여줄 때 사용
+
+  void deleteByMemberId(Long memberId); // 회원 탈퇴
 }
