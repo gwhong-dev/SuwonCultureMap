@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.suwon.festival.entity.Member;
 import com.suwon.festival.repository.LoginMethodRepository;
+import com.suwon.festival.repository.MemberRepository;
 import com.suwon.festival.security.OAuthStateManager;
 import com.suwon.festival.service.AuthService;
 
@@ -32,6 +33,7 @@ public class AuthController {
 
   private final AuthService authService;
   private final LoginMethodRepository loginMethodRepository;
+  private final MemberRepository memberRepository;
   private final OAuthStateManager stateManager;
 
   // ===== 소셜 로그인 설정값 (프로필별 properties에서 주입) =====
@@ -149,6 +151,11 @@ public class AuthController {
   @GetMapping(value = "/me", produces = "application/json")
   public Map<String, Object> me(HttpSession session) {
     Long memberId = (Long) session.getAttribute("memberId");
+    // 다른 브라우저에서 탈퇴한 회원의 세션이 남아 있으면 로그아웃 상태로 정리
+    if (memberId != null && !memberRepository.existsById(memberId)) {
+      session.invalidate();
+      memberId = null;
+    }
     Map<String, Object> result = new HashMap<>();
     result.put("loggedIn", memberId != null);
     result.put("memberId", memberId);
