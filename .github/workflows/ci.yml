@@ -65,3 +65,49 @@ jobs:
       - uses: actions/checkout@v5
       - name: docker build
         run: docker build -t suwonculturemap-app:ci .
+
+  deploy-check:
+    name: 배포 파일 확인
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: 가짜 값으로 .env 만들기
+        run: |
+          cat > .env <<'EOF'
+          SITE_DOMAIN=example.com
+          APP_BASE_URL=https://example.com
+          DB_USERNAME=ci
+          DB_PASSWORD=ci-password
+          MYSQL_ROOT_PASSWORD=ci-root-password
+          SWCF_API_KEY_EVENT=x
+          KAKAO_REST_API_KEY=x
+          KAKAO_CLIENT_SECRET=x
+          GOOGLE_CLIENT_ID=x
+          GOOGLE_CLIENT_SECRET=x
+          NAVER_CLIENT_ID=x
+          NAVER_CLIENT_SECRET=x
+          EOF
+
+      - name: compose 설정 · 스크립트 문법
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
+          bash -n deploy/setup-server.sh
+          bash -n deploy/backup-db.sh
+
+      - name: Caddyfile 검사
+        run: >
+          docker run --rm -e SITE_DOMAIN=example.com
+          -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2
+          caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      - name: DB 백업 후 복원
+        run: |
+          COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+          $COMPOSE up -d --wait db
+          sql() { $COMPOSE exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot -N "$@"' sh "$@"; }
+          sql -e "CREATE TABLE suwon_culture_map.ci_check (id INT); INSERT INTO suwon_culture_map.ci_check VALUES (7);"
+          BACKUP_DIR="$PWD/ci-backups" bash deploy/backup-db.sh
+          sql -e "DROP DATABASE suwon_culture_map;"
+          gzip -dc ci-backups/db-*.sql.gz | sql
+          test "$(sql -e 'SELECT id FROM suwon_culture_map.ci_check;')" = "7"
