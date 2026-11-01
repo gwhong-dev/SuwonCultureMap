@@ -105,7 +105,7 @@ public class InstagramPostProcessor {
     int saved = 0, updated = 0, duplicates = 0;
     List<String> logLines = new java.util.ArrayList<>();
     List<Event> ready = new java.util.ArrayList<>();
-    List<Event> fresh = new java.util.ArrayList<>(); // 이번 캡션에 새로 나타나 READY 가 된 행사 (예전 블록이 없음)
+    List<Event> fresh = new java.util.ArrayList<>(); // 그중 이번에 새로 READY 가 된 행사 (READY 로 이어진 블록 제외)
 
     List<BlockResult> results = parser.parse(post.caption());
     for (BlockResult r : results) {
@@ -145,7 +145,7 @@ public class InstagramPostProcessor {
                   event = found;
                   updated++;
                 }
-                if (block == null || block.getStatus() == InstagramBlock.Status.RETIRED) fresh.add(event);
+                fresh.add(event);
                 status = InstagramBlock.Status.READY;
                 reason = null;
               }
@@ -185,7 +185,7 @@ public class InstagramPostProcessor {
     if (!results.isEmpty()) {
       existing.keySet().removeAll(seen);
       List<String> retired = retirer.retire(post.id(), existing.values(),
-          new StaleBlockRetirer.Current(ready, fresh, counts.keySet()), now);
+          new StaleBlockRetirer.Current(ready, fresh, counts.keySet(), post.caption()), now);
       if (!retired.isEmpty()) counts.put(InstagramBlock.Status.RETIRED, retired.size());
       logLines.addAll(retired);
     }

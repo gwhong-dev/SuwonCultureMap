@@ -102,7 +102,7 @@ class StaleBlockRetireNoTxTest {
   }
 
   @Test
-  void 뒤_행사를_이미_찜한_회원의_옛_찜은_지우고_커밋() {
+  void 찜_2개가_같은_행사로_모여도_unique_충돌_없이_커밋() {
     String both = "가을 음악회" + DATE_AND_PLACE + "\n\n가을 음악회 앙코르" + DATE_AND_PLACE;
     sync(both, "겨울 음악회" + DATE_AND_PLACE);
     Event old = event("가을 음악회");
@@ -111,11 +111,12 @@ class StaleBlockRetireNoTxTest {
     favoriteRepository.save(Favorite.builder().member(member).event(old).createdAt(LocalDateTime.of(2026, 10, 1, 9, 0)).build());
     favoriteRepository.save(Favorite.builder().member(member).event(encore).createdAt(LocalDateTime.of(2026, 10, 1, 9, 0)).build());
 
-    InstagramSyncResult r = sync("가을 음악회 앙코르" + DATE_AND_PLACE, "겨울 음악회" + DATE_AND_PLACE);
+    InstagramSyncResult r = sync("가을 음악회 앙코르 공연" + DATE_AND_PLACE, "겨울 음악회" + DATE_AND_PLACE);
 
     assertThat(r.postErrors()).isZero();
     assertThat(eventRepository.findById(old.getId())).isEmpty();
+    assertThat(eventRepository.findById(encore.getId())).isEmpty();
     assertThat(favoriteRepository.findByMemberId(member.getId())).hasSize(1);
-    assertThat(favoriteRepository.existsByMemberIdAndEventId(member.getId(), encore.getId())).isTrue();
+    assertThat(favoriteRepository.existsByMemberIdAndEventId(member.getId(), event("가을 음악회 앙코르 공연").getId())).isTrue();
   }
 }

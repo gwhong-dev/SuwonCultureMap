@@ -183,7 +183,7 @@ class StaleBlockRetireTest {
   }
 
   @Test
-  void 행사_없는_옛_블록도_내려_모음_글로_세지_않음() {
+  void 행사_없는_옛_블록은_상태만_RETIRED() {
     // 처음엔 좌표를 못 찾아 NO_COORD(행사 없음), 캡션 수정 뒤 READY → 옛 NO_COORD 가 남으면 블록 2개로 셈
     syncCaption(block("가을 음악회", "2026. 11. 5.(목) 19:00", "없는 아트홀"));
 
@@ -246,18 +246,83 @@ class StaleBlockRetireTest {
   }
 
   @Test
-  void 뒤_행사를_이미_찜한_회원은_찜_1개만_남음() {
+  void 옛_행사_2개를_찜한_회원의_찜이_같은_행사로_모이면_1개만_남음() {
     String both = concert("가을 음악회") + "\n\n" + concert("가을 음악회 앙코르");
     syncCaption(both);
     Member member = member("찜회원");
     favorite(member, event("가을 음악회"));
     favorite(member, event("가을 음악회 앙코르"));
 
-    syncCaption(concert("가을 음악회 앙코르"));
+    syncCaption(concert("가을 음악회 앙코르 공연"));
 
-    assertThat(events()).extracting(Event::getTitle).containsExactly("가을 음악회 앙코르");
+    assertThat(events()).extracting(Event::getTitle).containsExactly("가을 음악회 앙코르 공연");
+    assertThat(favoriteRepository.findByMemberId(member.getId())).singleElement()
+        .satisfies(f -> assertThat(f.getEvent().getTitle()).isEqualTo("가을 음악회 앙코르 공연"));
+  }
+
+  @Test
+  void 같은_글에_따로_있던_비슷한_행사가_못_읽게_되어도_지우지_않음() {
+    syncCaption(concert("가을 음악회") + "\n\n" + concert("가을 음악회 앙코르"));
+
+    String unreadable = concert("가을 음악회") + "\n\n가을 음악회 앙코르\n🗓️ 매주 금~일요일\n📍 가상 아트홀";
+    InstagramSyncResult r = syncCaption(unreadable);
+
+    assertThat(r.blocks().get("NO_DATE")).isEqualTo(1);
+    assertThat(r.blocks().get("RETIRED")).isZero();
+    assertThat(events()).extracting(Event::getTitle).contains("가을 음악회 앙코르");
+  }
+
+  @Test
+  void 같은_글에_따로_있던_비슷한_행사로_찜을_옮기지_않음() {
+    syncCaption(concert("가을 음악회") + "\n\n" + concert("가을 음악회 앙코르"));
+    Member member = member("찜회원");
+    favorite(member, event("가을 음악회 앙코르"));
+
+    InstagramSyncResult r = syncCaption(concert("가을 음악회"));
+
+    assertThat(r.blocks().get("RETIRED")).isZero();
     assertThat(favoriteRepository.findByMemberId(member.getId())).singleElement()
         .satisfies(f -> assertThat(f.getEvent().getTitle()).isEqualTo("가을 음악회 앙코르"));
+  }
+
+  @Test
+  void 글을_다른_행사로_재활용하면_찜을_옮기지_않음() {
+    syncCaption(concert("가을 음악회"));
+    Member member = member("찜회원");
+    favorite(member, event("가을 음악회"));
+
+    InstagramSyncResult r = syncCaption(other("겨울 전시"));
+
+    assertThat(r.blocks().get("RETIRED")).isZero();
+    assertThat(favoriteRepository.findByMemberId(member.getId())).singleElement()
+        .satisfies(f -> assertThat(f.getEvent().getTitle()).isEqualTo("가을 음악회"));
+  }
+
+  @Test
+  void 옛_제목이_캡션에_그대로_있으면_블록이_안_나와도_지우지_않음() {
+    syncCaption(concert("가을 음악회") + "\n\n" + other("겨울 음악회"));
+
+    // 날짜 라벨이 없어져 겨울 음악회 블록이 나오지 않음 → READY 만 있어 "확정"으로 보임
+    InstagramSyncResult r = syncCaption(concert("가을 음악회") + "\n\n겨울 음악회\n날짜는 12월 5일\n장소는 다른 아트홀");
+
+    assertThat(r.blocks().get("RETIRED")).isZero();
+    assertThat(events()).extracting(Event::getTitle).contains("겨울 음악회");
+  }
+
+  @Test
+  void 검색_오류_뒤에_READY_가_되어도_찜을_옮기고_내림() {
+    syncCaption(concert("공연도 즐기고 선물도 받으세요"));
+    Member member = member("찜회원");
+    favorite(member, event("공연도 즐기고 선물도 받으세요"));
+
+    search.failing = true;
+    assertThat(syncCaption(concert("단풍 콘서트")).blocks().get("RETIRED")).isZero();
+
+    search.failing = false;
+    assertThat(syncCaption(concert("단풍 콘서트")).blocks().get("RETIRED")).isEqualTo(1);
+    assertThat(events()).extracting(Event::getTitle).containsExactly("단풍 콘서트");
+    assertThat(favoriteRepository.findByMemberId(member.getId())).singleElement()
+        .satisfies(f -> assertThat(f.getEvent().getTitle()).isEqualTo("단풍 콘서트"));
   }
 
   @Test
