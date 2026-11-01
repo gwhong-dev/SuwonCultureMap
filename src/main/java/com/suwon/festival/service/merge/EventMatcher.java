@@ -58,10 +58,30 @@ public final class EventMatcher {
     }
     String shorter = a.length() <= b.length() ? a : b;
     String longer = shorter == a ? b : a;
-    if (shorter.length() >= MIN_CONTAINED_LENGTH && longer.contains(shorter)) {
+    // 숫자뿐이면(`2026`) 어느 제목에나 들어 있어 포함으로 치지 않음
+    if (shorter.length() >= MIN_CONTAINED_LENGTH && longer.contains(shorter)
+        && shorter.chars().anyMatch(Character::isLetter)) {
       return true;
     }
-    return MergeText.dice(a, b) >= MIN_TITLE_SIMILARITY;
+    return MergeText.dice(a, b) >= MIN_TITLE_SIMILARITY && !differsAfterCommonPrefix(a, b);
+  }
+
+  // 시설명 · 연도가 앞에 붙으면 전체 유사도가 부풀려짐 → 같은 앞부분을 뺀 나머지도 비슷해야 함
+  // `정조테마공연장2026작은음악회` ↔ `정조테마공연장2026마당놀이터` (전체 0.67, 나머지 0)
+  // 나머지가 1글자 이하면 오타 · 회차 번호 수준이라 전체 유사도만 봄
+  private static boolean differsAfterCommonPrefix(String a, String b) {
+    int common = 0;
+    while (common < a.length() && common < b.length() && a.charAt(common) == b.charAt(common)) {
+      common++;
+    }
+    String restA = a.substring(common);
+    String restB = b.substring(common);
+    return restA.length() >= 2 && restB.length() >= 2 && MergeText.dice(restA, restB) < MIN_TITLE_SIMILARITY;
+  }
+
+  // inner 의 기간이 outer 기간 안에 있는가
+  static boolean periodWithin(MergeCandidate inner, MergeCandidate outer) {
+    return !inner.startDate().isBefore(outer.startDate()) && !endOf(inner).isAfter(endOf(outer));
   }
 
   // 두 좌표 사이 거리(m) — 하버사인 공식 (지구를 구로 보고 계산, 수백 m 범위에선 오차 무시 가능)

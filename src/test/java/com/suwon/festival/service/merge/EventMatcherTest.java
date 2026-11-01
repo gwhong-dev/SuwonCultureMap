@@ -126,6 +126,21 @@ class EventMatcherTest {
     }
 
     @Test
+    void 앞부분만_같고_나머지가_다르면_다름() {
+      // 시설명 · 연도가 앞에 붙으면 전체 유사도가 부풀려짐 (실데이터: 유사도 0.67 인 서로 다른 재단 행사)
+      assertThat(EventMatcher.similarTitle("정조테마공연장 2026 작은 음악회", "정조테마공연장 2026 마당놀이터")).isFalse();
+      // 뒤 한 글자 차이는 오타 → 같음
+      assertThat(EventMatcher.similarTitle("수원국악한마당축제", "수원국악한마당축졔")).isTrue();
+    }
+
+    @Test
+    void 숫자만_남는_제목은_다른_제목을_포함으로_잡지_않음() {
+      assertThat(EventMatcher.similarTitle("2026", "2026 화성행궁 야간개장")).isFalse();
+      assertThat(EventMatcher.similarTitle("2026 #뷰티썸수원", "2026 화성행궁 야간개장")).isFalse();
+      assertThat(EventMatcher.similarTitle("2026 #뷰티썸수원", "2026 뷰티썸 수원")).isTrue();
+    }
+
+    @Test
     void 빈_제목은_다름() {
       assertThat(EventMatcher.similarTitle("", "")).isFalse();
       assertThat(EventMatcher.similarTitle(null, "가을 음악회")).isFalse();

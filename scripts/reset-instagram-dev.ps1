@@ -4,9 +4,10 @@
 #   다시 동기화할 때 새 행사로 저장되고 예전 행사도 남음 → 같은 자리 마커 2개
 #
 # 하는 일 (검사 통과 + Y 확인 시에만, 한 트랜잭션):
-#   1) instagram_block 전부 삭제
-#   2) instagram_media 전부 삭제
-#   3) event 중 source = 'INSTAGRAM' 인 행만 삭제
+#   1) 인스타 행의 merged_into_id 비움 (FK. 칸이 있을 때만, 다음 합치기 계산 때 다시 채워짐)
+#   2) instagram_block 전부 삭제
+#   3) instagram_media 전부 삭제
+#   4) event 중 source = 'INSTAGRAM' 인 행만 삭제
 #   → 앱에서 인스타 동기화를 다시 실행하면 새 규칙으로 처음부터 저장됨
 #
 # 건드리지 않는 것: 재단(SWCF) 행사 · 회원 · 로그인 · 찜, 표 구조, Flyway 기록
@@ -112,6 +113,7 @@ try {
     # ---------- 4. 확인 후 실행 ----------
     Write-Host ''
     Write-Host '--- 실행할 작업 (한 번에, 중간 실패 시 전부 취소) ---'
+    if (ColumnExists 'merged_into_id') { Write-Host "  UPDATE event SET merged_into_id = NULL WHERE source = 'INSTAGRAM'" }
     Write-Host '  DELETE FROM instagram_block'
     Write-Host '  DELETE FROM instagram_media'
     Write-Host "  DELETE FROM event WHERE source = 'INSTAGRAM'"
@@ -123,7 +125,10 @@ try {
     if ($answer -ne 'Y' -and $answer -ne 'y') { Write-Host '[취소] 아무것도 바꾸지 않음'; exit 0 }
 
     # 자식(block: media · event 를 가리킴) → media → event 순서. 찜은 위에서 0개 확인 + 같은 트랜잭션 안에서 다시 확인
+    # 합쳐진 행(merged_into_id)이 지울 인스타 행을 가리키면 FK 로 실패 → 먼저 비움. 다음 합치기 계산 때 다시 채워짐 (V2 까지만 적용된 DB 는 칸이 없음)
+    $clearMerged = if (ColumnExists 'merged_into_id') { "UPDATE event SET merged_into_id = NULL WHERE source = 'INSTAGRAM'; " } else { '' }
     Sql ("START TRANSACTION; " +
+        $clearMerged +
         "DELETE FROM instagram_block; " +
         "DELETE FROM instagram_media; " +
         "DELETE FROM event WHERE source = 'INSTAGRAM' AND id NOT IN (SELECT event_id FROM favorite WHERE event_id IS NOT NULL); " +

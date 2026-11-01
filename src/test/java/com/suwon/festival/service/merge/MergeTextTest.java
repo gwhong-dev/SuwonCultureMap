@@ -41,6 +41,12 @@ class MergeTextTest {
   }
 
   @Test
+  void 해시태그를_빼면_숫자만_남는_제목은_태그_글자를_살림() {
+    assertThat(MergeText.normalize("2026 #뷰티썸수원")).isEqualTo("2026뷰티썸수원");
+    assertThat(MergeText.normalize("🎶 #수원")).isEmpty(); // 숫자도 없으면 그대로 빈 제목
+  }
+
+  @Test
   void null_은_빈_문자열() {
     assertThat(MergeText.normalize(null)).isEmpty();
   }
