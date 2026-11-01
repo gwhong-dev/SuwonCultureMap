@@ -112,6 +112,8 @@ jobs:
           sql -e "DROP DATABASE suwon_culture_map;"
           gzip -dc ci-backups/db-*.sql.gz | sql
           test "$(sql -e 'SELECT id FROM suwon_culture_map.ci_check;')" = "7"
+          # 시험 테이블이 남으면 Flyway 가 기존 DB 로 보고 V1 을 건너뛰므로, 다음 단계는 새 서버처럼 빈 DB 로 시작
+          $COMPOSE down -v
 
       # H2 테스트로는 못 보는 것: MySQL 위의 Flyway · ddl-auto=validate · prod 프로필 설정
       - name: 앱을 실제 MySQL + prod 프로필로 실행
