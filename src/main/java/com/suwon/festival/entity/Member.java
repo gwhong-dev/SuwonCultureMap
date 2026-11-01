@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 /*
 회원번호 id
 가입일 createdAt
-로그인 정보는 소셜에게 맡기고 개인정보를 보관하지 않음 (V4)
+로그인은 소셜에게 맡기고, 로그인에 필요한 최소값(LoginMethod 의 식별값)만 보관 (V4)
 */
 
 @Entity
