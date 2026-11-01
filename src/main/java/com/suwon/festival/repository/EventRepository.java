@@ -1,5 +1,6 @@
 package com.suwon.festival.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,4 +13,6 @@ public interface EventRepository extends JpaRepository<Event, Long> {
   Optional<Event> findByIdx(Long idx); // 동기화 시 이미 저장된 행사를 꺼내서 갱신할 때 사용
 
   Optional<Event> findBySourceAndSourceKey(String source, String sourceKey); // 인스타 행사 중복 확인
+
+  List<Event> findByMergedIntoIdIsNull(); // 화면에 보이는 행사 (합쳐져 숨겨진 행 제외)
 }

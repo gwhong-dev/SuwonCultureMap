@@ -66,7 +66,7 @@ ALTER TABLE event ADD CONSTRAINT fk_event_merged_into FOREIGN KEY (merged_into_i
 - 대표는 항상 **묶음 끝**을 가리킴 (A→B→C 같은 사슬 없음) → 화면 · 찜에서 한 번만 따라가면 됨
 - 대표 행 자체의 정보는 바꾸지 않음 (인스타 링크를 대표 상세에 같이 보여주기는 8번 열린 결정)
 - 숨김 해제: 다시 계산했을 때 묶음에서 빠지면 `merged_into_id = NULL` 로 되돌림 (예: 재단 행사가 사라짐)
-- 대표 행이 지워질 때(지금은 지우는 코드 없음): FK 때문에 먼저 숨김 행의 `merged_into_id` 를 비운 뒤 지워야 함 → 인스타 설계 7번 #13 "READY 블록 내리기" 작업 때 같이 처리
+- 대표 행이 지워질 때: FK 때문에 먼저 숨김 행의 `merged_into_id` 를 비운 뒤 지워야 함. 앱 코드에는 지우는 곳이 없고 `scripts/reset-instagram-dev.ps1` 이 인스타 행을 지움 → 3번 PR 전에 이 스크립트에 비우는 단계 추가. 앱 코드는 인스타 설계 7번 #13 "READY 블록 내리기" 작업 때 같이 처리
 
 **영향 받는 조회**
 | 위치 | 바꿀 점 |
@@ -74,6 +74,7 @@ ALTER TABLE event ADD CONSTRAINT fk_event_merged_into FOREIGN KEY (merged_into_i
 | `EventService.getAllEvents` (`/api/events`) | 숨긴 행 제외 |
 | `FavoriteService.getFavoriteEvents` | 숨긴 행을 찜했으면 **대표로 바꿔** 보여줌 (같은 대표가 겹치면 1개) |
 | `FavoriteService.addFavorite` | 숨긴 행 id 로 찜하면 대표 id 로 저장 (화면엔 대표만 보이므로 드문 경우) |
+| `FavoriteService.removeFavorite` | 대표 id 로 취소하면 **그 대표로 모이는 찜을 모두** 지움 (화면엔 대표 id 만 있어서, 숨긴 행을 찜한 경우에도 취소되어야 함) |
 | 캘린더(`EventCalendarController`) | 숨긴 행 id 로 와도 그대로 동작 (원본 행이 남아 있음) → 변경 없음 |
 
 ## 5. 언제 실행하나
