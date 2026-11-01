@@ -51,7 +51,10 @@ public class AuthService {
   }
 
   // ===== 소셜 로그인 공통 처리: 신규 가입 / 기존 로그인 / 계정 연동 =====
-  private Member resolveMember(String provider, String providerId, String email, Long currentMemberId) {
+  private Member resolveMember(String provider, String providerId, String email, Long sessionMemberId) {
+    // 다른 브라우저에서 탈퇴한 회원의 세션이 남아 있으면 로그인 안 한 상태로 처리
+    Long currentMemberId = sessionMemberId != null && memberRepository.existsById(sessionMemberId) ? sessionMemberId : null;
+
     var existingLoginMethod = loginMethodRepository.findByProviderAndProviderId(provider, providerId);
 
     if (existingLoginMethod.isPresent()) {

@@ -100,6 +100,7 @@ erDiagram
 |---|---|---|
 | GET | `/api/events` | 행사 목록 |
 | POST | `/api/events/sync` | 재단 API 동기화 (신규 저장 + 변경 갱신) |
+| DELETE | `/api/members/me` | 회원 탈퇴 (찜 · 로그인 수단 · 회원 삭제, 카카오 연결 해제) |
 | GET | `/api/favorites` | 내 찜 목록 |
 | POST / DELETE | `/api/favorites/{eventId}` | 찜 추가 / 해제 |
 | GET | `/api/auth/{kakao·google·naver}/login` | 소셜 로그인 시작 (인증 페이지로 이동) |

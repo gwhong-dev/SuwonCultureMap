@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ import com.suwon.festival.repository.EventRepository;
 import com.suwon.festival.repository.FavoriteRepository;
 import com.suwon.festival.repository.LoginMethodRepository;
 import com.suwon.festival.repository.MemberRepository;
+import com.suwon.festival.service.KakaoAuthService;
 
 // DELETE /api/members/me: 회원 탈퇴 시 그 회원의 개인정보를 모두 지움
 @SpringBootTest
@@ -43,6 +45,7 @@ class MemberWithdrawTest {
   @Autowired private FavoriteRepository favoriteRepository;
   @Autowired private EventRepository eventRepository;
   @Autowired private EntityManager em;
+  @MockitoBean private KakaoAuthService kakaoAuthService; // 실제 카카오 호출 방지
 
   private MockMvc mockMvc;
   private Member member;
@@ -121,7 +124,7 @@ class MemberWithdrawTest {
   }
 
   @Test
-  void 남은_세션으로_다시_탈퇴하면_거부() throws Exception {
+  void 남은_세션으로_다시_탈퇴하면_세션만_끝내고_성공() throws Exception {
     MockHttpSession otherBrowser = sessionOf(member);
     mockMvc.perform(delete("/api/members/me").session(sessionOf(member))).andReturn();
     em.flush();
@@ -130,7 +133,8 @@ class MemberWithdrawTest {
     MockHttpServletResponse res = mockMvc.perform(delete("/api/members/me").session(otherBrowser))
         .andReturn().getResponse();
 
-    assertThat(res.getStatus()).isEqualTo(400);
+    assertThat(res.getStatus()).isEqualTo(200);
+    assertThat(otherBrowser.isInvalid()).isTrue();
   }
 
   private static MockHttpSession sessionOf(Member m) {

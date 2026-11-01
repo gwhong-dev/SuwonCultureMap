@@ -181,18 +181,24 @@
       document.getElementById("withdrawBtn").addEventListener("click", function () {
         var ok = confirm(
           "탈퇴하면 찜 목록과 연동된 소셜 계정 정보가 모두 삭제되고 되돌릴 수 없어요.\n" +
-            "소셜 계정 쪽 앱 연결은 카카오 · 구글 · 네이버 계정 설정에서 직접 해제할 수 있어요.\n\n" +
+            "카카오 연결은 자동으로 해제돼요. 구글 · 네이버 앱 연결은 각 계정 설정에서 직접 해제할 수 있어요.\n\n" +
             "탈퇴할까요?"
         );
         if (!ok) return;
-        fetch("/api/members/me", { method: "DELETE" }).then(function (r) {
-          if (!r.ok) {
-            alert("탈퇴하지 못했어요. 다시 로그인한 뒤 시도해 주세요.");
-            return;
-          }
-          alert("탈퇴가 완료됐어요.");
-          window.location.href = "index.html";
-        });
+        var btn = document.getElementById("withdrawBtn");
+        btn.disabled = true; // 요청 중 다시 눌러 실패 안내가 뜨지 않게
+        fetch("/api/members/me", { method: "DELETE" })
+          .then(function (r) {
+            return r.text().then(function (message) {
+              if (!r.ok) throw new Error(r.status === 400 ? message : "");
+              alert(message);
+              window.location.href = "index.html";
+            });
+          })
+          .catch(function (e) {
+            btn.disabled = false;
+            alert(e.message || "탈퇴하지 못했어요. 잠시 뒤 다시 시도해 주세요.");
+          });
       });
     </script>
       <script>
