@@ -142,4 +142,5 @@ if ($expiresAt) {
 } else {
     Write-Host '[완료] 토큰 저장 (토큰 값은 출력하지 않음)'
 }
-Write-Host '[다음] 앱을 (다시) 실행한 뒤 scripts\instagram-sync.cmd 실행'
+Write-Host '[다음] 앱이 켜져 있으면 끄고(Ctrl+C) 다시 실행 → scripts\instagram-sync.cmd 실행'
+Write-Host '       (앱은 켤 때 복사한 설정을 읽어서, 켜 둔 채로는 새 토큰이 반영 안 됨)'
