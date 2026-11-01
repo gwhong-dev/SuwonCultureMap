@@ -13,6 +13,8 @@ import com.suwon.festival.service.EventSyncService;
 import com.suwon.festival.service.merge.EventMergeResult;
 import com.suwon.festival.service.merge.EventMergeRunner;
 import com.suwon.festival.service.merge.EventMergeService;
+import com.suwon.festival.service.schedule.SchedulePreviewResult;
+import com.suwon.festival.service.schedule.SchedulePreviewService;
 import com.suwon.festival.dto.xml.EventItem;
 import org.springframework.web.bind.annotation.PostMapping;
 
@@ -27,6 +29,7 @@ public class EventController {
   private final EventSyncService eventSyncService;
   private final EventMergeService eventMergeService;
   private final EventMergeRunner eventMergeRunner;
+  private final SchedulePreviewService schedulePreviewService;
 
   @GetMapping(produces = "application/json")
   public List<EventResponse> getEvents() {
@@ -37,6 +40,12 @@ public class EventController {
   @GetMapping(value = "/merge/preview", produces = "application/json")
   public EventMergeResult mergePreview() {
     return eventMergeService.preview();
+  }
+
+  // 진행 날짜 추출 결과 미리보기 (저장 안 함, 재단 XML 을 그때 받음). 관리자 전용 보호는 위와 같음
+  @GetMapping(value = "/schedule/preview", produces = "application/json")
+  public SchedulePreviewResult schedulePreview() throws Exception {
+    return schedulePreviewService.preview();
   }
 
   @GetMapping("/sync/raw")
