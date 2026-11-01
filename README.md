@@ -1,4 +1,4 @@
-# 수원 문화지도 — Spring Boot 원본 버전
+# 수원바이블 — 수원 문화행사 지도 (Spring Boot)
 
 [![CI](https://github.com/gwhong-dev/SuwonCultureMap/actions/workflows/ci.yml/badge.svg)](https://github.com/gwhong-dev/SuwonCultureMap/actions/workflows/ci.yml)
 
