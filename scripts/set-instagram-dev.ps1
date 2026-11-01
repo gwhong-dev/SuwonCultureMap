@@ -85,7 +85,9 @@ if ($answer -notmatch '^[nN]') {
         # 오류 원문 · 요청 주소에는 비밀값이 섞일 수 있음 → Graph 오류 번호 · 종류만 출력
         $code = ''; $type = ''
         try { $e = ($_.ErrorDetails.Message | ConvertFrom-Json).error; $code = $e.code; $type = $e.type } catch {}
-        Write-Host ('[오류] 교환 실패 (Graph code=' + $code + ' ' + $type + ') → 아무것도 바꾸지 않음')
+        $kind = $_.Exception.GetType().Name  # 예외 종류 이름만 (비밀값 없음) — 네트워크 · 프록시 오류면 code 가 비어 있음
+        Write-Host ('[오류] 교환 실패 (Graph code=' + $code + ' ' + $type + ' / ' + $kind + ') → 아무것도 바꾸지 않음')
+        if (-not $code) { Write-Host '  · code 빈칸 : 인터넷 연결 · 회사/학원 프록시 확인 후 다시 실행' }
         Write-Host '  · code 190 : 토큰이 이미 만료 → 탐색기에서 새로 발급 후 다시 실행'
         Write-Host '  · code 101 / 1 : 앱 ID · 시크릿이 틀림, 또는 탐색기 오른쪽 "Meta 앱" 칸이 다른 앱'
         exit 1
