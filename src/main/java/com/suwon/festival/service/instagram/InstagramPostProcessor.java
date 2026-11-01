@@ -55,23 +55,27 @@ public class InstagramPostProcessor {
   private final PlaceGeocoder geocoder;
   private final CaptionParser parser;
   private final Clock clock;
+  private final StaleBlockRetirer retirer;
 
   @Autowired
   public InstagramPostProcessor(InstagramMediaRepository mediaRepository, InstagramBlockRepository blockRepository,
-      EventRepository eventRepository, PlaceGeocoder geocoder, ObjectProvider<CaptionAiClient> ai) {
+      EventRepository eventRepository, PlaceGeocoder geocoder, ObjectProvider<CaptionAiClient> ai,
+      StaleBlockRetirer retirer) {
     // AI 구현이 아직 없음 → null → 규칙으로 못 읽은 블록은 PENDING (AI 를 붙이면 다음 실행에서 다시 처리)
     this(mediaRepository, blockRepository, eventRepository, geocoder, new CaptionParser(ai.getIfAvailable()),
-        Clock.system(KST));
+        Clock.system(KST), retirer);
   }
 
   InstagramPostProcessor(InstagramMediaRepository mediaRepository, InstagramBlockRepository blockRepository,
-      EventRepository eventRepository, PlaceGeocoder geocoder, CaptionParser parser, Clock clock) {
+      EventRepository eventRepository, PlaceGeocoder geocoder, CaptionParser parser, Clock clock,
+      StaleBlockRetirer retirer) {
     this.mediaRepository = mediaRepository;
     this.blockRepository = blockRepository;
     this.eventRepository = eventRepository;
     this.geocoder = geocoder;
     this.parser = parser;
     this.clock = clock;
+    this.retirer = retirer;
   }
 
   @Transactional
@@ -100,6 +104,8 @@ public class InstagramPostProcessor {
     Set<String> seen = new HashSet<>();
     int saved = 0, updated = 0, duplicates = 0;
     List<String> logLines = new java.util.ArrayList<>();
+    List<Event> ready = new java.util.ArrayList<>();
+    List<Event> fresh = new java.util.ArrayList<>(); // 그중 이번에 새로 READY 가 된 행사 (READY 로 이어진 블록 제외)
 
     List<BlockResult> results = parser.parse(post.caption());
     for (BlockResult r : results) {
@@ -139,6 +145,7 @@ public class InstagramPostProcessor {
                   event = found;
                   updated++;
                 }
+                fresh.add(event);
                 status = InstagramBlock.Status.READY;
                 reason = null;
               }
@@ -159,7 +166,8 @@ public class InstagramPostProcessor {
         default -> status = InstagramBlock.Status.FAILED;
       }
 
-      // 예전에 READY 였던 블록이 이번엔 READY 가 아니어도 행사 연결은 남겨 둠 (지도에서 내리는 처리는 나중에 — PROGRESS "나중에 할 일")
+      if (status == InstagramBlock.Status.READY) ready.add(event);
+      // 예전에 READY 였던 블록이 이번엔 READY 가 아니어도 행사 연결은 남겨 둠
       if (event == null && block != null) event = block.getEvent();
 
       if (block == null) {
@@ -171,6 +179,15 @@ public class InstagramPostProcessor {
       }
       counts.merge(status, 1, Integer::sum);
       logLines.add(BlockLog.line(post.id(), key, r, status, reason));
+    }
+
+    // 캡션을 못 받았거나 블록이 하나도 안 나오면 판단할 근거가 없음 → 아무것도 내리지 않음
+    if (!results.isEmpty()) {
+      existing.keySet().removeAll(seen);
+      List<String> retired = retirer.retire(post.id(), existing.values(),
+          new StaleBlockRetirer.Current(ready, fresh, counts.keySet(), post.caption()), now);
+      if (!retired.isEmpty()) counts.put(InstagramBlock.Status.RETIRED, retired.size());
+      logLines.addAll(retired);
     }
 
     media.markProcessed(now);

@@ -15,4 +15,6 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
   List<Favorite> findByMemberId(Long memberId);
 
   void deleteByMemberId(Long memberId); // 회원 탈퇴
+
+  List<Favorite> findByEventId(Long eventId);
 }
