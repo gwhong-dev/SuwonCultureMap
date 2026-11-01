@@ -125,5 +125,6 @@ jobs:
             fi
             sleep 5
           done
-          $COMPOSE logs --tail=100 app
+          # 앱이 재시작을 반복하면 첫 오류가 앞쪽에 있으므로 처음부터 출력 (자바 호출 경로 줄 제외)
+          $COMPOSE logs --no-color app | grep -v -E '^\S+\s+\|\s+(at |\.\.\. )' | head -n 120
           exit 1
