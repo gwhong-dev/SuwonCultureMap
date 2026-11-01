@@ -56,7 +56,14 @@ public class EventController {
 
   @PostMapping("/sync")
   public String sync() throws Exception {
-    SyncResult result = eventSyncService.syncEvents();
+    SyncResult result;
+    try {
+      result = eventSyncService.syncEvents();
+    } catch (Exception e) {
+      // 행 하나가 실패해도 앞 행들은 이미 저장됨. 같은 행이 매번 실패하면 합치기가 계속 안 도니 여기서도 실행
+      eventMergeRunner.runAfterSync();
+      throw e;
+    }
     return "새 행사 " + result.saved() + "개 저장 · 기존 행사 " + result.updated() + "개 갱신 완료\n"
         + eventMergeRunner.runAfterSync().text();
   }

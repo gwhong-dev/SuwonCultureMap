@@ -1,6 +1,7 @@
 package com.suwon.festival.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
@@ -75,6 +76,17 @@ class SyncMergeControllerTest {
     assertThat(res.getStatus()).isEqualTo(200);
     assertThat(res.getContentAsString(StandardCharsets.UTF_8))
         .contains("\"eventsSaved\":3", "\"merge\"", "\"ok\":true", "\"hiddenCount\"");
+    assertThat(eventRepository.findById(insta.getId()).orElseThrow().getMergedIntoId()).isEqualTo(foundation.getId());
+  }
+
+  @Test
+  void 재단_동기화가_중간에_실패해도_합치기는_실행하고_원래_실패를_돌려줌() throws Exception {
+    Event foundation = eventRepository.save(event().idx(72003L).build());
+    Event insta = eventRepository.save(event().source(Event.SOURCE_INSTAGRAM).sourceKey("자동합치기#3").build());
+    when(eventSyncService.syncEvents()).thenThrow(new IllegalStateException("가상 동기화 실패"));
+
+    assertThatThrownBy(() -> post("/api/events/sync")).hasRootCauseMessage("가상 동기화 실패");
+
     assertThat(eventRepository.findById(insta.getId()).orElseThrow().getMergedIntoId()).isEqualTo(foundation.getId());
   }
 

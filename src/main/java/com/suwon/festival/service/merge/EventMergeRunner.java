@@ -16,12 +16,15 @@ public class EventMergeRunner {
 
   private final EventMergeService eventMergeService;
 
-  public MergeSummary runAfterSync() {
+  // synchronized: 합치기 2개가 겹치면 옛 계산이 나중에 저장되어 사슬(A→B→C)이 생길 수 있음. 트랜잭션 밖이라 커밋까지 잠금 안 (서버 1대 기준)
+  public synchronized MergeSummary runAfterSync() {
     try {
       return MergeSummary.of(eventMergeService.recompute());
     } catch (RuntimeException e) {
-      // 메시지는 남기지 않음 (DB 오류 메시지에 값이 섞일 수 있음) → 예외 종류만
-      log.warn("같은 행사 합치기 실패 {}", e.getClass().getSimpleName());
+      // 메시지는 남기지 않음 (DB 오류 메시지에 값이 섞일 수 있음) → 예외와 원인의 종류만
+      Throwable cause = e.getCause();
+      log.warn("같은 행사 합치기 실패 {}{}", e.getClass().getSimpleName(),
+          cause == null ? "" : " ← " + cause.getClass().getSimpleName());
       return MergeSummary.failed();
     }
   }
