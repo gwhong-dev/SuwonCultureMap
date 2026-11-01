@@ -102,31 +102,36 @@ jobs:
           -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2
           caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
-      - name: DB 백업 후 복원
+      # H2 테스트로는 못 보는 것: 빈 MySQL 위의 Flyway · ddl-auto=validate · prod 프로필 설정
+      # 빈 DB 에서 먼저 실행 (표가 있으면 Flyway 가 기존 DB 로 보고 V1 을 건너뜀)
+      - name: 앱 실행 후 문서 절차대로 백업 · 복원
         run: |
           COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
-          $COMPOSE up -d --wait db
           sql() { $COMPOSE exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot -N "$@"' sh "$@"; }
-          sql -e "CREATE TABLE suwon_culture_map.ci_check (id INT); INSERT INTO suwon_culture_map.ci_check VALUES (7);"
+          wait_app() {
+            for i in $(seq 1 60); do
+              if curl -fsS -o /dev/null http://127.0.0.1:8080/api/events; then
+                echo "앱 응답 확인"
+                return 0
+              fi
+              sleep 5
+            done
+            # 앱이 재시작을 반복하면 첫 오류가 앞쪽에 있으므로 처음부터 출력 (자바 호출 경로 줄 제외)
+            $COMPOSE logs --no-color app | grep -v -E '^\S+\s+\|\s+(at |\.\.\. )' | head -n 120 || true
+            return 1
+          }
+
+          $COMPOSE up -d --build db app
+          wait_app
+
+          COUNT_SQL='SELECT COUNT(*) FROM suwon_culture_map.flyway_schema_history WHERE success = 1;'
+          BEFORE="$(sql -e "$COUNT_SQL")"
+          test "$BEFORE" -ge 4
           BACKUP_DIR="$PWD/ci-backups" bash deploy/backup-db.sh
+
+          $COMPOSE stop app
           sql -e "DROP DATABASE suwon_culture_map;"
           gzip -dc ci-backups/db-*.sql.gz | sql
-          test "$(sql -e 'SELECT id FROM suwon_culture_map.ci_check;')" = "7"
-          # 시험 테이블이 남으면 Flyway 가 기존 DB 로 보고 V1 을 건너뛰므로, 다음 단계는 새 서버처럼 빈 DB 로 시작
-          $COMPOSE down -v
-
-      # H2 테스트로는 못 보는 것: MySQL 위의 Flyway · ddl-auto=validate · prod 프로필 설정
-      - name: 앱을 실제 MySQL + prod 프로필로 실행
-        run: |
-          COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
-          $COMPOSE up -d --build db app
-          for i in $(seq 1 60); do
-            if curl -fsS -o /dev/null http://127.0.0.1:8080/api/events; then
-              echo "앱 응답 확인"
-              exit 0
-            fi
-            sleep 5
-          done
-          # 앱이 재시작을 반복하면 첫 오류가 앞쪽에 있으므로 처음부터 출력 (자바 호출 경로 줄 제외)
-          $COMPOSE logs --no-color app | grep -v -E '^\S+\s+\|\s+(at |\.\.\. )' | head -n 120
-          exit 1
+          test "$(sql -e "$COUNT_SQL")" = "$BEFORE"
+          $COMPOSE start app
+          wait_app
