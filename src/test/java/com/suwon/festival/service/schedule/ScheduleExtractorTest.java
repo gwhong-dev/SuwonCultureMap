@@ -85,8 +85,8 @@ class ScheduleExtractorTest {
     ScheduleResult r = run(d(2026, 10, 1), d(2026, 11, 1), null, null, "일정 : 10. 11.(일) / 10. 18.(일) 우천예보 취소 / 11. 1.(일)");
     assertThat(r.dates()).containsExactly(d(2026, 10, 11), d(2026, 11, 1));
 
-    ScheduleResult notice = run(d(2026, 10, 1), d(2026, 11, 1), null, null, "일정 : 10. 11.(일) / 10. 18.(일) 우천 시 취소될 수 있음");
-    assertThat(notice.dates()).containsExactly(d(2026, 10, 11), d(2026, 10, 18));
+    assertUnknown(d(2026, 10, 1), d(2026, 11, 1), null, null, "일정 : 10. 11.(일) / 10. 18.(일) 우천 시 취소될 수 있음");
+    assertUnknown(d(2026, 10, 1), d(2026, 11, 1), null, null, "일정 : 10. 11.(일) / (취소) 10. 18.(일) / 10. 25.(일)");
   }
 
   // ===== ③ 매주 요일 =====
@@ -146,31 +146,42 @@ class ScheduleExtractorTest {
   }
 
   @Test
-  void 쉬는_요일만_있는_시간칸_idx3034() {
-    ScheduleResult r = run(d(2026, 8, 14), d(2026, 8, 23), "10:00~17:00 (야행기간 10:00~22:00 / 월 휴관)", null, null);
-    assertThat(r.dates()).hasSize(9).doesNotContain(d(2026, 8, 17));
-    assertThat(r.holidayNote()).isFalse();
+  void 쉬는_요일만_있는_시간칸_idx3015() {
+    ScheduleResult r = run(d(2026, 7, 14), d(2026, 8, 9), "10:00~17:00 (월요일 및 공휴일 휴무)", null, null);
+    assertThat(r.dates()).hasSize(24).noneMatch(x -> x.getDayOfWeek() == DayOfWeek.MONDAY);
+    assertThat(r.holidayNote()).isTrue();
+  }
+
+  @Test
+  void 쉬는_요일에_모르는_말이_섞이면_모름_idx3034_2931() {
+    assertUnknown(d(2026, 8, 14), d(2026, 8, 23), "10:00~17:00 (야행기간 10:00~22:00 / 월 휴관)", null, null);
+    assertUnknown(d(2026, 4, 4), d(2026, 4, 12), "10:00~19:00(매 시간 운영) ※ 12시 해설 및 월요일 운영 제외", null, null);
   }
 
   @Test
   void 요일별_시간표에_쉬는_요일이_같이_있으면_쉬는_요일_기준_idx3038() {
     ScheduleResult r = run(d(2026, 8, 14), d(2026, 8, 30),
         "화 ~ 토요일 09:30~21:30(입장 마감 21:00)\n일요일 09:30~17:30(입장 마감 17:00)\n월요일휴관", null, null);
-    assertThat(r.dates()).contains(d(2026, 8, 16)).doesNotContain(d(2026, 8, 17)); // 일요일 진행, 월요일 휴관
+    assertThat(r.dates()).hasSize(15).contains(d(2026, 8, 16)).noneMatch(x -> x.getDayOfWeek() == DayOfWeek.MONDAY); // 17일 중 월요일 2일 제외
   }
 
   @Test
-  void 매주_월요일_휴관은_매주_진행이_아니라_쉬는_요일_idx2984() {
-    ScheduleResult r = run(d(2026, 6, 9), d(2026, 10, 5), "10:00~18:00(17:00 입장 마감)", null,
+  void 매주_월요일_휴관은_매주_진행이_아니라_쉬는_요일() {
+    ScheduleResult r = run(d(2026, 6, 9), d(2026, 6, 30), null, null, "기간 : 2026. 6. 9.(화) ~ 6. 30.(화) (매주 월요일 휴관)");
+    assertThat(r.dates()).hasSize(19).noneMatch(x -> x.getDayOfWeek() == DayOfWeek.MONDAY);
+  }
+
+  @Test
+  void 휴관_예외_문구가_붙으면_모름_idx2984() {
+    assertUnknown(d(2026, 6, 9), d(2026, 10, 5), "10:00~18:00(17:00 입장 마감)", null,
         "기간 : 2026. 6. 9.(화) ~ 10. 5.(월) (매주 월요일 휴관 / 10월 5일의 경우 대체공휴일로 개관)");
-    assertThat(r.dates()).contains(d(2026, 6, 9)).doesNotContain(d(2026, 6, 15));
   }
 
   @Test
   void 본문_관람시간의_요일_범위와_별도_줄의_공휴일_안내_idx2966() {
     ScheduleResult r = run(d(2026, 5, 6), d(2026, 5, 31), null, null,
         "관람시간 : 10:00 ~ 17:00 (화요일 ~ 일요일)\n※ 월요일 및 법정공휴일은 전시실을 운영하지 않습니다.");
-    assertThat(r.dates()).doesNotContain(d(2026, 5, 11));
+    assertThat(r.dates()).hasSize(23).noneMatch(x -> x.getDayOfWeek() == DayOfWeek.MONDAY);
     assertThat(r.holidayNote()).isTrue();
   }
 
@@ -267,7 +278,131 @@ class ScheduleExtractorTest {
     assertUnknown(d(2026, 4, 14), d(2026, 6, 14), null, null, "전시 기간: 2026. 4. 14.(화) - 6. 14.(일)");
     ScheduleResult r = run(d(2026, 4, 14), d(2026, 6, 14), "10:00~18:00  *17:00 입장 마감", null,
         "전시 기간: 2026. 4. 14.(화) – 6. 14.(일)\n관람 시간: 화~일요일 10:00~18:00");
-    assertThat(r.dates()).contains(d(2026, 4, 14), d(2026, 6, 14)).doesNotContain(d(2026, 4, 20)); // 4/20 월요일
+    assertThat(r.dates()).hasSize(54).noneMatch(x -> x.getDayOfWeek() == DayOfWeek.MONDAY);
+  }
+
+  // ===== 검증 에이전트 지적 (PR #54): 뜻을 바꾸는 말이 섞이면 틀린 날짜 대신 모름 =====
+
+  private static final LocalDate S = LocalDate.of(2026, 5, 1);
+  private static final LocalDate E = LocalDate.of(2026, 10, 31);
+
+  @Test
+  void 시간이_붙은_날짜_범위를_회차로_읽지_않음() {
+    assertUnknown(S, E, null, null, "기간 : 2026. 5. 1.(금) 10:00 ~ 2026. 10. 31.(토) 18:00");
+    assertUnknown(S, E, "5. 1.(금) 10:00 ~ 10. 31.(토) 18:00", null, null);
+    assertUnknown(S, E, null, null, "기간 : 2026. 5. 1.(금)부터 10. 31.(토)까지");
+    for (String dash : List.of("―", "−", "‐", "ㅡ")) {
+      assertUnknown(S, E, "5. 1.(금) " + dash + " 10. 31.(토)", null, null);
+    }
+  }
+
+  @Test
+  void 쉬는_날_연기_날짜를_진행으로_읽지_않음() {
+    assertUnknown(S, E, "10:00~17:00 (10. 3.(토), 10. 9.(금) 휴관)", null, null);
+    assertUnknown(S, E, null, null, "일시 : 매주 토요일 10:00~12:00 (10. 3.(토), 10. 10.(토) 제외)");
+    assertUnknown(S, E, null, null, "일시 : 5. 16.(토) 14:00 (우천 시 5. 23.(토)로 연기)");
+    assertUnknown(S, E, null, null, "일정 : 10. 11.(일) / 10. 18.(일) 휴무 / 10. 25.(일)");
+  }
+
+  @Test
+  void 나열의_일부만_줍지_않음() {
+    assertUnknown(S, E, null, null, "일정 : 5월 16일(토), 17일(일), 6월 6일(토), 7일(일)");
+    assertUnknown(S, E, null, null, "일정 : 5. 16.(토), 5. 23, 5. 30.(토)");
+    assertUnknown(S, E, null, null, "일시: 5. 2.(토) 14:00\n일시: 5. 16.(토) / 5. 23.(토)");
+    assertUnknown(S, E, null, null, "기간 : 매주 토요일\n일정 : 5. 2.(토) / 5. 9.(토)");
+  }
+
+  @Test
+  void 매주_쉬는_요일을_진행으로_뒤집지_않음() {
+    for (String body : List.of("기간 : 2026. 5. 1.(금) ~ 10. 31.(토) (매주 월요일 정기휴관)",
+        "운영일시 : 10:00~18:00 (매주 월요일 제외)", "관람시간 : 10:00~18:00 (휴관일: 매주 월요일)",
+        "관람시간 : 10:00~18:00, 매주 월요일은 문을 닫습니다")) {
+      assertUnknown(S, E, null, null, body);
+    }
+    assertUnknown(S, E, null, "매주 월요일 쉼", null);
+    assertUnknown(S, E, null, "휴무 : 매주 화요일", null);
+  }
+
+  @Test
+  void 매주_뒤가_요일이_아니거나_일부만_읽히면_모름() {
+    for (String body : List.of("일정 : 매주 일정이 다릅니다", "일시 : 매주 토론 프로그램 운영", "운영일시 : 매주 금토일 18:00",
+        "운영일시 : 매주 토요일과 일요일 18:00", "운영일시 : 매주 토요일 14:00 / 일요일 15:00")) {
+      assertUnknown(S, E, null, null, body);
+    }
+    assertUnknown(S, E, null, "매주 수업 진행", null);
+  }
+
+  @Test
+  void 매주에_조건이_붙으면_모름() {
+    for (String weekly : List.of("매주 토요일 (7~8월 제외)", "7·8월 제외 매주 토요일", "9월부터 매주 토요일", "매주 토요일 (8월 휴무)",
+        "매주 토요일 (단, 9월은 일요일)", "9월까지 매주 토요일, 10월은 매주 일요일", "5~6월 매주 토요일, 9~10월 매주 일요일")) {
+      assertUnknown(S, E, null, weekly, null);
+    }
+  }
+
+  @Test
+  void 달_한정의_범위_쉼표_해넘김() {
+    assertThat(run(d(2026, 11, 1), d(2027, 2, 28), null, "11~2월 매주 토요일", null).dates())
+        .contains(d(2026, 12, 5), d(2027, 1, 2)).hasSize(17);
+    assertThat(run(S, E, null, "5~7월, 9~10월 매주 토요일", null).dates()).contains(d(2026, 6, 6), d(2026, 10, 3)).doesNotContain(d(2026, 8, 1));
+    assertThat(run(S, E, null, "5월~7월·9월 매주 토요일", null).dates()).contains(d(2026, 6, 6), d(2026, 9, 5)).doesNotContain(d(2026, 10, 3));
+    assertUnknown(S, E, null, null, "기간 : 2026. 5. 1.(금) ~ 10월 매주 토요일");
+  }
+
+  @Test
+  void 표_모양이_달라도_매주와_어긋나면_모름() {
+    LocalDate s = d(2026, 10, 1);
+    LocalDate e = d(2026, 10, 31);
+    assertUnknown(s, e, null, null, "기간 : 기간 중 매주 금, 토요일\n10. 3.(토) 19:00~20:30 |\n10. 10.(토) 19:00~20:30 |");
+    assertUnknown(s, e, null, null, "기간 : 기간 중 매주 금, 토요일\n1회차 | 10. 3.(토) | 19:00\n2회차 | 10. 10.(토) | 19:00");
+  }
+
+  @Test
+  void 요일_고정이_쉬는_요일_규칙으로_새지_않음() {
+    for (String time : List.of("토·일요일 14:00 (월요일 미운영)", "토요일 오후 2시 (월요일 미운영)", "금 19:30, 토 16:00 (월 휴관)", "수~금요일 10:00~17:00 (월요일 휴관)")) {
+      assertUnknown(S, E, time, null, null);
+    }
+    assertUnknown(S, E, null, null, "관람시간 : 토요일 14:00 ~ 17:30 (월요일 및 공휴일 미운영)");
+  }
+
+  @Test
+  void 시간_조건을_요일_범위로_읽지_않음() {
+    for (String time : List.of("10:00~18:00 (금~일요일 21:00까지)", "평일 10:00~18:00 / 토~일요일 10:00~20:00", "월~금요일 10:00~18:00, 토요일 10:00~13:00",
+        "월~금요일 10:00~18:00 / 토~일요일 10:00~20:00", "10:00~17:00 (토~일요일 제외)")) {
+      assertUnknown(S, E, time, null, null);
+    }
+  }
+
+  @Test
+  void 쉬는_요일_여러_개와_조건부_휴무() {
+    for (String time : List.of("10:00~17:00 (월, 화 휴관)", "10:00~17:00 (월·화요일 휴관)", "10:00~17:00 (월요일 및 화요일 휴관)")) {
+      ScheduleResult r = run(S, E, time, null, null);
+      assertThat(r.dates()).isNotEmpty().noneMatch(x -> x.getDayOfWeek() == DayOfWeek.MONDAY || x.getDayOfWeek() == DayOfWeek.TUESDAY);
+    }
+    for (String time : List.of("(매월 첫째 월요일 휴관)", "(7~8월 월요일 휴관)", "(월요일 휴관, 월요일이 공휴일인 경우 화요일 휴관)", "(9 월 휴관)")) {
+      assertUnknown(S, E, "10:00~17:00 " + time, null, null);
+    }
+  }
+
+  @Test
+  void 매일은_시간만_붙은_경우만() {
+    for (String body : List.of("운영일시 : 매일 10:00~17:00 (일요일 제외)", "일시 : 토요일 14:00 (매일 선착순 20명)", "일시 : 매일 (월~금요일 제외)")) {
+      assertUnknown(S, E, null, null, body);
+    }
+  }
+
+  @Test
+  void 신청_예매는_칸_값에서도_안_읽음() {
+    assertUnknown(S, E, "19:30 (예매 5. 1.(금), 5. 2.(토))", null, null);
+    assertUnknown(S, E, null, "접수 매주 월요일", null);
+    assertUnknown(S, E, null, null, "일정 : 사전예약 5. 1.(금) / 5. 2.(토)");
+  }
+
+  @Test
+  void 공휴일_표시는_원문_어디든_있으면() {
+    assertThat(run(S, E, "(공휴일 미운영)", "매주 토요일", null).holidayNote()).isTrue();
+    assertThat(run(S, E, null, "매주 토요일", "※ 법정공휴일 제외").holidayNote()).isTrue();
+    assertThat(run(S, E, null, "매주 토요일", null).holidayNote()).isFalse();
   }
 
   // ===== 검증 (설계 4번) — 하나라도 틀리면 전체 버림 =====

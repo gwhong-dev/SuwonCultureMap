@@ -3,8 +3,8 @@ package com.suwon.festival.service.schedule;
 import java.time.LocalDate;
 import java.util.List;
 
-// 뽑은 날짜 목록을 코드가 다시 검사 (설계 4번). 규칙 · 나중에 붙일 AI 결과가 같은 검사를 지남
-// 날짜 하나라도 틀리면 목록 전체를 버림 → 일부만 맞는 목록은 빠진 날을 "안 함"으로 안내하게 됨
+// 뽑은 날짜 목록을 코드가 다시 검사 (설계 4번). 날짜 하나라도 틀리면 목록 전체를 버림 → 일부만 맞는 목록은 빠진 날을 "안 함"으로 안내하게 됨
+// 요일이 달력과 맞는지는 원문 조각이 필요해 ScheduleExtractor 가 읽으면서 확인함. AI 를 붙일 때는 이 검사와 별도로 원문 대조가 필요
 public final class ScheduleValidator {
 
   private ScheduleValidator() {
