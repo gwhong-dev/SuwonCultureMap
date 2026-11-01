@@ -42,7 +42,7 @@ class RepositorySchemaTest {
   @Test
   void Flyway가_마지막_버전까지_적용함() {
     assertThat(flyway.info().current()).isNotNull();
-    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("3");
+    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("4");
     assertThat(flyway.info().pending()).isEmpty();
   }
 
@@ -52,10 +52,10 @@ class RepositorySchemaTest {
     long logins = loginMethodRepository.count();
     long favorites = favoriteRepository.count();
 
-    Member member = memberRepository.saveAndFlush(Member.builder().nickname("가상회원").build());
+    Member member = memberRepository.saveAndFlush(Member.create());
 
     loginMethodRepository.saveAndFlush(LoginMethod.builder()
-        .provider("kakao").providerId("p-1").email("a@example.com").password(null).member(member).build());
+        .provider("kakao").providerId("p-1").member(member).build());
 
     Event event = eventRepository.saveAndFlush(Event.builder()
         .idx(990001L).title("가상 행사").category("공연")

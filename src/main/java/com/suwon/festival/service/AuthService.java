@@ -29,7 +29,7 @@ public class AuthService {
     String accessToken = kakaoAuthService.getAccessToken(code);
     KakaoUserResponse kakaoUser = kakaoAuthService.getUserInfo(accessToken);
 
-    return resolveMember("kakao", String.valueOf(kakaoUser.id), kakaoUser.kakao_account.email, currentMemberId);
+    return resolveMember("kakao", kakaoUser.id == null ? null : String.valueOf(kakaoUser.id), currentMemberId);
   }
 
   // 구글
@@ -38,7 +38,7 @@ public class AuthService {
     String accessToken = googleAuthService.getAccessToken(code);
     GoogleUserResponse googleUser = googleAuthService.getUserInfo(accessToken);
 
-    return resolveMember("google", googleUser.id, googleUser.email, currentMemberId);
+    return resolveMember("google", googleUser.id, currentMemberId);
   }
 
   // 네이버
@@ -47,11 +47,16 @@ public class AuthService {
     String accessToken = naverAuthService.getAccessToken(code, state);
     var naverUser = naverAuthService.getUserInfo(accessToken);
 
-    return resolveMember("naver", naverUser.id, naverUser.email, currentMemberId);
+    return resolveMember("naver", naverUser.id, currentMemberId);
   }
 
   // ===== 소셜 로그인 공통 처리: 신규 가입 / 기존 로그인 / 계정 연동 =====
-  private Member resolveMember(String provider, String providerId, String email, Long sessionMemberId) {
+  private Member resolveMember(String provider, String providerId, Long sessionMemberId) {
+    // 식별값이 없으면 모르는 사람끼리 한 회원으로 묶일 수 있으므로 거부
+    if (providerId == null || providerId.isBlank()) {
+      throw new IllegalArgumentException("소셜 계정 정보를 확인하지 못했습니다. 다시 로그인해 주세요.");
+    }
+
     // 다른 브라우저에서 탈퇴한 회원의 세션이 남아 있으면 로그인 안 한 상태로 처리
     Long currentMemberId = sessionMemberId != null && memberRepository.existsById(sessionMemberId) ? sessionMemberId : null;
 
@@ -74,30 +79,26 @@ public class AuthService {
     if (currentMemberId != null) {
       Member currentMember = memberRepository.findById(currentMemberId)
           .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
-      attachLoginMethod(provider, providerId, email, currentMember);
+      attachLoginMethod(provider, providerId, currentMember);
       return currentMember;
     }
 
-    return createNewMember(provider, providerId, email);
+    return createNewMember(provider, providerId);
   }
 
-  private Member createNewMember(String provider, String providerId, String email) {
-    Member member = Member.builder()
-        .nickname(provider + "_" + providerId)
-        .build();
+  private Member createNewMember(String provider, String providerId) {
+    Member member = Member.create();
     memberRepository.save(member);
 
-    attachLoginMethod(provider, providerId, email, member);
+    attachLoginMethod(provider, providerId, member);
 
     return member;
   }
 
-  private void attachLoginMethod(String provider, String providerId, String email, Member member) {
+  private void attachLoginMethod(String provider, String providerId, Member member) {
     LoginMethod loginMethod = LoginMethod.builder()
         .provider(provider)
         .providerId(providerId)
-        .email(email)
-        .password(null)
         .member(member)
         .build();
     loginMethodRepository.save(loginMethod);

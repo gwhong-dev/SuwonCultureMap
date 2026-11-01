@@ -72,7 +72,7 @@ public class AuthController {
         .queryParam("client_id", googleClientId)
         .queryParam("redirect_uri", googleRedirectUri)
         .queryParam("response_type", "code")
-        .queryParam("scope", "email profile")
+        .queryParam("scope", "openid") // 식별값만 필요. 이메일 · 이름은 요청하지 않음
         .queryParam("state", stateManager.issue(session, "google"))
         .encode().build().toUriString();
     return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(url)).build();

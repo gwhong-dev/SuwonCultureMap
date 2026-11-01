@@ -125,7 +125,7 @@ class StaleBlockRetireTest {
   }
 
   private Member member(String name) {
-    return memberRepository.save(Member.builder().nickname(name).build());
+    return memberRepository.save(Member.create());
   }
 
   private void favorite(Member member, Event event) {

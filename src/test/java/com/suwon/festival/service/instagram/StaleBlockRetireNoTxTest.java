@@ -87,7 +87,7 @@ class StaleBlockRetireNoTxTest {
     Event hidden = event("가을 음악회 앙코르");
     hidden.mergeInto(old.getId());
     eventRepository.save(hidden);
-    Member member = memberRepository.save(Member.builder().nickname("찜회원").build());
+    Member member = memberRepository.save(Member.create());
     favoriteRepository.save(Favorite.builder().member(member).event(old).createdAt(LocalDateTime.of(2026, 10, 1, 9, 0)).build());
 
     InstagramSyncResult r = sync("<가을 음악회> 수원" + DATE_AND_PLACE, "가을 음악회 앙코르" + DATE_AND_PLACE);
@@ -107,7 +107,7 @@ class StaleBlockRetireNoTxTest {
     sync(both, "겨울 음악회" + DATE_AND_PLACE);
     Event old = event("가을 음악회");
     Event encore = event("가을 음악회 앙코르");
-    Member member = memberRepository.save(Member.builder().nickname("찜회원").build());
+    Member member = memberRepository.save(Member.create());
     favoriteRepository.save(Favorite.builder().member(member).event(old).createdAt(LocalDateTime.of(2026, 10, 1, 9, 0)).build());
     favoriteRepository.save(Favorite.builder().member(member).event(encore).createdAt(LocalDateTime.of(2026, 10, 1, 9, 0)).build());
 

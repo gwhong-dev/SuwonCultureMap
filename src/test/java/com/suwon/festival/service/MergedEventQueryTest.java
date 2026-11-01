@@ -45,7 +45,7 @@ class MergedEventQueryTest {
 
   @BeforeEach
   void setUp() {
-    memberId = memberRepository.saveAndFlush(Member.builder().nickname("가상회원").build()).getId();
+    memberId = memberRepository.saveAndFlush(Member.create()).getId();
     representative = eventRepository.saveAndFlush(event("대표"));
     hiddenA = eventRepository.saveAndFlush(event("숨김A"));
     hiddenB = eventRepository.saveAndFlush(event("숨김B"));

@@ -59,7 +59,7 @@ erDiagram
 
     MEMBER {
         Long id PK
-        String nickname
+        LocalDateTime createdAt
     }
     LOGIN_METHOD {
         Long id PK
