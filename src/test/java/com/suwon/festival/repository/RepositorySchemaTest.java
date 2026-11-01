@@ -150,7 +150,7 @@ class RepositorySchemaTest {
   void 없는_대표_id_로는_숨기지_못함() {
     Event hidden = eventRepository.saveAndFlush(instagramEvent("m4#숨김"));
     hidden.mergeInto(-1L);
-    assertThatThrownBy(() -> em.flush()).hasRootCauseInstanceOf(java.sql.SQLException.class);
+    assertThatThrownBy(() -> em.flush()).hasRootCauseInstanceOf(java.sql.SQLIntegrityConstraintViolationException.class);
   }
 
   private static Event instagramEvent(String sourceKey) {

@@ -151,6 +151,31 @@ class MergedEventQueryTest {
   }
 
   @Test
+  void 대표를_찜한_것을_숨긴_행_id_로_취소함() {
+    saveFavorite(representative);
+
+    favoriteService.removeFavorite(memberId, hiddenA.getId());
+
+    assertThat(favoriteService.getFavoriteEvents(memberId)).isEmpty();
+  }
+
+  @Test
+  void 대표를_찜한_상태에서_숨긴_행을_또_찜하면_이미_찜한_행사() {
+    saveFavorite(representative);
+
+    assertThatThrownBy(() -> favoriteService.addFavorite(memberId, hiddenA.getId()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("이미");
+  }
+
+  @Test
+  void 없는_행사를_취소하면_오류() {
+    assertThatThrownBy(() -> favoriteService.removeFavorite(memberId, -1L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("즐겨찾기하지 않은");
+  }
+
+  @Test
   void 없는_행사를_찜하면_오류() {
     assertThatThrownBy(() -> favoriteService.addFavorite(memberId, -1L))
         .isInstanceOf(IllegalArgumentException.class)
