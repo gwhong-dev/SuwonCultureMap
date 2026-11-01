@@ -38,6 +38,12 @@ final class BlockLog {
         + " | 장소 " + clean(place, PLACE_MAX) + " | " + clean(reason == null ? "" : reason, REASON_MAX);
   }
 
+  // 캡션에서 사라져 내린 블록 (이번 캡션에 없으므로 내려진 행사의 제목만 남음)
+  static String retiredLine(String mediaId, String blockKey, String title) {
+    String key = blockKey.substring(0, Math.min(KEY_PREFIX, blockKey.length()));
+    return "블록 " + InstagramBlock.Status.RETIRED + " | 게시물 " + mediaId + " | 키 " + key + " | 제목 " + clean(title, TITLE_MAX);
+  }
+
   // 줄바꿈 · 제어문자 · 보이지 않는 서식 문자(방향 제어 등) · 유니코드 줄 구분 문자 → 공백, 앞 max 글자만 (이모지는 반으로 안 자름)
   static String clean(String s, int max) {
     if (s == null || s.isBlank()) return "-";

@@ -35,7 +35,8 @@ public class InstagramBlock {
     PARSED, NO_DATE, PENDING, FAILED, SKIPPED, // 캡션 정리 결과
     NO_COORD, // 좌표를 못 찾아 보류
     ERROR,    // 장소 검색 호출 실패 → 다음 실행에서 다시
-    READY     // 지도에 올라감 (event 연결됨)
+    READY,    // 지도에 올라감 (event 연결됨)
+    RETIRED   // 다시 처리한 캡션에서 사라져 내림 (event 없음). 같은 키가 돌아오면 다시 처리됨
   }
 
   @Id
