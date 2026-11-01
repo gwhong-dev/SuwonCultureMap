@@ -11,9 +11,12 @@ import java.util.regex.Pattern;
 public final class MergeText {
 
   private static final Pattern NUMERIC_ENTITY = Pattern.compile("&#(x?)([0-9a-fA-F]+);");
-  private static final Map<String, String> NAMED_ENTITIES = Map.of(
-      "&amp;", "&", "&quot;", "\"", "&apos;", "'", "&lt;", "<", "&gt;", ">", "&nbsp;", " ");
-  private static final Pattern HASHTAG = Pattern.compile("#[^\\s#]+");
+  // 바꾸는 순서 고정 (Map.of 는 실행마다 순서가 달라 결과가 흔들림)
+  // &amp; 는 숫자 표기까지 다 푼 뒤 맨 마지막 → `&amp;lt;` · `&amp;#39;` 는 한 번만 풀림
+  private static final String[][] NAMED_ENTITIES = {
+      { "&quot;", "\"" }, { "&apos;", "'" }, { "&lt;", "<" }, { "&gt;", ">" }, { "&nbsp;", " " } };
+  // 앞이 공백이거나 처음일 때만 해시태그 (`제#2회` 같은 단어 중간 # 는 그대로)
+  private static final Pattern HASHTAG = Pattern.compile("(^|\\s)#[^\\s#]+");
   // 글자(한글 · 영문 등) · 숫자만 남김 → 공백 · 괄호류 · 따옴표 · 문장부호 · 이모지가 한 번에 빠짐
   private static final Pattern NOT_LETTER_OR_DIGIT = Pattern.compile("[^\\p{L}\\p{N}]");
 
@@ -25,7 +28,7 @@ public final class MergeText {
       return "";
     }
     String t = unescapeHtml(s);
-    t = HASHTAG.matcher(t).replaceAll(" ");
+    t = HASHTAG.matcher(t).replaceAll("$1");
     t = NOT_LETTER_OR_DIGIT.matcher(t).replaceAll("");
     return t.toLowerCase(Locale.ROOT);
   }
@@ -33,8 +36,8 @@ public final class MergeText {
   // `&#39;` · `&#x27;` · `&amp;` 같은 HTML 표기 풀기
   static String unescapeHtml(String s) {
     String t = s;
-    for (Map.Entry<String, String> e : NAMED_ENTITIES.entrySet()) {
-      t = t.replace(e.getKey(), e.getValue());
+    for (String[] e : NAMED_ENTITIES) {
+      t = t.replace(e[0], e[1]);
     }
     Matcher m = NUMERIC_ENTITY.matcher(t);
     StringBuilder out = new StringBuilder();
@@ -51,7 +54,7 @@ public final class MergeText {
       m.appendReplacement(out, Matcher.quoteReplacement(rep));
     }
     m.appendTail(out);
-    return out.toString();
+    return out.toString().replace("&amp;", "&");
   }
 
   // 글자쌍(2글자씩) 유사도 = Dice 계수: 2 × 겹치는 쌍 수 / (양쪽 쌍 수 합). 0.0 ~ 1.0

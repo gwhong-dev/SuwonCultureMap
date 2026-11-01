@@ -28,6 +28,19 @@ class MergeTextTest {
   }
 
   @Test
+  void 두_번_인코딩된_표기는_한_번만_풀고_결과가_항상_같음() {
+    assertThat(MergeText.unescapeHtml("&amp;lt;공연&amp;gt;")).isEqualTo("&lt;공연&gt;");
+    assertThat(MergeText.normalize("&amp;lt;공연&amp;gt;")).isEqualTo("lt공연gt");
+    assertThat(MergeText.unescapeHtml("&amp;#39;")).isEqualTo("&#39;");
+  }
+
+  @Test
+  void 단어_중간_샵은_해시태그가_아님() {
+    assertThat(MergeText.normalize("제#2회 음악회")).isEqualTo("제2회음악회");
+    assertThat(MergeText.normalize("#수원 가을 음악회")).isEqualTo("가을음악회");
+  }
+
+  @Test
   void null_은_빈_문자열() {
     assertThat(MergeText.normalize(null)).isEmpty();
   }
