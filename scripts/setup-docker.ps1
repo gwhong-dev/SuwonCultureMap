@@ -22,7 +22,7 @@ if (Test-Path -LiteralPath $envFile) {
             if ($l -match '^\s*([^#!\s=:][^=:]*?)\s*[=:]\s*(.*)$') { $devProps[$Matches[1].Trim()] = $Matches[2].Trim() }
         }
         $existing = Get-Content -LiteralPath $envFile -Encoding UTF8
-        $supplement = [ordered]@{ INSTAGRAM_ACCESS_TOKEN = 'instagram.access-token'; INSTAGRAM_USER_ID = 'instagram.user-id' }
+        $supplement = [ordered]@{ KAKAO_ADMIN_KEY = 'kakao.admin-key'; INSTAGRAM_ACCESS_TOKEN = 'instagram.access-token'; INSTAGRAM_USER_ID = 'instagram.user-id'; INSTAGRAM_ACCOUNTS = 'instagram.accounts' }
         foreach ($e in $supplement.GetEnumerator()) {
             $inEnv = @($existing | Where-Object { $_ -match ('^\s*' + $e.Key + '\s*=') }).Count -gt 0
             $v = $devProps[$e.Value]
@@ -95,10 +95,12 @@ $lines = @(
     ('MYSQL_ROOT_PASSWORD=' + (New-Password))
 )
 foreach ($e in $map.GetEnumerator()) { $lines += ($e.Key + '=' + (Escape-Value $props[$e.Value])) }
-# 인스타 수집은 선택 → dev 파일에 값이 있을 때만 넣음 (없으면 compose 기본값 = 빈 값 → 수집 안 함)
+# 카카오 어드민 키 · 인스타 수집은 선택 → dev 파일에 값이 있을 때만 넣음 (없으면 compose 기본값)
 $optional = [ordered]@{
+    KAKAO_ADMIN_KEY        = 'kakao.admin-key'
     INSTAGRAM_ACCESS_TOKEN = 'instagram.access-token'
     INSTAGRAM_USER_ID      = 'instagram.user-id'
+    INSTAGRAM_ACCOUNTS     = 'instagram.accounts'
 }
 foreach ($e in $optional.GetEnumerator()) {
     if ($props.ContainsKey($e.Value) -and -not [string]::IsNullOrWhiteSpace($props[$e.Value])) {

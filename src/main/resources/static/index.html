@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <!-- 모바일에서 PC 화면을 축소해서 보여주지 않고, 기기 폭 그대로 그리게 함 -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>수원 문화 프로그램 지도</title>
+    <title>수원바이블</title>
     <style>
       :root {
         --sidebar-width: 450px; /* PC 사이드바 폭 (모바일은 바텀시트라 사용 안 함) */
@@ -69,10 +69,6 @@
       }
       .login-btn.naver {
         background: #03c75a;
-        color: #fff;
-      }
-      .login-btn.sync {
-        background: #4a90d9;
         color: #fff;
       }
       .login-btn.logout {
@@ -427,7 +423,7 @@
           cursor: pointer;
         }
 
-        /* ----- ☰ 메뉴 (로그인 상태 · 로그인/로그아웃 · 동기화) ----- */
+        /* ----- ☰ 메뉴 (로그인 상태 · 로그인/로그아웃) ----- */
         #topbarActions {
           display: none;
           position: absolute;
@@ -846,10 +842,11 @@
         <span id="authStatus">로그인 확인 중...</span>
         <a id="loginPageBtn" class="login-btn login" href="login.html">로그인</a>
         <a id="mypageBtn" class="login-btn login" href="mypage.html" style="display: none">마이페이지</a>
-        <button id="syncBtn" class="login-btn sync">행사 동기화</button>
         <button id="logoutBtn" class="login-btn logout" style="display: none">
           로그아웃
         </button>
+        <a class="login-btn login" href="about.html">서비스 안내</a>
+        <a class="login-btn login" href="privacy.html">개인정보 처리방침</a>
       </div>
       <!-- 모바일 전용: ☰ 메뉴 버튼 + 카테고리 칩 -->
       <button id="mobileMenuBtn" type="button" aria-label="메뉴">☰</button>
@@ -1428,15 +1425,6 @@
       document
         .getElementById("showPastCheckbox")
         .addEventListener("change", filterMarkers);
-
-      document.getElementById("syncBtn").addEventListener("click", function () {
-        fetch("/api/events/sync", { method: "POST" })
-          .then((r) => r.text())
-          .then(function (msg) {
-            alert(msg);
-            location.reload();
-          });
-      });
 
       // ===== 로그인 상태 + 내 즐겨찾기 목록 확인 =====
       var isLoggedIn = false;

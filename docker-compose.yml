@@ -14,7 +14,8 @@ services:
       TZ: Asia/Seoul
     command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
     ports:
-      - "${DB_PORT:-3307}:3306"   # Workbench 접속용 (앱 동작엔 불필요). 3307 이 사용 중이면 .env 에 DB_PORT=3308 처럼 변경
+      # Workbench 접속용 (앱 동작엔 불필요). 이 컴퓨터 안에서만 접속 가능, 3307 이 사용 중이면 .env 에 DB_PORT=3308 처럼 변경
+      - "127.0.0.1:${DB_PORT:-3307}:3306"
     volumes:
       - db-data:/var/lib/mysql   # 컨테이너를 지워도 데이터는 유지
     healthcheck:
@@ -35,11 +36,14 @@ services:
       SPRING_PROFILES_ACTIVE: prod
       TZ: Asia/Seoul
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+      # useSSL=false: 앱 → DB 는 Docker 내부 네트워크 안에서만 통신 (외부 공개 안 함)
       DB_URL: jdbc:mysql://db:3306/${MYSQL_DATABASE:-suwon_culture_map}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       SWCF_API_KEY_EVENT: ${SWCF_API_KEY_EVENT:?.env 에 SWCF_API_KEY_EVENT 가 없음}
       KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY:?.env 에 KAKAO_REST_API_KEY 가 없음}
+      KAKAO_ADMIN_KEY: ${KAKAO_ADMIN_KEY:-}
       KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:?.env 에 KAKAO_CLIENT_SECRET 가 없음}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?.env 에 GOOGLE_CLIENT_ID 가 없음}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?.env 에 GOOGLE_CLIENT_SECRET 가 없음}
@@ -50,8 +54,11 @@ services:
       INSTAGRAM_USER_ID: ${INSTAGRAM_USER_ID:-}
       INSTAGRAM_TOKEN_EXPIRES_AT: ${INSTAGRAM_TOKEN_EXPIRES_AT:-}
       INSTAGRAM_ACCOUNTS: ${INSTAGRAM_ACCOUNTS:-suwon_city}
+      # 자동 동기화 시각 (초 분 시 일 월 요일, 한국 시간)
+      APP_SYNC_CRON: ${APP_SYNC_CRON:-0 0 6,18 * * *}
     ports:
-      - "8080:8080"
+      # 이 컴퓨터 안에서만 접속 가능. 운영에서는 HTTPS 프록시가 외부 요청을 받아 넘겨줌
+      - "127.0.0.1:8080:8080"
 
 volumes:
   db-data:

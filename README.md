@@ -1,4 +1,4 @@
-# 수원 문화지도 — Spring Boot 원본 버전
+# 수원바이블 — 수원 문화행사 지도 (Spring Boot)
 
 [![CI](https://github.com/gwhong-dev/SuwonCultureMap/actions/workflows/ci.yml/badge.svg)](https://github.com/gwhong-dev/SuwonCultureMap/actions/workflows/ci.yml)
 
@@ -59,7 +59,7 @@ erDiagram
 
     MEMBER {
         Long id PK
-        String nickname
+        LocalDateTime createdAt
     }
     LOGIN_METHOD {
         Long id PK
@@ -99,7 +99,8 @@ erDiagram
 | Method | URL | 설명 |
 |---|---|---|
 | GET | `/api/events` | 행사 목록 |
-| POST | `/api/events/sync` | 재단 API 동기화 (신규 저장 + 변경 갱신) |
+| POST | `/api/events/sync` | 재단 API 수동 동기화 (개발 전용, 운영은 매일 06시 · 18시 자동 실행) |
+| DELETE | `/api/members/me` | 회원 탈퇴 (찜 · 로그인 수단 · 회원 삭제, 카카오 연결 해제) |
 | GET | `/api/favorites` | 내 찜 목록 |
 | POST / DELETE | `/api/favorites/{eventId}` | 찜 추가 / 해제 |
 | GET | `/api/auth/{kakao·google·naver}/login` | 소셜 로그인 시작 (인증 페이지로 이동) |
@@ -121,7 +122,8 @@ erDiagram
 
 1. MySQL에 `suwon_culture_map` 데이터베이스 생성
 2. `src/main/resources/application-dev.properties.example` 을 복사해 `application-dev.properties` 로 이름 변경 → 실제 값 채우기
-3. `./mvnw spring-boot:run` → http://localhost:8080 → **행사 동기화** 버튼
+3. `./mvnw spring-boot:run` → http://localhost:8080
+4. 행사 가져오기 (개발 환경은 자동 실행 안 함): `curl.exe -X POST http://localhost:8080/api/events/sync` (Mac · Linux 는 `curl`)
 
 > 프로필을 따로 정하지 않으면 자동으로 `dev` 로 실행됩니다.
 
@@ -130,11 +132,11 @@ erDiagram
 [Docker Desktop](https://www.docker.com/products/docker-desktop/) 만 있으면 앱 + MySQL 을 한 번에 띄웁니다.
 
 1. `scripts\setup-docker.cmd` 더블클릭 → `application-dev.properties` 를 읽어 `.env` 자동 생성 (Git 제외)
-2. `docker compose up --build` → http://localhost:8080 → **행사 동기화** 버튼
+2. `docker compose up --build` → http://localhost:8080
 3. 끄기: `Ctrl + C` 또는 `docker compose down` (DB 데이터는 볼륨에 유지, 완전 삭제는 `docker compose down -v`)
 
-> Docker 안에서는 `prod` 프로필로 실행됩니다. DB는 새로 만들어지므로 처음 한 번은 동기화가 필요합니다.
-> 컨테이너 MySQL 은 내 PC MySQL(3306)과 겹치지 않게 `localhost:3307` 로 열립니다. `port is already allocated` 가 나면 `.env` 에 `DB_PORT=3308` 처럼 다른 번호를 넣으세요.
+> Docker 안에서는 `prod` 프로필로 실행됩니다. 재단 행사가 없는 새 DB는 앱이 뜬 직후 자동으로 동기화하고, 이후 매일 06시 · 18시에 다시 실행합니다.
+> 컨테이너 MySQL 은 내 PC MySQL(3306)과 겹치지 않게 `localhost:3307` 로 열리며, 앱 · DB 포트 모두 그 컴퓨터 안에서만 접속할 수 있습니다. `port is already allocated` 가 나면 `.env` 에 `DB_PORT=3308` 처럼 다른 번호를 넣으세요.
 > 로컬에서 `mvnw spring-boot:run` 으로 앱을 켜 둔 상태면 8080 이 겹치니 먼저 끄세요.
 > 루트에 예전 `.env` 가 있으면 스크립트가 건너뛰므로, 지우고 다시 실행하세요.
 
@@ -144,6 +146,9 @@ erDiagram
 
 `APP_BASE_URL` · `DB_URL` · `DB_USERNAME` · `DB_PASSWORD` · `SWCF_API_KEY_EVENT` · `KAKAO_REST_API_KEY` · `KAKAO_CLIENT_SECRET` · `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` · `NAVER_CLIENT_ID` · `NAVER_CLIENT_SECRET`
 
+선택 항목: `KAKAO_ADMIN_KEY`(탈퇴 때 카카오 연결 해제) · `INSTAGRAM_ACCESS_TOKEN` · `INSTAGRAM_USER_ID` · `INSTAGRAM_TOKEN_EXPIRES_AT` · `INSTAGRAM_ACCOUNTS`(인스타 수집) · `APP_SYNC_CRON`(자동 동기화 시각, 기본 매일 06시 · 18시) · `SESSION_COOKIE_SECURE`(기본 true, HTTPS 없이 시험할 때만 false)
+
+> 운영에는 Docker 이미지를 쓰세요. 내 PC 에서 `mvnw package` 로 만든 jar 에는 `application-dev.properties` 가 들어갈 수 있습니다.
 > 소셜 로그인 콜백 주소는 `APP_BASE_URL` 기준으로 자동 생성됩니다. 각 개발자 콘솔(카카오·구글·네이버)에 운영 주소의 콜백 URL도 등록해야 합니다.
 
 ## 트러블슈팅

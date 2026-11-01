@@ -43,6 +43,7 @@ class InstagramSyncServiceTest {
   @Autowired private InstagramMediaRepository mediaRepository;
   @Autowired private InstagramBlockRepository blockRepository;
   @Autowired private EventRepository eventRepository;
+  @Autowired private StaleBlockRetirer retirer;
 
   static final String ROUNDUP = String.join("\n",
       "가상시 11월 행사 모음",
@@ -116,7 +117,7 @@ class InstagramSyncServiceTest {
   private InstagramSyncService service(String accounts, String tokenExpiresAt) {
     Clock clock = Clock.fixed(Instant.parse("2026-10-31T03:00:00Z"), InstagramPostProcessor.KST);
     InstagramPostProcessor processor = new InstagramPostProcessor(mediaRepository, blockRepository, eventRepository,
-        new PlaceGeocoder(search), new CaptionParser(null), clock);
+        new PlaceGeocoder(search), new CaptionParser(null), clock, retirer);
     return new InstagramSyncService(client, processor, new InstagramTokenExpiry(tokenExpiresAt, clock), accounts, 10);
   }
 
