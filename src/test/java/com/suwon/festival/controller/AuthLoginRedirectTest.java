@@ -64,7 +64,7 @@ class AuthLoginRedirectTest {
         .startsWith("https://accounts.google.com/o/oauth2/v2/auth")
         .contains("client_id=test-google-id")
         .contains("redirect_uri=http://localhost:8080/api/auth/google/callback")
-        .contains("scope=email profile");
+        .contains("scope=openid");
   }
 
   @Test
