@@ -83,9 +83,9 @@ ALTER TABLE event ADD CONSTRAINT fk_event_merged_into FOREIGN KEY (merged_into_i
 ## 5. 언제 실행하나
 
 - `EventMergeService.recompute()` — 전체 행사를 읽어 묶음을 다시 계산하고 `merged_into_id` 를 갱신, 결과(묶음 수 · 숨긴 수 · 묶음별 제목 목록)를 돌려줌
-- **재단 동기화(`/api/events/sync`) · 인스타 동기화(`/api/instagram/sync`) 끝에 자동 실행** (`EventMergeRunner`) → 재단은 응답 문구, 인스타는 JSON `merge` 칸에 개수 표시. 합치기가 실패해도 동기화는 이미 저장됐으므로 성공으로 응답하고 실패만 표시, 다음 동기화 때 처음부터 다시 계산. 재단 동기화가 중간 예외로 끝나도 앞 행들은 저장됐으므로 합치기를 실행하고 원래 실패를 돌려줌. 합치기는 한 번에 하나만 실행 (서버 1대 기준)
+- **재단 동기화(`/api/events/sync`) · 인스타 동기화(`/api/instagram/sync`) 끝에 자동 실행** (`EventMergeRunner`) → 재단은 응답 문구, 인스타는 JSON `merge` 칸에 개수 표시. 합치기가 실패해도 동기화는 이미 저장됐으므로 성공으로 응답하고 실패만 표시, 다음 동기화 때 처음부터 다시 계산. 재단 동기화가 중간 예외로 끝나도 앞 행들은 저장됐으므로 합치기를 실행하고 원래 실패를 돌려줌. 합치기는 한 번에 하나만 실행 (서버 1대 기준). 위 두 API 는 개발 전용이고, 운영은 `ScheduledSyncJob` 이 재단 → 인스타 → 합치기 순서로 자동 실행
 - 비교 수 줄이기: 시작일이 없는 행은 제외, 나머지는 날짜 겹침 먼저 확인 후 제목 · 장소 비교 (수백 건이면 전부 비교해도 1초 미만)
-- **미리보기 먼저**: 자동 적용 전에 `GET /api/events/merge/preview`(저장 안 함)로 실데이터 결과를 눈으로 확인 → 기준 숫자(300m · 0.6) 조정 → 그다음 자동 실행 연결
+- **미리보기 먼저**: 자동 적용 전에 `GET /api/events/merge/preview`(저장 안 함, 개발 전용)로 실데이터 결과를 눈으로 확인 → 기준 숫자(300m · 0.6) 조정 → 그다음 자동 실행 연결
 - **모음 글 판단**: 행사로 읽힌 블록(`PARSED` · `NO_DATE` · `NO_COORD` · `ERROR` · `READY`)이 2개 이상인 게시물. 공지(`SKIPPED`) · 못 읽은 블록(`PENDING` · `FAILED`)은 세지 않음
 
 ## 6. 테스트 계획 (test 프로필 = H2 + 가짜 키)

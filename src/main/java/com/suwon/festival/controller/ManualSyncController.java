@@ -20,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 // 개발 확인용 수동 동기화 · 미리보기. 운영(prod)에는 등록되지 않음 → 운영은 ScheduledSyncJob 이 자동 실행
 @RestController
 @RequestMapping("/api/events")
-@Profile({ "dev", "test" })
+@Profile("(dev | test) & !prod")
 @RequiredArgsConstructor
 public class ManualSyncController {
 

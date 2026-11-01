@@ -15,7 +15,7 @@ import lombok.RequiredArgsConstructor;
 // 개발 확인용. 운영(prod)에는 등록되지 않음 → 운영은 ScheduledSyncJob 이 자동 실행
 @RestController
 @RequestMapping("/api/instagram")
-@Profile({ "dev", "test" })
+@Profile("(dev | test) & !prod")
 @RequiredArgsConstructor
 public class InstagramController {
 

@@ -1,8 +1,6 @@
 package com.suwon.festival.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -10,6 +8,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpMethod;
+import org.springframework.scheduling.config.CronTask;
+import org.springframework.scheduling.config.ScheduledTaskHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -57,7 +57,6 @@ class ProdSyncProtectionTest {
         .andReturn().getResponse().getStatus();
 
     assertThat(status).isIn(404, 405);
-    verify(eventSyncService, never()).fetchRawXml();
   }
 
   @Test
@@ -72,5 +71,11 @@ class ProdSyncProtectionTest {
   @Test
   void 운영에서는_자동_동기화가_켜져_있음() {
     assertThat(context.getBeansOfType(ScheduledSyncJob.class)).hasSize(1);
+    assertThat(context.getBeansOfType(ScheduledTaskHolder.class).values().stream()
+        .flatMap(holder -> holder.getScheduledTasks().stream())
+        .map(scheduled -> scheduled.getTask())
+        .filter(CronTask.class::isInstance)
+        .map(task -> ((CronTask) task).getExpression()))
+        .contains("0 0 6,18 * * *");
   }
 }

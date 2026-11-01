@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
 import com.suwon.festival.dto.SyncResult;
+import com.suwon.festival.entity.Event;
 import com.suwon.festival.repository.EventRepository;
 import com.suwon.festival.service.instagram.InstagramSyncResult;
 import com.suwon.festival.service.instagram.InstagramSyncService;
@@ -98,8 +99,8 @@ class ScheduledSyncJobTest {
   }
 
   @Test
-  void 행사가_없는_DB는_시작_직후_실행() throws Exception {
-    when(eventRepository.count()).thenReturn(0L);
+  void 재단_행사가_없는_DB는_시작_직후_실행() throws Exception {
+    when(eventRepository.existsBySource(Event.SOURCE_SWCF)).thenReturn(false);
 
     job.runIfEmpty();
 
@@ -107,8 +108,8 @@ class ScheduledSyncJobTest {
   }
 
   @Test
-  void 행사가_있는_DB는_시작_때_실행하지_않음() throws Exception {
-    when(eventRepository.count()).thenReturn(5L);
+  void 재단_행사가_있는_DB는_시작_때_실행하지_않음() throws Exception {
+    when(eventRepository.existsBySource(Event.SOURCE_SWCF)).thenReturn(true);
 
     job.runIfEmpty();
 
