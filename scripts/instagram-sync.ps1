@@ -45,6 +45,10 @@ if (@($r.accountErrors) -match 'TOKEN_INVALID') {
 Write-Host ('게시물    : ' + $r.posts + ' (새 게시물 ' + $r.newPosts + ', 오류 ' + $r.postErrors + ')')
 Write-Host '블록 상태 :'
 foreach ($p in $r.blocks.PSObject.Properties) { Write-Host ('  ' + $p.Name.PadRight(10) + $p.Value) }
+if ($r.merge) {
+    if ($r.merge.ok) { Write-Host ('합치기    : 같은 행사 묶음 ' + $r.merge.groupCount + ' · 숨김 ' + $r.merge.hiddenCount + ' · 충돌 ' + $r.merge.conflictCount) }
+    else { Write-Host '⚠️ 합치기  : 실패 (동기화 결과는 저장됨, 다음 동기화 때 다시 계산)' }
+}
 Write-Host ('행사      : 새로 저장 ' + $r.eventsSaved + ' · 갱신 ' + $r.eventsUpdated + ' · 중복 블록 ' + $r.duplicateBlocks)
 Write-Host ''
 Write-Host '→ 위 화면을 캡처하거나 숫자만 알려 주세요'

@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.suwon.festival.service.instagram.InstagramSyncResult;
 import com.suwon.festival.service.instagram.InstagramSyncService;
+import com.suwon.festival.service.merge.EventMergeRunner;
 
 import lombok.RequiredArgsConstructor;
 
@@ -17,9 +18,11 @@ import lombok.RequiredArgsConstructor;
 public class InstagramController {
 
   private final InstagramSyncService instagramSyncService;
+  private final EventMergeRunner eventMergeRunner;
 
   @PostMapping(value = "/sync", produces = "application/json")
   public InstagramSyncResult sync() {
-    return instagramSyncService.sync();
+    // 계정 일부가 실패해 일찍 끝나도 합치기는 실행 (저장된 게시물은 그대로라서)
+    return instagramSyncService.sync().withMerge(eventMergeRunner.runAfterSync());
   }
 }
