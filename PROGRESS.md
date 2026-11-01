@@ -51,7 +51,7 @@
         - [x] 1번 PR `EventMatcher` 규칙 + 단위 테스트 (PR #47, `service/merge/`, DB 변경 없음)
         - [x] 2번 PR V3 `merged_into_id` + 엔티티 + `/api/events` · 찜 조회 반영 (설계 7번, M · 로컬 확인: 임시 DB 에서 로그 `version "3"` · 화면 정상)
         - [x] 3번 PR `EventMergeService` + 미리보기 API (L · 임시 DB 실데이터: 묶음 8 · 숨김 13 · 충돌 3 · 잘못 합친 쌍 없음 → 기준 숫자 유지, 규칙 3가지 추가). 2번 PR 검증 지적 2건 포함: `reset-instagram-dev.ps1` 의 인스타 행 삭제 전에 `merged_into_id` 비우기(칸 존재 확인 포함) · 대표는 항상 `merged_into_id` NULL 임을 테스트로 고정(사슬 · 자기 자신 금지)
-        - [ ] 4번 PR 동기화 끝 자동 실행 + 결과 JSON (M · 같은 자리 마커 2개 → 1개). 체크(3번 PR 검증): `recompute` 실패 시 동기화는 이미 커밋됨 → 잡아서 결과에 표시 · 재단 동기화 중간 예외 · 인스타 `break` 뒤에도 호출 · `InstagramSyncService.sync` 에 바깥 `@Transactional` 금지 · 동시 실행 시 옛 값 덮어쓰기 · 트랜잭션 없는 테스트 1개 · 실제 MySQL 반영 확인
+        - [x] 4번 PR 동기화 끝 자동 실행 + 결과 JSON (M · 임시 DB: 163 → 보이는 행사 150, 두 번 돌려도 같음)
 
   - [x] 장기 토큰(60일) — `set-instagram-dev` 가 교환 · 만료일 저장, 만료 7일 전부터 동기화 결과에 ⚠️ 알림 (앱 시크릿은 매번 입력 · 저장 X)
     - [x] 사용자 PC 확인(11/1, 만료일 2026-12-31): `git pull` → `scripts\set-instagram-dev.cmd` (Y → 앱 ID · 시크릿) → `[완료] 장기 토큰 저장 · 만료일 2026-12-…` → 앱 재실행 → `scripts\instagram-sync.cmd` 성공
@@ -115,6 +115,7 @@
 | 11/1 | 작업 세션 | D: PC 개발 DB 발견 — Flyway 기록 없고 `place` · `time_text` 칸 없는 옛 구조(행사 125건)인데, 앱 실행으로 baseline · V2 · V3 가 적용됨(칸 추가만, 행사 125건 유지). `place` 칸이 없어 앱 시작 실패 → 두 칸을 수동 추가해 복구(정상 구조와 비교해 빠진 칸은 이 둘뿐, 앱 시작 · 125건 조회 확인). 기존 125건의 두 칸은 비어 있음 |
 | 11/1 | 작업 세션 | PR #49 찜 실사용 확인 (임시 DB · 카카오 로그인, 행사 하나를 임시로 숨김) — 추가 · 취소 ✅, 찜한 행사를 숨기면 대표에 ★ 로 옮겨감 ✅(목록 118→117), 대표 id 로 취소하면 찜 행 삭제 ✅. 임시 DB 삭제 |
 | 11/1 | 작업 세션 | 합치기 3번 PR — `EventMergeService`(미리보기 · 다시 계산) · `GET /api/events/merge/preview`. 테스트 +22(전체 257). 임시 DB 실데이터(재단 118 + 인스타 READY 45): 묶음 8 · 숨김 13 · 충돌 3, 결과는 `docs/event-merge.md` 8번. 검증 지적 반영: 인스타끼리는 기간을 전부 덮는 글이 대표 · 대표 기간을 벗어난 행은 숨기지 않음(행사가 지도에서 사라지는 문제) · 앞부분만 같은 제목 구분 · 자체 발견: 숫자만 남는 제목(`2026`) 처리. `recompute` 의 실제 MySQL 반영은 4번 PR 에서 확인 |
+| 11/1 | 작업 세션 | 합치기 4번 PR — 재단 · 인스타 동기화 끝에 자동 합치기(`EventMergeRunner`, 실패해도 동기화 응답은 성공 + 실패 표시), `Event` 에 `@DynamicUpdate`(겹쳐 실행돼도 다른 칸을 덮어쓰지 않음). 테스트 +4(전체 261). 임시 DB: 숨김 13건 저장 · 2회 실행 동일 · 사슬 0. `reset-instagram-dev` 실제 실행으로 버그 발견 · 수정(한글 사용자 이름이면 임시 설정 파일을 못 열어 실패 → 환경 변수로) |
 | 11/1 | 작업 세션 | Claude in Chrome 의 `localhost:8080` 이 앱과 다르게 응답한 원인 조사 — 노트북 8080 이 비어 있어도 Chrome 은 Spring 404 를 받고, 노트북에만 띄운 시험 서버(8765)에는 못 닿음 → 연결된 Chrome 은 다른 PC 로 판단. PR 코드와 무관. 로컬 앱 확인은 내장 브라우저, GitHub 작업만 Chrome |
 
 ## ⚠️ 막힌 것 / 메모
@@ -127,6 +128,8 @@
 - PC에서 `Connection refused` 가 나면 MySQL 서비스가 꺼진 것 → `services.msc` 에서 MySQL80 시작 (관리자 권한)
 
 ## 🧰 나중에 할 일 (발견 사항)
+- [ ] `scripts/repair-flyway-v2.ps1` 도 임시 설정 파일을 씀 → 한글 사용자 이름 PC 에서 실패 (`reset-instagram-dev` 와 같은 문제, 11/1 발견)
+- [ ] 재단 동기화가 중간 예외로 끝나면 그 회차는 합치기를 건너뜀 → 저장된 행은 다음 동기화 때 계산됨 (마커 2개가 잠시 보일 수 있음)
 - [x] D: PC 개발 DB 복구 (11/1): `event` 에 `place` · `time_text` 칸이 없어 앱이 시작 안 됨 (V1 보다 옛 구조인데 baseline 이 "버전 1"로 표시해 버림) → 칸 2개 수동 추가
 - [ ] D: PC 개발 DB 의 기존 행사 125건: `place` · `time_text` 가 비어 있음. 재단 동기화로 채워지는지 확인
 - [ ] Claude in Chrome 이 연결된 PC 의 8080 서버 확인: 그 PC 에서 `netstat -ano | findstr :8080` → 필요 없는 앱이면 종료 (`/` · `/api/events` 모두 404 인 Spring 앱, 정체 미확인)

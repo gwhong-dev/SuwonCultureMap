@@ -11,6 +11,7 @@ import com.suwon.festival.dto.SyncResult;
 import com.suwon.festival.service.EventService;
 import com.suwon.festival.service.EventSyncService;
 import com.suwon.festival.service.merge.EventMergeResult;
+import com.suwon.festival.service.merge.EventMergeRunner;
 import com.suwon.festival.service.merge.EventMergeService;
 import com.suwon.festival.dto.xml.EventItem;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,6 +26,7 @@ public class EventController {
   private final EventService eventService;
   private final EventSyncService eventSyncService;
   private final EventMergeService eventMergeService;
+  private final EventMergeRunner eventMergeRunner;
 
   @GetMapping(produces = "application/json")
   public List<EventResponse> getEvents() {
@@ -55,6 +57,7 @@ public class EventController {
   @PostMapping("/sync")
   public String sync() throws Exception {
     SyncResult result = eventSyncService.syncEvents();
-    return "새 행사 " + result.saved() + "개 저장 · 기존 행사 " + result.updated() + "개 갱신 완료";
+    return "새 행사 " + result.saved() + "개 저장 · 기존 행사 " + result.updated() + "개 갱신 완료\n"
+        + eventMergeRunner.runAfterSync().text();
   }
 }

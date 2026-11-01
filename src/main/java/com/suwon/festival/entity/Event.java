@@ -2,6 +2,8 @@ package com.suwon.festival.entity;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.DynamicUpdate;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -19,6 +21,7 @@ import java.time.LocalDate;
 @Table(name = "event", uniqueConstraints = @UniqueConstraint(columnNames = { "source", "source_key" }))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@DynamicUpdate // 바뀐 칸만 UPDATE → 동기화와 합치기가 겹쳐도 서로의 칸을 옛 값으로 덮어쓰지 않음
 public class Event {
 
   @Id
