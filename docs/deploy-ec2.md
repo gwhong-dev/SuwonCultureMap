@@ -20,6 +20,7 @@ echo "alias dc='docker compose -f docker-compose.yml -f docker-compose.prod.yml'
 | 이미지 | Ubuntu Server 24.04 LTS, 64비트(Arm) |
 | 인스턴스 유형 | `t4g.small` (2GB) |
 | 크레딧 사양 | **Standard** (Unlimited 는 추가 과금될 수 있음) |
+| 종료 방지 | **활성화** (실수로 지우면 DB 와 서버 안 백업이 함께 사라짐) |
 | 키 페어 | 새로 만들어 `.pem` 을 내 PC 에 보관 |
 | 저장 공간 | 20GB gp3 |
 | 보안 그룹 | SSH(22): 내 IP, HTTP(80) · HTTPS(443): 전체 |
@@ -145,4 +146,6 @@ gzip -dc ~/backups/백업파일.sql.gz | dc exec -T db sh -c 'MYSQL_PWD="$MYSQL_
 dc start app
 ```
 
-**AWS Free 플랜 종료:** 2027-05-02. 4월 초에 Oracle 이전 또는 Paid 전환을 결정한다. 종료 전에 백업을 내 PC 로 받아 둔다.
+**AWS Free 플랜 종료:** 2027-05-02 또는 크레딧 소진 중 먼저 오는 때. 그 뒤 계정이 닫혀 서비스와 DB 접근이 끊긴다. 잔액을 매달 EC2 대시보드에서 확인하고, **2027-03-01** 까지 Oracle 이전 또는 Paid 전환을 결정한다. 종료 전에 백업을 내 PC 로 받아 둔다.
+
+**하면 안 되는 명령:** `docker compose down -v` · `docker system prune --volumes` (DB 볼륨이 지워진다)
