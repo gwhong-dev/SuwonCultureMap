@@ -16,7 +16,7 @@ public class EventService {
   private final EventRepository eventRepository;
 
   public List<EventResponse> getAllEvents() {
-    return eventRepository.findAll().stream()
+    return eventRepository.findByMergedIntoIdIsNull().stream()
         .map(event -> new EventResponse(
             event.getId(),
             event.getTitle(),

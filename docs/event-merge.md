@@ -74,6 +74,7 @@ ALTER TABLE event ADD CONSTRAINT fk_event_merged_into FOREIGN KEY (merged_into_i
 | `EventService.getAllEvents` (`/api/events`) | 숨긴 행 제외 |
 | `FavoriteService.getFavoriteEvents` | 숨긴 행을 찜했으면 **대표로 바꿔** 보여줌 (같은 대표가 겹치면 1개) |
 | `FavoriteService.addFavorite` | 숨긴 행 id 로 찜하면 대표 id 로 저장 (화면엔 대표만 보이므로 드문 경우) |
+| `FavoriteService.removeFavorite` | 대표 id 로 취소하면 **그 대표로 모이는 찜을 모두** 지움 (화면엔 대표 id 만 있어서, 숨긴 행을 찜한 경우에도 취소되어야 함) |
 | 캘린더(`EventCalendarController`) | 숨긴 행 id 로 와도 그대로 동작 (원본 행이 남아 있음) → 변경 없음 |
 
 ## 5. 언제 실행하나

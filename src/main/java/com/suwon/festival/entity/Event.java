@@ -92,6 +92,11 @@ public class Event {
   private String sourceKey;
   // 인스타 행사의 중복 방지 키 (게시물 id + 블록 키). 재단 행사는 null 이고 idx 로 중복을 막음
 
+  @Column
+  private Long mergedIntoId;
+  // 같은 행사로 합쳐져 숨겨진 행이면 대표 행의 id, 대표 · 일반 행은 null (V3).
+  // 대표는 항상 묶음 끝이라 한 번만 따라가면 됨 (A→B→C 사슬 없음)
+
   @Builder
   public Event(Long idx, String title, String category, Double latitude,
       Double longitude, String imageUrl, String info, LocalDateTime pubDate, LocalDate startDate, LocalDate endDate,
@@ -128,5 +133,10 @@ public class Event {
     this.link = latest.link;
     this.place = latest.place;
     this.timeText = latest.timeText;
+  }
+
+  // 대표 행 id 로 숨김. null 이면 숨김 해제 (다시 계산했을 때 묶음에서 빠진 경우)
+  public void mergeInto(Long representativeId) {
+    this.mergedIntoId = representativeId;
   }
 }

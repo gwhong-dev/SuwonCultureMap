@@ -42,7 +42,7 @@ class RepositorySchemaTest {
   @Test
   void Flyway가_마지막_버전까지_적용함() {
     assertThat(flyway.info().current()).isNotNull();
-    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("2");
+    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("3");
     assertThat(flyway.info().pending()).isEmpty();
   }
 
@@ -127,6 +127,30 @@ class RepositorySchemaTest {
     eventRepository.saveAndFlush(instagramEvent("m2#중복"));
     assertThatThrownBy(() -> eventRepository.saveAndFlush(instagramEvent("m2#중복")))
         .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 숨김_칸을_저장하고_보이는_행사_조회에서_빠짐() {
+    Event representative = eventRepository.saveAndFlush(instagramEvent("m3#대표"));
+    Event hidden = eventRepository.saveAndFlush(instagramEvent("m3#숨김"));
+    assertThat(hidden.getMergedIntoId()).isNull(); // 기본값 = 숨기지 않음
+
+    hidden.mergeInto(representative.getId());
+    em.flush();
+    em.clear();
+
+    assertThat(eventRepository.findById(hidden.getId())).get()
+        .satisfies(r -> assertThat(r.getMergedIntoId()).isEqualTo(representative.getId()));
+    assertThat(eventRepository.findByMergedIntoIdIsNull()).extracting(Event::getId)
+        .contains(representative.getId())
+        .doesNotContain(hidden.getId());
+  }
+
+  @Test
+  void 없는_대표_id_로는_숨기지_못함() {
+    Event hidden = eventRepository.saveAndFlush(instagramEvent("m4#숨김"));
+    hidden.mergeInto(-1L);
+    assertThatThrownBy(() -> em.flush()).hasRootCauseInstanceOf(java.sql.SQLException.class);
   }
 
   private static Event instagramEvent(String sourceKey) {

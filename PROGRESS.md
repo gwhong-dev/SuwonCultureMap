@@ -48,7 +48,7 @@
         - [x] 설계 문서 (`docs/event-merge.md`) — 기준(날짜 겹침 · 300m/장소명 · 제목) 3개 모두, V3 `merged_into_id` 숨김, 테스트 계획, 4개 PR 순서
         - [x] 결정 3건 (11/1): 기준 3개 모두 · 숨김 칸 · 인스타 링크는 나중에 → 실사용 피드백으로 기준 조정
         - [x] 1번 PR `EventMatcher` 규칙 + 단위 테스트 (PR #47, `service/merge/`, DB 변경 없음)
-        - [ ] 2번 PR V3 `merged_into_id` + 엔티티 + `/api/events` · 찜 조회 반영 (설계 7번, M · 로컬 확인: 로그 `version "3"` · 화면 그대로)
+        - [x] 2번 PR V3 `merged_into_id` + 엔티티 + `/api/events` · 찜 조회 반영 (설계 7번, M · 로컬 확인: 임시 DB 에서 로그 `version "3"` · 화면 정상)
         - [ ] 3번 PR `EventMergeService` + 미리보기 API (L · 로컬 실데이터로 잘못 합쳐진 쌍 확인 → 기준 숫자 조정)
         - [ ] 4번 PR 동기화 끝 자동 실행 + 결과 JSON (M · 같은 자리 마커 2개 → 1개)
 
@@ -110,6 +110,8 @@
 | 11/1 | 작업 세션 | `instagram-sync` 에 옛 설정 감지(src ↔ target 토큰 줄 비교, 값 출력 X) · TOKEN_INVALID 안내 추가, `set-instagram-dev` 끝 안내에 "켜져 있으면 끄고 다시" |
 | 11/1 | 작업 세션 | PR #47 — 같은 행사 판단 규칙(`EventMatcher` · `EventGrouper` · `MergeText`) + 단위 테스트 28개. 검증 지적 반영: HTML 표기 풀이 순서 고정(실행마다 결과가 바뀌던 문제) · 단어 중간 `#` 보존 |
 | 11/1 | 작업 세션 | 로컬 Claude Code 전환 결정 — 작업 PC 1대 고정, 빌드 · 실행 · DB 조회까지 Claude 가 직접, USB 반영 스크립트 규칙 폐기 (`CLAUDE.md` 5번) |
+| 11/1 | 작업 세션 | 합치기 2번 PR — V3 `merged_into_id`, `/api/events` 숨긴 행 제외, 찜은 대표 기준(조회 · 추가 · 취소). 설계에 없던 취소 처리 추가: 숨긴 행을 찜한 경우 화면이 보낸 대표 id 로도 취소되게. 테스트 +13(전체 232). 실제 MySQL 은 임시 DB 로 확인(V1~V3 · 동기화 118건 · 숨김 1건 → API 117건 · 지도 정상) 후 삭제 |
+| 11/1 | 작업 세션 | D: PC 개발 DB 발견 — Flyway 기록 없고 `place` · `time_text` 칸 없는 옛 구조(행사 125건)인데, 앱 실행으로 baseline · V2 · V3 가 적용됨(칸 추가만, 행사 125건 유지). `place` 칸이 없어 앱은 시작 실패 → 아래 "나중에 할 일" |
 
 ## ⚠️ 막힌 것 / 메모
 
@@ -121,6 +123,9 @@
 - PC에서 `Connection refused` 가 나면 MySQL 서비스가 꺼진 것 → `services.msc` 에서 MySQL80 시작 (관리자 권한)
 
 ## 🧰 나중에 할 일 (발견 사항)
+- [ ] D: PC 개발 DB 복구: `event` 에 `place` · `time_text` 칸이 없어 앱이 시작 안 됨 (V1 보다 옛 구조인데 baseline 이 "버전 1"로 표시해 버림). 칸 2개 추가 → 재단 동기화로 값 채우기, 또는 DB 새로 만들기
+- [ ] Flyway `baseline-on-migrate`: V1 보다 옛 구조의 DB 도 "버전 1"로 표시하고 V2~ 를 적용함 → 칸이 빠졌으면 적용 뒤에야 검증 오류로 발견. 새 PC 점검 스크립트에 구조 확인 포함 검토
+- [ ] `CLAUDE.md` 프로젝트 위치(`F:\…`)와 이번 세션 위치(`D:\…`)가 다름 — 작업 PC 1대 고정 전제 재확인
 - [ ] 새 PC 준비 스크립트: USB 드라이브 문자가 PC마다 달라(F: · D: · E:) git `safe.directory` 를 PC마다 등록해야 함 — 첫 1회는 git 이 막혀 pull 불가 → 안내 문서 + 이후 점검 스크립트(Java · MySQL 서비스 · DB · dev 설정 파일) 검토
 
 - [x] `mvnw` 실행 권한 없음(100644) → PR #13 으로 수정
