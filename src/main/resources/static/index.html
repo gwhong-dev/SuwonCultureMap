@@ -71,10 +71,6 @@
         background: #03c75a;
         color: #fff;
       }
-      .login-btn.sync {
-        background: #4a90d9;
-        color: #fff;
-      }
       .login-btn.logout {
         background: #555;
         color: #fff;
@@ -427,7 +423,7 @@
           cursor: pointer;
         }
 
-        /* ----- ☰ 메뉴 (로그인 상태 · 로그인/로그아웃 · 동기화) ----- */
+        /* ----- ☰ 메뉴 (로그인 상태 · 로그인/로그아웃) ----- */
         #topbarActions {
           display: none;
           position: absolute;
@@ -846,7 +842,6 @@
         <span id="authStatus">로그인 확인 중...</span>
         <a id="loginPageBtn" class="login-btn login" href="login.html">로그인</a>
         <a id="mypageBtn" class="login-btn login" href="mypage.html" style="display: none">마이페이지</a>
-        <button id="syncBtn" class="login-btn sync">행사 동기화</button>
         <button id="logoutBtn" class="login-btn logout" style="display: none">
           로그아웃
         </button>
@@ -1429,15 +1424,6 @@
       document
         .getElementById("showPastCheckbox")
         .addEventListener("change", filterMarkers);
-
-      document.getElementById("syncBtn").addEventListener("click", function () {
-        fetch("/api/events/sync", { method: "POST" })
-          .then((r) => r.text())
-          .then(function (msg) {
-            alert(msg);
-            location.reload();
-          });
-      });
 
       // ===== 로그인 상태 + 내 즐겨찾기 목록 확인 =====
       var isLoggedIn = false;

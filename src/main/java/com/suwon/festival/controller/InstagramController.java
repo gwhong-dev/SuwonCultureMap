@@ -1,5 +1,6 @@
 package com.suwon.festival.controller;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,9 +12,10 @@ import com.suwon.festival.service.merge.EventMergeRunner;
 import lombok.RequiredArgsConstructor;
 
 // 인스타 게시물 → 행사 동기화를 손으로 실행 (재단 동기화 POST /api/events/sync 와 같은 방식)
-// 자동 실행(스케줄러) · 관리자 전용 보호는 PROGRESS "나중에 할 일"
+// 개발 확인용. 운영(prod)에는 등록되지 않음 → 운영은 ScheduledSyncJob 이 자동 실행
 @RestController
 @RequestMapping("/api/instagram")
+@Profile("(dev | test) & !prod")
 @RequiredArgsConstructor
 public class InstagramController {
 

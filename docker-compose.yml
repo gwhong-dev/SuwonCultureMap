@@ -51,6 +51,8 @@ services:
       INSTAGRAM_USER_ID: ${INSTAGRAM_USER_ID:-}
       INSTAGRAM_TOKEN_EXPIRES_AT: ${INSTAGRAM_TOKEN_EXPIRES_AT:-}
       INSTAGRAM_ACCOUNTS: ${INSTAGRAM_ACCOUNTS:-suwon_city}
+      # 자동 동기화 시각 (초 분 시 일 월 요일, 한국 시간)
+      APP_SYNC_CRON: ${APP_SYNC_CRON:-0 0 6,18 * * *}
     ports:
       - "8080:8080"
 

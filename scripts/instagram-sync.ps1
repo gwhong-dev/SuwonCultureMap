@@ -32,6 +32,7 @@ try {
 } catch {
     Write-Host ('[오류] 요청 실패: ' + $_.Exception.Message)
     Write-Host '→ 앱이 켜져 있나요? IntelliJ 실행 창에 "Started FestivalApplication" 이 보여야 함'
+    Write-Host '→ Docker(운영 프로필) 앱에는 이 API 가 없음 (자동 동기화만 실행)'
     exit 1
 }
 Write-Host ''
