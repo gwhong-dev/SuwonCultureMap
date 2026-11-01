@@ -56,4 +56,9 @@ public class Favorite {
     this.event = event;
     this.createdAt = createdAt;
   }
+
+  // 인스타 옛 블록을 내릴 때 뒤를 잇는 행사로 옮김 (찜한 시점은 그대로)
+  public void moveTo(Event event) {
+    this.event = event;
+  }
 }
