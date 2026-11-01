@@ -50,25 +50,54 @@ class EventGrouperTest {
   }
 
   @Test
-  void 대표보다_기간이_긴_글은_숨기지_않음() {
-    // 대표(개별 글)가 11/1 하루면, 숨겨진 모음 글(~12/31)의 남은 기간에 행사가 지도에서 사라짐
-    var roundup = insta(1, "수원 사진전", "2026-11-01", "2026-12-31", true);
-    var single = insta(2, "수원 사진전", "2026-11-01", null, false);
+  void 개별_글보다_기간이_긴_모음_글은_모음_글이_대표() {
+    // 개별 글(11/1)이 대표면 모음 글(~12/31)의 남은 기간에 행사가 지도에서 사라짐
+    var single = insta(1, "수원 사진전", "2026-11-01", null, false);
+    var roundup = insta(2, "수원 사진전", "2026-11-01", "2026-12-31", true);
 
-    Result r = EventGrouper.group(List.of(roundup, single));
+    Result r = EventGrouper.group(List.of(single, roundup));
 
-    assertThat(r.merged()).isEmpty();
+    assertThat(r.merged()).hasSize(1);
+    assertThat(r.merged().get(0).representative()).isEqualTo(roundup);
+    assertThat(r.merged().get(0).hidden()).containsExactly(single);
   }
 
   @Test
-  void 긴_글이_회차를_이어_붙여도_다른_회차는_숨기지_않음() {
+  void 회차를_모두_덮는_글이_있으면_그_글이_대표() {
     var first = insta(1, "가을 음악회", "2026-11-05", null, false);
     var second = insta(2, "가을 음악회", "2026-11-19", null, false);
     var roundup = insta(3, "가을 음악회", "2026-11-01", "2026-11-30", true);
 
     Result r = EventGrouper.group(List.of(first, second, roundup));
 
-    assertThat(r.merged()).isEmpty();
+    assertThat(r.merged()).hasSize(1);
+    assertThat(r.merged().get(0).representative()).isEqualTo(roundup);
+    assertThat(r.merged().get(0).hidden()).containsExactly(first, second);
+  }
+
+  @Test
+  void 전부_덮는_글이_없으면_대표_기간을_벗어난_행은_그대로_둠() {
+    var a = insta(1, "가을 음악회", "2026-11-01", "2026-11-03", false);
+    var b = insta(2, "가을 음악회", "2026-11-03", "2026-11-05", false);
+    var inside = insta(3, "가을 음악회", "2026-11-02", null, false);
+
+    Result r = EventGrouper.group(List.of(a, b, inside));
+
+    assertThat(r.merged()).hasSize(1);
+    assertThat(r.merged().get(0).representative()).isEqualTo(a);
+    assertThat(r.merged().get(0).hidden()).containsExactly(inside);
+  }
+
+  @Test
+  void 덮는_글이_여럿이면_평소_우선순위로_고름() {
+    var day = insta(1, "가을 음악회", "2026-11-05", null, false);
+    var roundup = insta(2, "가을 음악회", "2026-11-01", "2026-11-30", true);
+    var single = insta(3, "가을 음악회", "2026-11-01", "2026-11-30", false);
+
+    Result r = EventGrouper.group(List.of(day, roundup, single));
+
+    assertThat(r.merged().get(0).representative()).isEqualTo(single);
+    assertThat(r.merged().get(0).hidden()).containsExactly(day, roundup);
   }
 
   @Test
@@ -85,7 +114,7 @@ class EventGrouperTest {
   }
 
   @Test
-  void 대표_기간을_벗어난_행만_남기고_나머지는_숨김() {
+  void 재단은_기간이_짧아도_대표_유지_벗어난_글만_남김() {
     var foundation = swcf(9, "가을 음악회", "2026-11-05", "2026-11-07");
     var inside = insta(1, "가을 음악회", "2026-11-06", null, false);
     var longer = insta(2, "가을 음악회", "2026-11-01", "2026-11-30", true);
