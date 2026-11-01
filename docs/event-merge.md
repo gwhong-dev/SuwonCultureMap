@@ -82,7 +82,8 @@ ALTER TABLE event ADD CONSTRAINT fk_event_merged_into FOREIGN KEY (merged_into_i
 - `EventMergeService.recompute()` — 전체 행사를 읽어 묶음을 다시 계산하고 `merged_into_id` 를 갱신, 결과(묶음 수 · 숨긴 수 · 묶음별 제목 목록)를 돌려줌
 - **재단 동기화(`/api/events/sync`) · 인스타 동기화(`/api/instagram/sync`) 끝에 자동 실행** → 결과 JSON 에 합치기 결과 포함
 - 비교 수 줄이기: 시작일이 없는 행은 제외, 나머지는 날짜 겹침 먼저 확인 후 제목 · 장소 비교 (수백 건이면 전부 비교해도 1초 미만)
-- **미리보기 먼저**: 자동 적용 전에 `GET /api/events/merge/preview`(저장 안 함)로 실데이터 결과를 사용자 PC 에서 눈으로 확인 → 기준 숫자(300m · 0.6) 조정 → 그다음 자동 실행 연결
+- **미리보기 먼저**: 자동 적용 전에 `GET /api/events/merge/preview`(저장 안 함)로 실데이터 결과를 눈으로 확인 → 기준 숫자(300m · 0.6) 조정 → 그다음 자동 실행 연결
+- **모음 글 판단**: 행사로 읽힌 블록(`PARSED` · `NO_DATE` · `NO_COORD` · `ERROR` · `READY`)이 2개 이상인 게시물. 공지(`SKIPPED`) · 못 읽은 블록(`PENDING` · `FAILED`)은 세지 않음
 
 ## 6. 테스트 계획 (test 프로필 = H2 + 가짜 키)
 
@@ -94,7 +95,7 @@ ALTER TABLE event ADD CONSTRAINT fk_event_merged_into FOREIGN KEY (merged_into_i
 | 통합(H2) | `EventMergeService` | 재단 1 + 인스타 2 → 인스타 2개가 재단을 가리킴 / 두 번 실행해도 같음 / 재단 행 정보 바뀌어 기준 ❌ → 숨김 해제 |
 | 통합(H2) | 조회 | `/api/events` 에 숨긴 행 없음, 숨긴 행 찜 → 찜 목록에 대표로 1개 |
 | 통합(H2) | V3 | `RepositorySchemaTest` 에 `merged_into_id` 저장 · 조회 추가 (Flyway 스크립트가 H2 에서도 돌아야 함) |
-| 사용자 PC | 미리보기 | `scripts\event-merge-preview.cmd` 더블클릭 → 묶음 목록에서 **잘못 합쳐진 쌍이 없는지** ✅/❌ |
+| 로컬 | 미리보기 | 임시 DB 에 실데이터 동기화 → 미리보기 API 로 묶음 목록에서 **잘못 합쳐진 쌍이 없는지** ✅/❌ (로컬 전환으로 더블클릭 스크립트는 만들지 않음) |
 
 ## 7. 작업 순서 (한 PR = 한 목적)
 
@@ -102,7 +103,7 @@ ALTER TABLE event ADD CONSTRAINT fk_event_merged_into FOREIGN KEY (merged_into_i
 |---|---|---|---|
 | 1 | `EventMatcher` 규칙 + 단위 테스트 (DB 변경 없음) | M | — |
 | 2 | V3 `merged_into_id` + 엔티티 + `/api/events` · 찜 조회 반영 (숨긴 행이 없으니 화면 변화 없음) | M | 앱 실행 → 로그 `version "3"` · 화면 그대로 |
-| 3 | `EventMergeService` + 미리보기 API + `scripts\event-merge-preview.cmd` | L | 미리보기 결과 확인 → 기준 숫자 조정 |
+| 3 | `EventMergeService` + 미리보기 API | L | 미리보기 결과 확인 → 기준 숫자 조정 |
 | 4 | 동기화 끝 자동 실행 + 결과 JSON 표시 | M | 동기화 → 같은 자리 마커 2개 → 1개 |
 
 ## 8. 결정 (2026-11-01, 사용자)
@@ -110,6 +111,10 @@ ALTER TABLE event ADD CONSTRAINT fk_event_merged_into FOREIGN KEY (merged_into_i
 1. **기준 엄격도** — **3가지 모두** 맞을 때만 합침. 실사용 피드백을 받아 기준 숫자 · 규칙을 조정
 2. **데이터 방식** — 숨김 칸 `merged_into_id` (사용자 선호 없음 → 추천안)
 3. **대표 상세에 인스타 원문 링크** — 나중에 (사용자 선호 없음 → 추천안, 이번 범위는 마커 정리만)
+
+**1차 미리보기 결과 (2026-11-01, 임시 DB · 재단 118 + 인스타 READY 45)**: 묶음 8 · 숨김 13 · 충돌 4. 잘못 합쳐진 묶음 없음 → 기준 숫자 유지
+- 충돌 4건은 모두 재단 행사끼리 겹친 쌍 → 합치지 않음. 이 중 `정조테마공연장 2026 작은 음악회` ↔ `마당놀이터`(유사도 0.67)는 다른 행사 → 시설명이 제목 앞에 붙으면 유사도가 부풀려짐. 인스타끼리 이런 쌍이 나오면 잘못 합쳐질 수 있어 계속 관찰
+- 안 합쳐진 중복 후보: `수미C의 성덕일지 10월 프로그램` ↔ `<내 고민을 콘텐츠로 만드는 방법>`(같은 날 · 같은 자리, 유사도 0.55). 원칙 1번대로 그대로 둠
 
 **피드백 반영 방법**: 3번 PR 의 미리보기 결과 + 실제 화면에서 "안 합쳐진 중복" · "잘못 합쳐진 쌍"을 PROGRESS.md "나중에 할 일"에 기록 → 기준 숫자(300m · 0.6 · 4글자)만 바꾸는 작은 PR 로 조정
 

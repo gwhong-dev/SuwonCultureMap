@@ -112,6 +112,7 @@ try {
     # ---------- 4. 확인 후 실행 ----------
     Write-Host ''
     Write-Host '--- 실행할 작업 (한 번에, 중간 실패 시 전부 취소) ---'
+    if (ColumnExists 'merged_into_id') { Write-Host "  UPDATE event SET merged_into_id = NULL WHERE source = 'INSTAGRAM'" }
     Write-Host '  DELETE FROM instagram_block'
     Write-Host '  DELETE FROM instagram_media'
     Write-Host "  DELETE FROM event WHERE source = 'INSTAGRAM'"
@@ -123,7 +124,10 @@ try {
     if ($answer -ne 'Y' -and $answer -ne 'y') { Write-Host '[취소] 아무것도 바꾸지 않음'; exit 0 }
 
     # 자식(block: media · event 를 가리킴) → media → event 순서. 찜은 위에서 0개 확인 + 같은 트랜잭션 안에서 다시 확인
+    # 합쳐진 행(merged_into_id)이 지울 인스타 행을 가리키면 FK 로 실패 → 먼저 비움. 다음 합치기 계산 때 다시 채워짐 (V2 까지만 적용된 DB 는 칸이 없음)
+    $clearMerged = if (ColumnExists 'merged_into_id') { "UPDATE event SET merged_into_id = NULL WHERE source = 'INSTAGRAM'; " } else { '' }
     Sql ("START TRANSACTION; " +
+        $clearMerged +
         "DELETE FROM instagram_block; " +
         "DELETE FROM instagram_media; " +
         "DELETE FROM event WHERE source = 'INSTAGRAM' AND id NOT IN (SELECT event_id FROM favorite WHERE event_id IS NOT NULL); " +
