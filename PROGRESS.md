@@ -45,6 +45,9 @@
       - [x] 붙은 장소 라벨 떼기 (PR #38, PC 확인 READY 8→12 · NO_COORD 5→1) + sync 화면 한글 깨짐 (PR #39)
       - [x] `scripts\set-instagram-accounts.cmd` → **2 = 전체 5계정**으로 되돌리기 (사용자 PC, 11/1)
       - [ ] 같은 행사 합치기 (모음 글 ↔ 개별 글, 재단 ↔ 인스타) — 위 수정으로 같은 자리 마커 2개가 생길 수 있음
+        - [x] 설계 문서 (`docs/event-merge.md`) — 기준(날짜 겹침 · 300m/장소명 · 제목) 3개 모두, V3 `merged_into_id` 숨김, 테스트 계획, 4개 PR 순서
+        - [x] 결정 3건 (11/1): 기준 3개 모두 · 숨김 칸 · 인스타 링크는 나중에 → 실사용 피드백으로 기준 조정
+        - [ ] 1번 PR `EventMatcher` 규칙 + 단위 테스트 (설계 7번)
 
   - [x] 장기 토큰(60일) — `set-instagram-dev` 가 교환 · 만료일 저장, 만료 7일 전부터 동기화 결과에 ⚠️ 알림 (앱 시크릿은 매번 입력 · 저장 X)
     - [x] 사용자 PC 확인(11/1, 만료일 2026-12-31): `git pull` → `scripts\set-instagram-dev.cmd` (Y → 앱 ID · 시크릿) → `[완료] 장기 토큰 저장 · 만료일 2026-12-…` → 앱 재실행 → `scripts\instagram-sync.cmd` 성공
