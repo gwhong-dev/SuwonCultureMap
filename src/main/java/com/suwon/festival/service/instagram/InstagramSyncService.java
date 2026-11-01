@@ -25,25 +25,30 @@ public class InstagramSyncService {
 
   private final InstagramClient client;
   private final InstagramPostProcessor processor;
+  private final InstagramTokenExpiry tokenExpiry;
   private final List<String> accounts;
   private final int fetchLimit;
 
   public InstagramSyncService(InstagramClient client, InstagramPostProcessor processor,
+      InstagramTokenExpiry tokenExpiry,
       @Value("${instagram.accounts:}") String accounts,
       @Value("${instagram.fetch-limit:10}") int fetchLimit) {
     this.client = client;
     this.processor = processor;
+    this.tokenExpiry = tokenExpiry;
     this.accounts = Arrays.stream(accounts == null ? new String[0] : accounts.split(","))
         .map(String::strip).filter(s -> !s.isEmpty()).distinct().toList();
     this.fetchLimit = fetchLimit;
   }
 
   public InstagramSyncResult sync() {
+    String tokenWarning = tokenExpiry.warning();
+    if (tokenWarning != null) log.warn("{}", tokenWarning);
     if (!client.isConfigured()) {
-      return InstagramSyncResult.notConfigured("인스타 토큰 · 내 계정 ID 설정이 비어 있거나 형식이 다름");
+      return InstagramSyncResult.notConfigured("인스타 토큰 · 내 계정 ID 설정이 비어 있거나 형식이 다름", tokenWarning);
     }
     if (accounts.isEmpty()) {
-      return InstagramSyncResult.notConfigured("대상 계정(instagram.accounts)이 비어 있음");
+      return InstagramSyncResult.notConfigured("대상 계정(instagram.accounts)이 비어 있음", tokenWarning);
     }
 
     List<String> accountErrors = new ArrayList<>();
@@ -85,7 +90,7 @@ public class InstagramSyncService {
     }
 
     InstagramSyncResult result = new InstagramSyncResult(true, null, accounts.size(), okAccounts, accountErrors,
-        posts, newPosts, postErrors, blocks, saved, updated, duplicates);
+        posts, newPosts, postErrors, blocks, saved, updated, duplicates, tokenWarning);
     log.info("인스타 동기화 끝: 계정 {}/{} · 게시물 {} (새 {} · 실패 {}) · 행사 저장 {} · 갱신 {} · 블록 {}",
         okAccounts, accounts.size(), posts, newPosts, postErrors, saved, updated, blocks);
     return result;

@@ -48,6 +48,7 @@ services:
       # 인스타 수집 (선택). 비어 있으면 수집하지 않음
       INSTAGRAM_ACCESS_TOKEN: ${INSTAGRAM_ACCESS_TOKEN:-}
       INSTAGRAM_USER_ID: ${INSTAGRAM_USER_ID:-}
+      INSTAGRAM_TOKEN_EXPIRES_AT: ${INSTAGRAM_TOKEN_EXPIRES_AT:-}
       INSTAGRAM_ACCOUNTS: ${INSTAGRAM_ACCOUNTS:-suwon_city}
     ports:
       - "8080:8080"

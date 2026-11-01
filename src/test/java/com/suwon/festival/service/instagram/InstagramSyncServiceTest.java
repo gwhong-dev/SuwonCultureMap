@@ -110,10 +110,14 @@ class InstagramSyncServiceTest {
   }
 
   private InstagramSyncService service(String accounts) {
+    return service(accounts, "");
+  }
+
+  private InstagramSyncService service(String accounts, String tokenExpiresAt) {
     Clock clock = Clock.fixed(Instant.parse("2026-10-31T03:00:00Z"), InstagramPostProcessor.KST);
     InstagramPostProcessor processor = new InstagramPostProcessor(mediaRepository, blockRepository, eventRepository,
         new PlaceGeocoder(search), new CaptionParser(null), clock);
-    return new InstagramSyncService(client, processor, accounts, 10);
+    return new InstagramSyncService(client, processor, new InstagramTokenExpiry(tokenExpiresAt, clock), accounts, 10);
   }
 
   private static InstagramPost post(String id, String caption) {
@@ -122,6 +126,27 @@ class InstagramSyncServiceTest {
 
   private List<Event> instagramEvents() {
     return eventRepository.findAll().stream().filter(e -> Event.SOURCE_INSTAGRAM.equals(e.getSource())).toList();
+  }
+
+  @Test
+  void 토큰_만료가_가까우면_결과에_알림을_싣고_동기화는_그대로_진행() {
+    client.answers.put("gasang_city", List.of(post("1790000000000001", ROUNDUP)));
+
+    InstagramSyncResult r = service("gasang_city", "2026-11-03").sync(); // 기준일 10/31 → 3일 남음
+
+    assertThat(r.tokenWarning()).contains("3일 뒤 만료");
+    assertThat(r.posts()).isEqualTo(1);
+    assertThat(service("gasang_city", "").sync().tokenWarning()).isNull();
+  }
+
+  @Test
+  void 설정이_비어도_토큰_만료_알림은_전달() {
+    client.configured = false;
+
+    InstagramSyncResult r = service("gasang_city", "2026-10-01").sync();
+
+    assertThat(r.configured()).isFalse();
+    assertThat(r.tokenWarning()).contains("만료됨");
   }
 
   @Test
