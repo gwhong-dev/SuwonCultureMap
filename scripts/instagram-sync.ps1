@@ -18,6 +18,7 @@ try {
     exit 1
 }
 Write-Host ''
+if ($r.tokenWarning) { Write-Host ('⚠️ ' + $r.tokenWarning); Write-Host '' }
 if (-not $r.configured) { Write-Host ('[설정 안 됨] ' + $r.message); exit 1 }
 Write-Host ('계정      : ' + $r.accountsOk + ' / ' + $r.accounts + ' 성공')
 foreach ($e in @($r.accountErrors)) { Write-Host ('  ❌ ' + $e) }
