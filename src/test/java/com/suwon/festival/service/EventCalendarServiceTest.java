@@ -15,7 +15,7 @@ import com.suwon.festival.entity.Event;
 // 행사 → 캘린더 변환 규칙 확인 (DB·스프링 없이 순수 단위 테스트)
 class EventCalendarServiceTest {
 
-  private final EventCalendarService service = new EventCalendarService(null);
+  private final EventCalendarService service = new EventCalendarService(null, null);
   private static final Instant NOW = Instant.parse("2026-10-30T14:00:00Z");
 
   private Event event(String title, String info, LocalDate start, LocalDate end, String link) {
@@ -174,5 +174,34 @@ class EventCalendarServiceTest {
     assertThat(ics).doesNotContain("URL:").doesNotContain("\r\nATTENDEE");
     assertThat(EventCalendarService.safeLink("  https://example.com/a?b=1  ")).isEqualTo("https://example.com/a?b=1");
     assertThat(EventCalendarService.safeLink("javascript:alert(1)")).isNull();
+  }
+
+  // ===== 진행 날짜 고르기 (docs/event-schedule.md 7번) =====
+
+  @Test
+  void 고른_날짜는_그날_하루_종일_일정() {
+    Event e = event("정조 K 스테이지", "", LocalDate.of(2026, 5, 16), LocalDate.of(2026, 9, 19), null);
+    String ics = service.toIcs(e, LocalDate.of(2026, 9, 19), NOW);
+
+    assertThat(ics).contains("DTSTART;VALUE=DATE:20260919\r\n").contains("DTEND;VALUE=DATE:20260920\r\n");
+    assertThat(ics).contains("UID:event-7-20260919@suwonculturemap");
+    assertThat(service.toGoogleUrl(e, LocalDate.of(2026, 9, 19))).contains("&dates=20260919/20260920&");
+  }
+
+  @Test
+  void 고른_날짜에_확실한_시간이_있으면_시간_지정() {
+    Event e = eventB(LocalDate.of(2026, 5, 16), LocalDate.of(2026, 9, 19), "정조테마공연장", "19:00~19:40");
+    // 여러 날 행사라 날짜를 안 고르면 지금처럼 종일
+    assertThat(service.toIcs(e, NOW)).contains("DTSTART;VALUE=DATE:20260516");
+    // 한국 5/16 19:00 = UTC 10:00
+    String ics = service.toIcs(e, LocalDate.of(2026, 5, 16), NOW);
+    assertThat(ics).contains("DTSTART:20260516T100000Z").contains("DTEND:20260516T104000Z");
+    assertThat(service.toGoogleUrl(e, LocalDate.of(2026, 5, 16))).contains("&dates=20260516T100000Z/20260516T104000Z&");
+  }
+
+  @Test
+  void 날짜를_안_고르면_UID_와_기간이_그대로() {
+    Event e = event("정조 K 스테이지", "", LocalDate.of(2026, 5, 16), LocalDate.of(2026, 9, 19), null);
+    assertThat(service.toIcs(e, null, NOW)).isEqualTo(service.toIcs(e, NOW)).contains("UID:event-7@suwonculturemap");
   }
 }

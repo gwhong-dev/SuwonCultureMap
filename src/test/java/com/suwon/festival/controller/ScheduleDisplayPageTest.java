@@ -37,6 +37,16 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
+  void 캘린더_버튼은_아이폰만_ics_나머지는_구글_캘린더() throws Exception {
+    String html = page();
+
+    assertThat(html).contains("id=\"modalCalBtn\"", "id=\"modalIcsAltLink\"", "id=\"modalCalDate\"");
+    assertThat(html).doesNotContain("id=\"modalGoogleBtn\""); // 구글 버튼을 따로 두지 않음
+    assertThat(html).contains("if (isAppleMobile) {\n            calBtn.href = icsUrl;");
+    assertThat(html).contains("calBtn.href = googleUrl;");
+  }
+
+  @Test
   void 날짜_필터가_목록_필터에_연결됨() throws Exception {
     String html = page();
 
