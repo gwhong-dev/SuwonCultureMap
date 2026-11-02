@@ -24,6 +24,7 @@ public final class InfoParser {
   // 실제 데이터 141건 점검 결과: "장소" 141건으로 통일. 없을 때만 주소 계열을 씀
   private static final List<String> PLACE_LABELS = List.of("장소", "주소/소재지", "주소");
   private static final String TIME_LABEL = "시간";
+  private static final String WEEKDAY_LABEL = "요일";
 
   // 알려진 HTML 태그만 지움 → "<파랑새>" 같은 작품명 꺾쇠는 남김
   // <br>, <br/>, <br clear="all"> 등
@@ -70,6 +71,16 @@ public final class InfoParser {
 
   public static String findTimeText(List<ContentInfoDetail> details) {
     return limit(find(details, TIME_LABEL), TIME_TEXT_MAX);
+  }
+
+  // 저장용 길이 제한 없는 값. 잘리면 날짜 나열의 일부만 읽힐 수 있어 진행 날짜 추출에 씀
+  public static String findFullTimeText(List<ContentInfoDetail> details) {
+    return find(details, TIME_LABEL);
+  }
+
+  // "요일" 칸: 실제 진행 요일이 "시간" 칸이 아니라 여기에만 적힌 행사가 있음 (설계 docs/event-schedule.md 2-2)
+  public static String findWeekdayText(List<ContentInfoDetail> details) {
+    return find(details, WEEKDAY_LABEL);
   }
 
   // 글자 수 제한 (이모지처럼 2칸짜리 글자가 반으로 잘리지 않게)

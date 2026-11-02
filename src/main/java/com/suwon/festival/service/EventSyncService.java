@@ -42,7 +42,10 @@ public class EventSyncService {
   }
 
   public List<EventItem> fetchEventItems() throws Exception {
-    String xml = fetchRawXml();
+    return parseItems(fetchRawXml());
+  }
+
+  public static List<EventItem> parseItems(String xml) throws Exception {
     XmlMapper xmlMapper = new XmlMapper();
     xmlMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     SwcfRssResponse response = xmlMapper.readValue(xml, SwcfRssResponse.class);

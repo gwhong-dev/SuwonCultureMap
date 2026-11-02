@@ -50,6 +50,7 @@ class ProdSyncProtectionTest {
       "GET, /api/events/sync/raw",
       "GET, /api/events/sync/parsed",
       "GET, /api/events/merge/preview",
+      "GET, /api/events/schedule/preview",
       "POST, /api/instagram/sync"
   })
   void 수동_동기화_API는_운영에_없음(String method, String url) throws Exception {
