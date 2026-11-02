@@ -154,6 +154,40 @@ function matchRunDays(event, days) {
 
 var MAYBE_RUN_NOTE = "기간 중 · 일정 확인";
 
+// ===== 상태 배지 · D-day (디자인 docs/design/mobile-design-v1.md 2번) =====
+// 시작일 · 종료일만으로 계산 (오늘은 한국 시간). 날짜 없는 행사는 null → 배지 없음
+// "open" 운영중 · "upcoming" 오픈예정 · "ended" 종료
+function eventStatus(event, now) {
+  if (!event.startDate) return null;
+  var today = koreaToday(now);
+  var end = event.endDate || event.startDate;
+  if (today < event.startDate) return "upcoming";
+  if (today > end) return "ended";
+  return "open";
+}
+
+var STATUS_LABELS = { open: "운영중", upcoming: "오픈예정", ended: "종료" };
+
+function statusLabel(status) {
+  return STATUS_LABELS[status] || "";
+}
+
+// 오늘(한국 시간)부터 그날까지 남은 날 수
+function daysUntil(isoDate, now) {
+  return Math.round((utcDay(isoDate) - utcDay(koreaToday(now))) / 86400000);
+}
+
+// 운영중 = "종료까지 D-N" (마지막 날은 "오늘 종료"), 오픈예정 = "D-N" (시작까지), 종료 · 날짜 없음 = null
+function ddayText(event, now) {
+  var status = eventStatus(event, now);
+  if (status === "open") {
+    var left = daysUntil(event.endDate || event.startDate, now);
+    return left === 0 ? "오늘 종료" : "종료까지 D-" + left;
+  }
+  if (status === "upcoming") return "D-" + daysUntil(event.startDate, now);
+  return null;
+}
+
 // ===== 캘린더 저장 날짜 고르기 (설계 7번) =====
 // 진행 날짜가 확정된 여러 날 행사만 날짜를 고름. 아니면 null (지금처럼 기간 전체 종일)
 // 고를 수 있는 날: 오늘(한국 시간) 이후 진행일. 다 지났으면 전체. 기본값은 가장 가까운 날
@@ -185,5 +219,8 @@ if (typeof module !== "undefined") {
     filterDays: filterDays,
     matchRunDays: matchRunDays,
     calendarDateChoices: calendarDateChoices,
+    eventStatus: eventStatus,
+    statusLabel: statusLabel,
+    ddayText: ddayText,
   };
 }
