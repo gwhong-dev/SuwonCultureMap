@@ -2051,6 +2051,7 @@
         eventsLoaded = false;
         renderSkeleton();
         document.getElementById("resultCount").textContent = "행사 불러오는 중…";
+        updateSheetHeaderLabel(); // 다시 시도 때 "불러오지 못했어요" 라벨이 남지 않게
         fetch("/api/events")
           .then(function (response) {
             if (!response.ok) throw new Error("HTTP " + response.status);
