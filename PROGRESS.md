@@ -38,6 +38,9 @@
 - [x] Node 20 경고 해소: `configure-aws-credentials` v4→v6 · `upload-artifact` v4→v6 (둘 다 node24, 쓰는 입력값은 변경 없음, 11/2). 머지 후 Deploy 성공으로 확인
 - [x] 인스타 재개 결정: 공식 계정만, 문서 기준 판단 (11/2, 결정 문서에 Meta 원문 확인 표)
 - [ ] 인플루언서(개인) 계정 추가 검토 — 개인정보보호법 확인 먼저 (사용자 희망, 11/2)
+- [ ] CSP `script-src` 제한 — `index.html` 인라인 스크립트를 파일로 분리한 뒤 카카오 SDK 도메인만 허용 (보안 헤더 PR 에서 보류: 지금 넣으면 지도가 안 뜸)
+- [ ] `deploy/deploy.sh` 는 Caddyfile 만 바뀌면 Caddy 를 다시 띄우지 않음(설정 그대로 유지) → Caddyfile 수정 시 `docker compose up -d --force-recreate caddy` 단계 추가
+- [ ] 카카오 JavaScript 키는 화면에 공개되는 키 → 카카오 콘솔 "플랫폼 > Web 사이트 도메인"이 suwonbible.com · localhost 만인지 확인 (사용자 콘솔)
 - [x] 인스타 대상 계정 허용 목록을 코드 · 시험으로 고정 (`OfficialInstagramAccounts`, 11/2)
 - [ ] 지난 인스타 행사 정리 규칙 확인 (Meta 약관 3.d.i.2.a "필요 없어지면 삭제")
 - [ ] 클라우드에서 `./mvnw` 는 래퍼 내려받기 실패 → `LANG=C.UTF-8 mvn test` 로 실행 (한글 시험 이름 때문에 UTF-8 필요)
