@@ -1,7 +1,7 @@
 # 실제 진행 날짜 정제 — 설계
 
 > 코드보다 먼저 **읽는 곳 · 규칙 · 데이터 모델 · 테스트**를 정한다. 구현 순서는 11번, 결정은 12번.
-> 관련: `docs/event-merge.md` 3번, `docs/instagram-integration.md` 3-1 · 5번 · 8번, PROGRESS.md "실제 진행 날짜 정제"
+> 관련: `docs/event-merge.md` 3번, `docs/instagram-integration.md` 3-1 · 5번 · 8번, PROGRESS-LOG.md "실제 진행 날짜 정제"
 
 ## 1. 문제와 원칙
 

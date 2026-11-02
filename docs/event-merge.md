@@ -1,7 +1,7 @@
 # 같은 행사 합치기 — 설계 (초안)
 
 > 인스타 연동 설계 문서 7번 #6 "중복" 의 구현 설계. 코드보다 먼저 **기준 · 데이터 모델 · 테스트**를 정한다.
-> 관련: `docs/instagram-integration.md` 3-1 · 7번 #6 · #13, PROGRESS.md "같은 행사 합치기"
+> 관련: `docs/instagram-integration.md` 3-1 · 7번 #6 · #13, PROGRESS-LOG.md "같은 행사 합치기"
 
 ## 1. 문제
 
