@@ -50,13 +50,14 @@ class PrivacyPolicyPageTest {
   }
 
   @Test
-  void 행사_정보를_출처별로_적고_인스타는_수집_중단으로_표기() throws Exception {
+  void 행사_정보를_출처별로_적고_인스타는_공식_계정만으로_표기() throws Exception {
     String html = mockMvc.perform(get("/privacy.html")).andReturn().getResponse()
         .getContentAsString(StandardCharsets.UTF_8);
 
-    assertThat(html).contains("수원문화재단 공개 API", "인스타그램", "현재 수집 중단");
-    assertThat(html).contains("처리 상태, 좌표와 함께 저장했습니다"); // 인스타 저장 항목을 빠짐없이
-    assertThat(html).doesNotContain("처리 상태와 함께 저장하고 지도에 표시합니다"); // 옛 인스타 문구
+    assertThat(html).contains("수원문화재단 공개 API", "인스타그램", "공식 계정만", "개인 계정의 게시물은 수집하지 않습니다");
+    assertThat(html).contains("뽑은 행사 제목, 분류, 일시", "처리 상태, 좌표와 함께 저장하고 지도에 표시합니다"); // 인스타 저장 항목을 빠짐없이
+    assertThat(html).contains("삭제 요청:", "판매하거나 광고에 쓰지 않습니다"); // Meta 약관 3.d · 3.a.iv
+    assertThat(html).doesNotContain("현재 수집 중단");
   }
 
   @Test

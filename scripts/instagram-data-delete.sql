@@ -1,6 +1,7 @@
 -- instagram-data-delete.sql — 저장된 인스타 데이터 삭제 (⚠️ 되돌릴 수 없음, 사용자 승인 후에만 실행)
 --
--- 왜: 인스타 수집 중단 결정 (docs/decisions/2026-11-02-instagram-scope-off.md)
+-- 왜: 수집을 끄거나 다시 켜기 전 옛 데이터 정리 (docs/decisions/2026-11-02-instagram-resume-official.md "켜는 순서" 2,
+--      중단 시: docs/decisions/2026-11-02-instagram-scope-off.md)
 --
 -- 실행 전 확인:
 --   1) 서버에 스위치가 반영됨 (INSTAGRAM_SYNC_ENABLED 가 true 가 아니고, 새 코드로 재시작됨). 안 그러면 다음 동기화에 다시 쌓임

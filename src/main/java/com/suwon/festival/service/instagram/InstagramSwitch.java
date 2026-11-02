@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 
 import com.suwon.festival.entity.Event;
 
-// 인스타 수집 · 표시를 한 번에 켜고 끄는 스위치 (docs/decisions/2026-11-02-instagram-scope-off.md)
+// 인스타 수집 · 표시를 한 번에 켜고 끄는 스위치 (docs/decisions/2026-11-02-instagram-resume-official.md)
 //  - 꺼져 있으면 Meta API 를 호출하지 않고, 인스타 행사를 어떤 응답으로도 내보내지 않음
 //  - 저장된 행은 지우지 않음 → 켜면 코드 변경 없이 그대로 돌아옴
 @Component
