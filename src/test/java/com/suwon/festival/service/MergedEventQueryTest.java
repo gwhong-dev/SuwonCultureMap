@@ -25,7 +25,7 @@ import com.suwon.festival.repository.MemberRepository;
 
 // 합쳐져 숨겨진 행(merged_into_id)이 조회 · 찜에 어떻게 보이는지 (docs/event-merge.md 4번 "영향 받는 조회")
 //  - 화면엔 대표만 보임 → 찜도 대표 기준으로 보이고, 대표 id 로 추가 · 취소가 맞물려야 함
-@SpringBootTest
+@SpringBootTest(properties = "instagram.sync.enabled=true") // 이 시험의 행사는 모두 인스타 출처
 @ActiveProfiles("test")
 @Transactional
 class MergedEventQueryTest {

@@ -118,7 +118,7 @@ class InstagramSyncServiceTest {
     Clock clock = Clock.fixed(Instant.parse("2026-10-31T03:00:00Z"), InstagramPostProcessor.KST);
     InstagramPostProcessor processor = new InstagramPostProcessor(mediaRepository, blockRepository, eventRepository,
         new PlaceGeocoder(search), new CaptionParser(null), clock, retirer);
-    return new InstagramSyncService(client, processor, new InstagramTokenExpiry(tokenExpiresAt, clock), accounts, 10);
+    return new InstagramSyncService(client, processor, new InstagramTokenExpiry(tokenExpiresAt, clock), new InstagramSwitch(true), accounts, 10);
   }
 
   private static InstagramPost post(String id, String caption) {

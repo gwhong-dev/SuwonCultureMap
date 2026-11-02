@@ -15,7 +15,7 @@ import com.suwon.festival.entity.Event;
 // 행사 → 캘린더 변환 규칙 확인 (DB·스프링 없이 순수 단위 테스트)
 class EventCalendarServiceTest {
 
-  private final EventCalendarService service = new EventCalendarService(null, null);
+  private final EventCalendarService service = new EventCalendarService(null, null, null);
   private static final Instant NOW = Instant.parse("2026-10-30T14:00:00Z");
 
   private Event event(String title, String info, LocalDate start, LocalDate end, String link) {

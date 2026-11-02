@@ -26,7 +26,7 @@ import com.suwon.festival.service.place.PlaceGeocoder;
 
 // 게시물 하나가 중간에 실패하면 그 게시물이 쓴 것(게시물 · 블록)만 되돌려지는지 — 실제 스프링 빈(트랜잭션 프록시)으로 확인
 // 테스트 전체 트랜잭션을 쓰지 않음 (쓰면 게시물별 롤백이 가려짐) → 끝나고 직접 정리
-@SpringBootTest(properties = "instagram.accounts=gasang_city")
+@SpringBootTest(properties = { "instagram.sync.enabled=true", "instagram.accounts=gasang_city" })
 @ActiveProfiles("test")
 class InstagramSyncRollbackTest {
 
