@@ -33,7 +33,7 @@ class ScheduleDisplayPageTest {
     assertThat(html).contains("var text = formatEventDates(item.event)");
     assertThat(html).contains("var dateText = cardDateText(item)");
     assertThat(html).contains("escapeHtml(cardDateText(item))");
-    assertThat(html).contains("document.getElementById(\"modalDate\").textContent = formatEventDates(event)");
+    assertThat(html).contains("document.getElementById(\"modalDate\").textContent = cardDateText({");
   }
 
   @Test

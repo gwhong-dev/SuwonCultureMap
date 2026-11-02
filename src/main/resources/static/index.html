@@ -1536,7 +1536,12 @@
       function openDetailModal(event) {
         document.getElementById("modalImage").src = event.imageUrl || "";
         document.getElementById("modalTitle").textContent = event.title;
-        document.getElementById("modalDate").textContent = formatEventDates(event);
+        // 날짜 필터 중이면 카드와 같이 "기간 중 · 일정 확인" 을 붙임 (상세만 보고 오늘 한다고 믿지 않게)
+        var runDays = filterDays(document.getElementById("dateFilter").value);
+        document.getElementById("modalDate").textContent = cardDateText({
+          event: event,
+          runMatch: runDays ? matchRunDays(event, runDays) : null,
+        });
         var scheduleEl = document.getElementById("modalSchedule");
         var scheduleText = formatScheduleDetail(event);
         scheduleEl.textContent = scheduleText;
