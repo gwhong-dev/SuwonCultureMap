@@ -146,7 +146,7 @@ erDiagram
 
 `APP_BASE_URL` · `DB_URL` · `DB_USERNAME` · `DB_PASSWORD` · `SWCF_API_KEY_EVENT` · `KAKAO_REST_API_KEY` · `KAKAO_CLIENT_SECRET` · `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` · `NAVER_CLIENT_ID` · `NAVER_CLIENT_SECRET`
 
-선택 항목: `KAKAO_ADMIN_KEY`(탈퇴 때 카카오 연결 해제) · `INSTAGRAM_ACCESS_TOKEN` · `INSTAGRAM_USER_ID` · `INSTAGRAM_TOKEN_EXPIRES_AT` · `INSTAGRAM_ACCOUNTS`(인스타 수집) · `APP_SYNC_CRON`(자동 동기화 시각, 기본 매일 06시 · 18시) · `SESSION_COOKIE_SECURE`(기본 true, HTTPS 없이 시험할 때만 false)
+선택 항목: `KAKAO_ADMIN_KEY`(탈퇴 때 카카오 연결 해제) · `INSTAGRAM_SYNC_ENABLED`(인스타 수집 · 표시 스위치, 기본 false, [중단 결정](docs/decisions/2026-11-02-instagram-scope-off.md)) · `INSTAGRAM_ACCESS_TOKEN` · `INSTAGRAM_USER_ID` · `INSTAGRAM_TOKEN_EXPIRES_AT` · `INSTAGRAM_ACCOUNTS`(인스타 수집) · `APP_SYNC_CRON`(자동 동기화 시각, 기본 매일 06시 · 18시) · `SESSION_COOKIE_SECURE`(기본 true, HTTPS 없이 시험할 때만 false)
 
 > 운영에는 Docker 이미지를 쓰세요. 내 PC 에서 `mvnw package` 로 만든 jar 에는 `application-dev.properties` 가 들어갈 수 있습니다.
 > 소셜 로그인 콜백 주소는 `APP_BASE_URL` 기준으로 자동 생성됩니다. 각 개발자 콘솔(카카오·구글·네이버)에 운영 주소의 콜백 URL도 등록해야 합니다.

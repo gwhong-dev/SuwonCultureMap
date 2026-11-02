@@ -50,6 +50,15 @@ class PrivacyPolicyPageTest {
   }
 
   @Test
+  void 행사_정보를_출처별로_적고_인스타는_수집_중단으로_표기() throws Exception {
+    String html = mockMvc.perform(get("/privacy.html")).andReturn().getResponse()
+        .getContentAsString(StandardCharsets.UTF_8);
+
+    assertThat(html).contains("수원문화재단 공개 API", "인스타그램", "현재 수집 중단");
+    assertThat(html).doesNotContain("처리 상태와 함께 저장하고 지도에 표시합니다"); // 옛 인스타 문구
+  }
+
+  @Test
   void 메인_로그인_마이페이지에_링크가_있음() throws Exception {
     for (String page : new String[] { "/index.html", "/login.html", "/mypage.html" }) {
       String html = mockMvc.perform(get(page)).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);

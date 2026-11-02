@@ -17,6 +17,7 @@ import org.springframework.web.util.UriUtils;
 import com.suwon.festival.entity.Event;
 import com.suwon.festival.repository.EventDateRepository;
 import com.suwon.festival.repository.EventRepository;
+import com.suwon.festival.service.instagram.InstagramSwitch;
 
 import lombok.RequiredArgsConstructor;
 
@@ -47,10 +48,12 @@ public class EventCalendarService {
 
   private final EventRepository eventRepository;
   private final EventDateRepository eventDateRepository;
+  private final InstagramSwitch instagramSwitch;
 
-  // 없는 행사 → 404, 날짜 없는 행사 → 일정을 만들 수 없으므로 404
+  // 없는 행사(내보내지 않는 인스타 행사 포함) → 404, 날짜 없는 행사 → 일정을 만들 수 없으므로 404
   public Event findSchedulable(Long id) {
     Event event = eventRepository.findById(id)
+        .filter(instagramSwitch::isVisible)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "행사를 찾을 수 없습니다."));
     if (event.getStartDate() == null) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "날짜 정보가 없는 행사라 캘린더에 추가할 수 없습니다.");

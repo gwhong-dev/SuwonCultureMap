@@ -31,7 +31,7 @@ import com.suwon.festival.service.schedule.ScheduleResult;
 import jakarta.persistence.EntityManager;
 
 // 재단 동기화가 진행 날짜를 저장하고, 다시 돌려도 달라진 것만 고치는지 (설계 11번 3번 PR)
-@SpringBootTest
+@SpringBootTest(properties = "instagram.sync.enabled=true") // 인스타 행사 응답도 시험함
 @ActiveProfiles("test")
 @Transactional
 class EventScheduleSyncTest {

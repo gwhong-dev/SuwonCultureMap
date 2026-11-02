@@ -83,7 +83,7 @@ class StaleBlockRetireTest {
     Clock clock = Clock.fixed(Instant.parse("2026-10-31T03:00:00Z"), InstagramPostProcessor.KST);
     InstagramPostProcessor processor = new InstagramPostProcessor(mediaRepository, blockRepository, eventRepository,
         new PlaceGeocoder(search), new CaptionParser(null), clock, retirer);
-    service = new InstagramSyncService(client, processor, new InstagramTokenExpiry("", clock), ACCOUNT, 10);
+    service = new InstagramSyncService(client, processor, new InstagramTokenExpiry("", clock), new InstagramSwitch(true), ACCOUNT, 10);
   }
 
   private static String block(String title, String date, String place) {

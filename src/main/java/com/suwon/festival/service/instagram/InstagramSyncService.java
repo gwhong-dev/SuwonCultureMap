@@ -26,22 +26,27 @@ public class InstagramSyncService {
   private final InstagramClient client;
   private final InstagramPostProcessor processor;
   private final InstagramTokenExpiry tokenExpiry;
+  private final InstagramSwitch instagramSwitch;
   private final List<String> accounts;
   private final int fetchLimit;
 
   public InstagramSyncService(InstagramClient client, InstagramPostProcessor processor,
-      InstagramTokenExpiry tokenExpiry,
+      InstagramTokenExpiry tokenExpiry, InstagramSwitch instagramSwitch,
       @Value("${instagram.accounts:}") String accounts,
       @Value("${instagram.fetch-limit:10}") int fetchLimit) {
     this.client = client;
     this.processor = processor;
     this.tokenExpiry = tokenExpiry;
+    this.instagramSwitch = instagramSwitch;
     this.accounts = Arrays.stream(accounts == null ? new String[0] : accounts.split(","))
         .map(String::strip).filter(s -> !s.isEmpty()).distinct().toList();
     this.fetchLimit = fetchLimit;
   }
 
   public InstagramSyncResult sync() {
+    if (!instagramSwitch.isEnabled()) {
+      return InstagramSyncResult.notConfigured("인스타 수집 중단 상태 (instagram.sync.enabled=false)", null);
+    }
     String tokenWarning = tokenExpiry.warning();
     if (tokenWarning != null) log.warn("{}", tokenWarning);
     if (!client.isConfigured()) {
