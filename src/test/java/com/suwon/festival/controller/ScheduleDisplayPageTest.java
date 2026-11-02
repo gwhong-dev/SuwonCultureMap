@@ -22,7 +22,9 @@ class ScheduleDisplayPageTest {
 
   private String page() throws Exception {
     MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
-    return mockMvc.perform(get("/index.html")).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+    // Windows 체크아웃은 줄바꿈이 \r\n 이라 여러 줄 문자열 비교가 실패함 → \n 으로 맞춤
+    return mockMvc.perform(get("/index.html")).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8)
+        .replace("\r\n", "\n");
   }
 
   @Test
