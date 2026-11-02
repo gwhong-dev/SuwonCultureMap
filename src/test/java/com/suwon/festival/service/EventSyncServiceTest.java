@@ -1,6 +1,7 @@
 package com.suwon.festival.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.suwon.festival.dto.SyncResult;
 import com.suwon.festival.dto.xml.Coordinate;
+import com.suwon.festival.dto.xml.EventDate;
 import com.suwon.festival.dto.xml.EventItem;
 import com.suwon.festival.entity.Event;
 import com.suwon.festival.repository.EventRepository;
@@ -54,6 +56,38 @@ class EventSyncServiceTest {
         });
     assertThat(eventRepository.findByIdx(880001L)).get()
         .satisfies(e -> assertThat(e.getSource()).isEqualTo(Event.SOURCE_SWCF));
+  }
+
+  @Test
+  void 형식이_틀린_행은_건너뛰고_뒤_행사는_저장() {
+    EventItem badPubDate = item(880101L, "게시일 형식 오류");
+    badPubDate.pubDate = "2026/10/31";
+    EventItem badPeriod = item(880102L, "기간 형식 오류");
+    badPeriod.eventDate = new EventDate();
+    badPeriod.eventDate.sdate = "2026-13-01";
+    badPeriod.eventDate.edate = "2026-13-02";
+
+    SyncResult result = eventSyncService.syncItems(List.of(badPubDate, badPeriod, item(880103L, "정상 행사")));
+
+    assertThat(result.saved()).isEqualTo(1);
+    assertThat(result.skipped()).isEqualTo(2);
+    assertThat(eventRepository.findByIdx(880103L)).isPresent();
+    assertThat(eventRepository.findByIdx(880101L)).isEmpty();
+  }
+
+  @Test
+  void 행사_0건_응답은_빈_목록() throws Exception {
+    String xml = "<rss><channel><title>수원문화재단</title></channel></rss>";
+    assertThat(EventSyncService.parseItems(xml)).isEmpty();
+    assertThat(eventSyncService.syncItems(List.of())).isEqualTo(new SyncResult(0, 0, 0));
+  }
+
+  @Test
+  void 행사_목록_모양이_아닌_응답은_이유를_알_수_있게_실패() {
+    String maintenance = "<html><body><p>서비스 점검 중입니다</p></body></html>";
+    assertThatThrownBy(() -> EventSyncService.parseItems(maintenance))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("channel");
   }
 
   private static Event instagramEvent(String sourceKey) {

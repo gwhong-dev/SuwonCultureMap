@@ -75,6 +75,9 @@ public class ScheduledSyncJob {
     try {
       SyncResult result = eventSyncService.syncEvents();
       log.info("재단 동기화 · 새 행사 {}개, 갱신 {}개", result.saved(), result.updated());
+      if (result.skipped() > 0) {
+        log.warn("재단 동기화 · 형식 오류로 건너뛴 행사 {}개 (위 '재단 행사 건너뜀' 로그에 idx)", result.skipped());
+      }
       return true;
     } catch (Exception e) {
       logFailure("재단", e);
