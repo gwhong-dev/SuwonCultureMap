@@ -143,13 +143,22 @@ main 에 머지 → CI 통과 → GitHub Actions `Deploy` → AWS SSM(원격 명
 **① 서버가 SSM 을 쓸 수 있게 (EC2 역할)**
 
 1. IAM → 역할 → 역할 생성 → 신뢰할 엔터티 `AWS 서비스` · 사용 사례 `EC2`
-2. 권한 정책 `AmazonSSMManagedInstanceCore` 선택 → 이름 `suwon-ec2-ssm` → 생성
+2. 권한 추가 화면의 **필터링 검색창**(화면 맨 위 AWS 검색창이 아님)에 `SSMManagedInstanceCore` → `AmazonSSMManagedInstanceCore` 체크 → 이름 `suwon-ec2-ssm` → 생성
 3. EC2 → 인스턴스 `suwon-app` 선택 → 작업 → 보안 → IAM 역할 수정 → `suwon-ec2-ssm` → 저장
-4. 서버에서 에이전트 확인 (Ubuntu 24.04 는 기본 설치): `sudo snap services amazon-ssm-agent` 가 `active`. 몇 분 뒤 Systems Manager → 플릿 관리자에 인스턴스가 `온라인` 으로 보이면 완료 (안 보이면 `sudo snap restart amazon-ssm-agent`)
+4. 몇 분 뒤 Systems Manager → 플릿 관리자에 인스턴스가 `온라인` 으로 보이면 완료
+   - 10분이 지나도 안 보이면: 에이전트가 역할이 붙기 전에 연결을 실패해 쉬는 중 → 내 PC 에서 서버에 접속해 재시작 (11/2 실제로 필요했음)
+   ```powershell
+   ssh -i "$HOME\.ssh\suwon-ec2.pem" ubuntu@탄력적IP
+   ```
+   ```bash
+   sudo snap restart amazon-ssm-agent
+   sudo snap services amazon-ssm-agent   # active 확인
+   ```
+   - `ssh` 가 `Connection timed out` 이면 내 공인 IP 가 바뀐 것 → 보안 그룹 SSH(22) 소스를 **내 IP** 로 다시 저장 (`ipconfig` 의 192.168… 은 사설 IP 라 쓰지 않음)
 
 **② GitHub 을 AWS 에 신분증 발급처로 등록 (OIDC 공급자)**
 
-IAM → 자격 증명 공급자 → 공급자 추가 → `OpenID Connect`
+IAM → 왼쪽 메뉴 **ID 제공업체** → 공급자 추가 → `OpenID Connect`
 
 | 칸 | 값 |
 |---|---|
@@ -160,14 +169,18 @@ IAM → 자격 증명 공급자 → 공급자 추가 → `OpenID Connect`
 
 1. IAM → 역할 → 역할 생성 → `웹 자격 증명` → 공급자 `token.actions.githubusercontent.com` · 대상 `sts.amazonaws.com`
 2. GitHub 조직 `gwhong-dev` · 리포지토리 `SuwonCultureMap` · 브랜치 `main` → 다음 (권한 정책은 고르지 않고 넘어감) → 이름 `suwon-github-deploy` → 생성
-3. 만든 역할 → 신뢰 관계 탭에서 조건이 아래와 같은지 확인. 콘솔이 `sub` 를 `StringLike` 아래에 만들었어도 값이 같으면 그대로 둔다
+3. 만든 역할 → 신뢰 관계 탭 → **신뢰 정책 편집** → 조건을 아래로 바꾼다
 
 ```json
 "StringEquals": {
   "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-  "token.actions.githubusercontent.com:sub": "repo:gwhong-dev/SuwonCultureMap:ref:refs/heads/main"
+  "token.actions.githubusercontent.com:sub": "repo:gwhong-dev@337212831/SuwonCultureMap@1370819111:ref:refs/heads/main"
 }
 ```
+
+- 이 저장소는 GitHub 이 `sub` 에 **계정 · 저장소 번호**를 붙여 보낸다 (`이름@번호`). 콘솔 마법사가 만드는 `repo:gwhong-dev/SuwonCultureMap:…` 로는 거부된다 (11/2 첫 배포 실패 원인)
+- 번호가 붙어 있어 같은 이름으로 저장소를 다시 만들어도 통과하지 못한다 → 그대로 쓰는 편이 더 안전
+- 실제 값은 Actions `Deploy` 로그의 "GitHub 신분 확인 (진단용)" 단계에 나온다. 저장소를 옮기거나 이름을 바꾸면 그 값으로 다시 맞춘다
 
 4. 권한 탭 → 권한 추가 → 인라인 정책 생성 → JSON 에 아래를 넣고 `계정ID` · `인스턴스ID` 를 바꾼다 → 이름 `suwon-deploy-ssm`
 
@@ -214,7 +227,7 @@ GitHub → Actions → `Deploy` → Run workflow (main) → 초록불 + 로그�
 
 | 증상 | 원인 · 해결 |
 |---|---|
-| `Not authorized to perform sts:AssumeRoleWithWebIdentity` | ③-3 신뢰 관계의 `sub` 오타, 또는 main 이 아닌 브랜치에서 실행 |
+| `Not authorized to perform sts:AssumeRoleWithWebIdentity` | ③-3 신뢰 정책의 `sub` 와 로그 "GitHub 신분 확인 (진단용)" 의 `sub` 를 글자 그대로 비교 (번호 형식 `이름@번호` 주의), 또는 main 이 아닌 브랜치에서 실행 |
 | `InvalidInstanceId` | ① 이 안 됨 (플릿 관리자에 `온라인` 이 아님), 또는 `EC2_INSTANCE_ID` 오타 |
 | `AccessDenied ... ssm:SendCommand` | ③-4 정책의 계정 ID · 인스턴스 ID 확인 |
 | `서버에서 고친 파일이 있음` | 서버에서 `git status` → 직접 고친 파일을 되돌리거나 PR 로 옮김 |
