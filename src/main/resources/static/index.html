@@ -423,7 +423,9 @@
       #detailRows,
       #detailIntro,
       #detailLocation,
-      #detailBar {
+      #detailBar,
+      .skeleton-card,
+      .load-error {
         display: none;
       }
       #routeSheet[hidden],
@@ -874,6 +876,70 @@
           top: 4px;
           right: 4px;
           background: transparent;
+        }
+
+        /* ----- 스켈레톤 로딩 (행사 목록을 받는 동안 회색 블록) + 실패 안내 ----- */
+        .skeleton-card {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .sk {
+          position: relative;
+          overflow: hidden;
+          background: var(--surface);
+        }
+        .sk::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          transform: translateX(-100%);
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+          animation: shimmer 1.4s infinite;
+        }
+        @media (prefers-color-scheme: dark) {
+          .sk::after {
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+          }
+        }
+        .sk-thumb {
+          width: 100%;
+          aspect-ratio: 4 / 3;
+        }
+        .sk-line {
+          height: 14px;
+        }
+        .sk-line.w60 {
+          width: 60%;
+        }
+        .sk-line.w40 {
+          width: 40%;
+        }
+        .sk-line.w80 {
+          width: 80%;
+        }
+        .load-error {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          grid-column: 1 / -1;
+          padding: 32px 16px;
+          text-align: center;
+          font-size: 14px;
+          color: var(--sub);
+        }
+        .load-error button {
+          height: 44px;
+          padding: 0 20px;
+          border: 1px solid var(--line);
+          border-radius: 2px;
+          background: var(--bg);
+          color: var(--text);
+          font: inherit;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
         }
 
         /* ----- 상태 배지 + D-day (docs/design/mobile-design-v1.md 2번) ----- */
@@ -1439,6 +1505,12 @@
         }
       }
 
+      @keyframes shimmer {
+        to {
+          transform: translateX(100%);
+        }
+      }
+
       @keyframes sheetUp {
         from {
           transform: translateY(100%);
@@ -1451,7 +1523,8 @@
       @media (prefers-reduced-motion: reduce) {
         #sidebar,
         #previewArea,
-        .modal-card {
+        .modal-card,
+        .sk::after {
           transition: none !important;
           animation: none !important;
         }
@@ -1689,6 +1762,7 @@
 
       var map;
       var markerList = [];
+      var eventsLoaded = false; // 행사 목록을 받기 전엔 목록(스켈레톤 · 실패 안내)을 다시 그리지 않음
       var currentInfowindow = null;
 
       // ===== 모바일 레이아웃 상태값 (아래 '모바일 레이아웃' 영역에서 사용) =====
@@ -1945,9 +2019,46 @@
           hidePreview();
         });
 
+        loadEvents();
+      });
+
+      // (모바일) 행사를 받는 동안 목록 자리에 회색 블록 4장 — 목록이 그려지면 renderSidebar 가 지움
+      function renderSkeleton() {
+        var list = document.getElementById("list");
+        list.setAttribute("aria-busy", "true");
+        var card =
+          '<div class="skeleton-card" aria-hidden="true">' +
+          '<div class="sk sk-thumb"></div>' +
+          '<div class="sk sk-line w60"></div>' +
+          '<div class="sk sk-line w40"></div>' +
+          '<div class="sk sk-line w80"></div>' +
+          "</div>";
+        list.innerHTML = card + card + card + card;
+      }
+
+      function renderLoadError() {
+        var list = document.getElementById("list");
+        list.removeAttribute("aria-busy");
+        list.innerHTML =
+          '<div class="load-error" role="alert"><span>행사를 불러오지 못했어요.<br>네트워크를 확인한 뒤 다시 시도해 주세요.</span>' +
+          '<button type="button" id="retryLoadBtn">다시 시도</button></div>';
+        document.getElementById("retryLoadBtn").addEventListener("click", loadEvents);
+        document.getElementById("resultCount").textContent = "불러오지 못했어요";
+        updateSheetHeaderLabel();
+      }
+
+      function loadEvents() {
+        eventsLoaded = false;
+        renderSkeleton();
+        document.getElementById("resultCount").textContent = "행사 불러오는 중…";
+        updateSheetHeaderLabel(); // 다시 시도 때 "불러오지 못했어요" 라벨이 남지 않게
         fetch("/api/events")
-          .then((response) => response.json())
+          .then(function (response) {
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            return response.json();
+          })
           .then((events) => {
+            markerList = [];
             setupCategoryOptions(events);
 
             // 이 시점엔 마커를 만들지 않음. 실제 마커는 filterMarkers() -> renderLocationMarkers()에서
@@ -1956,6 +2067,7 @@
             events.forEach(function (event) {
               markerList.push({ event: event });
             });
+            eventsLoaded = true;
 
             filterMarkers();
 
@@ -1970,8 +2082,12 @@
                 openDetailModal(found.event);
               }
             }
+          })
+          .catch(function (err) {
+            console.error("행사 불러오기 실패", err);
+            renderLoadError();
           });
-      });
+      }
 
       function toggleInfowindow(infowindow, marker) {
         if (currentInfowindow === infowindow) {
@@ -1992,6 +2108,10 @@
       function setupCategoryOptions(events) {
         var categories = [...new Set(events.map((e) => e.category))];
         var select = document.getElementById("categorySelect");
+        // 다시 시도로 또 불러올 수 있으니 "전체" 뒤의 옵션은 지우고 새로 넣음
+        Array.from(select.options).slice(1).forEach(function (option) {
+          option.remove();
+        });
 
         CATEGORY_ORDER.forEach(function (category) {
           // '찜'은 실제 DB 카테고리가 아니라 항상 넣어줌
@@ -2032,6 +2152,7 @@
 
       // ===== 필터링 (검색어 + 카테고리 + 진행 날짜 + 지난 행사 여부, '찜'은 즐겨찾기 목록으로 필터) =====
       function filterMarkers() {
+        if (!eventsLoaded) return; // 아직 받는 중(스켈레톤) 또는 실패 안내 표시 중 — 로그인 확인 등이 지우지 않게
         var keyword = document.getElementById("searchInput").value.trim();
         var selectedCategory = document.getElementById("categorySelect").value;
         var showPast = document.getElementById("showPastCheckbox").checked;
@@ -2124,6 +2245,7 @@
 
         var list = document.getElementById("list");
         list.innerHTML = "";
+        list.removeAttribute("aria-busy"); // 스켈레톤 끝
 
         // 찜한 행사가 있을 때만 구분 제목 표시
         function addSectionTitle(text) {
