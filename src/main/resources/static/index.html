@@ -1354,7 +1354,7 @@
         }
         #detailIntroMore {
           align-self: flex-start;
-          height: 36px;
+          min-height: 44px;
           padding: 0;
           border: 0;
           background: none;
@@ -2388,6 +2388,7 @@
         card.scrollTop = 0;
         selectDetailTab("detailRows", false);
         renderDetailMap(event); // 지도는 창이 보인 뒤에 그려야 크기를 잡음
+        measureIntro();
       }
 
       // ===== 상세 (모바일 디자인 04): 분류 · 구 → 정보 표 → 소개 → 위치 =====
@@ -2406,9 +2407,12 @@
         return lines;
       }
 
-      function findInfo(lines, keywords) {
+      function findInfo(lines, keywords, excludes) {
         var found = lines.filter(function (line) {
-          return keywords.some(function (k) {
+          var excluded = (excludes || []).some(function (k) {
+            return line.label.indexOf(k) !== -1;
+          });
+          return !excluded && keywords.some(function (k) {
             return line.label.indexOf(k) !== -1;
           });
         });
@@ -2426,12 +2430,12 @@
         var rows = [];
         if (event.startDate) rows.push(["기간", document.getElementById("modalDate").textContent]);
         var schedule = formatScheduleDetail(event);
-        if (schedule) rows.push(["일정", schedule]);
+        if (schedule) rows.push(["진행", schedule]); // 값 안에 "일정 원문:" 이 있어 라벨은 "진행"
         var time = findInfo(lines, ["시간", "요일"]);
         if (time) rows.push(["시간", time]);
         var place = extractPlaceName(event.info);
         if (place) rows.push(["장소", place]);
-        var fee = findInfo(lines, ["이용료", "요금", "입장료", "관람료", "참가비"]);
+        var fee = findInfo(lines, ["이용료", "요금", "입장료", "관람료", "참가비"], ["주차"]); // "주차요금" 은 제외
         if (fee) rows.push(["요금", fee]);
         var dl = document.getElementById("detailRows");
         dl.innerHTML = rows
@@ -2447,6 +2451,7 @@
         intro.classList.remove("expanded");
         more.setAttribute("aria-expanded", "false");
         more.textContent = "더보기";
+        more.hidden = true; // 창이 보인 뒤 measureIntro 가 3줄을 넘을 때만 다시 켬
         document.getElementById("detailIntro").hidden = !event.info;
 
         // 위치: 주소 (없으면 장소명), 복사 버튼은 복사할 글이 있을 때만
@@ -2463,7 +2468,10 @@
         if (!window.kakao || !kakao.maps || !kakao.maps.StaticMap) return;
         var position = new kakao.maps.LatLng(event.latitude, event.longitude);
         new kakao.maps.StaticMap(box, { center: position, level: 4, marker: { position: position } });
-        // 소개가 3줄을 넘을 때만 더보기 표시 (지도와 같이 창이 보인 뒤에 재야 함)
+      }
+
+      // 소개가 3줄을 넘을 때만 더보기 표시 (창이 보인 뒤에 재야 함)
+      function measureIntro() {
         var intro = document.getElementById("detailIntroText");
         document.getElementById("detailIntroMore").hidden = intro.scrollHeight <= intro.clientHeight + 1;
       }
@@ -2478,9 +2486,8 @@
         if (!scroll) return;
         var card = document.querySelector("#detailModal .modal-card");
         var offset = document.getElementById("detailHead").offsetHeight + document.getElementById("detailTabs").offsetHeight;
-        var top = targetId === "detailRows"
-          ? document.getElementById("detailTabs").offsetTop - document.getElementById("detailHead").offsetHeight
-          : document.getElementById("detailLocation").offsetTop - offset;
+        // 탭은 sticky 라 offsetTop 이 붙은 위치를 돌려줌 → 붙지 않는 표 · 위치 칸의 offsetTop 을 기준으로
+        var top = document.getElementById(targetId).offsetTop - offset;
         card.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
       }
       document.querySelectorAll("#detailTabs .detail-tab").forEach(function (tab) {
