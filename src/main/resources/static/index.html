@@ -5,9 +5,54 @@
     <!-- 모바일에서 PC 화면을 축소해서 보여주지 않고, 기기 폭 그대로 그리게 함 -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>수원바이블</title>
+    <!-- 모바일(1024px 이하)에서만 Noto Sans KR 글꼴을 내려받음 (PC 는 기존 글꼴 유지) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      media="(max-width: 1024px)"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap"
+    />
     <style>
       :root {
         --sidebar-width: 450px; /* PC 사이드바 폭 (모바일은 바텀시트라 사용 안 함) */
+
+        /* ===== 모바일 디자인 값 (docs/design/mobile-design-v1.md 1번) — 모바일 화면에서만 사용 ===== */
+        --bg: #ffffff; /* 바탕 */
+        --surface: #f4f2ef; /* 회색 칸 (주소 박스 등) */
+        --line: #e3dfd9; /* 구분선 · 테두리 */
+        --text: #1c1b1a; /* 본문 */
+        --sub: #5f5a54; /* 보조 글자 */
+        --accent: #b4472a; /* 주 색 (화성 벽돌) · 버튼 · 선택 탭 */
+        --on-accent: #ffffff; /* 주 색 위 글자 */
+        --accent-soft: #f7e9e3; /* D-day 배지 · 선택 칩 바탕 */
+        --accent-ink: #93391f; /* D-day 배지 · 선택 칩 글자 */
+        --blue-soft: #e6eef6; /* 오픈예정 배지 바탕 */
+        --blue: #2d5b88; /* 오픈예정 배지 글자 */
+        --gray-soft: #eceae6; /* 종료 배지 바탕 */
+        --gray: #6b6660; /* 종료 배지 글자 */
+        --shadow-float: 0 6px 18px rgba(0, 0, 0, 0.12); /* 지도 위에 떠 있는 카드에만 */
+        --font-mobile: "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
+        --tab-height: 64px; /* 하단 탭 높이 */
+      }
+      /* 어두운 테마: 기기 설정을 따름 (토글은 나중). PC 는 토큰을 안 쓰므로 영향 없음 */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #141312;
+          --surface: #1e1c1a;
+          --line: #35322e;
+          --text: #f2efea;
+          --sub: #a9a39b;
+          --accent: #e07a57;
+          --on-accent: #141312;
+          --accent-soft: #3a241c;
+          --accent-ink: #f0a285;
+          --blue-soft: #1c2733;
+          --blue: #8db4dc;
+          --gray-soft: #2a2825;
+          --gray: #a9a39b;
+          --shadow-float: 0 6px 18px rgba(0, 0, 0, 0.5);
+        }
       }
 
       body {
@@ -366,19 +411,9 @@
       #categoryChips,
       #sheetHeader,
       #previewStrip,
-      #mapViewBtn,
+      #tabBar,
       .card-fav {
         display: none;
-      }
-      /* 아이폰 하단 홈 바 높이를 JS에서 읽기 위한 측정용 요소 */
-      #safeAreaProbe {
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 0;
-        height: env(safe-area-inset-bottom, 0px);
-        visibility: hidden;
-        pointer-events: none;
       }
 
       /* =====================================================
@@ -389,6 +424,9 @@
       @media (max-width: 1024px) {
         body {
           overflow: hidden;
+          font-family: var(--font-mobile);
+          background: var(--bg);
+          color: var(--text);
         }
         button,
         .chip {
@@ -403,7 +441,7 @@
           right: 0;
           z-index: 30;
           background: transparent;
-          color: #222;
+          color: var(--text);
           padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 0;
           gap: 8px;
           pointer-events: none; /* 빈 공간은 통과 → 지도 드래그 가능 */
@@ -414,8 +452,8 @@
         }
         /* 목록을 끝까지 올렸을 때는 상단을 흰 배경으로 */
         body.sheet-full #topbar {
-          background: #fff;
-          box-shadow: 0 1px 0 #eee;
+          background: var(--bg);
+          box-shadow: 0 1px 0 var(--line);
         }
         /* 드롭다운·체크박스는 아래 칩 버튼으로 대체 */
         #topbar #categorySelect,
@@ -427,17 +465,21 @@
           flex: 1 1 0;
           min-width: 0;
           height: 48px;
-          padding: 0 16px 0 44px;
-          border: none;
-          border-radius: 999px;
+          padding: 0 16px 0 40px;
+          border: 1px solid var(--line);
+          border-radius: 2px;
+          font: inherit;
           font-size: 16px; /* 16px 미만이면 아이폰이 입력할 때 화면을 확대함 */
-          background: #fff
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23222' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E")
-            no-repeat 16px center / 18px;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+          color: var(--text);
+          background: var(--bg)
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235F5A54' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E")
+            no-repeat 12px center / 20px;
           outline: none;
           -webkit-appearance: none;
           appearance: none;
+        }
+        #topbar #searchInput::placeholder {
+          color: var(--sub);
         }
         #mobileMenuBtn {
           display: flex;
@@ -446,12 +488,11 @@
           flex: none;
           width: 48px;
           height: 48px;
-          border: none;
-          border-radius: 50%;
-          background: #fff;
-          color: #222;
+          border: 1px solid var(--line);
+          border-radius: 2px;
+          background: var(--bg);
+          color: var(--text);
           font-size: 1.2rem;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
           cursor: pointer;
         }
 
@@ -467,9 +508,10 @@
           min-width: 200px;
           margin-left: 0;
           padding: 14px;
-          background: #fff;
-          border-radius: 14px;
-          box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+          background: var(--bg);
+          border: 1px solid var(--line);
+          border-radius: 2px;
+          box-shadow: var(--shadow-float);
         }
         #topbar.menu-open #topbarActions {
           display: flex;
@@ -477,7 +519,7 @@
         #authStatus {
           margin: 0 0 4px;
           font-size: 0.85rem;
-          color: #555;
+          color: var(--sub);
         }
         #topbarActions .login-btn {
           padding: 11px 12px;
@@ -500,20 +542,22 @@
         }
         .chip {
           flex: none;
-          padding: 8px 14px;
-          border: 1px solid #e3e3e3;
-          border-radius: 999px;
-          background: #fff;
-          color: #222;
-          font-size: 0.88rem;
+          height: 34px;
+          padding: 0 14px;
+          border: 1px solid var(--line);
+          border-radius: 2px;
+          background: var(--bg);
+          color: var(--text);
+          font: inherit;
+          font-size: 13px;
           white-space: nowrap;
-          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
           cursor: pointer;
         }
         .chip.active {
-          background: #222;
-          border-color: #222;
-          color: #fff;
+          background: var(--text);
+          border-color: var(--text);
+          color: var(--bg);
+          font-weight: 700;
         }
 
         /* ----- 사이드바 → 바텀시트 ----- */
@@ -530,8 +574,10 @@
           width: auto;
           z-index: 20;
           border-left: none;
-          border-radius: 18px 18px 0 0;
-          box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+          border-top: 1px solid var(--line);
+          border-radius: 0;
+          background: var(--bg);
+          box-shadow: var(--shadow-float);
           transform: translateY(100%); /* 실제 위치는 JS가 상태에 맞게 지정 */
           transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
           will-change: transform;
@@ -541,24 +587,23 @@
           flex-direction: column;
           align-items: center;
           flex: none;
-          padding: 10px 16px 14px;
-          border-bottom: 1px solid #f0f0f0;
+          padding: 6px 16px 12px;
+          border-bottom: 1px solid var(--line);
           cursor: grab;
           touch-action: none; /* 끌어올릴 때 페이지가 같이 움직이지 않게 */
           user-select: none;
           -webkit-user-select: none;
         }
         .sheet-handle {
-          width: 40px;
-          height: 5px;
+          width: 36px;
+          height: 4px;
           margin-bottom: 10px;
-          border-radius: 3px;
-          background: #d0d0d0;
+          background: var(--line);
         }
         #resultCount {
-          font-size: 0.95rem;
-          font-weight: 600;
-          color: #222;
+          font-size: 14px;
+          font-weight: 500;
+          color: var(--text);
         }
 
         /* ----- 목록 카드: 큰 사진 위 + 글 아래 (태블릿은 2열) ----- */
@@ -583,7 +628,8 @@
           width: 100%;
           height: auto;
           aspect-ratio: 4 / 3;
-          border-radius: 14px;
+          border-radius: 0;
+          background: var(--surface);
         }
         .event-body {
           display: flex;
@@ -593,16 +639,18 @@
         .event-body .title {
           order: -1; /* 제목을 날짜보다 위로 */
           margin-top: 0;
-          font-size: 1rem;
+          font-size: 15px;
+          font-weight: 700;
+          color: var(--text);
         }
         .event-body .date {
-          font-size: 0.85rem;
-          color: #717171;
+          font-size: 13px;
+          color: var(--sub);
         }
         .event-body .info {
           margin-top: 2px;
-          font-size: 0.85rem;
-          color: #717171;
+          font-size: 13px;
+          color: var(--sub);
           -webkit-line-clamp: 2;
         }
         .favorite-badge {
@@ -612,6 +660,9 @@
           grid-column: 1 / -1; /* 태블릿 2열에서도 한 줄 전체 */
           margin: 0 -16px;
           padding: 8px 16px;
+          background: var(--surface);
+          color: var(--sub);
+          border-bottom: 1px solid var(--line);
         }
 
         /* ----- 찜 하트 버튼 (목록 카드 / 미리보기 카드) ----- */
@@ -622,19 +673,18 @@
           position: absolute;
           top: 10px;
           right: 10px;
-          width: 36px;
-          height: 36px;
+          width: 44px;
+          height: 44px;
           border: none;
-          border-radius: 50%;
-          background: rgba(255, 255, 255, 0.92);
-          color: #222;
+          border-radius: 2px;
+          background: var(--bg);
+          color: var(--sub);
           font-size: 1.15rem;
           line-height: 1;
-          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
           cursor: pointer;
         }
         .card-fav.active {
-          color: #ff385c;
+          color: var(--accent);
         }
 
         /* ----- 마커 탭 → 하단 미리보기 카드 (좌우로 넘기기) ----- */
@@ -643,7 +693,7 @@
           position: absolute;
           left: 0;
           right: 0;
-          bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+          bottom: 16px;
           z-index: 25;
           gap: 10px;
           padding: 14px 16px 8px; /* 위쪽: 겹친 카드 모양이 잘리지 않게 */
@@ -669,9 +719,9 @@
           display: flex;
           height: 116px;
           overflow: hidden;
-          border-radius: 16px;
-          background: #fff;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+          border: 1px solid var(--line);
+          background: var(--bg);
+          box-shadow: var(--shadow-float);
           scroll-snap-align: center;
           cursor: pointer;
         }
@@ -680,27 +730,26 @@
           width: 116px;
           height: 100%;
           object-fit: cover;
-          background: #eee;
+          background: var(--surface);
         }
         /* 같은 장소에 행사가 여러 개 → 뒤에 카드가 쌓인 모양 + 'n/전체' 표시 */
         .preview-card.stacked {
           box-shadow:
-            0 -11px 0 -6px #fff,
-            0 -11px 0 -5px #d4d4d4,
-            0 -20px 0 -12px #f4f4f4,
-            0 -20px 0 -11px #d4d4d4,
-            0 4px 16px rgba(0, 0, 0, 0.18);
+            0 -11px 0 -6px var(--bg),
+            0 -11px 0 -5px var(--line),
+            0 -20px 0 -12px var(--surface),
+            0 -20px 0 -11px var(--line),
+            var(--shadow-float);
         }
         .preview-stack {
           position: absolute;
           left: 6px;
           bottom: 6px;
           padding: 3px 8px;
-          border-radius: 999px;
-          background: rgba(0, 0, 0, 0.72);
-          color: #fff;
-          font-size: 0.72rem;
-          font-weight: 600;
+          background: var(--text);
+          color: var(--bg);
+          font-size: 11px;
+          font-weight: 700;
           white-space: nowrap;
         }
         .preview-body {
@@ -712,9 +761,10 @@
           padding: 12px 44px 12px 12px;
         }
         .preview-title {
-          font-size: 0.95rem;
-          font-weight: 600;
-          line-height: 1.3;
+          font-size: 15px;
+          font-weight: 700;
+          line-height: 1.35;
+          color: var(--text);
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
@@ -722,8 +772,8 @@
         }
         .preview-date,
         .preview-place {
-          font-size: 0.8rem;
-          color: #717171;
+          font-size: 12px;
+          color: var(--sub);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -742,33 +792,41 @@
           box-shadow: none;
         }
 
-        /* ----- 목록 전체일 때 '지도 보기' 버튼 ----- */
-        #mapViewBtn {
+        /* ----- 하단 탭 (높이 64px, 아이콘 22px + 글자 11px, 선택 = 주 색 + 굵게) ----- */
+        #tabBar {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          flex: none;
+          height: var(--tab-height);
+          padding-bottom: env(safe-area-inset-bottom, 0px); /* 아이폰 홈 바 아래로 내려가지 않게 */
+          border-top: 1px solid var(--line);
+          background: var(--bg);
+          z-index: 40;
+        }
+        .tab-item {
           display: flex;
+          flex-direction: column;
           align-items: center;
-          gap: 6px;
-          position: absolute;
-          left: 50%;
-          bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
-          z-index: 26;
-          padding: 12px 20px;
-          border: none;
-          border-radius: 999px;
-          background: #222;
-          color: #fff;
-          font-size: 0.95rem;
-          font-weight: 600;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-          transform: translate(-50%, 200%);
-          opacity: 0;
-          pointer-events: none;
-          transition: transform 0.25s, opacity 0.2s;
+          justify-content: center;
+          gap: 3px;
+          min-height: 44px;
+          margin: 0;
+          padding: 0;
+          border: 0;
+          background: none;
+          color: var(--sub);
+          font: inherit;
+          font-size: 11px;
+          text-decoration: none;
           cursor: pointer;
         }
-        #mapViewBtn.show {
-          transform: translate(-50%, 0);
-          opacity: 1;
-          pointer-events: auto;
+        .tab-item svg {
+          width: 22px;
+          height: 22px;
+        }
+        .tab-item.active {
+          color: var(--accent);
+          font-weight: 700;
         }
 
         /* ----- 상세정보: 전체 화면 페이지처럼 ----- */
@@ -781,6 +839,8 @@
           height: 100%;
           max-height: 100%;
           border-radius: 0;
+          background: var(--bg);
+          color: var(--text);
           animation: sheetUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         .modal-close {
@@ -788,21 +848,37 @@
           top: calc(env(safe-area-inset-top, 0px) + 12px);
           left: 12px;
           right: auto;
-          width: 40px;
-          height: 40px;
+          width: 44px;
+          height: 44px;
           display: flex;
           align-items: center;
           justify-content: center;
-          border-radius: 50%;
-          background: rgba(255, 255, 255, 0.95);
-          color: #222;
+          border: 1px solid var(--line);
+          border-radius: 2px;
+          background: var(--bg);
+          color: var(--text);
           font-size: 1.4rem;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
         .modal-image {
           height: auto;
           aspect-ratio: 4 / 3;
           max-height: 45vh;
+          background: var(--surface);
+        }
+        .modal-fav-badge {
+          border-radius: 0;
+          background: var(--accent-soft);
+          color: var(--accent-ink);
+        }
+        .modal-date,
+        .modal-schedule,
+        .modal-info,
+        .modal-cal-date,
+        .modal-ics-alt {
+          color: var(--sub);
+        }
+        .modal-schedule {
+          border-bottom-color: var(--line);
         }
         .modal-body {
           padding: 20px 20px calc(env(safe-area-inset-bottom, 0px) + 100px);
@@ -821,8 +897,21 @@
           bottom: 0;
           z-index: 3;
           padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 12px);
-          background: #fff;
-          border-top: 1px solid #eee;
+          background: var(--bg);
+          border-top: 1px solid var(--line);
+        }
+        .favorite-btn,
+        .modal-link-btn {
+          border: 1px solid var(--line);
+          border-radius: 2px;
+          background: var(--bg);
+          color: var(--text);
+          font-family: inherit;
+        }
+        .favorite-btn.active {
+          border-color: var(--accent);
+          background: var(--accent);
+          color: var(--on-accent);
         }
         .favorite-btn,
         .modal-link-btn {
@@ -855,7 +944,6 @@
       @media (prefers-reduced-motion: reduce) {
         #sidebar,
         #previewStrip,
-        #mapViewBtn,
         .modal-card {
           transition: none !important;
           animation: none !important;
@@ -904,11 +992,28 @@
         </div>
         <div id="list"></div>
       </aside>
-      <!-- 모바일 전용: 마커 탭 시 하단 미리보기 카드 / 목록 전체일 때 지도 버튼 -->
+      <!-- 모바일 전용: 마커 탭 시 하단 미리보기 카드 -->
       <div id="previewStrip"></div>
-      <button id="mapViewBtn" type="button">🗺 지도 보기</button>
     </div>
-    <div id="safeAreaProbe" aria-hidden="true"></div>
+    <!-- 모바일 전용: 하단 탭 (docs/design/mobile-design-v1.md 2번). 홈 탭은 홈 화면(01)이 생길 때 추가 -->
+    <nav id="tabBar" aria-label="하단 탭">
+      <button type="button" class="tab-item" data-tab="map">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z" /><path d="M9 4v14M15 6v14" /></svg>
+        <span>지도</span>
+      </button>
+      <button type="button" class="tab-item" data-tab="list">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+        <span>목록</span>
+      </button>
+      <button type="button" class="tab-item" data-tab="fav">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>
+        <span>찜</span>
+      </button>
+      <a class="tab-item" data-tab="my" href="mypage.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" /></svg>
+        <span>마이</span>
+      </a>
+    </nav>
 
     <!-- ===== 상세정보 큰 팝업창 ===== -->
     <div id="detailModal" class="modal-overlay" style="display: none">
@@ -1300,6 +1405,7 @@
         var runDays = filterDays(document.getElementById("dateFilter").value); // 한국 시간 기준, 필터 없으면 null
 
         updateChipActive(); // 모바일 칩 선택 표시 동기화
+        updateTabBar(); // 모바일 하단 탭 선택 표시 동기화
 
         if (currentInfowindow) {
           currentInfowindow.close();
@@ -1722,7 +1828,7 @@
       // =====================================================
       // 모바일 레이아웃 (에어비앤비 스타일)
       // - 화면 폭 1024px 이하에서만 동작 (PC 화면은 기존 그대로)
-      // - 카테고리 칩 / 바텀시트 목록 / 마커 미리보기 카드 / ☰ 메뉴
+      // - 카테고리 칩 / 바텀시트 목록 / 마커 미리보기 카드 / ☰ 메뉴 / 하단 탭
       // =====================================================
 
       // ----- 공통 도우미 -----
@@ -1818,12 +1924,11 @@
       function getSheetPositions() {
         var appHeight = document.getElementById("app").clientHeight;
         var headerHeight = document.getElementById("sheetHeader").offsetHeight;
-        var safeBottom = document.getElementById("safeAreaProbe").offsetHeight;
         var topbarHeight = document.getElementById("topbar").offsetHeight;
         return {
           full: topbarHeight, // 검색창 바로 아래까지
           half: Math.round(appHeight * 0.5),
-          peek: appHeight - headerHeight - safeBottom - 8, // 손잡이 + 개수만 보이게
+          peek: appHeight - headerHeight, // 손잡이 + 개수만 보이게 (아이폰 홈 바 여백은 하단 탭이 맡음)
           hidden: appHeight, // 완전히 내려감
         };
       }
@@ -1842,10 +1947,8 @@
         setSheetY(y, true);
         // 시트가 내려가 있는 만큼 목록 아래 여백 → 마지막 카드까지 스크롤 가능
         document.getElementById("list").style.paddingBottom = y + 24 + "px";
-        document
-          .getElementById("mapViewBtn")
-          .classList.toggle("show", state === "full");
         document.body.classList.toggle("sheet-full", state === "full");
+        updateTabBar();
       }
 
       function nearestSheetState(y) {
@@ -1913,11 +2016,44 @@
         header.addEventListener("pointercancel", endDrag);
       })();
 
-      document
-        .getElementById("mapViewBtn")
-        .addEventListener("click", function () {
-          setSheetState("peek");
+      // ----- 하단 탭 (지도 · 목록 · 찜 · 마이) -----
+      // 한 화면(index.html) 안의 상태를 탭으로 오가게 함: 지도 = 목록 살짝, 목록 = 목록 전체, 찜 = '찜' 필터 + 목록 전체
+      // 마이는 mypage.html 링크 (로그인 안 했으면 그 페이지가 login.html 로 보냄)
+      function activeTab() {
+        if (document.getElementById("categorySelect").value === "찜") return "fav";
+        return sheetState === "full" ? "list" : "map";
+      }
+
+      function updateTabBar() {
+        var current = activeTab();
+        document.querySelectorAll("#tabBar .tab-item").forEach(function (tab) {
+          var active = tab.dataset.tab === current;
+          tab.classList.toggle("active", active);
+          if (active) {
+            tab.setAttribute("aria-current", "page");
+          } else {
+            tab.removeAttribute("aria-current");
+          }
         });
+      }
+
+      function selectTab(tab) {
+        var select = document.getElementById("categorySelect");
+        hidePreview();
+        if (tab === "fav") {
+          select.value = "찜";
+        } else if (select.value === "찜") {
+          select.value = "all"; // 찜 탭에서 나오면 전체로
+        }
+        filterMarkers();
+        setSheetState(tab === "map" ? "peek" : "full");
+      }
+
+      document.querySelectorAll("#tabBar button[data-tab]").forEach(function (tab) {
+        tab.addEventListener("click", function () {
+          selectTab(tab.dataset.tab);
+        });
+      });
 
       // ----- 마커 미리보기 카드 (마커 탭 → 하단 카드, 좌우로 넘기면 다음 행사) -----
       function renderPreviewStrip(sortedItems) {
@@ -2102,7 +2238,6 @@
           sidebar.style.transform = "";
           sidebar.style.transition = "";
           document.getElementById("list").style.paddingBottom = "";
-          document.getElementById("mapViewBtn").classList.remove("show");
           document.body.classList.remove("sheet-full");
           document.getElementById("topbar").classList.remove("menu-open");
         }
