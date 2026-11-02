@@ -18,6 +18,7 @@
 3. 자기소개서 작성 → 입사 지원 🚀
 
 **남은 큰 일**
+- [ ] 모바일 앱식 레이아웃 1단계 (`docs/design/mobile-design-v1.md`, 근거 `docs/benchmark.md`) — 토큰·하단 탭 → 상태 배지·D-day → 마커 카드 → 길찾기 → 상세 → 찜 토스트 → 스켈레톤 순, PR 하나에 한 가지
 - [ ] 진행 날짜 7번 PR 합치기 대표 날짜 표시 (`docs/event-schedule.md` 11번) — 묶음이 거의 인스타라 수집 중단 중엔 효과 없음, 재개 때 8번과 함께
 - [ ] 로드맵 6단계 운영 · 유지보수 (헬스체크, 로그, 장애 → Issue → 수정 기록)
 - [ ] (선택) Jenkins로 같은 파이프라인 재구성해 비교
@@ -33,6 +34,9 @@
 - PC에서 `Connection refused` 가 나면 MySQL 서비스가 꺼진 것 → `services.msc` 에서 MySQL80 시작 (관리자 권한)
 
 ## 🧰 나중에 할 일 (발견 사항)
+- [ ] 로고 제작 (웹 · 앱 아이콘 겸용)
+- [ ] 인스타 행사 이미지: 수집 재개 시 이미지 주소 만료 대비 → 받아서 따로 저장
+- [ ] 상세 정보 분해: API 원문 → 기간 · 시간 · 장소 · 요금 칸 (`docs/benchmark.md` 6번과 함께)
 - [ ] 서버 Docker 빌드가 옛 빌더 사용 (`DEPRECATED: The legacy builder`, Deploy #10) → 서버에 `docker-buildx` 설치 검토 (빌드 캐시 · 속도). 배포 중 `curl: (56)` 은 앱이 뜨는 동안의 재시도라 정상
 - [ ] `aws-actions/configure-aws-credentials@v4` 가 Node 20 지원 종료 경고 (Deploy #10) → 경고가 실패로 바뀌기 전에 Node 24 지원 버전으로 올리기
 - [ ] Meta Direct Support 접근 경로 재확인 후 문의 (`docs/decisions/2026-11-02-instagram-scope-off.md`, 서면 허용 또는 앱 심사 통과 전에는 인스타 수집을 켜지 않음)
