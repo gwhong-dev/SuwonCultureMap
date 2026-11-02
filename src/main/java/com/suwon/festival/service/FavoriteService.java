@@ -15,6 +15,7 @@ import com.suwon.festival.entity.Member;
 import com.suwon.festival.repository.EventRepository;
 import com.suwon.festival.repository.FavoriteRepository;
 import com.suwon.festival.repository.MemberRepository;
+import com.suwon.festival.service.instagram.InstagramSwitch;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,11 +28,13 @@ public class FavoriteService {
   private final MemberRepository memberRepository;
   private final EventRepository eventRepository;
   private final EventService eventService;
+  private final InstagramSwitch instagramSwitch;
 
   @Transactional
   public void addFavorite(Long memberId, Long eventId) {
     Event event = eventRepository.findById(eventId)
         .map(this::representativeOf)
+        .filter(instagramSwitch::isVisible)
         .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 행사입니다."));
 
     if (!favoritesOf(memberId, event.getId()).isEmpty()) {

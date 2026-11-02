@@ -30,7 +30,8 @@ google.client-secret=여기에_키
 naver.client-id=여기에_키
 naver.client-secret=여기에_키
 
-# 인스타그램 게시물 수집 (선택). 비워 두면 수집하지 않음
+# 인스타그램 게시물 수집 (선택). 2026-11-02 부터 중단: 기본 스위치(instagram.sync.enabled=false)면 값을 넣어도 수집 · 표시하지 않음
+#  - 다시 켜는 조건: docs/decisions/2026-11-02-instagram-scope-off.md
 #  - user-id: 내 인스타 계정 ID (17841… 숫자, Graph API 탐색기 debug_token 의 granular_scopes → instagram_basic)
 instagram.access-token=
 instagram.user-id=
