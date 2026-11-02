@@ -24,7 +24,7 @@ jobs:
   check:
     name: 운영 응답 확인
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15 # 최악: 11번 × (15초 + 30초) ≈ 8분
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
