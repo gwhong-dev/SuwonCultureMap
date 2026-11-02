@@ -13,7 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-// 메인 화면의 진행 날짜 표시가 연결되어 있는지 확인 (표시 규칙 자체는 브라우저에서 실제 데이터로 확인)
+// 메인 화면의 진행 날짜 표시가 연결되어 있는지 확인 (표시 규칙 자체는 src/test/js 에서 시험)
 @SpringBootTest
 @ActiveProfiles("test")
 class ScheduleDisplayPageTest {
@@ -35,9 +35,10 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
-  void 상세에_일정_칸과_공휴일_안내가_있음() throws Exception {
-    String html = page();
+  void 상세에_일정_칸이_있고_표시_규칙_파일을_불러옴() throws Exception {
+    assertThat(page()).contains("id=\"modalSchedule\"", "<script src=\"/schedule-format.js\"></script>");
 
-    assertThat(html).contains("id=\"modalSchedule\"", "공휴일은 원문 확인", "일정 원문: ");
+    MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+    assertThat(mockMvc.perform(get("/schedule-format.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
   }
 }

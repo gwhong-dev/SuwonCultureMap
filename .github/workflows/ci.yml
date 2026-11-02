@@ -30,6 +30,9 @@ jobs:
           java-version: "17"
           cache: maven   # 라이브러리 캐시 → 두 번째부터 빨라짐
 
+      - name: 화면 표시 규칙 시험
+        run: node --test src/test/js/schedule-format.test.js
+
       - name: 컴파일 + 테스트
         run: ./mvnw -B -ntp verify
 
