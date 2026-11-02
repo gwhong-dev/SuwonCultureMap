@@ -2161,7 +2161,7 @@
               if (found) {
                 map.setCenter(new kakao.maps.LatLng(found.event.latitude, found.event.longitude));
                 openDetailModal(found.event);
-                if (initialParams.get("route")) openRouteSheet(found.event);
+                if (initialParams.get("route") && mobileQuery.matches) openRouteSheet(found.event); // 길찾기 창은 모바일 전용
               }
             }
           })
@@ -3415,14 +3415,16 @@
         syncUrlState();
       }
       // 카카오맵 웹 링크(/link/to/)는 자동차로만 열림 → 폰에서는 앱 주소(kakaomap://route, 대중교통)를 먼저 열고,
-      // 앱이 없어 화면이 그대로면 2초 뒤 웹 링크로 넘어감. PC 는 앱이 없으니 웹 링크 그대로(새 탭)
+      // 앱이 없어 화면이 그대로면 2.5초 뒤 웹 링크로 넘어감. PC 는 앱이 없으니 웹 링크 그대로(새 탭)
       var isPhone = isAppleMobile || /Android/i.test(navigator.userAgent);
       document.getElementById("routeKakao").addEventListener("click", function (e) {
         if (!routeEvent || !isPhone) return;
         e.preventDefault();
         openAppOrWeb(kakaoRouteAppUrl(routeEvent.latitude, routeEvent.longitude), this.href);
       });
+      var APP_OPEN_WAIT = 2500;
       function openAppOrWeb(appUrl, webUrl) {
+        var start = Date.now();
         var left = false; // 앱으로 넘어가면 페이지가 숨겨짐(visibilitychange · pagehide)
         function onHide() {
           if (document.hidden) left = true;
@@ -3435,8 +3437,10 @@
         setTimeout(function () {
           document.removeEventListener("visibilitychange", onHide);
           window.removeEventListener("pagehide", onPageHide);
-          if (!left && !document.hidden) location.href = webUrl; // 같은 탭으로 → 돌아오면 ?event=&route=1 로 복원
-        }, 2000);
+          // 타이머가 제때(여유 1초 안에) 돌았을 때만 웹으로: 앱 확인창 · 앱 전환으로 페이지가 멈췄다 돌아온 경우는 이미 앱이 열림
+          var onTime = Date.now() - start < APP_OPEN_WAIT + 1000;
+          if (!left && !document.hidden && onTime) location.href = webUrl; // 같은 탭으로 → 돌아오면 ?event=&route=1 로 복원
+        }, APP_OPEN_WAIT);
         location.href = appUrl;
       }
       document.getElementById("routeCloseBtn").addEventListener("click", closeRouteSheet);

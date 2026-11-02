@@ -54,6 +54,12 @@ class SecurityHeadersFilterTest {
   }
 
   @Test
+  void CSP_form_action은_카카오톡_공유_전송만_예외로_허용() {
+    // 카카오톡 공유(JS SDK)는 폰 밖에서 sharer.kakao.com 으로 폼 전송 → 그 도메인만 허용, 나머지는 'self' 유지
+    assertThat(SecurityHeadersFilter.CSP).contains("form-action 'self' https://sharer.kakao.com");
+  }
+
+  @Test
   void 테스트_로컬에서는_HSTS를_붙이지_않음() throws Exception {
     MockHttpServletResponse res = mockMvc.perform(get("/")).andReturn().getResponse();
 
