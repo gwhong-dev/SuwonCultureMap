@@ -1,0 +1,41 @@
+# =====================================================
+#  가동 감시 — 15분마다 운영 헬스체크(/actuator/health) 확인
+#  - 응답 없음: "uptime" 라벨 장애 Issue 자동 생성 + 이 실행은 실패(빨간불)로 표시
+#  - 다시 정상: 열린 장애 Issue 에 복구 시각을 남기고 자동으로 닫음
+#  - 실제 판단 · Issue 처리는 deploy/uptime-check.sh
+#  - GitHub 예약 실행은 몇 분 늦을 수 있음 (정확한 1분 단위 감시가 아님)
+# =====================================================
+name: Uptime
+
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *" # 15분마다 (정각 몰림을 피해 7분부터)
+  workflow_dispatch: # Actions 화면에서 바로 확인
+
+permissions:
+  contents: read
+  issues: write # 장애 Issue 생성 · 닫기
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: 운영 응답 확인
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      HEALTH_URL: ${{ vars.HEALTH_URL || 'https://suwonbible.com/actuator/health' }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: 헬스체크 · 장애 Issue 처리
+        run: bash deploy/uptime-check.sh
+      - name: 보안 헤더 기록 (참고용, 실패로 치지 않음)
+        if: always()
+        run: |
+          curl -sSI --max-time 15 "${HEALTH_URL%/actuator/health}/" \
+            | grep -iE '^(strict-transport-security|x-frame-options|x-content-type-options|content-security-policy|referrer-policy|permissions-policy):' \
+            || echo "보안 헤더를 읽지 못함"
