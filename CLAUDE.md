@@ -37,7 +37,7 @@ deploy/  docs/  scripts/
 ```bash
 ./mvnw spring-boot:run      # 로컬 실행 → http://localhost:8080
 ./mvnw test                 # 테스트 (test 프로필, H2 — MySQL 불필요)
-node --test src/test/js/schedule-format.test.js   # 화면 표시 규칙 시험
+node --test "src/test/js/*.test.js"   # 화면 표시 규칙 · 길찾기 링크 시험
 ./mvnw -DskipTests package  # jar 빌드
 docker compose up --build   # 앱 + MySQL (.env 는 scripts/setup-docker.cmd)
 ```

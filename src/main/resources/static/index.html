@@ -32,6 +32,7 @@
         --gray-soft: #eceae6; /* 종료 배지 바탕 */
         --gray: #6b6660; /* 종료 배지 글자 */
         --shadow-float: 0 6px 18px rgba(0, 0, 0, 0.12); /* 지도 위에 떠 있는 카드에만 */
+        --dim: rgba(20, 19, 18, 0.5); /* 하단 시트 뒤 덮개 */
         --font-mobile: "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
         --tab-height: 64px; /* 하단 탭 높이 */
         --sheet-bar-height: 52px; /* "검색 결과 N개 · 목록 보기" 바 높이 */
@@ -53,6 +54,7 @@
           --gray-soft: #2a2825;
           --gray: #a9a39b;
           --shadow-float: 0 6px 18px rgba(0, 0, 0, 0.5);
+          --dim: rgba(0, 0, 0, 0.62);
         }
       }
 
@@ -415,6 +417,10 @@
       #tabBar,
       .card-fav,
       .badge-row {
+        display: none;
+      }
+      #routeSheet[hidden],
+      #toast[hidden] {
         display: none;
       }
 
@@ -907,6 +913,204 @@
           margin: 0 0 10px;
         }
 
+        /* ----- 길찾기 창 (하단 시트, docs/design/mobile-design-v1.md 3번) ----- */
+        #routeSheet {
+          position: fixed;
+          inset: 0;
+          z-index: 110; /* 상세창(100) 위에서도 열림 */
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-end;
+          background: var(--dim);
+        }
+        .route-sheet {
+          display: flex;
+          flex-direction: column;
+          background: var(--bg);
+          color: var(--text);
+          border-top: 1px solid var(--line);
+          padding-bottom: env(safe-area-inset-bottom, 0px);
+          animation: sheetUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .route-sheet .sheet-handle {
+          align-self: center;
+          margin-top: 8px;
+        }
+        .route-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 8px 8px 0 20px;
+        }
+        .route-head h2 {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 700;
+        }
+        .icon-btn {
+          width: 44px;
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 0;
+          background: none;
+          color: var(--text);
+          font: inherit;
+          cursor: pointer;
+        }
+        .icon-btn svg {
+          width: 22px;
+          height: 22px;
+        }
+        .route-place {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          margin: 8px 20px 0;
+          padding: 16px;
+          background: var(--surface);
+        }
+        .route-event {
+          font-size: 12px;
+          color: var(--sub);
+        }
+        .route-name {
+          font-size: 17px;
+          font-weight: 700;
+        }
+        .route-addr-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+        .route-addr {
+          font-size: 14px;
+          color: var(--sub);
+        }
+        .copy-btn {
+          flex: none;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          height: 36px;
+          padding: 0 10px;
+          border: 1px solid var(--line);
+          border-radius: 2px;
+          background: var(--bg);
+          color: var(--text);
+          font: inherit;
+          font-size: 13px;
+          cursor: pointer;
+        }
+        .route-links {
+          display: flex;
+          flex-direction: column;
+          padding: 12px 20px 0;
+        }
+        .route-link {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-height: 60px;
+          border-bottom: 1px solid var(--line);
+          color: var(--text);
+          text-decoration: none;
+        }
+        .route-icon {
+          flex: none;
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--accent-soft);
+          color: var(--accent-ink);
+          font-size: 15px;
+          font-weight: 700;
+        }
+        .route-link.google .route-icon {
+          background: var(--surface);
+          color: var(--text);
+        }
+        .route-link-text {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          font-size: 15px;
+          font-weight: 500;
+        }
+        .route-link-text small {
+          font-size: 12px;
+          font-weight: 400;
+          color: var(--sub);
+        }
+        .route-link svg {
+          width: 18px;
+          height: 18px;
+          color: var(--sub);
+        }
+        .route-note {
+          padding-top: 10px;
+          font-size: 12px;
+          color: var(--sub);
+        }
+        .route-cancel {
+          padding: 16px 20px 12px;
+        }
+        .route-cancel button {
+          width: 100%;
+          height: 52px;
+          border: 1px solid var(--line);
+          border-radius: 2px;
+          background: var(--bg);
+          color: var(--text);
+          font: inherit;
+          font-size: 15px;
+          font-weight: 500;
+          cursor: pointer;
+        }
+
+        /* ----- 토스트 (text 바탕 + bg 글자, 확인 버튼 없이 사라짐) ----- */
+        #toast {
+          position: fixed;
+          left: 20px;
+          right: 20px;
+          bottom: calc(var(--tab-height) + env(safe-area-inset-bottom, 0px) + 16px);
+          z-index: 130;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          min-height: 44px;
+          padding: 0 6px 0 14px;
+          background: var(--text);
+          color: var(--bg);
+          font-size: 14px;
+          box-shadow: var(--shadow-float);
+        }
+        #toastAction {
+          height: 44px;
+          padding: 0 10px;
+          border: 0;
+          background: none;
+          color: var(--bg);
+          font: inherit;
+          font-size: 14px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+        #toastAction[hidden] {
+          display: none;
+        }
+        /* 길찾기 창이 열려 있으면 토스트는 시트 위(덮개 위쪽)에 */
+        #routeSheet:not([hidden]) + #toast {
+          bottom: auto;
+          top: calc(env(safe-area-inset-top, 0px) + 80px);
+        }
+
         /* ----- 하단 탭 (높이 64px, 아이콘 22px + 글자 11px, 선택 = 주 색 + 굵게) ----- */
         #tabBar {
           display: grid;
@@ -1139,6 +1343,55 @@
       </a>
     </nav>
 
+    <!-- ===== 모바일 전용: 길찾기 창 (하단 시트) + 토스트 ===== -->
+    <div id="routeSheet" hidden>
+      <section class="route-sheet" role="dialog" aria-modal="true" aria-labelledby="routeTitle">
+        <span class="sheet-handle" aria-hidden="true"></span>
+        <div class="route-head">
+          <h2 id="routeTitle">길찾기</h2>
+          <button id="routeCloseBtn" type="button" class="icon-btn" aria-label="닫기">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+        </div>
+        <div class="route-place">
+          <span id="routeEvent" class="route-event"></span>
+          <span id="routePlace" class="route-name"></span>
+          <div class="route-addr-row">
+            <span id="routeAddress" class="route-addr"></span>
+            <button id="routeCopyBtn" type="button" class="copy-btn">주소 복사</button>
+          </div>
+        </div>
+        <div class="route-links">
+          <a id="routeKakao" class="route-link" href="#" target="_blank" rel="noopener">
+            <span class="route-icon" aria-hidden="true">K</span>
+            <span class="route-link-text">카카오맵에서 길찾기</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+          </a>
+          <a id="routeNaver" class="route-link" href="#" target="_blank" rel="noopener">
+            <span class="route-icon" aria-hidden="true">N</span>
+            <span class="route-link-text">네이버 지도에서 길찾기</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+          </a>
+          <a id="routeGoogle" class="route-link google" href="#" target="_blank" rel="noopener">
+            <span class="route-icon" aria-hidden="true">G</span>
+            <span class="route-link-text">
+              <span lang="en">Google Maps</span>
+              <small>대중교통 길찾기만 지원 (도보·자동차 미지원)</small>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+          </a>
+          <span class="route-note">앱이 설치되어 있지 않으면 웹 지도가 열려요</span>
+        </div>
+        <div class="route-cancel">
+          <button id="routeCancelBtn" type="button">취소</button>
+        </div>
+      </section>
+    </div>
+    <div id="toast" role="status" aria-live="polite" hidden>
+      <span id="toastText"></span>
+      <button id="toastAction" type="button" hidden></button>
+    </div>
+
     <!-- ===== 상세정보 큰 팝업창 ===== -->
     <div id="detailModal" class="modal-overlay" style="display: none">
       <div class="modal-card">
@@ -1169,6 +1422,7 @@
 
     <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=7e3b2a42df77bc183241db2bcc6c3cbb&autoload=false"></script>
     <script src="/schedule-format.js"></script>
+    <script src="/route-links.js"></script>
     <script>
       // ===== 텍스트 정리 / 안전하게 화면에 넣기 =====
       // 재단 데이터 제목에 "<일월동행>" 같은 꺾쇠가 들어 있어서,
@@ -1904,6 +2158,7 @@
       // ===== ESC 키로 상세 모달 + 마커 팝업(InfoWindow) 닫기 =====
       document.addEventListener("keydown", function (e) {
         if (e.key === "Escape") {
+          closeRouteSheet();
           closeDetailModal();
           if (currentInfowindow) {
             currentInfowindow.close();
@@ -2212,15 +2467,6 @@
         return dLat * dLat + dLng * dLng;
       }
 
-      // 길찾기 (④ 길찾기 창 전까지는 카카오맵 링크로 바로) — API 키 불필요
-      function kakaoRouteUrl(event) {
-        var name = extractPlaceName(event.info) || event.title;
-        return (
-          "https://map.kakao.com/link/to/" +
-          encodeURIComponent(name) + "," + event.latitude + "," + event.longitude
-        );
-      }
-
       function renderPreviewStrip(sortedItems) {
         var strip = document.getElementById("previewStrip");
         strip.innerHTML = "";
@@ -2270,10 +2516,8 @@
               "</div>" +
               '<div class="preview-actions">' +
               '<button type="button" class="preview-detail">상세 보기</button>' +
-              '<a class="preview-route" href="' +
-              escapeHtml(kakaoRouteUrl(item.event)) +
-              '" target="_blank" rel="noopener">' +
-              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11 21 3l-8 18-2-8-8-2z" /></svg>길찾기</a>' +
+              '<button type="button" class="preview-route">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11 21 3l-8 18-2-8-8-2z" /></svg>길찾기</button>' +
               "</div>" +
               "</div>" +
               favButtonHtml(favoriteEventIds.has(item.event.id));
@@ -2282,7 +2526,8 @@
               openDetailModal(item.event); // 카드 어디를 눌러도 상세 (상세 보기 버튼 포함)
             });
             card.querySelector(".preview-route").addEventListener("click", function (e) {
-              e.stopPropagation(); // 길찾기는 링크만 열고 상세는 열지 않음
+              e.stopPropagation(); // 길찾기 창만 열고 상세는 열지 않음
+              openRouteSheet(item.event);
             });
             card.querySelector(".card-fav").addEventListener("click", function (e) {
               e.stopPropagation();
@@ -2393,6 +2638,84 @@
             }
           }, 120);
         });
+
+      // ----- 토스트 (찜 · 주소 복사 · 링크 복사 안내, 2.5초 뒤 자동으로 사라짐) -----
+      var toastTimer = null;
+      function showToast(message, actionLabel, onAction) {
+        var toast = document.getElementById("toast");
+        var action = document.getElementById("toastAction");
+        document.getElementById("toastText").textContent = message;
+        action.hidden = !actionLabel;
+        action.textContent = actionLabel || "";
+        action.onclick = function () {
+          hideToast();
+          if (onAction) onAction();
+        };
+        toast.hidden = false;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(hideToast, 2500);
+      }
+      function hideToast() {
+        clearTimeout(toastTimer);
+        document.getElementById("toast").hidden = true;
+      }
+
+      // 클립보드: 보안 컨텍스트(https · localhost)가 아니면 navigator.clipboard 가 없음 → 옛 방식으로
+      function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          return navigator.clipboard.writeText(text);
+        }
+        return new Promise(function (resolve, reject) {
+          var area = document.createElement("textarea");
+          area.value = text;
+          area.setAttribute("readonly", "");
+          area.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+          document.body.appendChild(area);
+          area.select();
+          var ok = false;
+          try {
+            ok = document.execCommand("copy");
+          } catch (e) {}
+          document.body.removeChild(area);
+          ok ? resolve() : reject(new Error("copy failed"));
+        });
+      }
+
+      // ----- 길찾기 창 (하단 시트): 행사명 · 장소 · 주소 복사 · 카카오맵 · 네이버 · Google Maps -----
+      var routeEvent = null;
+      function openRouteSheet(event) {
+        routeEvent = event;
+        var place = extractPlaceName(event.info) || event.title;
+        var address = extractAddress(event.info);
+        document.getElementById("routeEvent").textContent = event.title;
+        document.getElementById("routePlace").textContent = place;
+        document.getElementById("routeAddress").textContent = address || "주소 정보 없음";
+        document.getElementById("routeCopyBtn").hidden = !address;
+        document.getElementById("routeKakao").href = kakaoRouteUrl(place, event.latitude, event.longitude);
+        document.getElementById("routeNaver").href = naverRouteUrl(place, event.latitude, event.longitude);
+        document.getElementById("routeGoogle").href = googleRouteUrl(event.latitude, event.longitude);
+        document.getElementById("routeSheet").hidden = false;
+      }
+      function closeRouteSheet() {
+        routeEvent = null;
+        document.getElementById("routeSheet").hidden = true;
+      }
+      document.getElementById("routeCloseBtn").addEventListener("click", closeRouteSheet);
+      document.getElementById("routeCancelBtn").addEventListener("click", closeRouteSheet);
+      document.getElementById("routeSheet").addEventListener("click", function (e) {
+        if (e.target.id === "routeSheet") closeRouteSheet(); // 덮개를 누르면 닫힘
+      });
+      document.getElementById("routeCopyBtn").addEventListener("click", function () {
+        if (!routeEvent) return;
+        copyText(extractAddress(routeEvent.info) || "").then(
+          function () {
+            showToast("주소를 복사했어요");
+          },
+          function () {
+            showToast("복사하지 못했어요. 주소를 길게 눌러 복사해 주세요");
+          },
+        );
+      });
 
       // ----- 검색창 (모바일) -----
       var searchInputEl = document.getElementById("searchInput");
