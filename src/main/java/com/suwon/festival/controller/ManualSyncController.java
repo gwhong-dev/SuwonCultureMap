@@ -63,7 +63,8 @@ public class ManualSyncController {
       eventMergeRunner.runAfterSync();
       throw e;
     }
-    return "새 행사 " + result.saved() + "개 저장 · 기존 행사 " + result.updated() + "개 갱신 완료\n"
+    return "새 행사 " + result.saved() + "개 저장 · 기존 행사 " + result.updated() + "개 갱신 완료"
+        + (result.skipped() > 0 ? " · 형식 오류로 " + result.skipped() + "개 건너뜀" : "") + "\n"
         + eventMergeRunner.runAfterSync().text();
   }
 }
