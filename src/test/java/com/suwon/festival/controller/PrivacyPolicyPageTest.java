@@ -55,6 +55,7 @@ class PrivacyPolicyPageTest {
         .getContentAsString(StandardCharsets.UTF_8);
 
     assertThat(html).contains("수원문화재단 공개 API", "인스타그램", "현재 수집 중단");
+    assertThat(html).contains("처리 상태, 좌표와 함께 저장했습니다"); // 인스타 저장 항목을 빠짐없이
     assertThat(html).doesNotContain("처리 상태와 함께 저장하고 지도에 표시합니다"); // 옛 인스타 문구
   }
 

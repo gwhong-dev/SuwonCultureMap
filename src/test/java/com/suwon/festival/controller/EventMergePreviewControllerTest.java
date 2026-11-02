@@ -20,7 +20,7 @@ import com.suwon.festival.entity.Event;
 import com.suwon.festival.repository.EventRepository;
 
 // GET /api/events/merge/preview 응답 확인 (test 프로필, H2)
-@SpringBootTest
+@SpringBootTest(properties = "instagram.sync.enabled=true") // 재단 · 인스타 묶음이 있어야 응답 모양을 볼 수 있음
 @ActiveProfiles("test")
 @Transactional
 class EventMergePreviewControllerTest {

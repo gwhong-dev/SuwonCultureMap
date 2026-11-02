@@ -19,6 +19,7 @@ import com.suwon.festival.entity.Event;
 import com.suwon.festival.entity.InstagramBlock;
 import com.suwon.festival.repository.EventRepository;
 import com.suwon.festival.repository.InstagramBlockRepository;
+import com.suwon.festival.service.instagram.InstagramSwitch;
 
 import lombok.RequiredArgsConstructor;
 
@@ -38,11 +39,12 @@ public class EventMergeService {
 
   private final EventRepository eventRepository;
   private final InstagramBlockRepository blockRepository;
+  private final InstagramSwitch instagramSwitch;
 
-  // 계산만 하고 저장하지 않음 → 자동 적용 전에 실데이터로 잘못 합쳐지는 쌍을 눈으로 확인
+  // 계산만 하고 저장하지 않음 → 자동 적용 전에 실데이터로 잘못 합쳐지는 쌍을 눈으로 확인 (응답이므로 인스타 스위치를 따름)
   @Transactional(readOnly = true)
   public EventMergeResult preview() {
-    List<Event> events = eventRepository.findAll();
+    List<Event> events = eventRepository.findAll().stream().filter(instagramSwitch::isVisible).toList();
     return toResult(events, group(events));
   }
 
