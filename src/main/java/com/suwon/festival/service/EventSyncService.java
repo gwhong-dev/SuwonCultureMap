@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -20,16 +21,23 @@ import com.suwon.festival.dto.xml.EventItem;
 import com.suwon.festival.dto.xml.SwcfRssResponse;
 import com.suwon.festival.entity.Event;
 import com.suwon.festival.repository.EventRepository;
+import com.suwon.festival.service.schedule.EventScheduleWriter;
+import com.suwon.festival.service.schedule.ScheduleBodyText;
+import com.suwon.festival.service.schedule.ScheduleReader;
+import com.suwon.festival.service.schedule.ScheduleResult;
 import java.time.LocalDate;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EventSyncService {
 
   private final RestTemplate restTemplate;
   private final EventRepository eventRepository;
+  private final EventScheduleWriter eventScheduleWriter;
 
   @Value("${swcf.api.key.event}")
   private String apiKey;
@@ -53,11 +61,16 @@ public class EventSyncService {
   }
 
   public SyncResult syncEvents() throws Exception {
-    return syncItems(fetchEventItems());
+    String xml = fetchRawXml();
+    return syncItems(parseItems(xml), ScheduleBodyText.byIdx(xml));
   }
 
-  // 받아 온 재단 행사 목록을 DB 에 반영 (테스트에서 목록을 직접 넣을 수 있게 분리)
   SyncResult syncItems(List<EventItem> items) {
+    return syncItems(items, Map.of());
+  }
+
+  // 받아 온 재단 행사 목록을 DB 에 반영 (테스트에서 목록을 직접 넣을 수 있게 분리). bodies: 행사별 본문 (진행 날짜 추출용, 저장 안 함)
+  SyncResult syncItems(List<EventItem> items, Map<Long, String> bodies) {
     int savedCount = 0;
     int updatedCount = 0;
 
@@ -88,9 +101,11 @@ public class EventSyncService {
           .build();
 
       Event existing = eventRepository.findByIdx(item.idx).orElse(null);
+      ScheduleResult schedule = readSchedule(item, bodies.get(item.idx));
 
       if (existing == null) {
-        eventRepository.save(latest); // 처음 보는 행사 → 새로 저장
+        Event saved = eventRepository.save(latest); // 처음 보는 행사 → 새로 저장
+        eventScheduleWriter.apply(saved.getId(), schedule, InfoParser.findFullTimeText(details(item)));
         savedCount++;
         continue;
       }
@@ -108,14 +123,29 @@ public class EventSyncService {
           || !Objects.equals(existing.getPlace(), latest.getPlace())
           || !Objects.equals(existing.getTimeText(), latest.getTimeText());
 
-      if (changed || linkMissing || titleFixed || detailFixed) {
+      boolean rowChanged = changed || linkMissing || titleFixed || detailFixed;
+      if (rowChanged) {
         existing.updateFrom(latest);
         eventRepository.save(existing);
+      }
+      // 진행 날짜는 위 조건과 별개로 매번 다시 계산 (규칙을 고치면 다음 동기화에 전부 반영)
+      boolean scheduleChanged = eventScheduleWriter.apply(existing.getId(), schedule, InfoParser.findFullTimeText(details(item)));
+      if (rowChanged || scheduleChanged) {
         updatedCount++;
       }
     }
 
     return new SyncResult(savedCount, updatedCount);
+  }
+
+  // 추출 오류 하나로 행사 동기화 전체가 멈추지 않게 함. 모름으로 두면 화면은 원문을 보여 줌
+  private ScheduleResult readSchedule(EventItem item, String body) {
+    try {
+      return ScheduleReader.read(item, body);
+    } catch (RuntimeException e) {
+      log.warn("진행 날짜 추출 실패: idx={} {}", item.idx, e.getClass().getSimpleName());
+      return new ScheduleResult(ScheduleResult.Status.UNKNOWN, List.of(), null, false, "추출 오류");
+    }
   }
 
   private String extractImageUrl(EventItem item) {

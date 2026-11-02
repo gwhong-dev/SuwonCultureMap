@@ -100,6 +100,16 @@ public class Event {
   // 같은 행사로 합쳐져 숨겨진 행이면 대표 행의 id, 대표 · 일반 행은 null (V3).
   // 대표는 항상 묶음 끝이라 한 번만 따라가면 됨 (A→B→C 사슬 없음)
 
+  public static final String SCHEDULE_UNKNOWN = "UNKNOWN";
+
+  @Column(nullable = false, length = 20)
+  private String scheduleStatus = SCHEDULE_UNKNOWN;
+  // DATES: event_date 가 정답 / UNKNOWN: 기간만 믿을 수 있음 (V5). "매일 진행"이라는 뜻이 아님
+
+  @Column(length = 1000)
+  private String scheduleText;
+  // 화면에 보일 일정 원문 한 줄
+
   @Builder
   public Event(Long idx, String title, String category, Double latitude,
       Double longitude, String imageUrl, String info, LocalDateTime pubDate, LocalDate startDate, LocalDate endDate,
@@ -136,6 +146,11 @@ public class Event {
     this.link = latest.link;
     this.place = latest.place;
     this.timeText = latest.timeText;
+  }
+
+  public void updateSchedule(String status, String text) {
+    this.scheduleStatus = status;
+    this.scheduleText = text;
   }
 
   // 대표 행 id 로 숨김. null 이면 숨김 해제 (다시 계산했을 때 묶음에서 빠진 경우)

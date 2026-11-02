@@ -26,6 +26,7 @@
   - [x] 설계 문서 (`docs/event-schedule.md`) — 재단 XML 실측: 7일+ 58건 중 42건이 기간 내내 진행 아님, 실제 일정은 대부분 본문(`description`)에 있음. 결정 10건 확정(11/1, 문서 12번 추천안 그대로)
   - [x] 1번 PR `ScheduleExtractor` 규칙 + 검증 + 단위 테스트 (`service/schedule/`, DB 변경 없음). 설계 PR #52 11번 순서
   - [x] 2번 PR 본문 가져오기(`ScheduleBodyText`) + 미리보기 `GET /api/events/schedule/preview` (저장 안 함, M)
+  - [x] 3번 PR `event_date` 표 · 상태 · 원문 칸(V5) + 동기화 저장 + `/api/events` 응답 (화면 변화 없음, L)
 - [ ] 인스타 게시글 연동 — 공식 API(Business Discovery) + AI로 캡션 정리 + 카카오 장소 검색 (크롤링 X)
   - [x] 설계 문서 (PR #25, `docs/instagram-integration.md`)
   - [x] 0단계 Meta 사전 확인 — 실호출로 `caption` 등 5개 필드 수신 확인 (10/31, 대상 1계정 · 본인 앱 토큰)
@@ -137,6 +138,7 @@
 | 11/2 | 작업 세션 | 동기화 자동화 · API 보호 — `ScheduledSyncJob`(재단 → 인스타 → 합치기, 단계별 실패 분리, 겹침 방지, 빈 DB 는 시작 직후 1회, 운영 기본 매일 06시 · 18시), 수동 동기화 · 미리보기 API 는 `dev` · `test` 프로필에만 등록, `행사 동기화` 버튼 제거. 검증 지적 반영: 외부 호출 시간 제한(연결 5초 · 읽기 30초), 재단 행사 없는 DB 기준 시작 실행, 일부 실패 경고, compose · setup-docker 설정 전달. 테스트 +15(전체 380). 임시 MySQL 실제 실행(지적 반영 전 코드): 빈 DB 시작 동기화(재단 118 · 인스타 45 · 숨김 13), 3분 간격 예약 실행 확인, 화면 버튼 없음 · 콘솔 오류 없음, API 150건. 임시 DB 삭제 |
 | 11/2 | 작업 세션 | EC2 배포 준비 — `docker-compose.prod.yml`(Caddy HTTPS · 재시작 · 로그 크기 제한 · 앱 메모리 상한), `deploy/`(Caddyfile · 서버 준비 · DB 백업 14일 보관), `docs/deploy-ec2.md`. 이 PC 에 Docker 가 없어 CI 에 설정 검사, 백업 → 복원, 실제 MySQL + prod 프로필 앱 실행 시험 추가. 검증 지적 반영: 복원 순서, binlog 끔(기본 30일 보관이 처리방침과 어긋남), 필수값 강제, 일반 사용자 로그인 확인 등. 실제 서버 실행은 아직 |
 | 11/2 | 작업 세션 | 운영 배포 — https://suwonbible.com 공개 (EC2 서울 t4g.small, Docker Compose, Caddy HTTPS). 외부 확인: http · www 이동, 수동 API 404, 8080 · 3307 차단, 쿠키 Secure, 행사 150건, 지도 표시 · 콘솔 오류 없음. 실제 로그인: 카카오, 구글(테스트 사용자 아닌 계정), 구글 회원에 네이버 연동. 찜 추가 확인. 탈퇴는 화면 버튼 대신 API 로 시험 회원 2명 삭제, 회원 · 로그인 · 찜 0건, 카카오 연결 해제 경고 없음. 백업을 임시 MySQL 컨테이너에 복원해 행사 163 · V4 일치 확인 (운영 DB 는 건드리지 않음). 복원 절차 자체(운영 DB 삭제 후 복원)는 실행 안 함 |
+| 11/2 | 작업 세션 | 진행 날짜 3번 PR — V5 `event_date` · `schedule_status` · `schedule_text`, 동기화 때 행마다 다시 계산해 달라진 것만 저장(`EventScheduleWriter`), `/api/events` · 찜 응답에 `scheduleStatus` · `scheduleText` · `dates` 추가(화면 변화 없음). 테스트 +7(전체 407). 임시 MySQL 실제 실행: 재단 118건 중 DATES 73 · UNKNOWN 45, 날짜 451행, 재동기화 갱신 0건, 2972 는 5/16 · 9/19 2회. V4 에 행사 118건이 있는 DB 로 되돌린 뒤 V5 적용 → 데이터 유지, 동기화 후 날짜가 같음(MD5 일치). 임시 DB 삭제 |
 
 ## ⚠️ 막힌 것 / 메모
 

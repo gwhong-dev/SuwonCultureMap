@@ -42,7 +42,7 @@ class RepositorySchemaTest {
   @Test
   void Flyway가_마지막_버전까지_적용함() {
     assertThat(flyway.info().current()).isNotNull();
-    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("4");
+    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("5");
     assertThat(flyway.info().pending()).isEmpty();
   }
 
