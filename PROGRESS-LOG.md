@@ -158,6 +158,7 @@
 | 11/2 | 작업 세션 | 모바일 1단계 #84~#91 머지 — 쌓인 PR 을 앞에서부터 머지 · 다음 PR base 를 main 으로 바꿔 CI 확인. #84 는 PROGRESS 충돌을 main 병합으로 해결. 운영 배포 `498a205` 성공 |
 | 11/2 | 작업 세션 | 가동 감시 #96 — `uptime.yml`(15분 예약) + `deploy/uptime-check.sh`: 5분 재시도 → 응답 없으면 `uptime` 라벨 장애 Issue 1개, 복구 시 댓글 후 자동 닫기, 장애 중엔 알림 반복 안 함, gh 실패 시 Issue 안 건드림. UptimeRobot 대신 선택(가입 없음 · 기록이 저장소에 남음). 가짜 curl · gh 6가지 시험, 수동 실행으로 운영 정상 · 보안 헤더 확인 |
 | 11/2 | 작업 세션 | 로드맵 6단계 시작: 헬스체크 `/actuator/health` (상태만 공개, 상세 · 다른 엔드포인트 비공개). 배포 스크립트 기동 확인을 `/api/events` → 헬스체크로, CI 의 MySQL 실기동 단계에 UP 확인 추가 |
+| 11/2 | 작업 세션 | 아이폰 1차 확인 5건 보완 PR — ① `#app overflow:hidden` + `html` 바탕색(탭 · 사파리 주소창 뒤 비침) ② `kakaoRouteAppUrl`(kakaomap://route 대중교통) → 폰은 앱 먼저, 2초 안에 안 떠나면 웹 `/link/to/` ③ 상세 · 길찾기 열림을 `history.replaceState` 로 `?event=번호&route=1` 기록, 다시 열리면 복원 ④ 위치 칸 `min-height` + `scroll-margin-top`, 탭 스크롤을 화면 좌표로 계산 ⑤ 공유 하단 창(카카오톡 `Kakao.Share.sendDefault` 피드 · 링크 복사). node 시험 +1, Playwright(아이폰 13 크기 · SDK 가짜)로 복원 · 탭 · 공유 · 앱→웹 대체 확인 |
 
 ## 🧰 나중에 할 일 중 끝난 것
 
