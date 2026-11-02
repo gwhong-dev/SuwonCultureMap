@@ -1,12 +1,15 @@
 package com.suwon.festival.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mockStatic;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -18,7 +21,12 @@ import com.suwon.festival.dto.xml.Coordinate;
 import com.suwon.festival.dto.xml.EventItem;
 import com.suwon.festival.entity.Event;
 import com.suwon.festival.repository.EventDateRepository;
+import com.suwon.festival.entity.Member;
 import com.suwon.festival.repository.EventRepository;
+import com.suwon.festival.repository.MemberRepository;
+import com.suwon.festival.service.schedule.EventScheduleWriter;
+import com.suwon.festival.service.schedule.ScheduleReader;
+import com.suwon.festival.service.schedule.ScheduleResult;
 
 import jakarta.persistence.EntityManager;
 
@@ -40,6 +48,9 @@ class EventScheduleSyncTest {
   @Autowired private EventRepository eventRepository;
   @Autowired private EventDateRepository eventDateRepository;
   @Autowired private EntityManager em;
+  @Autowired private EventScheduleWriter eventScheduleWriter;
+  @Autowired private FavoriteService favoriteService;
+  @Autowired private MemberRepository memberRepository;
 
   private static EventItem item(long idx) {
     EventItem it = new EventItem();
@@ -108,6 +119,94 @@ class EventScheduleSyncTest {
     assertThat(eventRepository.findByIdx(IDX)).get()
         .satisfies(e -> assertThat(e.getScheduleStatus()).isEqualTo("UNKNOWN"));
     assertThat(storedDates(IDX)).isEmpty();
+  }
+
+  @Test
+  void 본문을_못_받으면_저장된_날짜를_유지() {
+    sync(TWO_DAYS);
+
+    SyncResult result = eventSyncService.syncItems(List.of(item(IDX)), Map.of());
+    em.flush();
+    em.clear();
+
+    assertThat(result.updated()).isZero();
+    assertThat(eventRepository.findByIdx(IDX)).get()
+        .satisfies(e -> assertThat(e.getScheduleStatus()).isEqualTo("DATES"));
+    assertThat(storedDates(IDX)).containsExactly(MAY, SEPT);
+  }
+
+  @Test
+  void 추출이_실패해도_동기화는_계속되고_저장된_날짜를_유지() {
+    sync(TWO_DAYS);
+
+    SyncResult result;
+    try (MockedStatic<ScheduleReader> reader = mockStatic(ScheduleReader.class)) {
+      reader.when(() -> ScheduleReader.read(any(), any())).thenThrow(new StackOverflowError());
+      result = eventSyncService.syncItems(List.of(item(IDX), item(IDX + 1)), Map.of(IDX, TWO_DAYS, IDX + 1, TWO_DAYS));
+    }
+    em.flush();
+    em.clear();
+
+    assertThat(result.saved()).isEqualTo(1); // 뒤 행사도 저장됨
+    assertThat(storedDates(IDX)).containsExactly(MAY, SEPT);
+    assertThat(eventRepository.findByIdx(IDX + 1)).get()
+        .satisfies(e -> assertThat(e.getScheduleStatus()).isEqualTo("UNKNOWN"));
+  }
+
+  @Test
+  void pubDate_가_같아도_기간이_바뀌면_기간도_고침() {
+    sync(TWO_DAYS);
+    EventItem changed = item(IDX);
+    changed.eventDate.edate = "2026-10-17";
+
+    eventSyncService.syncItems(List.of(changed), Map.of(IDX, "행사일정 : 2026. 5. 16.(토) / 10. 17.(토) 총 2회"));
+    em.flush();
+    em.clear();
+
+    assertThat(eventRepository.findByIdx(IDX)).get()
+        .satisfies(e -> assertThat(e.getEndDate()).isEqualTo(LocalDate.of(2026, 10, 17)));
+    assertThat(storedDates(IDX)).containsExactly(MAY, LocalDate.of(2026, 10, 17));
+  }
+
+  @Test
+  void 공휴일_조건을_저장하고_응답에_넣음() {
+    sync(TWO_DAYS);
+    Long id = eventRepository.findByIdx(IDX).orElseThrow().getId();
+
+    boolean changed = eventScheduleWriter.apply(id,
+        new ScheduleResult(ScheduleResult.Status.DATES, List.of(MAY, SEPT), "매주 금~일, 공휴일", true, null), null);
+    em.flush();
+    em.clear();
+
+    assertThat(changed).isTrue();
+    Event event = eventRepository.findById(id).orElseThrow();
+    assertThat(event.isScheduleHolidayNote()).isTrue();
+    assertThat(eventService.toResponses(List.of(event)).get(0).scheduleHolidayNote()).isTrue();
+  }
+
+  @Test
+  void 긴_원문은_글자를_반으로_자르지_않고_1000자_안으로_저장() {
+    Event event = eventRepository.saveAndFlush(Event.builder()
+        .title("긴 원문").category("공연").latitude(37.28).longitude(127.01)
+        .pubDate(java.time.LocalDateTime.of(2026, 10, 30, 18, 0)).build());
+    String text = "가".repeat(999) + "😀" + "나";
+
+    eventScheduleWriter.apply(event.getId(),
+        new ScheduleResult(ScheduleResult.Status.UNKNOWN, List.of(), null, false, "시험"), text);
+    em.flush();
+    em.clear();
+
+    assertThat(eventRepository.findById(event.getId()).orElseThrow().getScheduleText()).isEqualTo("가".repeat(999));
+  }
+
+  @Test
+  void 찜_응답에도_진행_날짜가_들어감() {
+    sync(TWO_DAYS);
+    Long memberId = memberRepository.saveAndFlush(Member.create()).getId();
+    favoriteService.addFavorite(memberId, eventRepository.findByIdx(IDX).orElseThrow().getId());
+
+    assertThat(favoriteService.getFavoriteEvents(memberId)).singleElement()
+        .satisfies(e -> assertThat(e.dates()).containsExactly(MAY, SEPT));
   }
 
   @Test

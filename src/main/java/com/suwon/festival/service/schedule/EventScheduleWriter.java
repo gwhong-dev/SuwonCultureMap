@@ -13,6 +13,7 @@ import com.suwon.festival.entity.Event;
 import com.suwon.festival.entity.EventDate;
 import com.suwon.festival.repository.EventDateRepository;
 import com.suwon.festival.repository.EventRepository;
+import com.suwon.festival.service.caption.CaptionText;
 
 import lombok.RequiredArgsConstructor;
 
@@ -31,7 +32,7 @@ public class EventScheduleWriter {
   public boolean apply(Long eventId, ScheduleResult result, String fallbackText) {
     Event event = eventRepository.findById(eventId).orElseThrow();
     String status = result.status().name();
-    String text = limit(result.sourceText() != null ? result.sourceText() : fallbackText);
+    String text = CaptionText.limit(result.sourceText() != null ? result.sourceText() : fallbackText, TEXT_MAX);
 
     List<EventDate> stored = eventDateRepository.findByEventId(eventId);
     Set<LocalDate> wanted = new HashSet<>(result.dates());
@@ -40,16 +41,12 @@ public class EventScheduleWriter {
     stored.forEach(d -> wanted.remove(d.getRunDate()));
 
     boolean changed = !status.equals(event.getScheduleStatus()) || !Objects.equals(text, event.getScheduleText())
-        || !gone.isEmpty() || !wanted.isEmpty();
+        || result.holidayNote() != event.isScheduleHolidayNote() || !gone.isEmpty() || !wanted.isEmpty();
     if (!changed) return false;
 
-    event.updateSchedule(status, text);
+    event.updateSchedule(status, text, result.holidayNote());
     eventDateRepository.deleteAll(gone);
     eventDateRepository.saveAll(wanted.stream().map(d -> new EventDate(eventId, d)).toList());
     return true;
-  }
-
-  private static String limit(String text) {
-    return text != null && text.length() > TEXT_MAX ? text.substring(0, TEXT_MAX) : text;
   }
 }

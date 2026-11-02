@@ -49,6 +49,7 @@ public class EventService {
             event.getLink(),
             event.getScheduleStatus(),
             event.getScheduleText(),
+            event.isScheduleHolidayNote(),
             dates.getOrDefault(event.getId(), List.of())))
         .toList();
   }

@@ -184,13 +184,15 @@ CREATE TABLE event_date (
 CREATE INDEX idx_event_date_run_date ON event_date (run_date);
 ALTER TABLE event ADD COLUMN schedule_status VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN';
 ALTER TABLE event ADD COLUMN schedule_text VARCHAR(1000) NULL;
+ALTER TABLE event ADD COLUMN schedule_holiday_note BOOLEAN NOT NULL DEFAULT FALSE; -- 구현 때 추가 (PR #68 검증): 6번 표시에 필요한데 본문을 저장하지 않음
 ```
 
 - **상태 칸이 필요한 이유**: 날짜 표에 행이 없을 때 "아직 안 읽음 · 못 읽음"을 "안 함"으로 오해하지 않기 위해서다. 값: `DATES`(날짜 표가 정답) / `UNKNOWN`(기간만 믿을 수 있음, 원문 표시)
 - 칸 이름은 `date` 대신 `run_date` (MySQL · H2 예약어와 겹치지 않게)
 - `ON DELETE CASCADE` 로 행사가 지워지면 날짜도 같이 지워진다 → `scripts/reset-instagram-dev.ps1` 수정 불필요
 - **언제 쓰나**: 재단 동기화에서 행마다 계산. `syncItems` 의 "바뀐 행만 갱신" 조건과 별개로 **전부 다시 계산**하고, 결과가 달라진 행만 쓴다 (규칙을 고치면 다음 동기화에 전부 반영되도록)
-- 영향 받는 조회: `EventResponse` 에 `scheduleStatus` · `scheduleText` · `dates` 추가. `getAllEvents` 는 N+1(행마다 쿼리)을 피해 날짜를 한 번에 읽어 묶는다
+- **본문을 못 받았거나 추출이 실패해 모름이 되면 저장된 값을 유지한다.** 일정이 없어진 것이 아니라 읽지 못한 것이기 때문이다. 본문이 있는데 못 읽게 된 경우는 재단이 글을 바꾼 것이므로 지운다
+- 영향 받는 조회: `EventResponse` 에 `scheduleStatus` · `scheduleText` · `scheduleHolidayNote` · `dates` 추가. `getAllEvents` 는 N+1(행마다 쿼리)을 피해 날짜를 한 번에 읽어 묶는다
 
 ## 6. 공휴일
 

@@ -101,6 +101,7 @@ public class Event {
   // 대표는 항상 묶음 끝이라 한 번만 따라가면 됨 (A→B→C 사슬 없음)
 
   public static final String SCHEDULE_UNKNOWN = "UNKNOWN";
+  public static final String SCHEDULE_DATES = "DATES";
 
   @Column(nullable = false, length = 20)
   private String scheduleStatus = SCHEDULE_UNKNOWN;
@@ -109,6 +110,10 @@ public class Event {
   @Column(length = 1000)
   private String scheduleText;
   // 화면에 보일 일정 원문 한 줄
+
+  @Column(nullable = false)
+  private boolean scheduleHolidayNote;
+  // 원문에 공휴일 조건이 있음. 달력 없이 요일로만 펼쳤으므로 "공휴일은 원문 확인" 표시 (설계 6번)
 
   @Builder
   public Event(Long idx, String title, String category, Double latitude,
@@ -148,9 +153,10 @@ public class Event {
     this.timeText = latest.timeText;
   }
 
-  public void updateSchedule(String status, String text) {
+  public void updateSchedule(String status, String text, boolean holidayNote) {
     this.scheduleStatus = status;
     this.scheduleText = text;
+    this.scheduleHolidayNote = holidayNote;
   }
 
   // 대표 행 id 로 숨김. null 이면 숨김 해제 (다시 계산했을 때 묶음에서 빠진 경우)

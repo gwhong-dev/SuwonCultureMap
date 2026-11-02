@@ -105,7 +105,9 @@ public class EventSyncService {
 
       if (existing == null) {
         Event saved = eventRepository.save(latest); // 처음 보는 행사 → 새로 저장
-        eventScheduleWriter.apply(saved.getId(), schedule, InfoParser.findFullTimeText(details(item)));
+        if (schedule != null) {
+          eventScheduleWriter.apply(saved.getId(), schedule, InfoParser.findFullTimeText(details(item)));
+        }
         savedCount++;
         continue;
       }
@@ -123,13 +125,24 @@ public class EventSyncService {
           || !Objects.equals(existing.getPlace(), latest.getPlace())
           || !Objects.equals(existing.getTimeText(), latest.getTimeText());
 
-      boolean rowChanged = changed || linkMissing || titleFixed || detailFixed;
+      // ⑤ 기간이 달라졌으면 (진행 날짜만 고쳐져 기간 밖 날짜가 나가지 않게)
+      boolean periodFixed = !Objects.equals(existing.getStartDate(), latest.getStartDate())
+          || !Objects.equals(existing.getEndDate(), latest.getEndDate());
+      boolean rowChanged = changed || linkMissing || titleFixed || detailFixed || periodFixed;
       if (rowChanged) {
         existing.updateFrom(latest);
         eventRepository.save(existing);
       }
       // 진행 날짜는 위 조건과 별개로 매번 다시 계산 (규칙을 고치면 다음 동기화에 전부 반영)
-      boolean scheduleChanged = eventScheduleWriter.apply(existing.getId(), schedule, InfoParser.findFullTimeText(details(item)));
+      // 본문을 못 받았거나 추출이 실패해 모름이 된 것은 "일정이 없어짐"이 아님 → 저장된 값을 유지
+      boolean bodyMissing = bodies.get(item.idx) == null;
+      boolean keepStored = schedule == null
+          || (bodyMissing && schedule.status() == ScheduleResult.Status.UNKNOWN);
+      if (keepStored && Event.SCHEDULE_DATES.equals(existing.getScheduleStatus())) {
+        log.warn("진행 날짜 유지: idx={} 본문 없음 또는 추출 실패", item.idx);
+      }
+      boolean scheduleChanged = !keepStored
+          && eventScheduleWriter.apply(existing.getId(), schedule, InfoParser.findFullTimeText(details(item)));
       if (rowChanged || scheduleChanged) {
         updatedCount++;
       }
@@ -138,13 +151,13 @@ public class EventSyncService {
     return new SyncResult(savedCount, updatedCount);
   }
 
-  // 추출 오류 하나로 행사 동기화 전체가 멈추지 않게 함. 모름으로 두면 화면은 원문을 보여 줌
+  // 추출 오류 하나로 행사 동기화 전체가 멈추지 않게 함. 실패는 null (정규식이 아주 긴 글에서 StackOverflowError 를 낼 수 있음)
   private ScheduleResult readSchedule(EventItem item, String body) {
     try {
       return ScheduleReader.read(item, body);
-    } catch (RuntimeException e) {
+    } catch (RuntimeException | StackOverflowError e) {
       log.warn("진행 날짜 추출 실패: idx={} {}", item.idx, e.getClass().getSimpleName());
-      return new ScheduleResult(ScheduleResult.Status.UNKNOWN, List.of(), null, false, "추출 오류");
+      return null;
     }
   }
 

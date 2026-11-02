@@ -18,5 +18,6 @@ public record EventResponse(
         String link,
         String scheduleStatus,
         String scheduleText,
+        boolean scheduleHolidayNote,
         List<LocalDate> dates) {
 }
