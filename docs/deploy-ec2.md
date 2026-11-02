@@ -127,6 +127,12 @@ docker compose logs -f app
 bash deploy/deploy.sh   # git pull → 다시 빌드 · 실행 → 응답 확인 → 옛 이미지 정리
 ```
 
+**헬스체크** — `https://suwonbible.com/actuator/health` 가 `{"status":"UP"}` 이면 앱과 DB 연결이 정상. DB 연결이 끊기면 `503` + `DOWN`. 상세 정보와 다른 actuator 엔드포인트는 공개하지 않는다 (`application.properties`). 배포 스크립트도 이 주소로 새 앱 기동을 확인한다
+
+```bash
+curl -s http://127.0.0.1:8080/actuator/health   # 서버 안에서
+```
+
 ## 자동 배포 (CD)
 
 main 에 머지 → CI 통과 → GitHub Actions `Deploy` → AWS SSM(원격 명령) → 서버에서 `deploy/deploy.sh`.
