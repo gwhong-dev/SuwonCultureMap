@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +26,7 @@ public class FavoriteService {
   private final FavoriteRepository favoriteRepository;
   private final MemberRepository memberRepository;
   private final EventRepository eventRepository;
+  private final EventService eventService;
 
   @Transactional
   public void addFavorite(Long memberId, Long eventId) {
@@ -66,23 +66,11 @@ public class FavoriteService {
   @Transactional(readOnly = true)
   public List<EventResponse> getFavoriteEvents(Long memberId) {
     Set<Long> seen = new HashSet<>();
-    return favoriteRepository.findByMemberId(memberId).stream()
+    return eventService.toResponses(favoriteRepository.findByMemberId(memberId).stream()
         .map(Favorite::getEvent)
         .map(this::representativeOf)
         .filter(event -> seen.add(event.getId())) // 같은 대표로 모이면 1개만
-        .map(event -> new EventResponse(
-            event.getId(),
-            event.getTitle(),
-            event.getCategory(),
-            event.getLatitude(),
-            event.getLongitude(),
-            event.getImageUrl(),
-            event.getInfo(),
-            event.getPubDate(),
-            event.getStartDate(),
-            event.getEndDate(),
-            event.getLink()))
-        .collect(Collectors.toList());
+        .toList());
   }
 
   // 이 회원의 찜 중 해당 대표로 모이는 것들 (대표 자체를 찜했거나, 합쳐지기 전에 숨긴 행을 찜한 경우)

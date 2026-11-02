@@ -1,6 +1,5 @@
 package com.suwon.festival.service.schedule;
 
-import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,7 +8,6 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
-import com.suwon.festival.dto.xml.ContentInfoDetail;
 import com.suwon.festival.dto.xml.EventItem;
 import com.suwon.festival.service.EventSyncService;
 import com.suwon.festival.service.InfoParser;
@@ -39,15 +37,11 @@ public class SchedulePreviewService {
 
     for (EventItem item : EventSyncService.parseItems(xml)) {
       if (item.idx == null) continue; // 동기화도 건너뜀
-      List<ContentInfoDetail> details = item.contentInfo == null ? null : item.contentInfo.contentInfoDetail;
-      LocalDate start = item.eventDate == null ? null : date(item.eventDate.sdate);
-      LocalDate end = item.eventDate == null ? null : date(item.eventDate.edate);
-      String timeText = InfoParser.findFullTimeText(details);
+      LocalDate start = item.eventDate == null ? null : ScheduleReader.date(item.eventDate.sdate);
+      LocalDate end = item.eventDate == null ? null : ScheduleReader.date(item.eventDate.edate);
+      String timeText = InfoParser.findFullTimeText(ScheduleReader.details(item));
       String body = bodies.get(item.idx);
-      // 시작일만 읽히면 추출기는 하루짜리로 보지만, 재단 데이터는 종료일이 늘 있음 → 못 읽은 것은 이상 데이터로 드러냄
-      ScheduleResult r = start != null && end == null
-          ? ScheduleResult.unknown("종료일을 못 읽음")
-          : ScheduleExtractor.extract(new ScheduleInput(start, end, timeText, InfoParser.findWeekdayText(details), body));
+      ScheduleResult r = ScheduleReader.read(item, body);
 
       total++;
       if (body == null) noBody++;
@@ -62,14 +56,5 @@ public class SchedulePreviewService {
           start, end, r.status(), r.dates(), r.holidayNote(), r.sourceText(), r.reason(), timeText));
     }
     return new SchedulePreviewResult(total, oneDay, dates, unknown, noBody, items);
-  }
-
-  private static LocalDate date(String value) {
-    if (value == null) return null;
-    try {
-      return LocalDate.parse(value.strip());
-    } catch (DateTimeException e) {
-      return null;
-    }
   }
 }
