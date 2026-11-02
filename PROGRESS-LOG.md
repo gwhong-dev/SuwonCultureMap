@@ -151,6 +151,10 @@
 | 11/2 | 작업 세션 | 재단 동기화 안정성 — 응답에 channel 이 없으면(점검 · 오류 페이지) NPE 대신 이유가 담긴 오류, 행사 0건은 빈 목록. 행사마다 try · catch 로 형식 오류 행(날짜 등)만 건너뛰고 뒤 행사는 저장, 결과에 `skipped` 와 idx 로그, 자동 동기화가 건너뛴 개수를 경고. 테스트 +3(전체 442) |
 | 11/2 | 작업 세션 | 자동 배포 첫 실행 실패 조사 — AWS ①~④ 설정(사용자, SSM 에이전트 재시작 필요했음) 후 `Deploy` 가 `AssumeRoleWithWebIdentity` 거부. 진단 단계(#77)로 GitHub `sub` 가 `이름@번호` 형식임을 확인 → 신뢰 정책 수정 안내, 문서 반영(#79). Windows 줄바꿈 시험 수정(#80) |
 | 11/2 | 사용자 | 신뢰 정책 `sub` 를 번호 형식으로 수정 → Deploy #10 성공(1분 40초): 서버 `a4b3ded → 2b56d27`, 앱 응답 확인, 외부 `https://suwonbible.com` 응답 확인. 5단계 CD 완료 |
+| 11/2 | 작업 세션 | 인스타 운영 확인(118건 중 인스타 0건) · DB 건수(행사 60 · 찜 영향 0). Meta 원문 확인(Developer Policies 6 · Platform Terms 3 · App Review) → 명시적 허용 · 금지 없음, 공식 판정 경로 없음(Get Help 없음 · Direct Support 일부만 · 사업자 없음) → **수원 공식 계정만 재개 결정**, 처리방침 · 안내 문구 반영 (#88, 검증 머지 가능) |
+| 11/2 | 작업 세션 | 인스타 공식 계정 허용 목록을 코드로 고정 (`OfficialInstagramAccounts`) — 목록 밖 계정은 Meta 호출 없이 건너뜀, 설정 · PC 스크립트와 목록 일치 시험 |
+| 11/2 | 작업 세션 | Actions Node 20 지원 종료 대비 — `aws-actions/configure-aws-credentials` v4→v6, `actions/upload-artifact` v4→v6 (action.yml `node24` 확인, v5·v6 변경점은 boolean 입력 처리 · Node 버전뿐이라 영향 없음) |
+| 11/2 | 작업 세션 | 로드맵 6단계 시작: 헬스체크 `/actuator/health` (상태만 공개, 상세 · 다른 엔드포인트 비공개). 배포 스크립트 기동 확인을 `/api/events` → 헬스체크로, CI 의 MySQL 실기동 단계에 UP 확인 추가 |
 
 ## 🧰 나중에 할 일 중 끝난 것
 

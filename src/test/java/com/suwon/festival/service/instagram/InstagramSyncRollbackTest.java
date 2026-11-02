@@ -26,7 +26,7 @@ import com.suwon.festival.service.place.PlaceGeocoder;
 
 // 게시물 하나가 중간에 실패하면 그 게시물이 쓴 것(게시물 · 블록)만 되돌려지는지 — 실제 스프링 빈(트랜잭션 프록시)으로 확인
 // 테스트 전체 트랜잭션을 쓰지 않음 (쓰면 게시물별 롤백이 가려짐) → 끝나고 직접 정리
-@SpringBootTest(properties = { "instagram.sync.enabled=true", "instagram.accounts=gasang_city" })
+@SpringBootTest(properties = { "instagram.sync.enabled=true", "instagram.accounts=suwon_city" })
 @ActiveProfiles("test")
 class InstagramSyncRollbackTest {
 
@@ -66,7 +66,7 @@ class InstagramSyncRollbackTest {
   @Test
   void 중간에_실패한_게시물은_통째로_되돌리고_다음_게시물은_저장() {
     when(client.isConfigured()).thenReturn(true);
-    when(client.fetchRecent(eq("gasang_city"), anyInt())).thenReturn(List.of(
+    when(client.fetchRecent(eq("suwon_city"), anyInt())).thenReturn(List.of(
         new InstagramPost("1790000000000011", FIRST, "https://www.instagram.com/p/A/", POSTED, "IMAGE"),
         new InstagramPost("1790000000000012", SECOND, "https://www.instagram.com/p/B/", POSTED, "IMAGE")));
     PlaceCandidate hall = new PlaceCandidate("가상 아트홀", "경기 수원시 팔달구 가상동 1", null, 37.28, 127.01);

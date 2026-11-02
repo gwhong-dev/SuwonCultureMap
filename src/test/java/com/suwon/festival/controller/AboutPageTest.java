@@ -42,12 +42,12 @@ class AboutPageTest {
   }
 
   @Test
-  void 인스타그램은_현재_출처가_아니라고_안내함() throws Exception {
+  void 인스타그램은_공식_계정만_출처로_안내함() throws Exception {
     String html = mockMvc.perform(get("/about.html")).andReturn().getResponse()
         .getContentAsString(StandardCharsets.UTF_8);
 
-    assertThat(html).contains("수원문화재단 공개 API", "인스타그램", "수집을 중단");
-    assertThat(html).doesNotContain("게시물에서 자동으로 읽은 행사 정보");
+    assertThat(html).contains("수원문화재단 공개 API", "공식 인스타그램 계정", "원문 링크");
+    assertThat(html).doesNotContain("수집을 중단"); // 중단 안내 문구
   }
 
   @Test

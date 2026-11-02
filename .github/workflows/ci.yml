@@ -31,7 +31,7 @@ jobs:
           cache: maven   # 라이브러리 캐시 → 두 번째부터 빨라짐
 
       - name: 화면 표시 규칙 시험
-        run: node --test src/test/js/schedule-format.test.js
+        run: node --test "src/test/js/*.test.js"
 
       - name: 컴파일 + 테스트
         run: ./mvnw -B -ntp verify
@@ -55,7 +55,7 @@ jobs:
 
       - name: 실패 시 테스트 리포트 업로드
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: surefire-reports
           path: target/surefire-reports/
@@ -114,7 +114,7 @@ jobs:
           sql() { $COMPOSE exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot -N "$@"' sh "$@"; }
           wait_app() {
             for i in $(seq 1 60); do
-              if curl -fsS -o /dev/null http://127.0.0.1:8080/api/events; then
+              if curl -fsS -o /dev/null http://127.0.0.1:8080/actuator/health; then
                 echo "앱 응답 확인"
                 return 0
               fi
@@ -127,6 +127,12 @@ jobs:
 
           $COMPOSE up -d --build db app
           wait_app
+
+          # 헬스체크: MySQL 연결까지 UP, 상세 정보와 다른 actuator 엔드포인트는 공개하지 않음
+          HEALTH="$(curl -fsS http://127.0.0.1:8080/actuator/health)"
+          echo "health: $HEALTH"
+          echo "$HEALTH" | jq -e '.status == "UP" and (has("components") | not) and (has("details") | not)'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/actuator/env)" = 404
 
           COUNT_SQL='SELECT COUNT(*) FROM suwon_culture_map.flyway_schema_history WHERE success = 1;'
           BEFORE="$(sql -e "$COUNT_SQL")"

@@ -43,7 +43,7 @@ import jakarta.persistence.EntityManager;
 class StaleBlockRetireTest {
 
   private static final String MEDIA = "1790000000000101";
-  private static final String ACCOUNT = "gasang_city";
+  private static final String ACCOUNT = "suwon_city";
   private static final OffsetDateTime POSTED = OffsetDateTime.of(2026, 10, 30, 9, 0, 0, 0, ZoneOffset.UTC);
 
   @Autowired private InstagramMediaRepository mediaRepository;

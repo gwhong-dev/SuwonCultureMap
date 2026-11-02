@@ -18,6 +18,7 @@ import com.suwon.festival.service.instagram.InstagramFetchException.Kind;
 //  - 계정 하나가 실패하면 그 계정만 건너뜀. 단 토큰 · 호출 제한 문제는 다른 계정도 똑같이 실패하므로 바로 멈춤
 //  - 게시물 하나가 실패하면 그 게시물만 되돌리고 다음 게시물 진행
 //  - 로그에는 계정 이름 · 게시물 id · 오류 종류만 (토큰 · 캡션 원문 X)
+//  - 공식 계정 목록(OfficialInstagramAccounts)에 없는 계정은 호출하지 않고 건너뜀 (개인 계정 제외)
 @Service
 public class InstagramSyncService {
 
@@ -28,6 +29,7 @@ public class InstagramSyncService {
   private final InstagramTokenExpiry tokenExpiry;
   private final InstagramSwitch instagramSwitch;
   private final List<String> accounts;
+  private final List<String> rejectedAccounts;
   private final int fetchLimit;
 
   public InstagramSyncService(InstagramClient client, InstagramPostProcessor processor,
@@ -38,8 +40,14 @@ public class InstagramSyncService {
     this.processor = processor;
     this.tokenExpiry = tokenExpiry;
     this.instagramSwitch = instagramSwitch;
-    this.accounts = Arrays.stream(accounts == null ? new String[0] : accounts.split(","))
+    List<String> configured = Arrays.stream(accounts == null ? new String[0] : accounts.split(","))
         .map(String::strip).filter(s -> !s.isEmpty()).distinct().toList();
+    this.accounts = configured.stream().filter(OfficialInstagramAccounts::isOfficial)
+        .map(OfficialInstagramAccounts::normalize).distinct().toList();
+    this.rejectedAccounts = configured.stream().filter(a -> !OfficialInstagramAccounts.isOfficial(a)).toList();
+    if (!rejectedAccounts.isEmpty()) {
+      log.warn("공식 계정 목록에 없어 수집하지 않는 계정: {}", rejectedAccounts);
+    }
     this.fetchLimit = fetchLimit;
   }
 
@@ -53,10 +61,13 @@ public class InstagramSyncService {
       return InstagramSyncResult.notConfigured("인스타 토큰 · 내 계정 ID 설정이 비어 있거나 형식이 다름", tokenWarning);
     }
     if (accounts.isEmpty()) {
-      return InstagramSyncResult.notConfigured("대상 계정(instagram.accounts)이 비어 있음", tokenWarning);
+      String reason = rejectedAccounts.isEmpty() ? "대상 계정(instagram.accounts)이 비어 있음"
+          : "대상 계정이 모두 공식 계정 목록에 없음: " + String.join(", ", rejectedAccounts);
+      return InstagramSyncResult.notConfigured(reason, tokenWarning);
     }
 
     List<String> accountErrors = new ArrayList<>();
+    for (String rejected : rejectedAccounts) accountErrors.add(rejected + ": 공식 계정 목록에 없어 건너뜀");
     Map<String, Integer> blocks = new LinkedHashMap<>();
     for (InstagramBlock.Status s : InstagramBlock.Status.values()) blocks.put(s.name(), 0);
     int okAccounts = 0, posts = 0, newPosts = 0, postErrors = 0, saved = 0, updated = 0, duplicates = 0;

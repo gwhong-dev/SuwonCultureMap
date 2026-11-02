@@ -131,20 +131,20 @@ class InstagramSyncServiceTest {
 
   @Test
   void 토큰_만료가_가까우면_결과에_알림을_싣고_동기화는_그대로_진행() {
-    client.answers.put("gasang_city", List.of(post("1790000000000001", ROUNDUP)));
+    client.answers.put("suwon_city", List.of(post("1790000000000001", ROUNDUP)));
 
-    InstagramSyncResult r = service("gasang_city", "2026-11-03").sync(); // 기준일 10/31 → 3일 남음
+    InstagramSyncResult r = service("suwon_city", "2026-11-03").sync(); // 기준일 10/31 → 3일 남음
 
     assertThat(r.tokenWarning()).contains("3일 뒤 만료");
     assertThat(r.posts()).isEqualTo(1);
-    assertThat(service("gasang_city", "").sync().tokenWarning()).isNull();
+    assertThat(service("suwon_city", "").sync().tokenWarning()).isNull();
   }
 
   @Test
   void 설정이_비어도_토큰_만료_알림은_전달() {
     client.configured = false;
 
-    InstagramSyncResult r = service("gasang_city", "2026-10-01").sync();
+    InstagramSyncResult r = service("suwon_city", "2026-10-01").sync();
 
     assertThat(r.configured()).isFalse();
     assertThat(r.tokenWarning()).contains("만료됨");
@@ -152,9 +152,9 @@ class InstagramSyncServiceTest {
 
   @Test
   void 좌표까지_찾은_블록만_행사로_저장하고_나머지는_상태로_남김() {
-    client.answers.put("gasang_city", List.of(post("1790000000000001", ROUNDUP)));
+    client.answers.put("suwon_city", List.of(post("1790000000000001", ROUNDUP)));
 
-    InstagramSyncResult r = service("gasang_city").sync();
+    InstagramSyncResult r = service("suwon_city").sync();
 
     assertThat(r.configured()).isTrue();
     assertThat(r.posts()).isEqualTo(1);
@@ -189,8 +189,8 @@ class InstagramSyncServiceTest {
 
   @Test
   void 다시_실행해도_중복_없고_READY_블록은_좌표를_다시_찾지_않음() {
-    client.answers.put("gasang_city", List.of(post("1790000000000001", ROUNDUP)));
-    InstagramSyncService s = service("gasang_city");
+    client.answers.put("suwon_city", List.of(post("1790000000000001", ROUNDUP)));
+    InstagramSyncService s = service("suwon_city");
 
     s.sync();
     assertThat(search.queries).containsExactly("가상 아트홀", "가상 광장");
@@ -208,26 +208,26 @@ class InstagramSyncServiceTest {
 
   @Test
   void 계정_하나가_없으면_건너뛰고_다음_계정은_진행() {
-    client.answers.put("no_such", new InstagramFetchException(Kind.NOT_FOUND, 100));
-    client.answers.put("gasang_city", List.of(post("1790000000000001", ROUNDUP)));
+    client.answers.put("suwon_media", new InstagramFetchException(Kind.NOT_FOUND, 100));
+    client.answers.put("suwon_city", List.of(post("1790000000000001", ROUNDUP)));
 
-    InstagramSyncResult r = service("no_such, gasang_city").sync();
+    InstagramSyncResult r = service("suwon_media, suwon_city").sync();
 
-    assertThat(client.called).containsExactly("no_such", "gasang_city");
+    assertThat(client.called).containsExactly("suwon_media", "suwon_city");
     assertThat(r.accounts()).isEqualTo(2);
     assertThat(r.accountsOk()).isEqualTo(1);
-    assertThat(r.accountErrors()).singleElement().asString().contains("no_such").contains("NOT_FOUND");
+    assertThat(r.accountErrors()).singleElement().asString().contains("suwon_media").contains("NOT_FOUND");
     assertThat(r.eventsSaved()).isEqualTo(1);
   }
 
   @Test
   void 토큰_만료면_남은_계정은_부르지_않음() {
-    client.answers.put("first_city", new InstagramFetchException(Kind.TOKEN_INVALID, 190));
-    client.answers.put("gasang_city", List.of(post("1790000000000001", ROUNDUP)));
+    client.answers.put("sw_culture", new InstagramFetchException(Kind.TOKEN_INVALID, 190));
+    client.answers.put("suwon_city", List.of(post("1790000000000001", ROUNDUP)));
 
-    InstagramSyncResult r = service("first_city,gasang_city").sync();
+    InstagramSyncResult r = service("sw_culture,suwon_city").sync();
 
-    assertThat(client.called).containsExactly("first_city");
+    assertThat(client.called).containsExactly("sw_culture");
     assertThat(r.accountsOk()).isZero();
     assertThat(r.accountErrors()).anyMatch(m -> m.contains("건너뜀"));
     assertThat(instagramEvents()).isEmpty();
@@ -235,9 +235,9 @@ class InstagramSyncServiceTest {
 
   @Test
   void 게시물_하나가_실패해도_다음_게시물은_처리() {
-    client.answers.put("gasang_city", List.of(post("abc", ROUNDUP), post("1790000000000002", ROUNDUP)));
+    client.answers.put("suwon_city", List.of(post("abc", ROUNDUP), post("1790000000000002", ROUNDUP)));
 
-    InstagramSyncResult r = service("gasang_city").sync();
+    InstagramSyncResult r = service("suwon_city").sync();
 
     assertThat(r.posts()).isEqualTo(2);
     assertThat(r.postErrors()).isEqualTo(1); // id 형식이 다른 게시물
@@ -247,9 +247,9 @@ class InstagramSyncServiceTest {
 
   @Test
   void 캡션이_없는_게시물은_블록_없이_처리_끝() {
-    client.answers.put("gasang_city", List.of(post("1790000000000003", null)));
+    client.answers.put("suwon_city", List.of(post("1790000000000003", null)));
 
-    InstagramSyncResult r = service("gasang_city").sync();
+    InstagramSyncResult r = service("suwon_city").sync();
 
     assertThat(r.postErrors()).isZero();
     InstagramMedia media = mediaRepository.findByMediaId("1790000000000003").orElseThrow();
@@ -258,9 +258,28 @@ class InstagramSyncServiceTest {
   }
 
   @Test
+  void 공식_계정_목록에_없는_계정은_호출하지_않고_건너뜀() {
+    client.answers.put("suwon_city", List.of(post("1790000000000001", ROUNDUP)));
+
+    InstagramSyncResult r = service("some_influencer, @Suwon_City").sync();
+
+    assertThat(client.called).containsExactly("suwon_city"); // @ · 대문자는 정리해서 호출
+    assertThat(r.accountErrors()).singleElement().asString().contains("some_influencer").contains("공식 계정 목록");
+  }
+
+  @Test
+  void 대상이_모두_공식_계정이_아니면_수집하지_않음() {
+    InstagramSyncResult r = service("some_influencer").sync();
+
+    assertThat(r.configured()).isFalse();
+    assertThat(r.message()).contains("공식 계정 목록", "some_influencer");
+    assertThat(client.called).isEmpty();
+  }
+
+  @Test
   void 설정이_비어_있으면_호출하지_않음() {
     client.configured = false;
-    InstagramSyncResult r = service("gasang_city").sync();
+    InstagramSyncResult r = service("suwon_city").sync();
     assertThat(r.configured()).isFalse();
     assertThat(client.called).isEmpty();
 

@@ -87,7 +87,7 @@ COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml
 - `COMPOSE_FILE` · `COMPOSE_PROJECT_NAME` 덕분에 이후 `docker compose` 만 입력하면 된다. 폴더 이름이 바뀌어도 같은 DB 를 쓴다
 - 비밀번호에는 특수문자를 쓰지 않는다 (`$` 등을 compose 가 다르게 해석)
 - DB 비밀번호는 첫 실행 때 DB 에 저장된다. 나중에 `.env` 만 고치면 접속이 실패한다. `docker compose down -v` 는 **DB 를 통째로 삭제**하므로 운영에서 쓰지 않는다
-- 인스타 수집은 중단 상태다 (`INSTAGRAM_SYNC_ENABLED=false`, [결정 문서](decisions/2026-11-02-instagram-scope-off.md)). 다시 켜는 조건이 충족되기 전에는 `true` 로 바꾸지 않는다
+- 인스타 수집은 수원시 · 문화기관 공식 계정만 대상으로 한다 ([결정 문서](decisions/2026-11-02-instagram-resume-official.md)). 켤 때 `INSTAGRAM_SYNC_ENABLED=true` 와 `INSTAGRAM_*` 를 넣고, `INSTAGRAM_ACCOUNTS` 에 개인 계정을 넣지 않는다
 
 ## 6. 소셜 로그인 · 지도 콘솔
 
@@ -125,6 +125,12 @@ docker compose logs -f app
 
 ```bash
 bash deploy/deploy.sh   # git pull → 다시 빌드 · 실행 → 응답 확인 → 옛 이미지 정리
+```
+
+**헬스체크** — `https://suwonbible.com/actuator/health` 가 `{"status":"UP"}` 이면 앱과 DB 연결이 정상. DB 연결이 끊기면 `503` + `DOWN`. 상세 정보와 다른 actuator 엔드포인트는 공개하지 않는다 (`application.properties`). 배포 스크립트도 이 주소로 새 앱 기동을 확인한다
+
+```bash
+curl -s http://127.0.0.1:8080/actuator/health   # 서버 안에서
 ```
 
 ## 자동 배포 (CD)
