@@ -29,9 +29,20 @@ class ScheduleDisplayPageTest {
   void 목록_미리보기_상세가_같은_표시_함수를_씀() throws Exception {
     String html = page();
 
-    assertThat(html).contains("var dateText = formatEventDates(item.event)");
-    assertThat(html).contains("escapeHtml(formatEventDates(item.event))");
-    assertThat(html).contains("document.getElementById(\"modalDate\").textContent = formatEventDates(event)");
+    // 목록 · 미리보기는 날짜 필터의 "기간 중 · 일정 확인" 을 붙이는 cardDateText 를 거침
+    assertThat(html).contains("var text = formatEventDates(item.event)");
+    assertThat(html).contains("var dateText = cardDateText(item)");
+    assertThat(html).contains("escapeHtml(cardDateText(item))");
+    assertThat(html).contains("document.getElementById(\"modalDate\").textContent = cardDateText({");
+  }
+
+  @Test
+  void 날짜_필터가_목록_필터에_연결됨() throws Exception {
+    String html = page();
+
+    assertThat(html).contains("<select id=\"dateFilter\"", "<option value=\"today\">", "<option value=\"weekend\">");
+    assertThat(html).contains("filterDays(document.getElementById(\"dateFilter\").value)");
+    assertThat(html).contains("matchRunDays(item.event, runDays)");
   }
 
   @Test

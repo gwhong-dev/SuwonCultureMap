@@ -111,3 +111,52 @@ test("모름은 상세에 원문만", () => {
     "일정 원문: 13:00~20:00");
   assert.strictEqual(formatScheduleDetail({ scheduleStatus: "UNKNOWN", dates: [] }), "");
 });
+
+// ===== "오늘 진행" · "이번 주말" 필터 =====
+const { koreaToday, upcomingWeekend, filterDays, matchRunDays } = require("../../main/resources/static/schedule-format.js");
+
+test("오늘은 한국 시간 기준", () => {
+  assert.strictEqual(koreaToday(Date.UTC(2026, 10, 1, 14, 59)), "2026-11-01"); // 한국 11/1 23:59
+  assert.strictEqual(koreaToday(Date.UTC(2026, 10, 1, 15, 0)), "2026-11-02"); // 한국 11/2 00:00
+});
+
+test("이번 주말은 오늘 이후 가장 가까운 토 · 일", () => {
+  assert.deepStrictEqual(upcomingWeekend(Date.UTC(2026, 10, 2, 3)), ["2026-11-07", "2026-11-08"]); // 월
+  assert.deepStrictEqual(upcomingWeekend(Date.UTC(2026, 10, 7, 3)), ["2026-11-07", "2026-11-08"]); // 토
+  assert.deepStrictEqual(upcomingWeekend(Date.UTC(2026, 10, 8, 3)), ["2026-11-08"]); // 일: 오늘만
+  assert.deepStrictEqual(upcomingWeekend(Date.UTC(2026, 11, 31, 3)), ["2027-01-02", "2027-01-03"]); // 해 넘김
+  // 한국은 이미 토요일 00:30 인데 UTC 로는 금요일
+  assert.deepStrictEqual(upcomingWeekend(Date.UTC(2026, 10, 6, 15, 30)), ["2026-11-07", "2026-11-08"]);
+});
+
+test("필터 없음이면 날짜 목록 없음", () => {
+  assert.strictEqual(filterDays("all", NOW_2026), null);
+  assert.deepStrictEqual(filterDays("today", NOW_2026), ["2026-11-02"]);
+});
+
+test("날짜 확정 행사는 그날 진행할 때만", () => {
+  const e = event("2026-05-16", "2026-09-19", ["2026-05-16", "2026-09-19"]);
+  assert.strictEqual(matchRunDays(e, ["2026-05-16"]), "yes");
+  assert.strictEqual(matchRunDays(e, ["2026-05-23"]), "no"); // 기간 안이지만 진행일 아님 (2972 오안내 방지)
+  assert.strictEqual(matchRunDays(e, ["2026-09-19", "2026-09-20"]), "yes");
+});
+
+test("모름 행사는 기간 안이면 숨기지 않고 일정 확인", () => {
+  const e = { startDate: "2026-05-04", endDate: "2026-05-31", scheduleStatus: "UNKNOWN", dates: [] };
+  assert.strictEqual(matchRunDays(e, ["2026-05-10"]), "maybe");
+  assert.strictEqual(matchRunDays(e, ["2026-05-31"]), "maybe");
+  assert.strictEqual(matchRunDays(e, ["2026-06-01"]), "no");
+  assert.strictEqual(matchRunDays({ startDate: "2026-05-04", endDate: "2026-05-31" }, ["2026-05-10"]), "maybe"); // 예전 응답
+});
+
+test("날짜가 기간 밖이면 믿지 않고 모름처럼", () => {
+  const e = event("2026-05-01", "2026-05-03", ["2026-05-16"]);
+  assert.strictEqual(matchRunDays(e, ["2026-05-02"]), "maybe");
+  assert.strictEqual(matchRunDays(e, ["2026-05-16"]), "no");
+});
+
+test("하루짜리 행사는 그날이면 확실", () => {
+  assert.strictEqual(matchRunDays({ startDate: "2026-11-14", endDate: "2026-11-14", scheduleStatus: "UNKNOWN" }, ["2026-11-14"]), "yes");
+  assert.strictEqual(matchRunDays({ startDate: "2026-11-14", endDate: null }, ["2026-11-14"]), "yes");
+  assert.strictEqual(matchRunDays({ startDate: null, endDate: null }, ["2026-11-14"]), "no");
+});
