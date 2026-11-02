@@ -288,6 +288,13 @@
         font-size: 0.85rem;
         color: #444;
       }
+      .modal-ics-alt {
+        display: inline-block;
+        margin: 0 0 0.75rem;
+        font-size: 0.8rem;
+        color: #777;
+      }
+      .modal-ics-alt[hidden],
       .modal-cal-date[hidden] {
         display: none;
       }
@@ -834,10 +841,6 @@
           white-space: nowrap;
           min-width: 0;
         }
-        /* 모바일은 기기 기본 캘린더(.ics)만 — 구글 캘린더 버튼은 PC에서만 */
-        .modal-google-btn {
-          display: none !important;
-        }
       }
 
       @keyframes sheetUp {
@@ -923,10 +926,11 @@
             캘린더에 넣을 날짜
             <select id="modalCalDate"></select>
           </label>
+          <!-- 아이폰 외(PC · 안드로이드): 📅 은 구글 캘린더, 다른 캘린더 앱은 .ics 파일로 -->
+          <a id="modalIcsAltLink" class="modal-ics-alt" href="#" hidden>다른 캘린더 앱에 넣기 (.ics 파일)</a>
           <div class="modal-actions">
             <button id="modalFavoriteBtn" class="favorite-btn">☆ 즐겨찾기</button>
-            <a id="modalIcsBtn" class="modal-link-btn" href="#">📅 캘린더</a>
-            <a id="modalGoogleBtn" class="modal-link-btn modal-google-btn" href="#" target="_blank" rel="noopener">구글 캘린더</a>
+            <a id="modalCalBtn" class="modal-link-btn" href="#">📅 캘린더</a>
             <a id="modalLinkBtn" class="modal-link-btn" href="#" target="_blank" rel="noopener">원문 보기 →</a>
           </div>
         </div>
@@ -1552,6 +1556,11 @@
         }, 300);
       });
 
+      // 아이폰 · 아이패드 (아이패드는 PC 사파리처럼 "Macintosh" 로 보고하므로 터치 여부로 구분)
+      var isAppleMobile =
+        /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
       // ===== 상세정보 큰 팝업창 열기/닫기 =====
       function openDetailModal(event) {
         document.getElementById("modalImage").src = event.imageUrl || "";
@@ -1578,10 +1587,10 @@
         }
 
         // ===== 캘린더 저장 버튼: 날짜 없는 행사는 일정을 만들 수 없어서 숨김 =====
-        // 📅 캘린더 = .ics 파일 (아이폰은 "캘린더에 추가" 화면, PC는 파일 받기)
-        // 구글 캘린더 = 제목·날짜가 채워진 구글 "일정 추가" 화면 (PC에서만 보임)
-        var icsBtn = document.getElementById("modalIcsBtn");
-        var googleBtn = document.getElementById("modalGoogleBtn");
+        // 📅 캘린더: 아이폰 · 아이패드 = .ics (기본 캘린더 "캘린더에 추가" 화면)
+        //           그 외(PC · 안드로이드) = 구글 캘린더 "일정 추가" 화면 (.ics 는 파일로만 받아져서)
+        var calBtn = document.getElementById("modalCalBtn");
+        var icsAltLink = document.getElementById("modalIcsAltLink");
         var calDateWrap = document.getElementById("modalCalDateWrap");
         var calDateSelect = document.getElementById("modalCalDate");
         // 진행 날짜가 정해진 여러 날 행사는 고른 날 1회 일정 (아니면 지금처럼 기간 전체 종일)
@@ -1601,18 +1610,26 @@
         calDateSelect.disabled = !!choices && choices.dates.length < 2;
         function updateCalendarLinks() {
           var query = choices ? "?date=" + encodeURIComponent(calDateSelect.value) : "";
-          icsBtn.href = "/api/events/" + event.id + "/calendar.ics" + query;
-          googleBtn.href = "/api/events/" + event.id + "/calendar/google" + query;
+          var icsUrl = "/api/events/" + event.id + "/calendar.ics" + query;
+          var googleUrl = "/api/events/" + event.id + "/calendar/google" + query;
+          if (isAppleMobile) {
+            calBtn.href = icsUrl;
+            calBtn.removeAttribute("target");
+          } else {
+            calBtn.href = googleUrl;
+            calBtn.target = "_blank"; // 지도 화면은 그대로 두고 새 탭에서 구글 캘린더
+            calBtn.rel = "noopener";
+          }
+          icsAltLink.href = icsUrl;
         }
         calDateSelect.onchange = updateCalendarLinks;
         if (event.startDate) {
           updateCalendarLinks();
-          icsBtn.style.display = "inline-flex";
-          googleBtn.style.display = "inline-flex";
+          calBtn.style.display = "inline-flex";
         } else {
-          icsBtn.style.display = "none";
-          googleBtn.style.display = "none";
+          calBtn.style.display = "none";
         }
+        icsAltLink.hidden = !event.startDate || isAppleMobile;
 
         updateFavoriteButton(event.id);
 
