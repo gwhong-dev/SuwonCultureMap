@@ -47,6 +47,7 @@
 - [ ] 길찾기 창 · 상세창 포커스 이동(열릴 때 첫 버튼으로, 닫히면 원래 자리로) — 보조기기용 (#89 검증 지적)
 - [ ] 네이버 지도 길찾기 URL(`/p/directions/-/x,y,이름,,/-/transit`, 웹 메르카토르 좌표) 아이폰 확인 → ❌ 면 옛 `index.nhn?…&menu=route&pathType=1` 형식으로 교체 (#89)
 - [ ] 지도 첫 위치 "행궁동 중심"(디자인 02) — 실제 장소 확인 후 `DEFAULT_CENTER` 조정 (지금은 정조테마공연장)
+- [ ] 행사 불러오기 실패 안내(#91)는 모바일만 — PC 는 빈 목록 그대로 → PC 에도 안내 · 다시 시도 검토. `.catch` 가 렌더 오류까지 "네트워크" 안내로 보이므로 fetch 실패와 분리 (#91 검증 지적)
 - [ ] 서버 Docker 빌드가 옛 빌더 사용 (`DEPRECATED: The legacy builder`, Deploy #10) → 서버에 `docker-buildx` 설치 검토 (빌드 캐시 · 속도). 배포 중 `curl: (56)` 은 앱이 뜨는 동안의 재시도라 정상
 - [ ] `aws-actions/configure-aws-credentials@v4` 가 Node 20 지원 종료 경고 (Deploy #10) → 경고가 실패로 바뀌기 전에 Node 24 지원 버전으로 올리기
 - [ ] Meta Direct Support 접근 경로 재확인 후 문의 (`docs/decisions/2026-11-02-instagram-scope-off.md`, 서면 허용 또는 앱 심사 통과 전에는 인스타 수집을 켜지 않음)
