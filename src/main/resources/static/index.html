@@ -631,6 +631,10 @@
         #resultCount strong {
           color: var(--accent);
         }
+        #sheetHeader:focus-visible {
+          outline: 2px solid var(--accent);
+          outline-offset: -2px;
+        }
         #sheetToggle {
           display: flex;
           align-items: center;
@@ -1305,13 +1309,14 @@
       <button id="sidebarToggleBtn">›</button>
       <aside id="sidebar">
         <!-- 모바일 전용: 바텀시트 손잡이 + 결과 개수 (끌어올리기) -->
-        <div id="sheetHeader">
+        <!-- 바 전체가 버튼: 탭 · 끌기 · 키보드(Enter · Space) -->
+        <div id="sheetHeader" role="button" tabindex="0" aria-expanded="false" aria-label="행사 불러오는 중">
           <div class="sheet-handle"></div>
           <div class="sheet-bar">
             <span id="resultCount">행사 불러오는 중…</span>
-            <span id="sheetToggle" aria-hidden="true">
+            <span id="sheetToggle">
               <span id="sheetToggleText">목록 보기</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 15l6-6 6 6" /></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 15l6-6 6 6" /></svg>
             </span>
           </div>
         </div>
@@ -1956,6 +1961,7 @@
         // ===== (모바일) 결과 개수 + 미리보기 카드도 같은 목록으로 갱신 =====
         document.getElementById("resultCount").innerHTML =
           "검색 결과 <strong>" + sorted.length + "개</strong>";
+        updateSheetHeaderLabel();
         lastSortedItems = sorted;
         renderPreviewStrip(sorted);
         if (previewEventId !== null) {
@@ -2345,8 +2351,20 @@
         document.body.classList.toggle("sheet-full", state === "full");
         document.body.classList.toggle("sheet-peek", state === "peek");
         document.getElementById("sheetToggleText").textContent = state === "peek" ? "목록 보기" : "접기";
+        updateSheetHeaderLabel();
         if (state !== "peek") hidePreview(); // 목록이 올라오면 하단 카드는 닫음
         updateTabBar();
+      }
+
+      // 결과 바(버튼)의 보조기기용 이름 · 열림 상태
+      function updateSheetHeaderLabel() {
+        var header = document.getElementById("sheetHeader");
+        var expanded = sheetState !== "peek";
+        header.setAttribute("aria-expanded", expanded ? "true" : "false");
+        header.setAttribute(
+          "aria-label",
+          document.getElementById("resultCount").textContent + ", " + (expanded ? "접기" : "목록 보기"),
+        );
       }
 
       function nearestSheetState(y) {
@@ -2412,6 +2430,15 @@
         }
         header.addEventListener("pointerup", endDrag);
         header.addEventListener("pointercancel", endDrag);
+
+        // 키보드: Enter · Space 로 살짝 ↔ 절반
+        header.addEventListener("keydown", function (e) {
+          if (!mobileQuery.matches) return;
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setSheetState(sheetState === "peek" ? "half" : "peek");
+          }
+        });
       })();
 
       // ----- 하단 탭 (지도 · 목록 · 찜 · 마이) -----
