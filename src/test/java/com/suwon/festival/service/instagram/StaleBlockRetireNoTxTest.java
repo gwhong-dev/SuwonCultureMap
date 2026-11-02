@@ -32,7 +32,7 @@ import com.suwon.festival.service.place.PlaceCandidate;
 import com.suwon.festival.service.place.PlaceGeocoder;
 
 // 실제 스프링 빈 + 테스트 트랜잭션 없음 → 실제 동기화처럼 게시물마다 커밋될 때 FK 순서 · 지연 로딩이 맞는지 확인
-@SpringBootTest(properties = "instagram.accounts=gasang_city")
+@SpringBootTest(properties = { "instagram.sync.enabled=true", "instagram.accounts=gasang_city" })
 @ActiveProfiles("test")
 class StaleBlockRetireNoTxTest {
 

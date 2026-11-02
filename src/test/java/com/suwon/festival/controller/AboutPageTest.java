@@ -42,6 +42,15 @@ class AboutPageTest {
   }
 
   @Test
+  void 인스타그램은_현재_출처가_아니라고_안내함() throws Exception {
+    String html = mockMvc.perform(get("/about.html")).andReturn().getResponse()
+        .getContentAsString(StandardCharsets.UTF_8);
+
+    assertThat(html).contains("수원문화재단 공개 API", "인스타그램", "수집을 중단");
+    assertThat(html).doesNotContain("게시물에서 자동으로 읽은 행사 정보");
+  }
+
+  @Test
   void 모든_화면에_새_이름과_안내_링크가_있고_옛_이름이_없음() throws Exception {
     for (String page : PAGES) {
       String html = mockMvc.perform(get(page)).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
