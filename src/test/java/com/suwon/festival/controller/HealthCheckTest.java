@@ -40,7 +40,8 @@ class HealthCheckTest {
 
   @Test
   void 다른_actuator_엔드포인트는_열려_있지_않음() throws Exception {
-    for (String path : new String[] { "/actuator/env", "/actuator/beans", "/actuator/configprops", "/actuator/info" }) {
+    for (String path : new String[] { "/actuator", "/actuator/env", "/actuator/beans", "/actuator/configprops", "/actuator/info",
+        "/actuator/health/db" }) {
       assertThat(mockMvc.perform(get(path)).andReturn().getResponse().getStatus()).as(path).isEqualTo(404);
     }
   }

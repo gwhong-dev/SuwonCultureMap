@@ -114,7 +114,7 @@ jobs:
           sql() { $COMPOSE exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot -N "$@"' sh "$@"; }
           wait_app() {
             for i in $(seq 1 60); do
-              if curl -fsS -o /dev/null http://127.0.0.1:8080/api/events; then
+              if curl -fsS -o /dev/null http://127.0.0.1:8080/actuator/health; then
                 echo "앱 응답 확인"
                 return 0
               fi
