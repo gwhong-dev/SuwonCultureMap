@@ -154,6 +154,28 @@ function matchRunDays(event, days) {
 
 var MAYBE_RUN_NOTE = "기간 중 · 일정 확인";
 
+// ===== 캘린더 저장 날짜 고르기 (설계 7번) =====
+// 진행 날짜가 확정된 여러 날 행사만 날짜를 고름. 아니면 null (지금처럼 기간 전체 종일)
+// 고를 수 있는 날: 오늘(한국 시간) 이후 진행일. 다 지났으면 전체. 기본값은 가장 가까운 날
+function calendarDateChoices(event, now) {
+  if (!hasRunDates(event) || event.startDate === event.endDate) return null;
+  var today = koreaToday(now);
+  var upcoming = event.dates.filter(function (date) {
+    return date >= today;
+  });
+  var dates = upcoming.length > 0 ? upcoming : event.dates.slice();
+  var thisYear = koreaYear(now === undefined ? Date.now() : now);
+  return {
+    dates: dates,
+    selected: upcoming.length > 0 ? upcoming[0] : dates[dates.length - 1],
+    labels: dates.map(function (date) {
+      var day = WEEKDAY_NAMES[new Date(utcDay(date)).getUTCDay()];
+      var text = date.slice(0, 4) === thisYear ? shortDate(date) : date;
+      return text + " (" + day + ")";
+    }),
+  };
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     formatEventDates: formatEventDates,
@@ -162,5 +184,6 @@ if (typeof module !== "undefined") {
     upcomingWeekend: upcomingWeekend,
     filterDays: filterDays,
     matchRunDays: matchRunDays,
+    calendarDateChoices: calendarDateChoices,
   };
 }

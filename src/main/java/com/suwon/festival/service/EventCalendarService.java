@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriUtils;
 
 import com.suwon.festival.entity.Event;
+import com.suwon.festival.repository.EventDateRepository;
 import com.suwon.festival.repository.EventRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 // A안: 기본은 종일 일정
 // B안: 장소명이 있으면 위치에 장소명, 하루짜리 행사 + 확실한 시간 1개면 시간 지정 일정
 //      (시작만 있으면 2시간으로 가정, 시간 원문은 info(메모)에 그대로 남음)
+// 진행 날짜(DATES) 행사는 날짜 하나를 골라 그날 1회 일정으로 저장 (docs/event-schedule.md 7번)
 @Service
 @RequiredArgsConstructor
 public class EventCalendarService {
@@ -44,6 +46,7 @@ public class EventCalendarService {
   }
 
   private final EventRepository eventRepository;
+  private final EventDateRepository eventDateRepository;
 
   // 없는 행사 → 404, 날짜 없는 행사 → 일정을 만들 수 없으므로 404
   public Event findSchedulable(Long id) {
@@ -55,8 +58,23 @@ public class EventCalendarService {
     return event;
   }
 
+  // 고른 날짜 검사: 저장된 진행 날짜 중 하나여야 함 (기간 밖 · 진행하지 않는 날 · 날짜 모르는 행사 → 400)
+  public void checkRunDate(Event event, LocalDate runDate) {
+    if (runDate == null) return;
+    boolean known = Event.SCHEDULE_DATES.equals(event.getScheduleStatus())
+        && eventDateRepository.findByEventId(event.getId()).stream().anyMatch(d -> d.getRunDate().equals(runDate));
+    if (!known) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "행사가 진행되는 날짜가 아닙니다.");
+    }
+  }
+
   // ===== .ics 파일 내용 =====
   public String toIcs(Event event, Instant now) {
+    return toIcs(event, null, now);
+  }
+
+  // runDate 가 있으면 그날 하루짜리 일정, 없으면 지금처럼 기간 전체
+  public String toIcs(Event event, LocalDate runDate, Instant now) {
     StringBuilder sb = new StringBuilder();
     line(sb, "BEGIN:VCALENDAR");
     line(sb, "VERSION:2.0");
@@ -64,16 +82,17 @@ public class EventCalendarService {
     line(sb, "CALSCALE:GREGORIAN");
     line(sb, "METHOD:PUBLISH");
     line(sb, "BEGIN:VEVENT");
-    line(sb, "UID:event-" + event.getId() + "@suwonculturemap");
+    // 날짜마다 다른 일정이 되게 UID 에 날짜를 넣음 (같은 UID 면 캘린더가 앞의 날짜를 덮어씀)
+    line(sb, "UID:event-" + event.getId() + (runDate != null ? "-" + DATE.format(runDate) : "") + "@suwonculturemap");
     line(sb, "DTSTAMP:" + STAMP.format(now));
-    Optional<Timed> timed = timed(event);
+    Optional<Timed> timed = timed(event, runDate);
     if (timed.isPresent()) {
       line(sb, "DTSTART:" + STAMP.format(timed.get().start()));
       line(sb, "DTEND:" + STAMP.format(timed.get().end()));
     } else {
       // 종일 일정의 끝 날짜는 "다음 날"로 적는 게 규칙
-      line(sb, "DTSTART;VALUE=DATE:" + DATE.format(event.getStartDate()));
-      line(sb, "DTEND;VALUE=DATE:" + DATE.format(endExclusive(event)));
+      line(sb, "DTSTART;VALUE=DATE:" + DATE.format(startDay(event, runDate)));
+      line(sb, "DTEND;VALUE=DATE:" + DATE.format(endExclusive(event, runDate)));
     }
     line(sb, "SUMMARY:" + escape(event.getTitle()));
     // .ics 는 원문 링크를 URL 칸에 따로 넣으므로 메모에는 info만 (아이폰에서 링크가 두 번 보이는 문제 방지)
@@ -96,10 +115,14 @@ public class EventCalendarService {
 
   // ===== 구글 캘린더 "일정 추가" 주소 =====
   public String toGoogleUrl(Event event) {
-    Optional<Timed> timed = timed(event);
+    return toGoogleUrl(event, null);
+  }
+
+  public String toGoogleUrl(Event event, LocalDate runDate) {
+    Optional<Timed> timed = timed(event, runDate);
     String dates = timed.isPresent()
         ? STAMP.format(timed.get().start()) + "/" + STAMP.format(timed.get().end())
-        : DATE.format(event.getStartDate()) + "/" + DATE.format(endExclusive(event));
+        : DATE.format(startDay(event, runDate)) + "/" + DATE.format(endExclusive(event, runDate));
     String location = hasText(event.getPlace())
         ? event.getPlace()
         : event.getLatitude() + "," + event.getLongitude();
@@ -112,11 +135,15 @@ public class EventCalendarService {
         + "&location=" + encode(location);
   }
 
-  // 시간 지정 일정이 되는 조건: ① 하루짜리 행사 ② 시간 원문이 확실한 형식 1개
+  // 시간 지정 일정이 되는 조건: ① 하루짜리 행사 또는 고른 날짜 ② 시간 원문이 확실한 형식 1개
   // 여러 날 행사에 시간을 넣으면 "첫날 10시 ~ 마지막 날 17시"로 이어진 일정 1개가 되므로 종일 유지
   Optional<Timed> timed(Event event) {
-    LocalDate day = event.getStartDate();
-    if (event.getEndDate() != null && !event.getEndDate().equals(day)) return Optional.empty();
+    return timed(event, null);
+  }
+
+  Optional<Timed> timed(Event event, LocalDate runDate) {
+    LocalDate day = startDay(event, runDate);
+    if (runDate == null && event.getEndDate() != null && !event.getEndDate().equals(day)) return Optional.empty();
     return InfoParser.parseTime(event.getTimeText()).map(t -> {
       ZonedDateTime start = day.atTime(t.start()).atZone(SEOUL);
       ZonedDateTime end = t.end() != null ? day.atTime(t.end()).atZone(SEOUL) : start.plusHours(DEFAULT_HOURS);
@@ -128,8 +155,13 @@ public class EventCalendarService {
     return value != null && !value.isBlank();
   }
 
-  // 종료일이 없으면 하루짜리 일정
-  private LocalDate endExclusive(Event event) {
+  private static LocalDate startDay(Event event, LocalDate runDate) {
+    return runDate != null ? runDate : event.getStartDate();
+  }
+
+  // 종료일이 없거나 날짜를 골랐으면 하루짜리 일정
+  private LocalDate endExclusive(Event event, LocalDate runDate) {
+    if (runDate != null) return runDate.plusDays(1);
     LocalDate end = event.getEndDate() != null ? event.getEndDate() : event.getStartDate();
     if (end.isBefore(event.getStartDate())) {
       end = event.getStartDate(); // 원본 데이터가 뒤바뀐 경우 대비

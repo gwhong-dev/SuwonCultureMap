@@ -160,3 +160,30 @@ test("하루짜리 행사는 그날이면 확실", () => {
   assert.strictEqual(matchRunDays({ startDate: "2026-11-14", endDate: null }, ["2026-11-14"]), "yes");
   assert.strictEqual(matchRunDays({ startDate: null, endDate: null }, ["2026-11-14"]), "no");
 });
+
+// ===== 캘린더 저장 날짜 고르기 =====
+const { calendarDateChoices } = require("../../main/resources/static/schedule-format.js");
+
+test("캘린더 날짜는 오늘 이후 진행일, 기본값은 가장 가까운 날", () => {
+  const e = event("2026-10-03", "2026-11-28", weekdays("2026-10-03", "2026-11-28", [6]));
+  const c = calendarDateChoices(e, Date.UTC(2026, 10, 1, 15, 30)); // 한국 11/2(월) 00:30
+  assert.deepStrictEqual(c.dates, ["2026-11-07", "2026-11-14", "2026-11-21", "2026-11-28"]);
+  assert.strictEqual(c.selected, "2026-11-07");
+  assert.strictEqual(c.labels[0], "11/7 (토)");
+  // 오늘이 진행일이면 오늘도 포함
+  assert.strictEqual(calendarDateChoices(e, Date.UTC(2026, 10, 7, 3)).selected, "2026-11-07");
+});
+
+test("진행일이 다 지났으면 전체를 보여 주고 마지막 날", () => {
+  const e = event("2025-05-16", "2025-09-19", ["2025-05-16", "2025-09-19"]);
+  const c = calendarDateChoices(e, NOW_2026);
+  assert.deepStrictEqual(c.dates, ["2025-05-16", "2025-09-19"]);
+  assert.strictEqual(c.selected, "2025-09-19");
+  assert.strictEqual(c.labels[1], "2025-09-19 (금)"); // 올해가 아니면 연도까지
+});
+
+test("날짜 모름 · 하루 행사 · 기간 밖 날짜는 고르지 않음 (지금처럼 기간 전체)", () => {
+  assert.strictEqual(calendarDateChoices({ startDate: "2026-11-01", endDate: "2026-11-30", scheduleStatus: "UNKNOWN", dates: [] }, NOW_2026), null);
+  assert.strictEqual(calendarDateChoices(event("2026-11-14", "2026-11-14", ["2026-11-14"]), NOW_2026), null);
+  assert.strictEqual(calendarDateChoices(event("2026-11-01", "2026-11-03", ["2026-11-16"]), NOW_2026), null);
+});
