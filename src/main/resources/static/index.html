@@ -2560,7 +2560,11 @@
       // ===== ESC 키로 상세 모달 + 마커 팝업(InfoWindow) 닫기 =====
       document.addEventListener("keydown", function (e) {
         if (e.key === "Escape") {
-          closeRouteSheet();
+          // 길찾기 창이 상세 위에 열려 있으면 그것만 닫음
+          if (!document.getElementById("routeSheet").hidden) {
+            closeRouteSheet();
+            return;
+          }
           closeDetailModal();
           if (currentInfowindow) {
             currentInfowindow.close();
