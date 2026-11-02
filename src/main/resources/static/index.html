@@ -280,6 +280,15 @@
         font-size: 1.15rem;
         margin: 0.375rem 0 0.625rem;
       }
+      .modal-schedule {
+        font-size: 0.85rem;
+        color: #444;
+        white-space: pre-line;
+        line-height: 1.6;
+        margin-bottom: 0.625rem;
+        padding-bottom: 0.625rem;
+        border-bottom: 1px solid #f0f0f0;
+      }
       .modal-info {
         font-size: 0.88rem;
         color: #444;
@@ -696,6 +705,13 @@
           overflow: hidden;
           text-overflow: ellipsis;
         }
+        /* 일정이 길면 잘리지 않게 2줄까지 (날짜 · 공휴일 안내가 안 보이면 안 됨) */
+        .preview-date {
+          white-space: normal;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
         .preview-card .card-fav {
           top: 6px;
           right: 6px;
@@ -879,6 +895,7 @@
           <div id="modalFavBadge" class="modal-fav-badge" hidden>★ 찜한 행사</div>
           <div id="modalDate" class="modal-date"></div>
           <h2 id="modalTitle" class="modal-title"></h2>
+          <div id="modalSchedule" class="modal-schedule"></div>
           <div id="modalInfo" class="modal-info"></div>
           <div class="modal-actions">
             <button id="modalFavoriteBtn" class="favorite-btn">☆ 즐겨찾기</button>
@@ -1344,12 +1361,7 @@
           var div = document.createElement("div");
           div.className = "event-item";
 
-          var dateText = item.event.startDate
-            ? item.event.startDate +
-              (item.event.endDate && item.event.endDate !== item.event.startDate
-                ? " ~ " + item.event.endDate
-                : "")
-            : "기간 정보 없음";
+          var dateText = formatEventDates(item.event);
 
           var imgSrc = item.event.imageUrl || "";
           var infoText = extractSummaryInfo(item.event.info || ""); // 사이드바엔 이용료/장소/시간만
@@ -1504,12 +1516,11 @@
       function openDetailModal(event) {
         document.getElementById("modalImage").src = event.imageUrl || "";
         document.getElementById("modalTitle").textContent = event.title;
-        document.getElementById("modalDate").textContent = event.startDate
-          ? event.startDate +
-            (event.endDate && event.endDate !== event.startDate
-              ? " ~ " + event.endDate
-              : "")
-          : "기간 정보 없음";
+        document.getElementById("modalDate").textContent = formatEventDates(event);
+        var scheduleEl = document.getElementById("modalSchedule");
+        var scheduleText = formatScheduleDetail(event);
+        scheduleEl.textContent = scheduleText;
+        scheduleEl.style.display = scheduleText ? "block" : "none";
         document.getElementById("modalInfo").textContent = event.info || "";
 
         // ===== 원문 링크 버튼: link 없으면 숨김 =====
@@ -1641,6 +1652,90 @@
         );
       }
 
+      // ===== 실제 진행 날짜 표시 (설계 docs/event-schedule.md 7번) =====
+      var SCHEDULE_LIST_MAX = 5; // 이보다 많으면 카드에 날짜를 다 쓰지 않고 요약
+      var WEEKDAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
+
+      function hasRunDates(event) {
+        return event.scheduleStatus === "DATES" && event.dates && event.dates.length > 0;
+      }
+
+      function shortDate(isoDate) {
+        var parts = isoDate.split("-");
+        return Number(parts[1]) + "/" + Number(parts[2]);
+      }
+
+      function utcDay(isoDate) {
+        var parts = isoDate.split("-");
+        return Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      }
+
+      // 기간 안의 그 요일이 빠짐없이 있을 때만 요약 (총 2회뿐인 토요일 행사를 "토요일마다"로 안내하지 않게)
+      function weekdaySummary(event) {
+        if (!event.startDate || !event.endDate) return null;
+        var runDays = new Set(event.dates.map(utcDay));
+        var weekdays = new Set();
+        runDays.forEach(function (day) {
+          weekdays.add(new Date(day).getUTCDay());
+        });
+        var expected = 0;
+        for (var day = utcDay(event.startDate); day <= utcDay(event.endDate); day += 86400000) {
+          if (!weekdays.has(new Date(day).getUTCDay())) continue;
+          if (!runDays.has(day)) return null;
+          expected++;
+        }
+        if (expected !== runDays.size) return null; // 기간 밖 날짜가 섞이면 요약하지 않음
+        if (weekdays.size === 7) return "매일";
+        // 월요일부터 일요일 순서로 표시. 4일 이상 이어지면 "월~토" 로 줄임 (모바일 카드 폭이 좁음)
+        var order = [1, 2, 3, 4, 5, 6, 0];
+        var kept = order.filter(function (d) {
+          return weekdays.has(d);
+        });
+        var consecutive = order.indexOf(kept[kept.length - 1]) - order.indexOf(kept[0]) === kept.length - 1;
+        if (kept.length >= 4 && consecutive) {
+          return WEEKDAY_NAMES[kept[0]] + "~" + WEEKDAY_NAMES[kept[kept.length - 1]];
+        }
+        return kept
+          .map(function (d) {
+            return WEEKDAY_NAMES[d];
+          })
+          .join(" · ");
+      }
+
+      // 카드 · 상세 첫 줄. 모름은 지금처럼 기간만 ("매일 진행"이라는 뜻이 아님)
+      function formatEventDates(event) {
+        if (!hasRunDates(event) || event.startDate === event.endDate) return formatDateRange(event);
+        var dates = event.dates;
+        var range = shortDate(event.startDate) + " ~ " + shortDate(event.endDate);
+        if (event.startDate.slice(0, 4) !== event.endDate.slice(0, 4)) range = formatDateRange(event); // 해를 넘기면 연도까지
+        var text;
+        if (dates.length <= SCHEDULE_LIST_MAX) {
+          text = range + " · 총 " + dates.length + "회 · " + dates.map(shortDate).join(", ");
+        } else {
+          text = range + " · " + (weekdaySummary(event) || "총 " + dates.length + "회");
+        }
+        return event.scheduleHolidayNote ? text + " · 공휴일은 원문 확인" : text;
+      }
+
+      // 상세 팝업: 날짜가 많으면 달별 전체 목록 + 일정 원문
+      function formatScheduleDetail(event) {
+        var lines = [];
+        if (hasRunDates(event) && event.dates.length > SCHEDULE_LIST_MAX) {
+          var byMonth = new Map();
+          event.dates.forEach(function (date) {
+            var parts = date.split("-");
+            var month = Number(parts[1]) + "월";
+            if (!byMonth.has(month)) byMonth.set(month, []);
+            byMonth.get(month).push(Number(parts[2]));
+          });
+          lines.push("진행일 " + event.dates.length + "회");
+          byMonth.forEach(function (days, month) {
+            lines.push(month + ": " + days.join(", "));
+          });
+        }
+        if (event.scheduleText) lines.push("일정 원문: " + event.scheduleText);
+        return lines.join("\n");
+      }
 
       function favButtonHtml(isFavorited) {
         return (
@@ -1853,7 +1948,7 @@
             escapeHtml(item.event.title) +
             "</div>" +
             '<div class="preview-date">' +
-            formatDateRange(item.event) +
+            escapeHtml(formatEventDates(item.event)) +
             "</div>" +
             '<div class="preview-place">' +
             escapeHtml(extractPlaceName(item.event.info) || "") + // 장소명 (9/28 함수 재사용)
