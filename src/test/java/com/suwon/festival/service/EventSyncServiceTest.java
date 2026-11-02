@@ -76,6 +76,18 @@ class EventSyncServiceTest {
   }
 
   @Test
+  void 모든_행이_실패하면_성공으로_넘기지_않음() {
+    EventItem a = item(880201L, "오류 1");
+    a.pubDate = "잘못된 값";
+    EventItem b = item(880202L, "오류 2");
+    b.pubDate = "잘못된 값";
+
+    assertThatThrownBy(() -> eventSyncService.syncItems(List.of(a, b)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("2건 모두");
+  }
+
+  @Test
   void 행사_0건_응답은_빈_목록() throws Exception {
     String xml = "<rss><channel><title>수원문화재단</title></channel></rss>";
     assertThat(EventSyncService.parseItems(xml)).isEmpty();

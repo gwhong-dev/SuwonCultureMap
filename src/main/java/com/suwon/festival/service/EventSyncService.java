@@ -74,6 +74,8 @@ public class EventSyncService {
   }
 
   // 받아 온 재단 행사 목록을 DB 에 반영 (테스트에서 목록을 직접 넣을 수 있게 분리). bodies: 행사별 본문 (진행 날짜 추출용, 저장 안 함)
+  // ⚠️ 여기에 @Transactional 을 붙이지 말 것: 행 하나의 DB 오류가 전체 트랜잭션을 rollback-only 로 만들어
+  //    건너뛰기(try · catch)가 의미 없어지고 뒤 행사 저장까지 조용히 사라짐. 저장은 행마다 각자 트랜잭션
   SyncResult syncItems(List<EventItem> items, Map<Long, String> bodies) {
     int savedCount = 0;
     int updatedCount = 0;
@@ -94,6 +96,10 @@ public class EventSyncService {
     }
     if (items.isEmpty()) {
       log.warn("재단 응답에 행사가 0건");
+    }
+    // 전부 실패면 행 문제가 아니라 DB 장애 · 형식 변경 같은 전체 문제 → 성공으로 넘기지 않음
+    if (skippedCount > 0 && skippedCount == items.size()) {
+      throw new IllegalStateException("재단 행사 " + skippedCount + "건 모두 처리 실패 (DB · 응답 형식 확인)");
     }
 
     return new SyncResult(savedCount, updatedCount, skippedCount);
