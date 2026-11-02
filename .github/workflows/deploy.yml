@@ -50,7 +50,7 @@ jobs:
           echo "$PAYLOAD" | base64 -d | jq '{sub, aud, ref, event_name, repository}'
 
       - name: AWS 임시 권한 받기
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ap-northeast-2

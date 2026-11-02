@@ -35,7 +35,7 @@
 
 ## 🧰 나중에 할 일 (발견 사항)
 - [ ] 서버 Docker 빌드가 옛 빌더 사용 (`DEPRECATED: The legacy builder`, Deploy #10) → 서버에 `docker-buildx` 설치 검토 (빌드 캐시 · 속도). 배포 중 `curl: (56)` 은 앱이 뜨는 동안의 재시도라 정상
-- [ ] `aws-actions/configure-aws-credentials@v4` 가 Node 20 지원 종료 경고 (Deploy #10) → 경고가 실패로 바뀌기 전에 Node 24 지원 버전으로 올리기
+- [x] Node 20 경고 해소: `configure-aws-credentials` v4→v6 · `upload-artifact` v4→v6 (둘 다 node24, 쓰는 입력값은 변경 없음, 11/2). 머지 후 Deploy 성공으로 확인
 - [x] 인스타 재개 결정: 공식 계정만, 문서 기준 판단 (11/2, 결정 문서에 Meta 원문 확인 표)
 - [ ] 인플루언서(개인) 계정 추가 검토 — 개인정보보호법 확인 먼저 (사용자 희망, 11/2)
 - [x] 인스타 대상 계정 허용 목록을 코드 · 시험으로 고정 (`OfficialInstagramAccounts`, 11/2)
