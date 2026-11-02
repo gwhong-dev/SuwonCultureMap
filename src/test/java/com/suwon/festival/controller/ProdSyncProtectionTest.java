@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import com.suwon.festival.security.SecurityHeadersFilter;
 import com.suwon.festival.service.EventSyncService;
 import com.suwon.festival.service.ScheduledSyncJob;
 import com.suwon.festival.service.instagram.InstagramSyncService;
@@ -77,6 +78,17 @@ class ProdSyncProtectionTest {
     assertThat(env.getProperty("server.servlet.session.cookie.secure")).isEqualTo("true");
     assertThat(env.getProperty("server.servlet.session.cookie.http-only")).isEqualTo("true");
     assertThat(env.getProperty("server.servlet.session.cookie.same-site")).isEqualTo("lax");
+  }
+
+  @Test
+  void 운영에서는_HSTS_헤더가_붙음() throws Exception {
+    // application-prod.properties 의 app.security.hsts=true 줄이 실제로 필터에 전달되는지
+    String hsts = MockMvcBuilders.webAppContextSetup(context)
+        .addFilters(context.getBean(SecurityHeadersFilter.class)).build()
+        .perform(MockMvcRequestBuilders.get("/"))
+        .andReturn().getResponse().getHeader("Strict-Transport-Security");
+
+    assertThat(hsts).isEqualTo("max-age=31536000");
   }
 
   @Test
