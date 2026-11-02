@@ -1,7 +1,13 @@
 // 진행 날짜 표시 규칙 시험: node --test src/test/js/schedule-format.test.js
 const test = require("node:test");
 const assert = require("node:assert");
-const { formatEventDates, formatScheduleDetail } = require("../../main/resources/static/schedule-format.js");
+const {
+  formatEventDates,
+  formatScheduleDetail,
+  eventStatus,
+  statusLabel,
+  ddayText,
+} = require("../../main/resources/static/schedule-format.js");
 
 const NOW_2026 = Date.UTC(2026, 10, 2);
 
@@ -186,4 +192,58 @@ test("날짜 모름 · 하루 행사 · 기간 밖 날짜는 고르지 않음 (�
   assert.strictEqual(calendarDateChoices({ startDate: "2026-11-01", endDate: "2026-11-30", scheduleStatus: "UNKNOWN", dates: [] }, NOW_2026), null);
   assert.strictEqual(calendarDateChoices(event("2026-11-14", "2026-11-14", ["2026-11-14"]), NOW_2026), null);
   assert.strictEqual(calendarDateChoices(event("2026-11-01", "2026-11-03", ["2026-11-16"]), NOW_2026), null);
+});
+
+// ===== 상태 배지 · D-day (시작일 · 종료일만으로, 오늘은 한국 시간) =====
+// 2026-11-02 12:00 KST (= 03:00 UTC)
+const NOW_KST_NOON = Date.UTC(2026, 10, 2, 3);
+const period = (startDate, endDate) => ({ startDate, endDate });
+
+test("오늘이 기간 안이면 운영중, 전이면 오픈예정, 후면 종료", () => {
+  assert.strictEqual(eventStatus(period("2026-11-01", "2026-11-30"), NOW_KST_NOON), "open");
+  assert.strictEqual(eventStatus(period("2026-11-20", "2026-11-22"), NOW_KST_NOON), "upcoming");
+  assert.strictEqual(eventStatus(period("2026-09-01", "2026-10-20"), NOW_KST_NOON), "ended");
+});
+
+test("시작일 · 종료일 당일은 운영중", () => {
+  assert.strictEqual(eventStatus(period("2026-11-02", "2026-11-10"), NOW_KST_NOON), "open");
+  assert.strictEqual(eventStatus(period("2026-10-20", "2026-11-02"), NOW_KST_NOON), "open");
+});
+
+test("종료일이 없으면 시작일 하루 행사로, 둘 다 없으면 배지 없음", () => {
+  assert.strictEqual(eventStatus(period("2026-11-02", null), NOW_KST_NOON), "open");
+  assert.strictEqual(eventStatus(period("2026-11-01", null), NOW_KST_NOON), "ended");
+  assert.strictEqual(eventStatus({}, NOW_KST_NOON), null);
+  assert.strictEqual(ddayText({}, NOW_KST_NOON), null);
+});
+
+test("시작일만 없으면 이미 시작한 것으로 보고 종료일까지 운영중 (지난 행사 판별과 같은 기준)", () => {
+  assert.strictEqual(eventStatus(period(null, "2026-11-10"), NOW_KST_NOON), "open");
+  assert.strictEqual(ddayText(period(null, "2026-11-10"), NOW_KST_NOON), "종료까지 D-8");
+  assert.strictEqual(eventStatus(period(null, "2026-10-20"), NOW_KST_NOON), "ended");
+});
+
+test("상태는 한국 시간 기준 (UTC 로는 전날 밤)", () => {
+  const kst0030 = Date.UTC(2026, 10, 2, 15, 30); // 11/3 00:30 KST
+  assert.strictEqual(eventStatus(period("2026-11-03", "2026-11-03"), kst0030), "open");
+  assert.strictEqual(eventStatus(period("2026-11-02", "2026-11-02"), kst0030), "ended");
+});
+
+test("운영중은 종료까지, 오픈예정은 시작까지 남은 날", () => {
+  assert.strictEqual(ddayText(period("2026-11-01", "2026-11-30"), NOW_KST_NOON), "종료까지 D-28");
+  assert.strictEqual(ddayText(period("2026-11-20", "2026-11-22"), NOW_KST_NOON), "D-18");
+  assert.strictEqual(ddayText(period("2026-11-03", "2026-11-03"), NOW_KST_NOON), "D-1");
+});
+
+test("마지막 날은 오늘 종료, 끝난 행사는 D-day 없음", () => {
+  assert.strictEqual(ddayText(period("2026-10-20", "2026-11-02"), NOW_KST_NOON), "오늘 종료");
+  assert.strictEqual(ddayText(period("2026-11-02", null), NOW_KST_NOON), "오늘 종료");
+  assert.strictEqual(ddayText(period("2026-09-01", "2026-10-20"), NOW_KST_NOON), null);
+});
+
+test("배지 글자", () => {
+  assert.strictEqual(statusLabel("open"), "운영중");
+  assert.strictEqual(statusLabel("upcoming"), "오픈예정");
+  assert.strictEqual(statusLabel("ended"), "종료");
+  assert.strictEqual(statusLabel(null), "");
 });

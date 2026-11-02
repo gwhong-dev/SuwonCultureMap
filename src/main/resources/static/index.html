@@ -412,7 +412,8 @@
       #sheetHeader,
       #previewStrip,
       #tabBar,
-      .card-fav {
+      .card-fav,
+      .badge-row {
         display: none;
       }
 
@@ -723,7 +724,7 @@
           position: relative;
           flex: 0 0 min(86%, 420px);
           display: flex;
-          height: 116px;
+          min-height: 116px; /* 배지 줄이 들어가 제목이 잘리지 않게 높이는 내용에 맞춤 */
           overflow: hidden;
           border: 1px solid var(--line);
           background: var(--bg);
@@ -734,7 +735,7 @@
         .preview-card img {
           flex: none;
           width: 116px;
-          height: 100%;
+          align-self: stretch;
           object-fit: cover;
           background: var(--surface);
         }
@@ -796,6 +797,54 @@
           right: 6px;
           background: transparent;
           box-shadow: none;
+        }
+
+        /* ----- 상태 배지 + D-day (docs/design/mobile-design-v1.md 2번) ----- */
+        .badge-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+          align-items: center;
+        }
+        .status-badge,
+        .dday-badge {
+          box-sizing: border-box;
+          padding: 2px 6px;
+          font-size: 11px;
+          font-weight: 700;
+          line-height: 16px;
+          white-space: nowrap;
+        }
+        .status-badge.open {
+          background: var(--accent);
+          color: var(--on-accent);
+        }
+        .status-badge.upcoming {
+          background: var(--blue-soft);
+          color: var(--blue);
+        }
+        .status-badge.ended {
+          background: var(--gray-soft);
+          color: var(--gray);
+        }
+        .dday-badge {
+          background: var(--accent-soft);
+          color: var(--accent-ink);
+        }
+        /* 목록에서는 폭을 고정해 제목 시작선을 맞춤 */
+        #list .status-badge {
+          width: 60px;
+          text-align: center;
+        }
+        .event-body .badge-row {
+          order: -2; /* 제목(-1)보다 위 */
+          margin-bottom: 4px;
+        }
+        .preview-body .badge-row {
+          margin-bottom: 1px;
+        }
+        .modal-body .badge-row {
+          margin: 0 0 10px;
         }
 
         /* ----- 하단 탭 (높이 64px, 아이콘 22px + 글자 11px, 선택 = 주 색 + 굵게) ----- */
@@ -1030,6 +1079,7 @@
           <div id="modalFavBadge" class="modal-fav-badge" hidden>★ 찜한 행사</div>
           <div id="modalDate" class="modal-date"></div>
           <h2 id="modalTitle" class="modal-title"></h2>
+          <div id="modalBadges"></div>
           <div id="modalSchedule" class="modal-schedule"></div>
           <div id="modalInfo" class="modal-info"></div>
           <!-- 진행 날짜가 정해진 여러 날 행사: 캘린더에 넣을 날짜 하나를 고름 -->
@@ -1390,11 +1440,22 @@
         renderCategoryChips(); // 모바일용 칩도 같은 목록으로 생성
       }
 
-      // ===== 지난 행사 판별 (endDate가 오늘보다 이전이면 지난 행사) =====
+      // ===== 지난 행사 판별 = 상태 배지의 "종료" 와 같은 기준 (한국 시간, schedule-format.js) =====
       function isPastEvent(event) {
-        if (!event.endDate) return false; // 종료일 정보 없으면 지난 행사로 취급 안 함
-        var today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
-        return event.endDate < today;
+        return eventStatus(event) === "ended";
+      }
+
+      // 상태 배지 + D-day 줄 (모바일 전용 — PC 는 CSS 로 숨김). 날짜 없는 행사는 빈 문자열
+      function badgeRowHtml(event) {
+        var status = eventStatus(event);
+        if (!status) return "";
+        var dday = ddayText(event);
+        return (
+          '<div class="badge-row">' +
+          '<span class="status-badge ' + status + '">' + statusLabel(status) + "</span>" +
+          (dday ? '<span class="dday-badge">' + dday + "</span>" : "") +
+          "</div>"
+        );
       }
 
       // 카드 날짜 줄: 날짜 필터에서 날짜를 모르는 행사면 "기간 중 · 일정 확인" 을 붙임
@@ -1533,6 +1594,7 @@
             '<div class="title">' +
             escapeHtml(item.event.title) +
             "</div>" +
+            badgeRowHtml(item.event) + // 모바일: 상태 · D-day (CSS order 로 제목 위에 놓임)
             '<div class="info">' +
             escapeHtml(infoText) +
             "</div>" +
@@ -1677,6 +1739,7 @@
       function openDetailModal(event) {
         document.getElementById("modalImage").src = event.imageUrl || "";
         document.getElementById("modalTitle").textContent = event.title;
+        document.getElementById("modalBadges").innerHTML = badgeRowHtml(event);
         // 날짜 필터 중이면 카드와 같이 "기간 중 · 일정 확인" 을 붙임 (상세만 보고 오늘 한다고 믿지 않게)
         var runDays = filterDays(document.getElementById("dateFilter").value);
         document.getElementById("modalDate").textContent = cardDateText({
@@ -2095,6 +2158,7 @@
                 "</span>"
               : "") +
             '<div class="preview-body">' +
+            badgeRowHtml(item.event) +
             '<div class="preview-title">' +
             escapeHtml(item.event.title) +
             "</div>" +
