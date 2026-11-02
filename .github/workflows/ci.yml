@@ -128,6 +128,12 @@ jobs:
           $COMPOSE up -d --build db app
           wait_app
 
+          # 헬스체크: MySQL 연결까지 UP, 상세 정보와 다른 actuator 엔드포인트는 공개하지 않음
+          HEALTH="$(curl -fsS http://127.0.0.1:8080/actuator/health)"
+          echo "health: $HEALTH"
+          echo "$HEALTH" | jq -e '.status == "UP" and (has("components") | not) and (has("details") | not)'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/actuator/env)" = 404
+
           COUNT_SQL='SELECT COUNT(*) FROM suwon_culture_map.flyway_schema_history WHERE success = 1;'
           BEFORE="$(sql -e "$COUNT_SQL")"
           test "$BEFORE" -ge 4

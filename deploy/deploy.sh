@@ -79,11 +79,11 @@ main() {
   echo "[완료] ${after:0:7} 배포 · 응답 확인 ($(date '+%F %T'))"
 }
 
-# 앱은 서버 안(127.0.0.1:8080)에서만 열려 있음
+# 앱은 서버 안(127.0.0.1:8080)에서만 열려 있음. 헬스체크는 DB 연결까지 확인 (DOWN 이면 503)
 wait_app() {
   local i
   for i in $(seq 1 60); do
-    if curl -fsS -o /dev/null --max-time 5 http://127.0.0.1:8080/api/events; then
+    if curl -fsS -o /dev/null --max-time 5 http://127.0.0.1:8080/actuator/health; then
       return 0
     fi
     sleep 5
