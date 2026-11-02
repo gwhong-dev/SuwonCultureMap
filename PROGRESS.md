@@ -34,7 +34,6 @@
 - [ ] Meta Direct Support 접근 경로 재확인 후 문의 (`docs/decisions/2026-11-02-instagram-scope-off.md`, 서면 허용 또는 앱 심사 통과 전에는 인스타 수집을 켜지 않음)
 - [ ] 재단 이용 조건 회신 대기 (swcf_kr@swcf.or.kr 발송 예정)
 - [ ] 저장된 인스타 행사 DB 삭제 (스크립트 준비됨, 승인 대기): `scripts/instagram-data-count.sql` 로 건수 확인 → 백업 → `scripts/instagram-data-delete.sql`. 스위치를 서버에 반영한 뒤에 실행
-- [ ] `ScheduleDisplayPageTest` 캘린더 버튼 시험이 Windows 체크아웃(CRLF)에서만 실패: 시험 문자열이 `\n` 고정. CI(Linux)는 통과 (PR 인스타 수집 중단 때 발견)
 - [ ] 인스타 수집을 다시 켤 때: 행사 상세가 비어 보임 (11/2 사용자 아이폰). 사진 · `info` 가 없어 회색 칸 + 빈 본문 → `place` · `timeText` · 출처를 응답에 넣고 사진 칸 숨기기
 - [ ] 진행 날짜 7번 PR: 인스타 대표 응답 날짜를 숨긴 행과 합치면 캘린더 `checkRunDate`(`EventCalendarService`)도 같은 합집합으로 검사 — 안 그러면 화면에 보이는 날짜를 골라도 400 (PR #72 리뷰)
 - [ ] 캘린더 날짜 선택: 여러 날 행사의 `시간` 칸이 한 가지(`14:00`)면 고른 날에 그 시간을 지정함 — 날마다 시간이 다른 행사가 있는지 실데이터 확인 (PR #72 리뷰)
