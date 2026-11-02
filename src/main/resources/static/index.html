@@ -483,6 +483,12 @@
         #topbar #searchInput::placeholder {
           color: var(--sub);
         }
+        /* 어두운 테마: 돋보기 아이콘은 배경 이미지라 토큰을 못 써서 색을 따로 지정 (sub 어두운 값) */
+        @media (prefers-color-scheme: dark) {
+          #topbar #searchInput {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A9A39B' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E");
+          }
+        }
         #mobileMenuBtn {
           display: flex;
           align-items: center;
@@ -1142,7 +1148,7 @@
           <div id="modalFavBadge" class="modal-fav-badge" hidden>★ 찜한 행사</div>
           <div id="modalDate" class="modal-date"></div>
           <h2 id="modalTitle" class="modal-title"></h2>
-          <div id="modalBadges" class="badge-row"></div>
+          <div id="modalBadges"></div>
           <div id="modalSchedule" class="modal-schedule"></div>
           <div id="modalInfo" class="modal-info"></div>
           <!-- 진행 날짜가 정해진 여러 날 행사: 캘린더에 넣을 날짜 하나를 고름 -->

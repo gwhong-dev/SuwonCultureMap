@@ -155,13 +155,15 @@ function matchRunDays(event, days) {
 var MAYBE_RUN_NOTE = "기간 중 · 일정 확인";
 
 // ===== 상태 배지 · D-day (디자인 docs/design/mobile-design-v1.md 2번) =====
-// 시작일 · 종료일만으로 계산 (오늘은 한국 시간). 날짜 없는 행사는 null → 배지 없음
+// 시작일 · 종료일만으로 계산 (오늘은 한국 시간). 둘 다 없는 행사는 null → 배지 없음
 // "open" 운영중 · "upcoming" 오픈예정 · "ended" 종료
+// 한쪽만 있으면 그 날 하루 행사로 봄. 단 시작일만 없으면 이미 시작한 것으로 보고 종료일까지 운영중
 function eventStatus(event, now) {
-  if (!event.startDate) return null;
+  var start = event.startDate;
+  var end = event.endDate || start;
+  if (!end) return null;
   var today = koreaToday(now);
-  var end = event.endDate || event.startDate;
-  if (today < event.startDate) return "upcoming";
+  if (start && today < start) return "upcoming";
   if (today > end) return "ended";
   return "open";
 }
