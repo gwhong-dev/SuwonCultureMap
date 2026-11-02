@@ -210,11 +210,17 @@ test("시작일 · 종료일 당일은 운영중", () => {
   assert.strictEqual(eventStatus(period("2026-10-20", "2026-11-02"), NOW_KST_NOON), "open");
 });
 
-test("종료일이 없으면 시작일 하루 행사로, 시작일이 없으면 배지 없음", () => {
+test("종료일이 없으면 시작일 하루 행사로, 둘 다 없으면 배지 없음", () => {
   assert.strictEqual(eventStatus(period("2026-11-02", null), NOW_KST_NOON), "open");
   assert.strictEqual(eventStatus(period("2026-11-01", null), NOW_KST_NOON), "ended");
   assert.strictEqual(eventStatus({}, NOW_KST_NOON), null);
   assert.strictEqual(ddayText({}, NOW_KST_NOON), null);
+});
+
+test("시작일만 없으면 이미 시작한 것으로 보고 종료일까지 운영중 (지난 행사 판별과 같은 기준)", () => {
+  assert.strictEqual(eventStatus(period(null, "2026-11-10"), NOW_KST_NOON), "open");
+  assert.strictEqual(ddayText(period(null, "2026-11-10"), NOW_KST_NOON), "종료까지 D-8");
+  assert.strictEqual(eventStatus(period(null, "2026-10-20"), NOW_KST_NOON), "ended");
 });
 
 test("상태는 한국 시간 기준 (UTC 로는 전날 밤)", () => {
