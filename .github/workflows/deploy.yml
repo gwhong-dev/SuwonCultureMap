@@ -38,6 +38,17 @@ jobs:
       # CI 가 통과한 바로 그 커밋 (그 사이 main 에 더 머지돼도 아직 검사 안 된 커밋은 배포하지 않음)
       TARGET_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
+      # AWS 가 역할을 거부할 때(sts:AssumeRoleWithWebIdentity) 신뢰 정책과 비교할 값.
+      # 토큰 자체는 출력하지 않고, 공개돼도 되는 칸(sub · aud · ref)만 보여 줌
+      - name: GitHub 신분 확인 (진단용)
+        run: |
+          TOKEN="$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r .value)"
+          echo "::add-mask::$TOKEN"
+          PAYLOAD="$(echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+')"
+          while [ $(( ${#PAYLOAD} % 4 )) -ne 0 ]; do PAYLOAD="$PAYLOAD="; done
+          echo "$PAYLOAD" | base64 -d | jq '{sub, aud, ref, event_name, repository}'
+
       - name: AWS 임시 권한 받기
         uses: aws-actions/configure-aws-credentials@v4
         with:
