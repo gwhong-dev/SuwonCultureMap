@@ -59,6 +59,7 @@ public class EventCalendarService {
   }
 
   // 고른 날짜 검사: 저장된 진행 날짜 중 하나여야 함 (기간 밖 · 진행하지 않는 날 · 날짜 모르는 행사 → 400)
+  // ⚠️ 7번 PR(인스타 대표에 숨긴 행 날짜 합치기)에서 응답 날짜가 합집합이 되면 여기도 같은 합집합으로 검사해야 함
   public void checkRunDate(Event event, LocalDate runDate) {
     if (runDate == null) return;
     boolean known = Event.SCHEDULE_DATES.equals(event.getScheduleStatus())

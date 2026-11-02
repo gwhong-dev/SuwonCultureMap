@@ -1596,7 +1596,9 @@
           });
           calDateSelect.value = choices.selected;
         }
-        calDateWrap.hidden = !choices || choices.dates.length < 2; // 하나뿐이면 고를 필요 없음 (그 날로 저장)
+        // 하나뿐이어도 보여 줌 (그 날 하루로 저장된다는 걸 알 수 있게), 고를 게 없으니 잠금
+        calDateWrap.hidden = !choices;
+        calDateSelect.disabled = !!choices && choices.dates.length < 2;
         function updateCalendarLinks() {
           var query = choices ? "?date=" + encodeURIComponent(calDateSelect.value) : "";
           icsBtn.href = "/api/events/" + event.id + "/calendar.ics" + query;
