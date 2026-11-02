@@ -160,7 +160,7 @@ IAM → 자격 증명 공급자 → 공급자 추가 → `OpenID Connect`
 
 1. IAM → 역할 → 역할 생성 → `웹 자격 증명` → 공급자 `token.actions.githubusercontent.com` · 대상 `sts.amazonaws.com`
 2. GitHub 조직 `gwhong-dev` · 리포지토리 `SuwonCultureMap` · 브랜치 `main` → 다음 (권한 정책은 고르지 않고 넘어감) → 이름 `suwon-github-deploy` → 생성
-3. 만든 역할 → 신뢰 관계 탭에서 조건이 아래와 같은지 확인 (다르면 고침)
+3. 만든 역할 → 신뢰 관계 탭에서 조건이 아래와 같은지 확인. 콘솔이 `sub` 를 `StringLike` 아래에 만들었어도 값이 같으면 그대로 둔다
 
 ```json
 "StringEquals": {
@@ -218,7 +218,9 @@ GitHub → Actions → `Deploy` → Run workflow (main) → 초록불 + 로그�
 | `InvalidInstanceId` | ① 이 안 됨 (플릿 관리자에 `온라인` 이 아님), 또는 `EC2_INSTANCE_ID` 오타 |
 | `AccessDenied ... ssm:SendCommand` | ③-4 정책의 계정 ID · 인스턴스 ID 확인 |
 | `서버에서 고친 파일이 있음` | 서버에서 `git status` → 직접 고친 파일을 되돌리거나 PR 로 옮김 |
-| `새 앱이 5분 안에 응답하지 않음` | 출력된 앱 로그 확인. DB 구조 변경이 없으면 출력된 되돌리기 명령 실행 |
+| `새 앱이 5분 안에 응답하지 않음` | 출력된 앱 로그 확인. DB 구조 변경이 없으면 출력된 되돌리기 명령(`git reset --hard 이전커밋`) 실행 → 서버는 main 에 남아 다음 배포가 이어짐. `git checkout 커밋` 은 쓰지 않는다 (main 에서 벗어나 이후 배포가 `main 브랜치가 아님` 으로 멈춤) |
+| `빌드 · 실행 오류` | 출력된 마지막 40줄 확인. 전체는 서버 `.git/suwon-deploy-build.log` |
+| `25분 초과` 경고 | Systems Manager → Run Command 에서 명령 ID 로 실제 결과 확인 |
 
 **백업 확인과 복사** (주 1회)
 
