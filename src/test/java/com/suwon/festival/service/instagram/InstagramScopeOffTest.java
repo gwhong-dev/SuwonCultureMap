@@ -107,6 +107,19 @@ class InstagramScopeOffTest {
   }
 
   @Test
+  void 합치기_미리보기_API_응답에_인스타_행사가_없음() throws Exception {
+    eventRepository.saveAndFlush(event("인스타 묶음").place("가상 홀")
+        .source(Event.SOURCE_INSTAGRAM).sourceKey("범위축소#2").build());
+    eventRepository.saveAndFlush(event("인스타 묶음").place("가상 홀")
+        .source(Event.SOURCE_INSTAGRAM).sourceKey("범위축소#3").build());
+
+    String body = mockMvc.perform(get("/api/events/merge/preview")).andReturn().getResponse()
+        .getContentAsString(StandardCharsets.UTF_8);
+
+    assertThat(body).contains("\"groupCount\"").doesNotContain("가상 행사 인스타");
+  }
+
+  @Test
   void 인스타_행사를_찜했어도_찜_목록에_보이지_않고_찜_기록은_남음() {
     saveFavorite(instagram);
     saveFavorite(foundation);

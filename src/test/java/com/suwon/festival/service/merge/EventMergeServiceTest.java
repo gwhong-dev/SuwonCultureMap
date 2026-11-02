@@ -25,7 +25,7 @@ import com.suwon.festival.repository.InstagramMediaRepository;
 
 // 합치기 계산 → merged_into_id 반영 (docs/event-merge.md 5 · 6번)
 //  - 다른 테스트가 남긴 행과 섞이지 않게 제목 · 좌표 · 날짜를 이 테스트만의 값으로 씀
-@SpringBootTest
+@SpringBootTest(properties = "instagram.sync.enabled=true") // 재단 · 인스타 묶음의 미리보기도 시험함
 @ActiveProfiles("test")
 @Transactional
 class EventMergeServiceTest {
