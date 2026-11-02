@@ -107,6 +107,60 @@ function formatScheduleDetail(event) {
   return lines.join("\n");
 }
 
+// ===== "오늘 진행" · "이번 주말" 필터 (설계 7번) =====
+// 오늘은 한국 시간 기준 (toISOString 은 UTC 라 오전 9시 전엔 전날이 됨)
+function koreaToday(now) {
+  return new Date((now === undefined ? Date.now() : now) + 9 * 3600000).toISOString().slice(0, 10);
+}
+
+function addDays(isoDate, days) {
+  return new Date(utcDay(isoDate) + days * 86400000).toISOString().slice(0, 10);
+}
+
+// 오늘 이후 가장 가까운 토 · 일. 일요일이면 남은 주말은 오늘 하루
+function upcomingWeekend(now) {
+  var today = koreaToday(now);
+  var weekday = new Date(utcDay(today)).getUTCDay();
+  if (weekday === 0) return [today];
+  var saturday = addDays(today, 6 - weekday);
+  return [saturday, addDays(saturday, 1)];
+}
+
+function filterDays(filter, now) {
+  if (filter === "today") return [koreaToday(now)];
+  if (filter === "weekend") return upcomingWeekend(now);
+  return null;
+}
+
+// 고른 날에 진행하나: "yes" 확실 · "maybe" 기간 안이지만 날짜 모름 · "no"
+// 모름 행사는 숨기지 않고 "기간 중 · 일정 확인" 으로 보여 줌 (행사가 사라지지 않게)
+function matchRunDays(event, days) {
+  if (!event.startDate) return "no";
+  var end = event.endDate || event.startDate;
+  if (hasRunDates(event)) {
+    return days.some(function (day) {
+      return event.dates.indexOf(day) !== -1;
+    })
+      ? "yes"
+      : "no";
+  }
+  var inPeriod = days.some(function (day) {
+    return day >= event.startDate && day <= end;
+  });
+  if (!inPeriod) return "no";
+  // 하루짜리 행사는 기간이 곧 진행일
+  return event.startDate === end ? "yes" : "maybe";
+}
+
+var MAYBE_RUN_NOTE = "기간 중 · 일정 확인";
+
 if (typeof module !== "undefined") {
-  module.exports = { formatEventDates: formatEventDates, formatScheduleDetail: formatScheduleDetail };
+  module.exports = {
+    formatEventDates: formatEventDates,
+    formatScheduleDetail: formatScheduleDetail,
+    koreaToday: koreaToday,
+    upcomingWeekend: upcomingWeekend,
+    filterDays: filterDays,
+    matchRunDays: matchRunDays,
+  };
 }

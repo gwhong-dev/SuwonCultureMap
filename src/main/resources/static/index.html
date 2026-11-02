@@ -397,6 +397,7 @@
         }
         /* 드롭다운·체크박스는 아래 칩 버튼으로 대체 */
         #topbar #categorySelect,
+        #topbar #dateFilter,
         #topbar .past-toggle {
           display: none;
         }
@@ -849,6 +850,11 @@
       <select id="categorySelect">
         <option value="all">전체 카테고리</option>
       </select>
+      <select id="dateFilter" aria-label="진행 날짜">
+        <option value="all">전체 날짜</option>
+        <option value="today">오늘 진행</option>
+        <option value="weekend">이번 주말</option>
+      </select>
       <input type="text" id="searchInput" placeholder="행사 이름 검색" enterkeyhint="search" />
       <label class="past-toggle">
         <input type="checkbox" id="showPastCheckbox" />
@@ -1256,11 +1262,18 @@
         return event.endDate < today;
       }
 
-      // ===== 필터링 (검색어 + 카테고리 + 지난 행사 여부, '찜'은 즐겨찾기 목록으로 필터) =====
+      // 카드 날짜 줄: 날짜 필터에서 날짜를 모르는 행사면 "기간 중 · 일정 확인" 을 붙임
+      function cardDateText(item) {
+        var text = formatEventDates(item.event);
+        return item.runMatch === "maybe" ? text + " · " + MAYBE_RUN_NOTE : text;
+      }
+
+      // ===== 필터링 (검색어 + 카테고리 + 진행 날짜 + 지난 행사 여부, '찜'은 즐겨찾기 목록으로 필터) =====
       function filterMarkers() {
         var keyword = document.getElementById("searchInput").value.trim();
         var selectedCategory = document.getElementById("categorySelect").value;
         var showPast = document.getElementById("showPastCheckbox").checked;
+        var runDays = filterDays(document.getElementById("dateFilter").value); // 한국 시간 기준, 필터 없으면 null
 
         updateChipActive(); // 모바일 칩 선택 표시 동기화
 
@@ -1285,7 +1298,10 @@
 
           var matchesPast = showPast || !isPastEvent(item.event);
 
-          var visible = matchesKeyword && matchesCategory && matchesPast;
+          item.runMatch = runDays ? matchRunDays(item.event, runDays) : null;
+          var matchesDate = item.runMatch !== "no";
+
+          var visible = matchesKeyword && matchesCategory && matchesPast && matchesDate;
 
           if (visible) {
             visibleItems.push(item);
@@ -1362,7 +1378,7 @@
           var div = document.createElement("div");
           div.className = "event-item";
 
-          var dateText = formatEventDates(item.event);
+          var dateText = cardDateText(item);
 
           var imgSrc = item.event.imageUrl || "";
           var infoText = extractSummaryInfo(item.event.info || ""); // 사이드바엔 이용료/장소/시간만
@@ -1437,6 +1453,9 @@
         .addEventListener("change", filterMarkers);
       document
         .getElementById("showPastCheckbox")
+        .addEventListener("change", filterMarkers);
+      document
+        .getElementById("dateFilter")
         .addEventListener("change", filterMarkers);
 
       // ===== 로그인 상태 + 내 즐겨찾기 목록 확인 =====
@@ -1681,6 +1700,24 @@
           chips.appendChild(chip);
         });
 
+        // 날짜 칩 2개: 누르면 그 날짜 필터, 한 번 더 누르면 해제 (카테고리 칩과 함께 쓸 수 있음)
+        var dateSelect = document.getElementById("dateFilter");
+        [
+          { value: "today", label: "📅 오늘 진행" },
+          { value: "weekend", label: "📅 이번 주말" },
+        ].forEach(function (option, index) {
+          var chip = document.createElement("button");
+          chip.type = "button";
+          chip.className = "chip";
+          chip.dataset.date = option.value;
+          chip.textContent = option.label;
+          chip.addEventListener("click", function () {
+            dateSelect.value = dateSelect.value === option.value ? "all" : option.value;
+            filterMarkers();
+          });
+          chips.insertBefore(chip, chips.children[index] || null); // 맨 앞에 (가로 스크롤 뒤에 숨지 않게)
+        });
+
         // '지난 행사' 칩은 기존 체크박스를 대신 눌러줌
         var pastChip = document.createElement("button");
         pastChip.type = "button";
@@ -1699,11 +1736,13 @@
       function updateChipActive() {
         var selected = document.getElementById("categorySelect").value;
         var showPast = document.getElementById("showPastCheckbox").checked;
+        var dateFilter = document.getElementById("dateFilter").value;
         document
           .querySelectorAll("#categoryChips .chip")
           .forEach(function (chip) {
-            var active =
-              chip.dataset.value === "__past"
+            var active = chip.dataset.date
+              ? chip.dataset.date === dateFilter
+              : chip.dataset.value === "__past"
                 ? showPast
                 : chip.dataset.value === selected;
             chip.classList.toggle("active", active);
@@ -1854,7 +1893,7 @@
             escapeHtml(item.event.title) +
             "</div>" +
             '<div class="preview-date">' +
-            escapeHtml(formatEventDates(item.event)) +
+            escapeHtml(cardDateText(item)) +
             "</div>" +
             '<div class="preview-place">' +
             escapeHtml(extractPlaceName(item.event.info) || "") + // 장소명 (9/28 함수 재사용)
