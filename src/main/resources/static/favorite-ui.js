@@ -47,11 +47,17 @@ function favoriteErrorText(serverText) {
     : "찜을 저장하지 못했어요. 잠시 뒤 다시 시도해 주세요";
 }
 
+// 세션이 만료된 채로 ♡ 를 누른 경우: 서버(FavoriteController)가 400 "로그인이 필요합니다." 를 보냄
+function isLoginRequiredError(serverText) {
+  return (serverText || "").trim() === "로그인이 필요합니다.";
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     favoriteEmptyState: favoriteEmptyState,
     favoriteToast: favoriteToast,
     FAVORITE_LOGIN_TOAST: FAVORITE_LOGIN_TOAST,
     favoriteErrorText: favoriteErrorText,
+    isLoginRequiredError: isLoginRequiredError,
   };
 }

@@ -6,6 +6,7 @@ const {
   favoriteToast,
   FAVORITE_LOGIN_TOAST,
   favoriteErrorText,
+  isLoginRequiredError,
 } = require("../../main/resources/static/favorite-ui.js");
 
 test("빈 찜 탭: 로그인 안 했으면 로그인 버튼 (찜 개수와 상관없이)", () => {
@@ -48,4 +49,12 @@ test("실패 토스트: 서버 안내 글은 그대로, 비었거나 HTML · 긴
   assert.strictEqual(favoriteErrorText(null), fallback);
   assert.strictEqual(favoriteErrorText("<html><body>502 Bad Gateway</body></html>"), fallback);
   assert.strictEqual(favoriteErrorText("가".repeat(61)), fallback);
+});
+
+test("세션 만료 판별: 서버의 '로그인이 필요합니다.' 만 (다른 오류 글은 아님)", () => {
+  assert.strictEqual(isLoginRequiredError("로그인이 필요합니다."), true);
+  assert.strictEqual(isLoginRequiredError(" 로그인이 필요합니다.\n"), true);
+  assert.strictEqual(isLoginRequiredError("이미 즐겨찾기한 행사입니다."), false);
+  assert.strictEqual(isLoginRequiredError(""), false);
+  assert.strictEqual(isLoginRequiredError(null), false);
 });

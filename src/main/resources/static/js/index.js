@@ -1126,6 +1126,9 @@ function toggleFavorite(eventId) {
     return;
   }
 
+  if (pendingFavoriteIds.has(eventId)) return; // 요청 중에 또 누르면 무시 (같은 요청이 두 번 가서 "이미 즐겨찾기" 오류가 나지 않게)
+  pendingFavoriteIds.add(eventId);
+
   var isFavorited = favoriteEventIds.has(eventId);
   var method = isFavorited ? "DELETE" : "POST";
 
@@ -1133,6 +1136,11 @@ function toggleFavorite(eventId) {
     .then(function (response) {
       if (!response.ok) {
         return response.text().then(function (text) {
+          if (isLoginRequiredError(text)) {
+            // 세션 만료: 화면은 로그인 상태로 남아 있음 → 비로그인으로 바꾸고 로그인 버튼 토스트
+            isLoggedIn = false;
+            throw new Error("login");
+          }
           throw new Error(favoriteErrorText(text));
         });
       }
@@ -1147,10 +1155,19 @@ function toggleFavorite(eventId) {
       showToast(toast.text, toast.actionLabel, showFavoriteList);
     })
     .catch(function (err) {
+      if (!isLoggedIn) {
+        showToast(FAVORITE_LOGIN_TOAST.text, FAVORITE_LOGIN_TOAST.actionLabel, goToLogin);
+        checkAuth(); // 상단 로그인 표시 · ♥ 표시도 비로그인 기준으로 다시 그림
+        return;
+      }
       // 네트워크 끊김이면 fetch 가 "Failed to fetch" 같은 영어 글을 던짐 → 기본 문구로
       showToast(err instanceof TypeError ? favoriteErrorText("") : err.message);
+    })
+    .finally(function () {
+      pendingFavoriteIds.delete(eventId);
     });
 }
+var pendingFavoriteIds = new Set(); // 찜 요청이 아직 안 끝난 행사
 
 function goToLogin() {
   location.href = "login.html";
@@ -1163,6 +1180,7 @@ function showFavoriteList() {
     selectTab("fav");
     return;
   }
+  if (sidebarCollapsed) sidebarToggleBtn.click(); // PC: 사이드바를 접어 뒀으면 펼쳐서 찜 목록이 보이게
   document.getElementById("categorySelect").value = "찜";
   filterMarkers();
 }
@@ -1641,9 +1659,26 @@ function showToast(message, actionLabel, onAction) {
     if (onAction) onAction();
   };
   toast.hidden = false;
+  toastDuration = actionLabel ? 4000 : 2500; // 버튼 있는 토스트는 누를 시간을 더 줌
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(hideToast, 2500);
+  toastTimer = setTimeout(hideToast, toastDuration);
 }
+var toastDuration = 2500;
+// 마우스를 올리거나 키보드로 버튼에 가 있는 동안은 사라지지 않게
+function pauseToast() {
+  clearTimeout(toastTimer);
+}
+function resumeToast() {
+  if (document.getElementById("toast").hidden) return;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, toastDuration);
+}
+["mouseenter", "focusin"].forEach(function (type) {
+  document.getElementById("toast").addEventListener(type, pauseToast);
+});
+["mouseleave", "focusout"].forEach(function (type) {
+  document.getElementById("toast").addEventListener(type, resumeToast);
+});
 function hideToast() {
   clearTimeout(toastTimer);
   document.getElementById("toast").hidden = true;
