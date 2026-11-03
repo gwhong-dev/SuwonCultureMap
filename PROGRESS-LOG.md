@@ -162,6 +162,9 @@
 | 11/2 | 작업 세션 | 아이폰 1차 확인 5건 보완 PR — ① `#app overflow:hidden` + `html` 바탕색(탭 · 사파리 주소창 뒤 비침) ② `kakaoRouteAppUrl`(kakaomap://route 대중교통) → 폰은 앱 먼저, 2초 안에 안 떠나면 웹 `/link/to/` ③ 상세 · 길찾기 열림을 `history.replaceState` 로 `?event=번호&route=1` 기록, 다시 열리면 복원 ④ 위치 칸 `min-height` + `scroll-margin-top`, 탭 스크롤을 화면 좌표로 계산 ⑤ 공유 하단 창(카카오톡 `Kakao.Share.sendDefault` 피드 · 링크 복사). node 시험 +1, Playwright(아이폰 13 크기 · SDK 가짜)로 복원 · 탭 · 공유 · 앱→웹 대체 확인. 검증 ⚠️ 3건 반영: 길찾기 창 복원은 모바일만(PC 노출 회귀) · 앱 확인창에서 망설여도 웹이 같이 열리지 않게 2.5초 + 경과 시간 검사 · CSP `form-action` 에 `sharer.kakao.com` 허용(테스트 +1) |
 | 11/3 | 사용자 | 머지 규칙 재변경 — auto-merge 버튼(#98) 대신 **Claude 가 직접 머지** (CI 통과 + M · L 검증 댓글 뒤, "머지하지 마" 한 PR 만 보류). #99 를 이 방식으로 머지 (`CLAUDE.md` 3 · 4-7번) |
 | 11/3 | 작업 세션 | 포트폴리오 v1 완료 표시 — 시점 고정 스냅샷 = #97(`43a1b9c`, 11/2 기준), 사이트는 계속 개선 · 변경은 Releases로. Release 본문 `docs/releases/portfolio-v1.md` 추가. 클라우드 세션은 태그 push · Release API 모두 403 → 로컬 세션에서 생성 |
+| 11/3 | 작업 세션 | #102 docs 머지 규칙 맞추기(S) — CLAUDE.md 3 · 4-7번은 #100 에서 이미 11/3 방식 → 머지 수단 `gh pr merge --merge` · 막히면 멈추고 안내 1줄 보강, PROGRESS 현재 상태에 머지 방식 1줄 |
+| 11/3 | 작업 세션 | #103 chore Thymeleaf 제거(S) — templates 폴더 · `org.thymeleaf` import · `spring.thymeleaf.*` 없음 확인 후 starter · test starter 삭제. `mvnw verify` 436 통과, jar 안 thymeleaf 0, 로컬 5개 페이지 200 · 지도 로드 |
+| 11/3 | 작업 세션 | #104 feat CSP `script-src` 제한(L) — index · login · mypage 인라인 스크립트를 `static/js/*.js` 로 그대로 옮김, innerHTML 안 `onclick` 2 · `onerror` 2 → `bindOpenDetail` · `hideOnError`. `script-src 'self' dapi.kakao.com t1.kakaocdn.net`(지도 로더가 `t1.kakaocdn.net/mapjsapi` 를 이어 부름 → 리소스 목록으로 확인, scheme 생략으로 로컬 http 도 동작). `StaticScriptPolicyTest`(인라인 · on* · eval · javascript: 재유입 차단). 로컬 · 운영 콘솔 위반 0건. 검증 ⚠️ 3건: 검사식 보강 반영 · 지도 SDK eval 은 실행 안 됨 확인 · 정적 파일 캐시는 나중에 할 일. 발견: 카카오톡 공유 버튼 기존 버그(init 전에 `Kakao.Share` 검사, 운영도 같음) → 나중에 할 일 |
 
 ## 🧰 나중에 할 일 중 끝난 것
 
