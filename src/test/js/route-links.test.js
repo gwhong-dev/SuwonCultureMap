@@ -1,7 +1,7 @@
 // 길찾기 링크 시험: node --test src/test/js/
 const test = require("node:test");
 const assert = require("node:assert");
-const { kakaoRouteUrl, webMercator, naverRouteUrl, googleRouteUrl, extractAddress } =
+const { kakaoRouteUrl, kakaoRouteAppUrl, webMercator, naverRouteUrl, googleRouteUrl, extractAddress } =
   require("../../main/resources/static/route-links.js");
 
 // 화성행궁 (정조로 825)
@@ -10,6 +10,10 @@ const LAT = 37.2816, LNG = 127.0137;
 test("카카오맵: 이름은 URL 인코딩, 위도 · 경도 순서", () => {
   assert.strictEqual(kakaoRouteUrl("화성행궁", LAT, LNG),
     "https://map.kakao.com/link/to/%ED%99%94%EC%84%B1%ED%96%89%EA%B6%81,37.2816,127.0137");
+});
+
+test("카카오맵 앱: 도착 좌표 + 대중교통 (출발은 비워 현재 위치)", () => {
+  assert.strictEqual(kakaoRouteAppUrl(LAT, LNG), "kakaomap://route?ep=37.2816,127.0137&by=PUBLICTRANSIT");
 });
 
 test("이름에 쉼표 · 공백 · & 가 있어도 주소가 깨지지 않음", () => {

@@ -18,7 +18,7 @@ import jakarta.servlet.http.HttpServletResponse;
  *
  * - X-Content-Type-Options: 파일 종류를 브라우저가 멋대로 추측하지 않게 함 (스크립트 위장 차단)
  * - X-Frame-Options + CSP frame-ancestors: 다른 사이트가 이 화면을 iframe 에 넣지 못하게 함 (클릭재킹 차단)
- * - CSP object-src · base-uri · form-action: 플러그인 실행 · base 태그 바꿔치기 · 외부로 폼 전송 차단
+ * - CSP object-src · base-uri · form-action: 플러그인 실행 · base 태그 바꿔치기 · 외부로 폼 전송 차단 (카카오톡 공유 sharer.kakao.com 만 예외)
  *   (script-src 는 index.html 의 인라인 스크립트 · 카카오 지도 SDK 때문에 아직 제한하지 않음 → PROGRESS "나중에 할 일")
  * - Referrer-Policy: 외부 링크로 나갈 때 주소 전체 대신 도메인만 전달
  * - Permissions-Policy: 쓰지 않는 카메라 · 마이크 · 위치 권한을 막음 (위치 기능을 만들면 geolocation=(self) 로)
@@ -28,7 +28,9 @@ import jakarta.servlet.http.HttpServletResponse;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class SecurityHeadersFilter extends OncePerRequestFilter {
 
-  static final String CSP = "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'";
+  // form-action: 카카오톡 공유(JS SDK)가 폰 밖(아이패드 데스크톱 모드 · 좁은 PC 창)에서는 sharer.kakao.com 으로 폼 전송
+  static final String CSP =
+      "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self' https://sharer.kakao.com";
   static final String HSTS = "max-age=31536000";
 
   private final boolean hstsEnabled;

@@ -1,9 +1,15 @@
 // 길찾기 링크 (디자인 docs/design/mobile-design-v1.md 3번) — 지도 앱은 URL 로 열고, API 키는 쓰지 않음
 // 시험: node --test src/test/js/ (CI 에서 실행)
 
-// 카카오맵 "목적지로 길찾기" 링크 (map.kakao.com/link/to/이름,위도,경도)
+// 카카오맵 웹 "목적지로 길찾기" 링크 (map.kakao.com/link/to/이름,위도,경도) — 수단을 고를 수 없어 자동차로 열림
+// → 폰에서는 아래 앱 주소를 먼저 시도하고, 앱이 없을 때만 이 링크로 넘어감 (index.html openAppOrWeb)
 function kakaoRouteUrl(name, lat, lng) {
   return "https://map.kakao.com/link/to/" + encodeURIComponent(name) + "," + lat + "," + lng;
+}
+
+// 카카오맵 앱 길찾기 (kakaomap://route): 출발(sp) 비움 = 현재 위치, 도착(ep) = 위도,경도, by = 대중교통
+function kakaoRouteAppUrl(lat, lng) {
+  return "kakaomap://route?ep=" + lat + "," + lng + "&by=PUBLICTRANSIT";
 }
 
 // 네이버 지도 웹 길찾기 주소는 좌표를 웹 메르카토르(EPSG:3857, 미터) 로 받음
@@ -44,6 +50,7 @@ function extractAddress(infoText) {
 if (typeof module !== "undefined") {
   module.exports = {
     kakaoRouteUrl: kakaoRouteUrl,
+    kakaoRouteAppUrl: kakaoRouteAppUrl,
     webMercator: webMercator,
     naverRouteUrl: naverRouteUrl,
     googleRouteUrl: googleRouteUrl,

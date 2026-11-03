@@ -429,6 +429,7 @@
         display: none;
       }
       #routeSheet[hidden],
+      #shareSheet[hidden],
       #toast[hidden] {
         display: none;
       }
@@ -439,11 +440,17 @@
                           + 아래에서 끌어올리는 목록(바텀시트)
          ===================================================== */
       @media (max-width: 1024px) {
+        html {
+          background: var(--bg); /* 사파리 떠 있는 주소창 · 홈 바 뒤(body 밖)도 같은 바탕색으로 */
+        }
         body {
           overflow: hidden;
           font-family: var(--font-mobile);
           background: var(--bg);
           color: var(--text);
+        }
+        #app {
+          overflow: hidden; /* 아래로 내려간 바텀시트(translateY)가 하단 탭 밑으로 비치지 않게 */
         }
         button,
         .chip {
@@ -990,8 +997,9 @@
           margin: 0 0 10px;
         }
 
-        /* ----- 길찾기 창 (하단 시트, docs/design/mobile-design-v1.md 3번) ----- */
-        #routeSheet {
+        /* ----- 길찾기 · 공유 창 (하단 시트, docs/design/mobile-design-v1.md 3번) ----- */
+        #routeSheet,
+        #shareSheet {
           position: fixed;
           inset: 0;
           z-index: 110; /* 상세창(100) 위에서도 열림 */
@@ -1093,10 +1101,22 @@
           display: flex;
           align-items: center;
           gap: 12px;
+          width: 100%;
           min-height: 60px;
+          margin: 0;
+          padding: 0;
+          border: 0;
           border-bottom: 1px solid var(--line);
+          background: none;
           color: var(--text);
+          font: inherit;
+          text-align: left;
           text-decoration: none;
+          cursor: pointer;
+        }
+        .route-icon.kakao {
+          background: #fee500; /* 카카오 노랑 */
+          color: #191919;
         }
         .route-icon {
           flex: none;
@@ -1185,8 +1205,9 @@
         #toastAction[hidden] {
           display: none;
         }
-        /* 길찾기 창이 열려 있으면 토스트는 시트 위(덮개 위쪽)에 */
-        #routeSheet:not([hidden]) + #toast {
+        /* 길찾기 · 공유 창이 열려 있으면 토스트는 시트 위(덮개 위쪽)에 */
+        #routeSheet:not([hidden]) ~ #toast,
+        #shareSheet:not([hidden]) ~ #toast {
           bottom: auto;
           top: calc(env(safe-area-inset-top, 0px) + 80px);
         }
@@ -1317,12 +1338,19 @@
           color: var(--sub);
           font: inherit;
           font-size: 15px;
+          font-weight: 500;
           cursor: pointer;
+          -webkit-tap-highlight-color: transparent;
         }
         .detail-tab.active {
           color: var(--text);
           font-weight: 700;
-          box-shadow: inset 0 -2px 0 var(--text);
+          box-shadow: inset 0 -2px 0 var(--accent);
+        }
+        /* 탭을 눌러 옮길 때 붙어 있는 상단(52px) + 탭(48px) 아래로 8px 띄움 (JS 가 이 값을 읽어 씀) */
+        #detailRows,
+        #detailLocation {
+          scroll-margin-top: calc(52px + 48px + env(safe-area-inset-top, 0px) + 8px);
         }
         /* 정보 표: 라벨 56px + 값 */
         #detailRows {
@@ -1393,6 +1421,13 @@
           flex-direction: column;
           gap: 8px;
           padding: 20px 0 0;
+        }
+        /* 내용이 짧아도 "주변" 을 누르면 위치 칸이 탭 바로 아래까지 올라오도록 화면 높이만큼 아래 여백 확보
+           (화면 - 상단 52 - 탭 48 - 본문 아래 여백 96 - 안전 영역) */
+        #detailLocation {
+          box-sizing: border-box;
+          min-height: calc(100vh - 196px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+          min-height: calc(100dvh - 196px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
         }
         #detailIntro[hidden] {
           display: none;
@@ -1649,6 +1684,38 @@
         </div>
       </section>
     </div>
+    <!-- 모바일 전용: 공유 창 (카카오톡으로 보내기 · 링크 복사) -->
+    <div id="shareSheet" hidden>
+      <section class="route-sheet" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+        <span class="sheet-handle" aria-hidden="true"></span>
+        <div class="route-head">
+          <h2 id="shareTitle">공유</h2>
+          <button id="shareCloseBtn" type="button" class="icon-btn" aria-label="닫기">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+        </div>
+        <div class="route-place">
+          <span id="shareEvent" class="route-event"></span>
+        </div>
+        <div class="route-links">
+          <button id="shareKakaoBtn" type="button" class="route-link">
+            <span class="route-icon kakao" aria-hidden="true">K</span>
+            <span class="route-link-text">카카오톡으로 보내기</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+          </button>
+          <button id="shareCopyBtn" type="button" class="route-link">
+            <span class="route-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" style="width: 18px; height: 18px"><rect x="9" y="9" width="11" height="11" rx="1" /><path d="M5 15V5a1 1 0 0 1 1-1h10" /></svg>
+            </span>
+            <span class="route-link-text">링크 복사</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+          </button>
+        </div>
+        <div class="route-cancel">
+          <button id="shareCancelBtn" type="button">취소</button>
+        </div>
+      </section>
+    </div>
     <div id="toast" role="status" aria-live="polite" hidden>
       <span id="toastText"></span>
       <button id="toastAction" type="button" hidden></button>
@@ -1658,13 +1725,13 @@
     <div id="detailModal" class="modal-overlay" style="display: none">
       <div class="modal-card">
         <button id="modalCloseBtn" class="modal-close">×</button>
-        <!-- 모바일 전용 상단: 뒤로 · 공유(링크 복사) · ♡ -->
+        <!-- 모바일 전용 상단: 뒤로 · 공유(하단 창) · ♡ -->
         <header id="detailHead">
           <button id="detailBackBtn" type="button" class="icon-btn" aria-label="뒤로">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
           </button>
           <div class="head-actions">
-            <button id="detailShareBtn" type="button" class="icon-btn" aria-label="공유 (링크 복사)">
+            <button id="detailShareBtn" type="button" class="icon-btn" aria-label="공유">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 10.7l6.8-4.4M8.6 13.3l6.8 4.4" /></svg>
             </button>
             <button id="detailHeadFav" type="button" class="icon-btn" aria-label="찜하기" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg></button>
@@ -1723,6 +1790,8 @@
     </div>
 
     <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=7e3b2a42df77bc183241db2bcc6c3cbb&autoload=false"></script>
+    <!-- 카카오톡 공유용 JS SDK (지도와 같은 JavaScript 키로 Kakao.init). 못 불러오면 공유 창에서 안내만 -->
+    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.9/kakao.min.js" crossorigin="anonymous"></script>
     <script src="/schedule-format.js"></script>
     <script src="/route-links.js"></script>
     <script>
@@ -1767,6 +1836,17 @@
 
       // ===== 모바일 레이아웃 상태값 (아래 '모바일 레이아웃' 영역에서 사용) =====
       var mobileQuery = window.matchMedia("(max-width: 1024px)");
+      var initialParams = new URLSearchParams(location.search); // 처음 들어온 주소의 ?event= · route=
+
+      // 열린 창을 주소에 기록 (?event=번호[&route=1]) → 지도 앱 · 카카오톡에 갔다 와서 페이지가 다시 열려도 복원
+      // pushState 가 아니라 replaceState: 뒤로 가기 동작은 그대로 두고 현재 주소만 바꿈
+      function syncUrlState() {
+        if (!window.history || !history.replaceState) return;
+        var id = detailEvent ? detailEvent.id : routeEvent ? routeEvent.id : null;
+        var query = id ? "?event=" + id + (routeEvent ? "&route=1" : "") : "";
+        if (location.search === query) return;
+        history.replaceState(history.state, "", location.pathname + query + location.hash);
+      }
       var sheetState = "peek"; // "peek"(살짝 — 결과 바만) | "half"(절반) | "full"(전체)
       var sheetY = 0; // 바텀시트의 현재 위치 (위에서부터 px)
       var previewEventId = null; // 하단 카드로 보고 있는 행사 id
@@ -2071,8 +2151,9 @@
 
             filterMarkers();
 
-            // 공유 링크(?event=번호)로 들어오면 그 행사 상세를 바로 엶
-            var shared = Number(new URLSearchParams(location.search).get("event"));
+            // 공유 링크(?event=번호)로 들어오거나, 지도 앱에 갔다 와서 페이지가 다시 열리면 그 행사 상세를 복원
+            // (길찾기 창까지 열려 있었으면 &route=1 → 길찾기 창도 다시 엶)
+            var shared = Number(initialParams.get("event"));
             if (shared) {
               var found = markerList.find(function (item) {
                 return item.event.id === shared;
@@ -2080,6 +2161,7 @@
               if (found) {
                 map.setCenter(new kakao.maps.LatLng(found.event.latitude, found.event.longitude));
                 openDetailModal(found.event);
+                if (initialParams.get("route") && mobileQuery.matches) openRouteSheet(found.event); // 길찾기 창은 모바일 전용
               }
             }
           })
@@ -2511,6 +2593,7 @@
         selectDetailTab("detailRows", false);
         renderDetailMap(event); // 지도는 창이 보인 뒤에 그려야 크기를 잡음
         measureIntro();
+        syncUrlState();
       }
 
       // ===== 상세 (모바일 디자인 04): 분류 · 구 → 정보 표 → 소개 → 위치 =====
@@ -2607,10 +2690,12 @@
         });
         if (!scroll) return;
         var card = document.querySelector("#detailModal .modal-card");
-        var offset = document.getElementById("detailHead").offsetHeight + document.getElementById("detailTabs").offsetHeight;
-        // 탭은 sticky 라 offsetTop 이 붙은 위치를 돌려줌 → 붙지 않는 표 · 위치 칸의 offsetTop 을 기준으로
-        var top = document.getElementById(targetId).offsetTop - offset;
-        card.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+        card.scrollTo({ top: Math.max(0, sectionScrollTop(card, document.getElementById(targetId))), behavior: "smooth" });
+      }
+      // 칸(정보 표 · 위치)이 붙어 있는 상단 + 탭 바로 아래(scroll-margin-top 만큼 띄움)에 오는 스크롤 위치
+      function sectionScrollTop(card, section) {
+        var margin = parseFloat(getComputedStyle(section).scrollMarginTop) || 0;
+        return section.getBoundingClientRect().top - card.getBoundingClientRect().top + card.scrollTop - margin;
       }
       document.querySelectorAll("#detailTabs .detail-tab").forEach(function (tab) {
         tab.addEventListener("click", function () {
@@ -2621,10 +2706,8 @@
       document.querySelector("#detailModal .modal-card").addEventListener("scroll", function () {
         if (!mobileQuery.matches || document.getElementById("detailLocation").hidden) return;
         var card = this;
-        var offset = document.getElementById("detailHead").offsetHeight + document.getElementById("detailTabs").offsetHeight;
-        var atLocation = document.getElementById("detailLocation").offsetTop - offset <= card.scrollTop + 2;
-        var atBottom = card.scrollTop + card.clientHeight >= card.scrollHeight - 2; // 내용이 짧아 위치 칸이 맨 위까지 못 올라올 때
-        selectDetailTab(atLocation || atBottom ? "detailLocation" : "detailRows", false);
+        var atLocation = sectionScrollTop(card, document.getElementById("detailLocation")) <= card.scrollTop + 2;
+        selectDetailTab(atLocation ? "detailLocation" : "detailRows", false);
       });
 
       document.getElementById("detailIntroMore").addEventListener("click", function () {
@@ -2654,20 +2737,76 @@
           },
         );
       });
-      // 공유 = 이 행사로 바로 열리는 링크 복사 (?event=번호)
+      // ----- 공유 창 (하단 시트): 카카오톡으로 보내기 · 링크 복사. 링크 = 이 행사로 바로 열리는 주소 (?event=번호) -----
+      var KAKAO_JS_KEY = "7e3b2a42df77bc183241db2bcc6c3cbb"; // 지도 SDK 와 같은 JavaScript 키 (공개용 키)
       function eventShareUrl(event) {
         return location.origin + location.pathname + "?event=" + event.id;
       }
+      function openShareSheet(event) {
+        document.getElementById("shareEvent").textContent = event.title;
+        document.getElementById("shareSheet").hidden = false;
+      }
+      function closeShareSheet() {
+        document.getElementById("shareSheet").hidden = true;
+      }
       document.getElementById("detailShareBtn").addEventListener("click", function () {
+        if (detailEvent) openShareSheet(detailEvent);
+      });
+      document.getElementById("shareCloseBtn").addEventListener("click", closeShareSheet);
+      document.getElementById("shareCancelBtn").addEventListener("click", closeShareSheet);
+      document.getElementById("shareSheet").addEventListener("click", function (e) {
+        if (e.target.id === "shareSheet") closeShareSheet(); // 덮개를 누르면 닫힘
+      });
+      document.getElementById("shareCopyBtn").addEventListener("click", function () {
         if (!detailEvent) return;
         copyText(eventShareUrl(detailEvent)).then(
           function () {
+            closeShareSheet();
             showToast("링크를 복사했어요");
           },
           function () {
             showToast("복사하지 못했어요");
           },
         );
+      });
+      // 카카오톡 공유: 사진이 있으면 피드(사진 + 제목 + 설명), 없으면 글 형식. SDK 를 못 불러왔거나(차단 · 오프라인)
+      // 콘솔에 이 도메인이 등록되지 않았으면 안내 토스트만 (링크 복사는 그대로 됨)
+      document.getElementById("shareKakaoBtn").addEventListener("click", function () {
+        if (!detailEvent) return;
+        if (!window.Kakao || !Kakao.Share) {
+          showToast("카카오톡 공유를 불러오지 못했어요. 링크 복사를 이용해 주세요");
+          return;
+        }
+        var event = detailEvent;
+        var url = eventShareUrl(event);
+        var link = { mobileWebUrl: url, webUrl: url };
+        var place = extractPlaceName(event.info);
+        var description = [document.getElementById("modalDate").textContent, place].filter(Boolean).join(" · ");
+        try {
+          if (!Kakao.isInitialized()) Kakao.init(KAKAO_JS_KEY);
+          if (event.imageUrl) {
+            Kakao.Share.sendDefault({
+              objectType: "feed",
+              content: {
+                title: event.title,
+                description: description,
+                imageUrl: new URL(event.imageUrl, location.href).href, // 상대 주소여도 절대 주소로
+                link: link,
+              },
+              buttons: [{ title: "지도에서 보기", link: link }],
+            });
+          } else {
+            Kakao.Share.sendDefault({
+              objectType: "text",
+              text: (event.title + "\n" + description).substring(0, 200),
+              link: link,
+            });
+          }
+          closeShareSheet();
+        } catch (err) {
+          console.error("카카오톡 공유 실패", err);
+          showToast("카카오톡 공유에 실패했어요. 링크 복사를 이용해 주세요");
+        }
       });
 
       // ===== 마커 InfoWindow 제목 클릭 → 상세 팝업 열기 =====
@@ -2684,14 +2823,20 @@
         document.getElementById("detailModal").style.display = "none";
         document.body.classList.remove("detail-open");
         detailEvent = null;
+        closeShareSheet();
+        syncUrlState();
       }
 
       // ===== ESC 키로 상세 모달 + 마커 팝업(InfoWindow) 닫기 =====
       document.addEventListener("keydown", function (e) {
         if (e.key === "Escape") {
-          // 길찾기 창이 상세 위에 열려 있으면 그것만 닫음
+          // 길찾기 · 공유 창이 상세 위에 열려 있으면 그것만 닫음
           if (!document.getElementById("routeSheet").hidden) {
             closeRouteSheet();
+            return;
+          }
+          if (!document.getElementById("shareSheet").hidden) {
+            closeShareSheet();
             return;
           }
           closeDetailModal();
@@ -3262,10 +3407,41 @@
         document.getElementById("routeNaver").href = naverRouteUrl(place, event.latitude, event.longitude);
         document.getElementById("routeGoogle").href = googleRouteUrl(event.latitude, event.longitude);
         document.getElementById("routeSheet").hidden = false;
+        syncUrlState();
       }
       function closeRouteSheet() {
         routeEvent = null;
         document.getElementById("routeSheet").hidden = true;
+        syncUrlState();
+      }
+      // 카카오맵 웹 링크(/link/to/)는 자동차로만 열림 → 폰에서는 앱 주소(kakaomap://route, 대중교통)를 먼저 열고,
+      // 앱이 없어 화면이 그대로면 2.5초 뒤 웹 링크로 넘어감. PC 는 앱이 없으니 웹 링크 그대로(새 탭)
+      var isPhone = isAppleMobile || /Android/i.test(navigator.userAgent);
+      document.getElementById("routeKakao").addEventListener("click", function (e) {
+        if (!routeEvent || !isPhone) return;
+        e.preventDefault();
+        openAppOrWeb(kakaoRouteAppUrl(routeEvent.latitude, routeEvent.longitude), this.href);
+      });
+      var APP_OPEN_WAIT = 2500;
+      function openAppOrWeb(appUrl, webUrl) {
+        var start = Date.now();
+        var left = false; // 앱으로 넘어가면 페이지가 숨겨짐(visibilitychange · pagehide)
+        function onHide() {
+          if (document.hidden) left = true;
+        }
+        function onPageHide() {
+          left = true;
+        }
+        document.addEventListener("visibilitychange", onHide);
+        window.addEventListener("pagehide", onPageHide);
+        setTimeout(function () {
+          document.removeEventListener("visibilitychange", onHide);
+          window.removeEventListener("pagehide", onPageHide);
+          // 타이머가 제때(여유 1초 안에) 돌았을 때만 웹으로: 앱 확인창 · 앱 전환으로 페이지가 멈췄다 돌아온 경우는 이미 앱이 열림
+          var onTime = Date.now() - start < APP_OPEN_WAIT + 1000;
+          if (!left && !document.hidden && onTime) location.href = webUrl; // 같은 탭으로 → 돌아오면 ?event=&route=1 로 복원
+        }, APP_OPEN_WAIT);
+        location.href = appUrl;
       }
       document.getElementById("routeCloseBtn").addEventListener("click", closeRouteSheet);
       document.getElementById("routeCancelBtn").addEventListener("click", closeRouteSheet);
