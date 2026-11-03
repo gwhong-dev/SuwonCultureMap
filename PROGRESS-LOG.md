@@ -160,6 +160,7 @@
 | 11/2 | 작업 세션 | 로드맵 6단계 시작: 헬스체크 `/actuator/health` (상태만 공개, 상세 · 다른 엔드포인트 비공개). 배포 스크립트 기동 확인을 `/api/events` → 헬스체크로, CI 의 MySQL 실기동 단계에 UP 확인 추가 |
 | 11/2 | 작업 세션 | 머지 방식 변경 — GitHub 기본 auto-merge 사용(저장소 설정 켬). Claude는 PR 후 "auto-merge 눌러주세요" 안내, 사용자 버튼 = 머지 승인. 라벨로 Claude가 스스로 머지하는 방식은 안전 장치 우회라 채택 안 함 (`CLAUDE.md` 3 · 4-7번) |
 | 11/2 | 작업 세션 | 아이폰 1차 확인 5건 보완 PR — ① `#app overflow:hidden` + `html` 바탕색(탭 · 사파리 주소창 뒤 비침) ② `kakaoRouteAppUrl`(kakaomap://route 대중교통) → 폰은 앱 먼저, 2초 안에 안 떠나면 웹 `/link/to/` ③ 상세 · 길찾기 열림을 `history.replaceState` 로 `?event=번호&route=1` 기록, 다시 열리면 복원 ④ 위치 칸 `min-height` + `scroll-margin-top`, 탭 스크롤을 화면 좌표로 계산 ⑤ 공유 하단 창(카카오톡 `Kakao.Share.sendDefault` 피드 · 링크 복사). node 시험 +1, Playwright(아이폰 13 크기 · SDK 가짜)로 복원 · 탭 · 공유 · 앱→웹 대체 확인. 검증 ⚠️ 3건 반영: 길찾기 창 복원은 모바일만(PC 노출 회귀) · 앱 확인창에서 망설여도 웹이 같이 열리지 않게 2.5초 + 경과 시간 검사 · CSP `form-action` 에 `sharer.kakao.com` 허용(테스트 +1) |
+| 11/3 | 사용자 | 머지 규칙 재변경 — auto-merge 버튼(#98) 대신 **Claude 가 직접 머지** (CI 통과 + M · L 검증 댓글 뒤, "머지하지 마" 한 PR 만 보류). #99 를 이 방식으로 머지 (`CLAUDE.md` 3 · 4-7번) |
 
 ## 🧰 나중에 할 일 중 끝난 것
 

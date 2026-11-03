@@ -52,12 +52,12 @@ docker compose up --build   # 앱 + MySQL (.env 는 scripts/setup-docker.cmd)
 
 ## 3. 작업 구조 (사용자는 중계하지 않음)
 
-- Claude: 계획 · 코드 · 로컬 실행 검증 · 브랜치 push · PR → "auto-merge 눌러주세요" 안내 (머지 버튼은 누르지 않음)
+- Claude: 계획 · 코드 · 로컬 실행 검증 · 브랜치 push · PR → CI 통과(+ M · L 은 검증 댓글 판정) 뒤 **Claude가 직접 머지**
 - 검증 에이전트(서브 에이전트): M · L 등급 PR에서만 호출
   - 작업 내용을 처음 보는 상태로 독립 검토
   - 항목 | 결과(✅⚠️❌) | 근거 파일:줄 | 조치 표(최대 8줄)로 PR 댓글 1개에 기록
   - 마지막 줄에 판정
-- 사용자: 소셜 로그인 실제 계정 클릭, PR의 **Enable auto-merge** 버튼(= 머지 승인)만
+- 사용자: 소셜 로그인 실제 계정 클릭만 (머지는 Claude 가 함 — 먼저 보고 싶은 PR 은 "머지하지 마" 라고 말하기)
 - 다른 세션에 시켜야 하는 예외가 생기면 따로 표시하고, 복붙용 프롬프트를 코드블록으로 줄 것
 
 ## 4. 개발 절차
@@ -69,11 +69,12 @@ docker compose up --build   # 앱 + MySQL (.env 는 scripts/setup-docker.cmd)
 4. 로컬에서 mvn test 통과 확인
 5. push → PR 생성
 6. CI 통과 확인 (빌드 + 테스트, Docker 이미지 빌드 — main 브랜치 보호로 필수)
-7. 머지는 GitHub 기본 auto-merge로 (저장소 설정 "Allow auto-merge" 켜짐, 11/2)
-   - Claude는 PR 링크와 함께 "auto-merge 눌러주세요"라고만 안내 — 직접 머지 · 라벨 자동 머지 워크플로 금지
-   - 사용자가 **Enable auto-merge** 를 누르는 것이 머지 승인. CI 2개 통과 시 GitHub가 머지
-   - M · L 등급은 검증 댓글(판정)까지 끝난 뒤에 안내
-   - CI 실패 → 머지 안 됨. Claude가 고쳐서 다시 push하면 자동 재시도
+7. 머지는 Claude 가 직접 (GitHub 머지 버튼, 머지 커밋 방식 — 11/3 사용자 결정)
+   - 조건: CI 전부 통과 + 충돌 없음. M · L 등급은 검증 댓글(판정)까지 끝난 뒤
+   - 사용자 승인은 따로 기다리지 않음. 사용자가 "머지하지 마" 라고 한 PR 만 보류
+   - CI 실패 → 머지하지 않음. Claude가 고쳐서 다시 push 한 뒤 CI 재확인
+   - 라벨 자동 머지 워크플로 · auto-merge 버튼은 쓰지 않음
+   - 머지 뒤: Deploy 성공 · 운영 헬스체크 확인까지 Claude 가 함
 8. PROGRESS.md 체크박스 갱신, 작업 로그는 PROGRESS-LOG.md에 기록
 
 등급별 추가 절차
