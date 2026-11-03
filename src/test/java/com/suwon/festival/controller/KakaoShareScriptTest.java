@@ -36,4 +36,18 @@ class KakaoShareScriptTest {
     assertThat(shareCheck).as("Kakao.Share 확인").isNotNegative();
     assertThat(init).as("init 이 Share 확인보다 먼저").isLessThan(shareCheck);
   }
+
+  @Test
+  void 공유_SDK는_integrity로_바꿔치기를_막음() throws Exception {
+    // 버전이 고정된 파일이라 해시를 걸 수 있음 (지도 SDK 로더 dapi.kakao.com 은 내용이 바뀌는 파일이라 제외)
+    MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+    String html = mockMvc.perform(get("/index.html")).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+    int tag = html.indexOf("src=\"https://t1.kakaocdn.net/kakao_js_sdk/");
+    assertThat(tag).as("공유 SDK script 태그").isNotNegative();
+    String script = html.substring(tag, html.indexOf("</script>", tag));
+    assertThat(script)
+        .containsPattern("integrity=\"sha384-[A-Za-z0-9+/=]{64}\"")
+        .contains("crossorigin=\"anonymous\"");
+  }
 }
