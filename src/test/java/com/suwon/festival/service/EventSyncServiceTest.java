@@ -17,6 +17,8 @@ import com.suwon.festival.dto.SyncResult;
 import com.suwon.festival.dto.xml.Coordinate;
 import com.suwon.festival.dto.xml.EventDate;
 import com.suwon.festival.dto.xml.EventItem;
+import com.suwon.festival.dto.xml.PhotoInfo;
+import com.suwon.festival.dto.xml.Photos;
 import com.suwon.festival.entity.Event;
 import com.suwon.festival.repository.EventRepository;
 
@@ -100,6 +102,47 @@ class EventSyncServiceTest {
     assertThatThrownBy(() -> EventSyncService.parseItems(maintenance))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("channel");
+  }
+
+  @Test
+  void 이미지_주소는_https_로_바꿔_저장() {
+    assertThat(EventSyncService.toHttps("http://www.swcf.or.kr/a.jpg")).isEqualTo("https://www.swcf.or.kr/a.jpg");
+    assertThat(EventSyncService.toHttps("HTTP://www.swcf.or.kr/a.jpg")).isEqualTo("https://www.swcf.or.kr/a.jpg");
+    assertThat(EventSyncService.toHttps("https://www.swcf.or.kr/a.jpg")).isEqualTo("https://www.swcf.or.kr/a.jpg");
+    assertThat(EventSyncService.toHttps(null)).isNull();
+
+    eventSyncService.syncItems(List.of(withPhoto(item(880301L, "이미지 행사"), "http://www.swcf.or.kr/a.jpg")));
+
+    assertThat(eventRepository.findByIdx(880301L)).get()
+        .satisfies(e -> assertThat(e.getImageUrl()).isEqualTo("https://www.swcf.or.kr/a.jpg"));
+  }
+
+  @Test
+  void 예전에_http_로_저장된_이미지는_다음_동기화에_https_로_갱신() {
+    EventItem first = withPhoto(item(880302L, "옛 이미지 행사"), "http://www.swcf.or.kr/b.jpg");
+    eventSyncService.syncItems(List.of(first));
+    Event saved = eventRepository.findByIdx(880302L).orElseThrow();
+    saved.updateFrom(Event.builder().idx(880302L).title(saved.getTitle()).category(saved.getCategory())
+        .latitude(saved.getLatitude()).longitude(saved.getLongitude())
+        .imageUrl("http://www.swcf.or.kr/b.jpg") // 변환 전에 저장된 상태를 흉내
+        .info(saved.getInfo()).pubDate(saved.getPubDate()).startDate(saved.getStartDate())
+        .endDate(saved.getEndDate()).link(saved.getLink()).place(saved.getPlace()).timeText(saved.getTimeText())
+        .build());
+    eventRepository.saveAndFlush(saved);
+
+    SyncResult result = eventSyncService.syncItems(List.of(first)); // pubDate 그대로 — 이미지 주소만 다름
+
+    assertThat(result.updated()).isEqualTo(1);
+    assertThat(eventRepository.findByIdx(880302L)).get()
+        .satisfies(e -> assertThat(e.getImageUrl()).isEqualTo("https://www.swcf.or.kr/b.jpg"));
+  }
+
+  private static EventItem withPhoto(EventItem it, String url) {
+    PhotoInfo photo = new PhotoInfo();
+    photo.photoUrl = url;
+    it.photos = new Photos();
+    it.photos.photoInfo = List.of(photo);
+    return it;
   }
 
   private static Event instagramEvent(String sourceKey) {

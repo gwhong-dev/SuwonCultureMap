@@ -160,7 +160,9 @@ public class EventSyncService {
     // ⑤ 기간이 달라졌으면 (진행 날짜만 고쳐져 기간 밖 날짜가 나가지 않게)
     boolean periodFixed = !Objects.equals(existing.getStartDate(), latest.getStartDate())
         || !Objects.equals(existing.getEndDate(), latest.getEndDate());
-    boolean rowChanged = changed || linkMissing || titleFixed || detailFixed || periodFixed;
+    // ⑥ 이미지 주소가 달라졌으면 (https 변환 전에 http:// 로 저장된 행사)
+    boolean imageFixed = !Objects.equals(existing.getImageUrl(), latest.getImageUrl());
+    boolean rowChanged = changed || linkMissing || titleFixed || detailFixed || periodFixed || imageFixed;
     if (rowChanged) {
       existing.updateFrom(latest);
       eventRepository.save(existing);
@@ -192,7 +194,16 @@ public class EventSyncService {
     if (item.photos == null || item.photos.photoInfo == null || item.photos.photoInfo.isEmpty()) {
       return null;
     }
-    return item.photos.photoInfo.get(0).photoUrl;
+    return toHttps(item.photos.photoInfo.get(0).photoUrl);
+  }
+
+  // 재단 XML 이미지 주소가 http:// 로 옴 → https 화면(운영)에서 Mixed Content(보안 연결 화면 속 비보안 이미지) 경고 · 차단
+  // → 저장할 때 https:// 로 바꿔 둠 (11/3 결정). 다른 형식(https · 상대 주소 · null)은 그대로
+  static String toHttps(String url) {
+    if (url != null && url.regionMatches(true, 0, "http://", 0, 7)) {
+      return "https://" + url.substring(7);
+    }
+    return url;
   }
 
   private List<ContentInfoDetail> details(EventItem item) {
