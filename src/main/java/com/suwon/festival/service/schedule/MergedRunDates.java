@@ -60,6 +60,8 @@ public class MergedRunDates {
     for (Event event : events) {
       List<LocalDate> mine = own.getOrDefault(event.getId(), List.of());
       TreeSet<LocalDate> extra = fromHidden.getOrDefault(event.getId(), new TreeSet<>());
+      // 대표 기간 밖 날짜는 버림 (합친 뒤 대표 기간만 바뀐 경우 등). 화면은 기간 밖 날짜가 하나라도 있으면 날짜 목록 전체를 안 믿음
+      extra.removeIf(date -> !withinPeriod(event, date));
       boolean known = Event.SCHEDULE_DATES.equals(event.getScheduleStatus());
       if (known && Event.SOURCE_INSTAGRAM.equals(event.getSource())) {
         extra.addAll(mine);
@@ -71,5 +73,12 @@ public class MergedRunDates {
       }
     }
     return result;
+  }
+
+  private static boolean withinPeriod(Event event, LocalDate date) {
+    LocalDate start = event.getStartDate();
+    if (start == null) return false;
+    LocalDate end = event.getEndDate() != null ? event.getEndDate() : start;
+    return !date.isBefore(start) && !date.isAfter(end);
   }
 }

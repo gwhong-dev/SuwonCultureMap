@@ -32,6 +32,7 @@ class MergedRunDatesTest {
   private static final LocalDate NOV_1 = LocalDate.of(2026, 11, 1);
   private static final LocalDate NOV_8 = LocalDate.of(2026, 11, 8);
   private static final LocalDate NOV_15 = LocalDate.of(2026, 11, 15);
+  private static final LocalDate DEC_5 = LocalDate.of(2026, 12, 5);
 
   @Autowired private EventService eventService;
   @Autowired private EventCalendarService calendarService;
@@ -97,6 +98,30 @@ class MergedRunDatesTest {
 
     assertThat(res.dates()).containsExactly(NOV_1, NOV_8);
     assertThat(res.confirmedDates()).isEmpty();
+  }
+
+  @Test
+  void 대표_기간_밖의_숨긴_행_날짜는_버림() {
+    Event rep = save("대표", Event.SOURCE_INSTAGRAM, NOV_1);
+    Event hidden = save("숨김", Event.SOURCE_INSTAGRAM, NOV_8, DEC_5); // 합친 뒤 대표 기간만 바뀐 경우 등
+    hide(hidden, rep);
+
+    assertThat(response(rep).dates()).containsExactly(NOV_1, NOV_8); // 대표 자신의 날짜까지 화면에서 버려지지 않게
+  }
+
+  @Test
+  void 대표_여러_건을_한_번에_조회해도_제_대표에_붙음() {
+    Event repA = save("대표A", Event.SOURCE_INSTAGRAM, NOV_1);
+    Event repB = save("대표B", Event.SOURCE_INSTAGRAM);
+    Event hiddenA = save("숨김A", Event.SOURCE_INSTAGRAM, NOV_8);
+    Event hiddenB = save("숨김B", Event.SOURCE_INSTAGRAM, NOV_15);
+    hide(hiddenA, repA);
+    hide(hiddenB, repB);
+
+    assertThat(response(repA).dates()).containsExactly(NOV_1, NOV_8);
+    assertThat(response(repA).confirmedDates()).isEmpty();
+    assertThat(response(repB).dates()).isEmpty();
+    assertThat(response(repB).confirmedDates()).containsExactly(NOV_15);
   }
 
   @Test
