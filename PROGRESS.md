@@ -78,7 +78,7 @@
 - [x] 인스타 재개 결정: 공식 계정만, 문서 기준 판단 (11/2, 결정 문서에 Meta 원문 확인 표)
 - [ ] 인플루언서(개인) 계정 추가 검토 — 개인정보보호법 확인 먼저 (사용자 희망, 11/2)
 - [x] CSP `script-src` 제한 — 인라인 스크립트를 `static/js` 로 분리, `script-src 'self' dapi.kakao.com t1.kakaocdn.net` (#104, 11/3 운영 콘솔 위반 0건)
-- [x] 정적 파일 캐시: `spring.web.resources.cache.cachecontrol.no-cache=true` → HTML · JS · CSS 매번 서버 확인(안 바뀌면 304), `?v=` · 리소스 체인 버전은 안 씀 (11/4 fix PR)
+- [x] 정적 파일 캐시: `spring.web.resources.cache.cachecontrol.no-cache=true` → HTML · JS · CSS 매번 서버 확인(안 바뀌면 304), `?v=` · 리소스 체인 버전은 안 씀 (#128, 11/4 02:00 운영 반영: `/` · js · css `no-cache` + CSP · HSTS 유지, 안 바뀐 파일 304, API 변화 없음)
 - [x] 카카오톡 공유 버튼이 항상 "불러오지 못했어요" 토스트 (11/3 발견 · 수정): SDK v2 는 `Kakao.init()` 뒤에야 `Kakao.Share` 가 생기는데 init 전에 검사했음 → init 먼저 하고 Share 확인. 로컬에서 카카오 공유 API 200 확인, 회귀 테스트 `KakaoShareScriptTest`
 - [ ] 처리방침 로그 보관 기간: 앱 로그 파일은 14일(#107)이지만 화면 출력 `docker logs`(10MB×3)는 기간 제한이 없어 지금은 "자동 삭제될 때까지"로 둠 → 14일로 적으려면 Docker 로그에도 기간 제한(예: 배포마다 새 컨테이너 + 크기 축소) 후 처리방침 수정 (#107 검증 지적)
 - [ ] 운영 서버 로그를 Claude 가 직접 보려면 ssh 읽기 허용 필요 (11/3 자동 권한 검사가 운영 읽기로 막음) → 필요할 때 사용자가 `/permissions` 로 허용하거나 사용자가 명령 결과를 붙여 줌
