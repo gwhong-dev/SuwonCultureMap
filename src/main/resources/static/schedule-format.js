@@ -102,6 +102,14 @@ function formatScheduleDetail(event) {
       lines.push(month + ": " + days.join(", "));
     });
   }
+  // 합쳐 숨긴 글에서 확인된 회차 (설계 8번). 대표 날짜를 모를 때만 오고, "이날은 한다"는 뜻이라 필터 · 캘린더는 안 씀
+  var confirmed = !hasRunDates(event) && event.confirmedDates ? event.confirmedDates : [];
+  if (confirmed.length > 0) {
+    var oneYear = confirmed.every(function (date) {
+      return date.slice(0, 4) === confirmed[0].slice(0, 4);
+    });
+    lines.push("확인된 회차: " + confirmed.map(oneYear ? shortDate : String).join(", "));
+  }
   if (hasRunDates(event) && event.scheduleHolidayNote) lines.push("공휴일은 원문 확인");
   if (event.scheduleText) lines.push("일정 원문: " + event.scheduleText);
   return lines.join("\n");
