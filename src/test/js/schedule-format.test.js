@@ -118,6 +118,33 @@ test("모름은 상세에 원문만", () => {
   assert.strictEqual(formatScheduleDetail({ scheduleStatus: "UNKNOWN", dates: [] }), "");
 });
 
+// ===== 합치기 대표의 확인된 회차 (설계 8번) =====
+test("날짜 모르는 대표는 숨긴 글의 회차를 표시만", () => {
+  const e = { scheduleStatus: "UNKNOWN", startDate: "2026-11-01", endDate: "2026-12-31", dates: [],
+    confirmedDates: ["2026-11-01", "2026-11-08"], scheduleText: "~12/31" };
+  assert.strictEqual(formatScheduleDetail(e), "확인된 회차: 11/1, 11/8\n일정 원문: ~12/31");
+  assert.strictEqual(card(e), "2026-11-01 ~ 2026-12-31"); // 카드 · 기간은 그대로 ("그날만"으로 안내하지 않음)
+});
+
+test("확인된 회차가 두 해에 걸치면 연도까지", () => {
+  const e = { scheduleStatus: "UNKNOWN", startDate: "2026-12-01", endDate: "2027-01-31", dates: [],
+    confirmedDates: ["2026-12-31", "2027-01-01"] };
+  assert.strictEqual(formatScheduleDetail(e), "확인된 회차: 2026-12-31, 2027-01-01");
+});
+
+test("대표 날짜가 있으면 확인된 회차는 쓰지 않음", () => {
+  const e = event("2026-11-01", "2026-11-08", ["2026-11-01", "2026-11-08"], { confirmedDates: ["2026-11-01"] });
+  assert.doesNotMatch(formatScheduleDetail(e), /확인된 회차/);
+});
+
+test("확인된 회차는 필터에서 모름과 같음", () => {
+  const { matchRunDays, calendarDateChoices } = require("../../main/resources/static/schedule-format.js");
+  const e = { scheduleStatus: "UNKNOWN", startDate: "2026-11-01", endDate: "2026-12-31", dates: [],
+    confirmedDates: ["2026-11-08"] };
+  assert.strictEqual(matchRunDays(e, ["2026-11-08"]), "maybe");
+  assert.strictEqual(calendarDateChoices(e, NOW_2026), null);
+});
+
 // ===== "오늘 진행" · "이번 주말" 필터 =====
 const { koreaToday, upcomingWeekend, filterDays, matchRunDays } = require("../../main/resources/static/schedule-format.js");
 

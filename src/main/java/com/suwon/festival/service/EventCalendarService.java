@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.time.format.DateTimeFormatter;
 
@@ -15,9 +16,9 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriUtils;
 
 import com.suwon.festival.entity.Event;
-import com.suwon.festival.repository.EventDateRepository;
 import com.suwon.festival.repository.EventRepository;
 import com.suwon.festival.service.instagram.InstagramSwitch;
+import com.suwon.festival.service.schedule.MergedRunDates;
 
 import lombok.RequiredArgsConstructor;
 
@@ -47,7 +48,7 @@ public class EventCalendarService {
   }
 
   private final EventRepository eventRepository;
-  private final EventDateRepository eventDateRepository;
+  private final MergedRunDates mergedRunDates;
   private final InstagramSwitch instagramSwitch;
 
   // 없는 행사(내보내지 않는 인스타 행사 포함) → 404, 날짜 없는 행사 → 일정을 만들 수 없으므로 404
@@ -61,12 +62,12 @@ public class EventCalendarService {
     return event;
   }
 
-  // 고른 날짜 검사: 저장된 진행 날짜 중 하나여야 함 (기간 밖 · 진행하지 않는 날 · 날짜 모르는 행사 → 400)
-  // ⚠️ 7번 PR(인스타 대표에 숨긴 행 날짜 합치기)에서 응답 날짜가 합집합이 되면 여기도 같은 합집합으로 검사해야 함
+  // 고른 날짜 검사: 화면에 보낸 진행 날짜 중 하나여야 함 (기간 밖 · 진행하지 않는 날 · 날짜 모르는 행사 → 400)
+  // 인스타 대표는 숨긴 행 날짜까지 합친 날짜로 검사 (행사 목록 응답과 같은 MergedRunDates)
   public void checkRunDate(Event event, LocalDate runDate) {
     if (runDate == null) return;
     boolean known = Event.SCHEDULE_DATES.equals(event.getScheduleStatus())
-        && eventDateRepository.findByEventId(event.getId()).stream().anyMatch(d -> d.getRunDate().equals(runDate));
+        && mergedRunDates.of(List.of(event)).get(event.getId()).dates().contains(runDate);
     if (!known) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "행사가 진행되는 날짜가 아닙니다.");
     }

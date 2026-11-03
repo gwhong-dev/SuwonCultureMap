@@ -125,30 +125,7 @@ function createClusterMarkerIcon(count, hasFavorite) {
   return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
 }
 
-// ===== info 텍스트에서 "장소" 값만 뽑기 (목록 팝업 제목용) =====
-// 라벨이 "장소" 하나로만 안 오고 "행사장소", "공연장소" 등으로도 와서
-// 포함 여부로 찾음. "장소" 계열이 아예 없으면 "주소/소재지"로 대체
-function extractPlaceName(infoText) {
-  if (!infoText) return null;
-  var lines = infoText.split("\n");
-  var addressFallback = null;
-
-  for (var i = 0; i < lines.length; i++) {
-    var idx = lines[i].indexOf(":");
-    if (idx === -1) continue;
-    var label = lines[i].substring(0, idx).trim();
-    var value = lines[i].substring(idx + 1).trim();
-
-    if (label.indexOf("장소") !== -1) {
-      return value;
-    }
-    if (!addressFallback && label.indexOf("주소") !== -1) {
-      addressFallback = value;
-    }
-  }
-
-  return addressFallback;
-}
+// info 에서 장소명 뽑기(extractPlaceName · eventPlace)는 /event-detail.js
 
 // ===== 이벤트 배열을 좌표(위치)별로 묶기 =====
 function groupByLocation(items) {
@@ -216,7 +193,7 @@ function renderLocationMarkers(visibleItems) {
 
     var infowindowContent;
     if (group.length === 1) {
-      var singlePlaceName = extractPlaceName(first.info);
+      var singlePlaceName = eventPlace(first);
       infowindowContent =
         '<div class="iw-single">' +
         (singlePlaceName
@@ -258,7 +235,7 @@ function renderLocationMarkers(visibleItems) {
           );
         })
         .join("");
-      var placeName = extractPlaceName(first.info) || first.title;
+      var placeName = eventPlace(first) || first.title;
       infowindowContent =
         '<div class="iw-group">' +
         '<div class="iw-place">' +
@@ -531,6 +508,30 @@ function extractSummaryInfo(infoText) {
   return result.join("\n");
 }
 
+// ===== 찜 탭이 비었을 때 안내 (비로그인 · 아직 없음 · 조건에 걸러짐) =====
+function renderFavoriteEmpty(list) {
+  var favoriteCount = markerList.filter(function (item) {
+    return favoriteEventIds.has(item.event.id);
+  }).length;
+  var state = favoriteEmptyState(isLoggedIn, favoriteCount);
+
+  var box = document.createElement("div");
+  box.className = "fav-empty";
+  box.innerHTML =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>' +
+    '<strong class="fav-empty-title"></strong><span class="fav-empty-body"></span>';
+  box.querySelector(".fav-empty-title").textContent = state.title;
+  box.querySelector(".fav-empty-body").textContent = state.body;
+  if (state.action) {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.textContent = state.actionLabel;
+    button.addEventListener("click", state.action === "login" ? goToLogin : browseAllEvents);
+    box.appendChild(button);
+  }
+  list.appendChild(box);
+}
+
 // ===== Side-bar 카드 렌더링 (이미지 + 제목 + info 요약) =====
 function renderSidebar(items) {
   // 찜한 행사는 맨 위에 이름순, 나머지는 시작일 순
@@ -551,6 +552,9 @@ function renderSidebar(items) {
   var list = document.getElementById("list");
   list.innerHTML = "";
   list.removeAttribute("aria-busy"); // 스켈레톤 끝
+  if (sorted.length === 0 && document.getElementById("categorySelect").value === "찜") {
+    renderFavoriteEmpty(list);
+  }
 
   // 찜한 행사가 있을 때만 구분 제목 표시
   function addSectionTitle(text) {
@@ -731,9 +735,20 @@ var isAppleMobile =
   /iPhone|iPad|iPod/.test(navigator.userAgent) ||
   (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
+// 상세 사진 칸 보이기 · 숨기기. 숨기면 PC 의 흰 × 가 안 보이므로 카드에 no-image 를 붙여 색을 바꿈
+function showModalImage(visible) {
+  document.getElementById("modalImage").hidden = !visible;
+  document.querySelector("#detailModal .modal-card").classList.toggle("no-image", !visible);
+}
+document.getElementById("modalImage").addEventListener("error", function () {
+  if (this.getAttribute("src")) showModalImage(false); // src="" 로 비울 때 나는 error 는 무시
+});
+
 // ===== 상세정보 큰 팝업창 열기/닫기 =====
 function openDetailModal(event) {
+  // 사진이 없으면(인스타 행사) 회색 빈 칸 대신 사진 칸을 숨김. 불러오다 실패해도 숨김 (아래 error 처리)
   document.getElementById("modalImage").src = event.imageUrl || "";
+  showModalImage(!!event.imageUrl);
   document.getElementById("modalTitle").textContent = event.title;
   document.getElementById("modalBadges").innerHTML = badgeRowHtml(event);
   // 날짜 필터 중이면 카드와 같이 "기간 중 · 일정 확인" 을 붙임 (상세만 보고 오늘 한다고 믿지 않게)
@@ -746,12 +761,14 @@ function openDetailModal(event) {
   var scheduleText = formatScheduleDetail(event);
   scheduleEl.textContent = scheduleText;
   scheduleEl.style.display = scheduleText ? "block" : "none";
-  document.getElementById("modalInfo").textContent = event.info || "";
+  document.getElementById("modalInfo").textContent = detailInfoText(event); // info 가 없으면 장소 · 시간 · 출처
 
   // ===== 원문 링크 버튼: link 없으면 숨김 =====
   var linkBtn = document.getElementById("modalLinkBtn");
-  if (event.link) {
-    linkBtn.href = event.link;
+  var link = safeLink(event.link);
+  if (link) {
+    linkBtn.href = link;
+    linkBtn.textContent = linkButtonText(event); // 인스타 행사는 "인스타그램에서 보기"
     linkBtn.style.display = "inline-flex";
   } else {
     linkBtn.style.display = "none";
@@ -864,12 +881,14 @@ function renderDetailMobile(event) {
   if (event.startDate) rows.push(["기간", document.getElementById("modalDate").textContent]);
   var schedule = formatScheduleDetail(event);
   if (schedule) rows.push(["진행", schedule]); // 값 안에 "일정 원문:" 이 있어 라벨은 "진행"
-  var time = findInfo(lines, ["시간", "요일"]);
+  var time = findInfo(lines, ["시간", "요일"]) || fallbackTime(event); // info 가 없으면 timeText
   if (time) rows.push(["시간", time]);
-  var place = extractPlaceName(event.info);
+  var place = eventPlace(event);
   if (place) rows.push(["장소", place]);
   var fee = findInfo(lines, ["이용료", "요금", "입장료", "관람료", "참가비"], ["주차"]); // "주차요금" 은 제외
   if (fee) rows.push(["요금", fee]);
+  var source = sourceLabel(event); // 인스타 행사만 "인스타그램 @계정"
+  if (source) rows.push(["출처", source]);
   var dl = document.getElementById("detailRows");
   dl.innerHTML = rows
     .map(function (row) {
@@ -1020,7 +1039,7 @@ document.getElementById("shareKakaoBtn").addEventListener("click", function () {
   var event = detailEvent;
   var url = eventShareUrl(event);
   var link = { mobileWebUrl: url, webUrl: url };
-  var place = extractPlaceName(event.info);
+  var place = eventPlace(event);
   var description = [document.getElementById("modalDate").textContent, place].filter(Boolean).join(" · ");
   try {
     if (event.imageUrl) {
@@ -1115,9 +1134,12 @@ function updateFavoriteButton(eventId) {
 
 function toggleFavorite(eventId) {
   if (!isLoggedIn) {
-    alert("로그인이 필요합니다."); // 비회원 - 회원가입/로그인 유도
+    showToast(FAVORITE_LOGIN_TOAST.text, FAVORITE_LOGIN_TOAST.actionLabel, goToLogin); // 비회원 - 로그인 유도
     return;
   }
+
+  if (pendingFavoriteIds.has(eventId)) return; // 요청 중에 또 누르면 무시 (같은 요청이 두 번 가서 "이미 즐겨찾기" 오류가 나지 않게)
+  pendingFavoriteIds.add(eventId);
 
   var isFavorited = favoriteEventIds.has(eventId);
   var method = isFavorited ? "DELETE" : "POST";
@@ -1126,7 +1148,12 @@ function toggleFavorite(eventId) {
     .then(function (response) {
       if (!response.ok) {
         return response.text().then(function (text) {
-          throw new Error(text);
+          if (isLoginRequiredError(text)) {
+            // 세션 만료: 화면은 로그인 상태로 남아 있음 → 비로그인으로 바꾸고 로그인 버튼 토스트
+            isLoggedIn = false;
+            throw new Error("login");
+          }
+          throw new Error(favoriteErrorText(text));
         });
       }
       if (isFavorited) {
@@ -1136,10 +1163,48 @@ function toggleFavorite(eventId) {
       }
       updateFavoriteButton(eventId);
       filterMarkers(); // ← 여기로 옮김 (진짜로 상태 바뀐 다음에 다시 그림)
+      var toast = favoriteToast(!isFavorited);
+      showToast(toast.text, toast.actionLabel, showFavoriteList);
     })
     .catch(function (err) {
-      alert(err.message);
+      if (!isLoggedIn) {
+        showToast(FAVORITE_LOGIN_TOAST.text, FAVORITE_LOGIN_TOAST.actionLabel, goToLogin);
+        checkAuth(); // 상단 로그인 표시 · ♥ 표시도 비로그인 기준으로 다시 그림
+        return;
+      }
+      // 네트워크 끊김이면 fetch 가 "Failed to fetch" 같은 영어 글을 던짐 → 기본 문구로
+      showToast(err instanceof TypeError ? favoriteErrorText("") : err.message);
+    })
+    .finally(function () {
+      pendingFavoriteIds.delete(eventId);
     });
+}
+var pendingFavoriteIds = new Set(); // 찜 요청이 아직 안 끝난 행사
+
+function goToLogin() {
+  location.href = "login.html";
+}
+
+// 토스트 "보기" → 찜 목록 (상세창이 열려 있으면 닫고)
+function showFavoriteList() {
+  if (detailEvent) closeDetailModal();
+  if (mobileQuery.matches) {
+    selectTab("fav");
+    return;
+  }
+  if (sidebarCollapsed) sidebarToggleBtn.click(); // PC: 사이드바를 접어 뒀으면 펼쳐서 찜 목록이 보이게
+  document.getElementById("categorySelect").value = "찜";
+  filterMarkers();
+}
+
+// 빈 찜 탭 "행사 둘러보기" → 전체 행사 지도
+function browseAllEvents() {
+  if (mobileQuery.matches) {
+    selectTab("map");
+    return;
+  }
+  document.getElementById("categorySelect").value = "all";
+  filterMarkers();
 }
 
 document
@@ -1465,7 +1530,7 @@ function renderPreviewStrip(sortedItems) {
         sub.push('<span class="preview-stack">같은 장소 ' + (item.groupIndex + 1) + "/" + item.groupSize + "</span>");
       }
       sub.push(escapeHtml(cardDateText(item)));
-      var place = extractPlaceName(item.event.info);
+      var place = eventPlace(item.event);
       if (place) sub.push(escapeHtml(place));
       var district = extractDistrict(item.event.info);
       if (district) sub.push(district);
@@ -1624,9 +1689,26 @@ function showToast(message, actionLabel, onAction) {
     if (onAction) onAction();
   };
   toast.hidden = false;
+  toastDuration = actionLabel ? 4000 : 2500; // 버튼 있는 토스트는 누를 시간을 더 줌
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(hideToast, 2500);
+  toastTimer = setTimeout(hideToast, toastDuration);
 }
+var toastDuration = 2500;
+// 마우스를 올리거나 키보드로 버튼에 가 있는 동안은 사라지지 않게
+function pauseToast() {
+  clearTimeout(toastTimer);
+}
+function resumeToast() {
+  if (document.getElementById("toast").hidden) return;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, toastDuration);
+}
+["mouseenter", "focusin"].forEach(function (type) {
+  document.getElementById("toast").addEventListener(type, pauseToast);
+});
+["mouseleave", "focusout"].forEach(function (type) {
+  document.getElementById("toast").addEventListener(type, resumeToast);
+});
 function hideToast() {
   clearTimeout(toastTimer);
   document.getElementById("toast").hidden = true;
@@ -1657,7 +1739,7 @@ function copyText(text) {
 var routeEvent = null;
 function openRouteSheet(event) {
   routeEvent = event;
-  var place = extractPlaceName(event.info) || event.title;
+  var place = eventPlace(event) || event.title;
   var address = extractAddress(event.info);
   document.getElementById("routeEvent").textContent = event.title;
   document.getElementById("routePlace").textContent = place;

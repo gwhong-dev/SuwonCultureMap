@@ -240,9 +240,16 @@
 
     <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=7e3b2a42df77bc183241db2bcc6c3cbb&autoload=false"></script>
     <!-- 카카오톡 공유용 JS SDK (지도와 같은 JavaScript 키로 Kakao.init). 못 불러오면 공유 창에서 안내만 -->
-    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.9/kakao.min.js" crossorigin="anonymous"></script>
+    <!-- integrity: 카카오 문서(JavaScript > 다운로드)의 2.7.9 SRI 해시. 파일이 바뀌면 브라우저가 실행하지 않음 → 버전을 올릴 땐 해시도 같이 -->
+    <script
+      src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.9/kakao.min.js"
+      integrity="sha384-JpLApTkB8lPskhVMhT+m5Ln8aHlnS0bsIexhaak0jOhAkMYedQoVghPfSpjNi9K1"
+      crossorigin="anonymous"
+    ></script>
     <script src="/schedule-format.js"></script>
     <script src="/route-links.js"></script>
+    <script src="/event-detail.js"></script>
+    <script src="/favorite-ui.js"></script>
     <script src="/js/index.js"></script>
   </body>
 </html>

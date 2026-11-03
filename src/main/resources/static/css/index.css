@@ -278,6 +278,18 @@ body {
   display: block;
   background: #ddd;
 }
+/* 사진이 없는 행사(인스타): 사진 칸을 숨기고, 흰 × 를 본문 위에서 보이는 색으로 */
+.modal-image[hidden] {
+  display: none;
+}
+.modal-card.no-image .modal-close {
+  color: #666;
+}
+@media (min-width: 1025px) {
+  .modal-card.no-image .modal-body {
+    padding-top: 2.25rem; /* PC: × 와 날짜 줄이 겹치지 않게 (모바일은 × 대신 상단 헤더) */
+  }
+}
 .modal-body {
   padding: 1rem 1.25rem;
 }
@@ -463,6 +475,70 @@ body {
 #shareSheet[hidden],
 #toast[hidden] {
   display: none;
+}
+
+/* 찜 탭이 비었을 때 안내 (PC 모양, 모바일은 아래 미디어 쿼리에서 토큰 색으로) */
+.fav-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: #666;
+  font-size: 0.875rem;
+}
+.fav-empty svg {
+  width: 40px;
+  height: 40px;
+  color: #c77d00;
+}
+.fav-empty-title {
+  color: #222;
+  font-size: 1rem;
+}
+.fav-empty button {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  border: 1px solid #ddd;
+  border-radius: 2px;
+  background: #fff;
+  color: #222;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* PC 토스트: 화면 아래 가운데 (모바일은 아래 미디어 쿼리에서 하단 탭 위로) */
+@media (min-width: 1025px) {
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 32px;
+    transform: translateX(-50%);
+    z-index: 130; /* 상세창(100) 위 */
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 0 6px 0 16px;
+    background: #222;
+    color: #fff;
+    font-size: 14px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  }
+  #toastAction {
+    height: 44px;
+    padding: 0 10px;
+    border: 0;
+    background: none;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  #toastAction[hidden] {
+    display: none;
+  }
 }
 
 /* =====================================================
@@ -978,6 +1054,33 @@ body {
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
+  }
+
+  /* ----- 찜 탭 빈 상태 (docs/design/mobile-design-v1.md 05): 하트 · 제목 · 안내 · 버튼 ----- */
+  .fav-empty {
+    grid-column: 1 / -1;
+    padding: 48px 16px;
+    color: var(--sub);
+    font-size: 14px;
+  }
+  .fav-empty svg {
+    width: 44px;
+    height: 44px;
+    color: var(--accent);
+  }
+  .fav-empty-title {
+    color: var(--text);
+    font-size: 16px;
+  }
+  .fav-empty button {
+    height: 44px;
+    margin-top: 8px;
+    padding: 0 20px;
+    border: 0;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-size: 14px;
+    font-weight: 700;
   }
 
   /* ----- 상태 배지 + D-day (docs/design/mobile-design-v1.md 2번) ----- */

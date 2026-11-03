@@ -48,12 +48,13 @@ public final class ParsedEventValidator {
       place = null; // 지어낸 장소로 엉뚱한 좌표가 찍히는 것 방지 → 다음 단계에서 NO_COORD
     }
     String timeText = CaptionText.limit(CaptionText.blankToNull(e.timeText()), TIME_TEXT_MAX);
+    String scheduleText = CaptionText.limit(CaptionText.blankToNull(e.scheduleText()), TIME_TEXT_MAX); // event.schedule_text 칸 길이
 
     LocalDate start = e.startDate();
     LocalDate end = e.endDate();
     if (start == null) {
       return new Result(CandidateStatus.NO_DATE,
-          new ParsedEvent(true, title, category, null, null, timeText, place), "시작일 없음", warnings);
+          new ParsedEvent(true, title, category, null, null, timeText, place, scheduleText), "시작일 없음", warnings);
     }
     if (end == null) end = start;
     if (end.isBefore(start)) return fail("종료일이 시작일보다 앞섬", warnings);
@@ -74,7 +75,7 @@ public final class ParsedEventValidator {
     }
 
     return new Result(CandidateStatus.PARSED,
-        new ParsedEvent(true, title, category, start, end, timeText, place), null, warnings);
+        new ParsedEvent(true, title, category, start, end, timeText, place, scheduleText), null, warnings);
   }
 
   private static Result fail(String reason, List<String> warnings) {

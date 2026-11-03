@@ -67,7 +67,8 @@ public final class RuleCaptionParser {
     }
 
     String place = CaptionText.blankToNull(CaptionLabel.content(placeLine));
-    ParsedEvent event = new ParsedEvent(true, title, category(title + "\n" + titleLine), date.start(), date.end(), timeText, place);
+    ParsedEvent event = new ParsedEvent(true, title, category(title + "\n" + titleLine), date.start(), date.end(), timeText,
+        place, CaptionText.blankToNull(CaptionText.normalize(CaptionLabel.content(dateLine)).strip()));
     return new Confident(event, date.kind() == CaptionDateParser.Kind.NO_DATE ? date.reason() : null);
   }
 
