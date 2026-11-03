@@ -23,7 +23,8 @@ FROM eclipse-temurin:17-jre
 WORKDIR /app
 
 # root 가 아닌 전용 사용자로 실행 (보안)
-RUN useradd --system --uid 10001 spring
+# 로그 폴더는 미리 만들어 둠 → 처음 붙는 Docker 볼륨이 이 폴더의 소유자(spring)를 그대로 물려받음
+RUN useradd --system --uid 10001 spring && mkdir /app/logs && chown spring /app/logs
 COPY --from=build /app/app.jar app.jar
 USER spring
 

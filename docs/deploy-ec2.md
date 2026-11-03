@@ -133,6 +133,23 @@ bash deploy/deploy.sh   # git pull → 다시 빌드 · 실행 → 응답 확인
 curl -s http://127.0.0.1:8080/actuator/health   # 서버 안에서
 ```
 
+**로그 보기** — `docker compose logs` 는 지금 컨테이너의 로그만 있다 (배포하면 새 컨테이너라 지난 로그가 없음). 지난 로그는 `app-logs` 볼륨의 파일에서 본다. 날짜가 바뀌거나 10MB 를 넘으면 `.gz` 로 넘기고 **14일 · 합계 100MB** 까지만 남긴다 (`application-prod.properties`)
+
+```bash
+docker compose logs --since 2h app                  # 최근 2시간 (지금 컨테이너)
+docker compose exec app ls -l /app/logs             # 오늘 app.log + 지난 날짜 app.log.2026-11-03.0.gz …
+docker compose exec app sh -c "zcat -f /app/logs/app.log* | grep -E '동기화|실패'"           # 보관된 전체에서 동기화 결과 · 실패
+docker compose exec app sh -c "zcat /app/logs/app.log.2026-11-03.*.gz | grep -E 'WARN|ERROR'"   # 지난 날짜의 경고 · 오류
+```
+
+| 찾을 것 | 검색어 |
+|---|---|
+| 예약 동기화 결과 | `자동 동기화 완료` · `자동 동기화 일부 실패` |
+| 재단 · 인스타 실패 원인 | `동기화 실패` · `재단 행사 건너뜀` · `인스타 수집 실패` |
+| 앱 시작 · 종료 | `Started FestivalApplication` · `Commencing graceful shutdown` |
+
+로그에는 비밀값 · 방문자 IP 를 남기지 않는다 (API 호출 · DB 오류처럼 값이 섞일 수 있는 예외는 메시지 없이 종류만 기록). 새 로그를 추가할 때도 지킨다
+
 ## 자동 배포 (CD)
 
 main 에 머지 → CI 통과 → GitHub Actions `Deploy` → AWS SSM(원격 명령) → 서버에서 `deploy/deploy.sh`.
@@ -266,4 +283,4 @@ docker compose start app
 
 **AWS Free 플랜 종료:** 2027-05-02 또는 크레딧 소진 중 먼저 오는 때. 그 뒤 계정이 닫혀 서비스와 DB 접근이 끊긴다. 잔액을 매달 EC2 대시보드에서 확인하고, **2027-03-01** 까지 Oracle 이전 또는 Paid 전환을 결정한다. 종료 전에 백업을 내 PC 로 받아 둔다.
 
-**하면 안 되는 명령:** `docker compose down -v` · `docker system prune --volumes` (DB 볼륨이 지워진다)
+**하면 안 되는 명령:** `docker compose down -v` · `docker system prune --volumes` (DB · 로그 볼륨이 지워진다)

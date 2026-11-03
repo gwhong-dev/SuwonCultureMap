@@ -3,6 +3,7 @@
 #  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 #  - caddy: 80 · 443 을 받아 HTTPS 인증서를 자동 발급 · 갱신하고 앱으로 넘김
 #  - 앱 · DB 는 외부에 열지 않음 (docker-compose.yml 에서 127.0.0.1 에만 연결)
+#  - 앱 로그는 docker logs(배포로 컨테이너를 새로 만들면 사라짐)와 별도로 app-logs 볼륨에 날짜별 파일로 남김
 # =====================================================
 x-logging: &logging
   driver: json-file
@@ -26,6 +27,10 @@ services:
       KAKAO_ADMIN_KEY: ${KAKAO_ADMIN_KEY:?.env 에 KAKAO_ADMIN_KEY 가 없음}
       # 2GB 서버에서 MySQL 과 메모리를 나눠 쓰도록 앱 메모리 상한을 둠
       JAVA_TOOL_OPTIONS: -Xmx700m
+      # 파일 로그 위치 (보관 기간 · 용량은 application-prod.properties)
+      LOGGING_FILE_NAME: /app/logs/app.log
+    volumes:
+      - app-logs:/app/logs     # 배포해도 지난 로그가 남음
 
   caddy:
     image: caddy:2
@@ -44,5 +49,6 @@ services:
       - caddy-config:/config
 
 volumes:
+  app-logs:
   caddy-data:
   caddy-config:
