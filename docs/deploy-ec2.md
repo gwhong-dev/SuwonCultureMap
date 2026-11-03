@@ -138,7 +138,7 @@ curl -s http://127.0.0.1:8080/actuator/health   # 서버 안에서
 ```bash
 docker compose logs --since 2h app                  # 최근 2시간 (지금 컨테이너)
 docker compose exec app ls -l /app/logs             # 오늘 app.log + 지난 날짜 app.log.2026-11-03.0.gz …
-docker compose exec app grep -E '동기화|실패' /app/logs/app.log                      # 오늘 동기화 결과 · 실패
+docker compose exec app sh -c "zcat -f /app/logs/app.log* | grep -E '동기화|실패'"           # 보관된 전체에서 동기화 결과 · 실패
 docker compose exec app sh -c "zcat /app/logs/app.log.2026-11-03.*.gz | grep -E 'WARN|ERROR'"   # 지난 날짜의 경고 · 오류
 ```
 
@@ -146,9 +146,9 @@ docker compose exec app sh -c "zcat /app/logs/app.log.2026-11-03.*.gz | grep -E 
 |---|---|
 | 예약 동기화 결과 | `자동 동기화 완료` · `자동 동기화 일부 실패` |
 | 재단 · 인스타 실패 원인 | `동기화 실패` · `재단 행사 건너뜀` · `인스타 수집 실패` |
-| 앱 시작 · 종료 | `Started FestivalApplication` · `Shutting down` |
+| 앱 시작 · 종료 | `Started FestivalApplication` · `Commencing graceful shutdown` |
 
-로그에는 비밀값 · 방문자 IP 를 남기지 않는다 (예외는 메시지 없이 종류만 기록). 새 로그를 추가할 때도 지킨다
+로그에는 비밀값 · 방문자 IP 를 남기지 않는다 (API 호출 · DB 오류처럼 값이 섞일 수 있는 예외는 메시지 없이 종류만 기록). 새 로그를 추가할 때도 지킨다
 
 ## 자동 배포 (CD)
 
