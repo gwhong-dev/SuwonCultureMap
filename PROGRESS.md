@@ -17,7 +17,7 @@
 **다음 할 일 (순서대로)**
 - 👉 다음 작업(Claude): **운영 로그 정리** (로드맵 6단계 남은 것)
 0. 아이폰 재확인 — 1차 확인(11/2) 5건 보완 **#99 머지 · 운영 배포 완료(11/3 13:11)** → 아이폰에서 다시 확인 (사용자)
-   ① 탭 아래 목록 비침 ② 카카오 길찾기 대중교통(앱 먼저, 없으면 웹) ③ 지도 앱 갔다 와도 상세 · 길찾기 복원(`?event=&route=1`) ④ 상세 탭 여백 ⑤ 공유 하단 창(카카오톡 · 링크 복사) — 카카오톡 버튼은 기존 버그로 "불러오지 못했어요" 토스트(아래 나중에 할 일) → 고친 뒤 확인
+   ① 탭 아래 목록 비침 ② 카카오 길찾기 대중교통(앱 먼저, 없으면 웹) ③ 지도 앱 갔다 와도 상세 · 길찾기 복원(`?event=&route=1`) ④ 상세 탭 여백 ⑤ 공유 하단 창(카카오톡 · 링크 복사) — 카카오톡 버튼 버그는 11/3 수정(fix PR) → 아이폰에서 카카오톡이 열리는지 확인
    - 아이폰에서 볼 것: 카카오맵 앱 있는 폰은 "열겠습니까?" 확인 뒤 웹이 같이 열리지 않는지(2.5초 타이머) · 앱 없는 폰은 "주소가 잘못되었습니다" 알림 뒤 웹으로 넘어가는지 · 카카오톡 공유가 열리는지(안 열리면 콘솔 Web 플랫폼 도메인 확인) · 아이패드(데스크톱 모드)에서도 공유 창이 열리는지
    - ⑥ 찜 토스트 + 찜 탭 빈 상태는 **기존 FavoriteService(로그인 찜)와 합치는 방식을 정한 뒤** 시작
 1. 인스타 켜기 (결정 문서 "켜는 순서" 2~4): 옛 데이터 백업 → 삭제(**사용자 승인**) → 서버 `.env` 에 `INSTAGRAM_SYNC_ENABLED=true` → 재시작 → `/api/events` 확인
@@ -62,7 +62,7 @@
 - [ ] 인플루언서(개인) 계정 추가 검토 — 개인정보보호법 확인 먼저 (사용자 희망, 11/2)
 - [x] CSP `script-src` 제한 — 인라인 스크립트를 `static/js` 로 분리, `script-src 'self' dapi.kakao.com t1.kakaocdn.net` (#104, 11/3 운영 콘솔 위반 0건)
 - [ ] 정적 파일 캐시: Cache-Control 설정이 없어 브라우저가 추정 캐시 → index.html 과 js/index.js 를 같이 고치면 옛 js 가 섞일 수 있음 → `?v=` 버전 또는 `spring.web.resources.cache.cachecontrol.no-cache=true` 검토 (CSP PR 검증 지적)
-- [ ] 카카오톡 공유 버튼이 항상 "불러오지 못했어요" 토스트 (운영도 같음, CSP 와 무관 · 11/3 발견): SDK v2 는 `Kakao.init()` 뒤에야 `Kakao.Share` 가 생기는데 `js/index.js` 공유 처리에서 init 전에 `Kakao.Share` 를 검사 → `!window.Kakao` 만 검사하고 init 뒤 `Kakao.Share` 확인으로 고치는 fix PR (init 후 sendDefault 는 CSP 아래에서 위반 0건 확인)
+- [x] 카카오톡 공유 버튼이 항상 "불러오지 못했어요" 토스트 (11/3 발견 · 수정): SDK v2 는 `Kakao.init()` 뒤에야 `Kakao.Share` 가 생기는데 init 전에 검사했음 → init 먼저 하고 Share 확인. 로컬에서 카카오 공유 API 200 확인, 회귀 테스트 `KakaoShareScriptTest`
 - [ ] `deploy/deploy.sh` 는 Caddyfile 만 바뀌면 Caddy 를 다시 띄우지 않음(설정 그대로 유지) → Caddyfile 수정 시 `docker compose up -d --force-recreate caddy` 단계 추가
 - [ ] GitHub 예약 실행은 공개 저장소에 60일 동안 커밋이 없으면 자동 정지 → 정지되면 Actions 화면에서 Uptime 다시 켜기 (메일 안내 옴)
 - [ ] 카카오 JS SDK(`t1.kakaocdn.net/kakao_js_sdk/2.7.9`) `integrity` 속성 없음 — 클라우드에서 카카오 문서 도메인이 막혀 해시를 확인 못 함 → PC 에서 developers.kakao.com "JavaScript 시작하기" 의 script 태그를 그대로 복사해 넣기

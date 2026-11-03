@@ -998,6 +998,12 @@ document.getElementById("shareCopyBtn").addEventListener("click", function () {
 // 콘솔에 이 도메인이 등록되지 않았으면 안내 토스트만 (링크 복사는 그대로 됨)
 document.getElementById("shareKakaoBtn").addEventListener("click", function () {
   if (!detailEvent) return;
+  // SDK v2 는 Kakao.init() 을 한 뒤에야 Kakao.Share 가 생김 → init 먼저, 그다음 Share 확인
+  try {
+    if (window.Kakao && !Kakao.isInitialized()) Kakao.init(KAKAO_JS_KEY);
+  } catch (err) {
+    console.error("카카오 SDK 초기화 실패", err);
+  }
   if (!window.Kakao || !Kakao.Share) {
     showToast("카카오톡 공유를 불러오지 못했어요. 링크 복사를 이용해 주세요");
     return;
@@ -1008,7 +1014,6 @@ document.getElementById("shareKakaoBtn").addEventListener("click", function () {
   var place = extractPlaceName(event.info);
   var description = [document.getElementById("modalDate").textContent, place].filter(Boolean).join(" · ");
   try {
-    if (!Kakao.isInitialized()) Kakao.init(KAKAO_JS_KEY);
     if (event.imageUrl) {
       Kakao.Share.sendDefault({
         objectType: "feed",
