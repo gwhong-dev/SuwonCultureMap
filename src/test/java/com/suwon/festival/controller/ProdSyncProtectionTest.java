@@ -92,6 +92,17 @@ class ProdSyncProtectionTest {
   }
 
   @Test
+  void 운영_파일_로그는_14일_100MB까지만_보관() {
+    // 파일 위치는 docker-compose.prod.yml 의 LOGGING_FILE_NAME → 시험 · 로컬 실행은 파일을 만들지 않음
+    Environment env = context.getEnvironment();
+
+    assertThat(env.getProperty("logging.file.name")).isNull();
+    assertThat(env.getProperty("logging.logback.rollingpolicy.max-history")).isEqualTo("14");
+    assertThat(env.getProperty("logging.logback.rollingpolicy.total-size-cap")).isEqualTo("100MB");
+    assertThat(env.getProperty("logging.logback.rollingpolicy.max-file-size")).isEqualTo("10MB");
+  }
+
+  @Test
   void 운영에서는_자동_동기화가_켜져_있음() {
     assertThat(context.getBeansOfType(ScheduledSyncJob.class)).hasSize(1);
     assertThat(context.getBeansOfType(ScheduledTaskHolder.class).values().stream()

@@ -128,6 +128,15 @@ jobs:
           $COMPOSE up -d --build db app
           wait_app
 
+          # 파일 로그: 볼륨 폴더에 앱(spring 사용자)이 쓸 수 있어야 함 → 시작 로그가 파일에도 있는지
+          # (헬스체크가 시작 완료 로그보다 먼저 응답할 수 있어 잠깐 기다림)
+          for i in $(seq 1 15); do
+            $COMPOSE exec -T app grep -q 'Started FestivalApplication' /app/logs/app.log && break
+            sleep 2
+          done
+          $COMPOSE exec -T app grep -q 'Started FestivalApplication' /app/logs/app.log
+          echo "파일 로그 확인"
+
           # 헬스체크: MySQL 연결까지 UP, 상세 정보와 다른 actuator 엔드포인트는 공개하지 않음
           HEALTH="$(curl -fsS http://127.0.0.1:8080/actuator/health)"
           echo "health: $HEALTH"
