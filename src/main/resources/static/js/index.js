@@ -508,6 +508,30 @@ function extractSummaryInfo(infoText) {
   return result.join("\n");
 }
 
+// ===== 찜 탭이 비었을 때 안내 (비로그인 · 아직 없음 · 조건에 걸러짐) =====
+function renderFavoriteEmpty(list) {
+  var favoriteCount = markerList.filter(function (item) {
+    return favoriteEventIds.has(item.event.id);
+  }).length;
+  var state = favoriteEmptyState(isLoggedIn, favoriteCount);
+
+  var box = document.createElement("div");
+  box.className = "fav-empty";
+  box.innerHTML =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>' +
+    '<strong class="fav-empty-title"></strong><span class="fav-empty-body"></span>';
+  box.querySelector(".fav-empty-title").textContent = state.title;
+  box.querySelector(".fav-empty-body").textContent = state.body;
+  if (state.action) {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.textContent = state.actionLabel;
+    button.addEventListener("click", state.action === "login" ? goToLogin : browseAllEvents);
+    box.appendChild(button);
+  }
+  list.appendChild(box);
+}
+
 // ===== Side-bar 카드 렌더링 (이미지 + 제목 + info 요약) =====
 function renderSidebar(items) {
   // 찜한 행사는 맨 위에 이름순, 나머지는 시작일 순
@@ -528,6 +552,9 @@ function renderSidebar(items) {
   var list = document.getElementById("list");
   list.innerHTML = "";
   list.removeAttribute("aria-busy"); // 스켈레톤 끝
+  if (sorted.length === 0 && document.getElementById("categorySelect").value === "찜") {
+    renderFavoriteEmpty(list);
+  }
 
   // 찜한 행사가 있을 때만 구분 제목 표시
   function addSectionTitle(text) {
@@ -1095,9 +1122,12 @@ function updateFavoriteButton(eventId) {
 
 function toggleFavorite(eventId) {
   if (!isLoggedIn) {
-    alert("로그인이 필요합니다."); // 비회원 - 회원가입/로그인 유도
+    showToast(FAVORITE_LOGIN_TOAST.text, FAVORITE_LOGIN_TOAST.actionLabel, goToLogin); // 비회원 - 로그인 유도
     return;
   }
+
+  if (pendingFavoriteIds.has(eventId)) return; // 요청 중에 또 누르면 무시 (같은 요청이 두 번 가서 "이미 즐겨찾기" 오류가 나지 않게)
+  pendingFavoriteIds.add(eventId);
 
   var isFavorited = favoriteEventIds.has(eventId);
   var method = isFavorited ? "DELETE" : "POST";
@@ -1106,7 +1136,12 @@ function toggleFavorite(eventId) {
     .then(function (response) {
       if (!response.ok) {
         return response.text().then(function (text) {
-          throw new Error(text);
+          if (isLoginRequiredError(text)) {
+            // 세션 만료: 화면은 로그인 상태로 남아 있음 → 비로그인으로 바꾸고 로그인 버튼 토스트
+            isLoggedIn = false;
+            throw new Error("login");
+          }
+          throw new Error(favoriteErrorText(text));
         });
       }
       if (isFavorited) {
@@ -1116,10 +1151,48 @@ function toggleFavorite(eventId) {
       }
       updateFavoriteButton(eventId);
       filterMarkers(); // ← 여기로 옮김 (진짜로 상태 바뀐 다음에 다시 그림)
+      var toast = favoriteToast(!isFavorited);
+      showToast(toast.text, toast.actionLabel, showFavoriteList);
     })
     .catch(function (err) {
-      alert(err.message);
+      if (!isLoggedIn) {
+        showToast(FAVORITE_LOGIN_TOAST.text, FAVORITE_LOGIN_TOAST.actionLabel, goToLogin);
+        checkAuth(); // 상단 로그인 표시 · ♥ 표시도 비로그인 기준으로 다시 그림
+        return;
+      }
+      // 네트워크 끊김이면 fetch 가 "Failed to fetch" 같은 영어 글을 던짐 → 기본 문구로
+      showToast(err instanceof TypeError ? favoriteErrorText("") : err.message);
+    })
+    .finally(function () {
+      pendingFavoriteIds.delete(eventId);
     });
+}
+var pendingFavoriteIds = new Set(); // 찜 요청이 아직 안 끝난 행사
+
+function goToLogin() {
+  location.href = "login.html";
+}
+
+// 토스트 "보기" → 찜 목록 (상세창이 열려 있으면 닫고)
+function showFavoriteList() {
+  if (detailEvent) closeDetailModal();
+  if (mobileQuery.matches) {
+    selectTab("fav");
+    return;
+  }
+  if (sidebarCollapsed) sidebarToggleBtn.click(); // PC: 사이드바를 접어 뒀으면 펼쳐서 찜 목록이 보이게
+  document.getElementById("categorySelect").value = "찜";
+  filterMarkers();
+}
+
+// 빈 찜 탭 "행사 둘러보기" → 전체 행사 지도
+function browseAllEvents() {
+  if (mobileQuery.matches) {
+    selectTab("map");
+    return;
+  }
+  document.getElementById("categorySelect").value = "all";
+  filterMarkers();
 }
 
 document
@@ -1586,9 +1659,26 @@ function showToast(message, actionLabel, onAction) {
     if (onAction) onAction();
   };
   toast.hidden = false;
+  toastDuration = actionLabel ? 4000 : 2500; // 버튼 있는 토스트는 누를 시간을 더 줌
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(hideToast, 2500);
+  toastTimer = setTimeout(hideToast, toastDuration);
 }
+var toastDuration = 2500;
+// 마우스를 올리거나 키보드로 버튼에 가 있는 동안은 사라지지 않게
+function pauseToast() {
+  clearTimeout(toastTimer);
+}
+function resumeToast() {
+  if (document.getElementById("toast").hidden) return;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, toastDuration);
+}
+["mouseenter", "focusin"].forEach(function (type) {
+  document.getElementById("toast").addEventListener(type, pauseToast);
+});
+["mouseleave", "focusout"].forEach(function (type) {
+  document.getElementById("toast").addEventListener(type, resumeToast);
+});
 function hideToast() {
   clearTimeout(toastTimer);
   document.getElementById("toast").hidden = true;

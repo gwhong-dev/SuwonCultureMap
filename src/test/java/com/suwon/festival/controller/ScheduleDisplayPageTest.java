@@ -88,4 +88,16 @@ class ScheduleDisplayPageTest {
     MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     assertThat(mockMvc.perform(get("/event-detail.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
   }
+
+  @Test
+  void 찜_안내_문구_파일을_화면_스크립트보다_먼저_불러옴() throws Exception {
+    // 찜 토스트 · 찜 탭 빈 상태 문구(favoriteToast · favoriteEmptyState)가 favorite-ui.js 에 있음 → index.js 보다 앞
+    String html = page();
+    int rules = html.indexOf("<script src=\"/favorite-ui.js\"></script>");
+    assertThat(rules).isPositive().isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
+    assertThat(html).contains("id=\"toast\"");
+
+    MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+    assertThat(mockMvc.perform(get("/favorite-ui.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
+  }
 }
