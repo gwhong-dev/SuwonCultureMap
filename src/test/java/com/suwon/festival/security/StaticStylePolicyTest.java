@@ -22,8 +22,9 @@ class StaticStylePolicyTest {
 
   // <style> 태그
   private static final Pattern STYLE_TAG = Pattern.compile("<style[\\s>]", Pattern.CASE_INSENSITIVE);
-  // style="..." 속성. JS 문자열로 만든 HTML(innerHTML) 안의 것도 잡도록 앞 글자는 공백, 따옴표는 \" 도 허용
-  private static final Pattern STYLE_ATTR = Pattern.compile("\\sstyle\\s*=\\s*\\\\?[\"']", Pattern.CASE_INSENSITIVE);
+  // style="..." 속성. '<div ' + 'style="..."' 처럼 끊어 쓴 JS 문자열도 잡도록 앞 글자는 영문 · 숫자 · . · - 만 아니면 됨
+  // (el.style = · data-style= 은 제외, 따옴표는 \" 도 허용. var style = "..." 같은 변수는 걸리니 다른 이름으로)
+  private static final Pattern STYLE_ATTR = Pattern.compile("(?<![\\w.-])style\\s*=\\s*\\\\?[\"']", Pattern.CASE_INSENSITIVE);
   // setAttribute("style", ...) 도 인라인 스타일
   private static final Pattern SET_STYLE_ATTR = Pattern.compile("setAttribute\\(\\s*[\"']style[\"']", Pattern.CASE_INSENSITIVE);
 
@@ -67,7 +68,10 @@ class StaticStylePolicyTest {
     assertThat(STYLE_ATTR.matcher("<div style=\"display: none\">").find()).isTrue();
     assertThat(STYLE_ATTR.matcher("'<span style=\"color:#F5A623;\">'").find()).isTrue();
     assertThat(STYLE_ATTR.matcher("\"<div style=\\\"width:1px\\\">\"").find()).isTrue();
+    assertThat(STYLE_ATTR.matcher("'<div ' + 'style=\"color:red\">'").find()).isTrue();
     assertThat(STYLE_ATTR.matcher("el.style.display = \"none\"").find()).isFalse();
+    assertThat(STYLE_ATTR.matcher("el.style = \"color:red\"").find()).isFalse();
+    assertThat(STYLE_ATTR.matcher("<div data-style=\"x\">").find()).isFalse();
     assertThat(SET_STYLE_ATTR.matcher("el.setAttribute(\"style\", \"color:red\")").find()).isTrue();
   }
 
