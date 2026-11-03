@@ -278,6 +278,18 @@ body {
   display: block;
   background: #ddd;
 }
+/* 사진이 없는 행사(인스타): 사진 칸을 숨기고, 흰 × 를 본문 위에서 보이는 색으로 */
+.modal-image[hidden] {
+  display: none;
+}
+.modal-card.no-image .modal-close {
+  color: #666;
+}
+@media (min-width: 1025px) {
+  .modal-card.no-image .modal-body {
+    padding-top: 2.25rem; /* PC: × 와 날짜 줄이 겹치지 않게 (모바일은 × 대신 상단 헤더) */
+  }
+}
 .modal-body {
   padding: 1rem 1.25rem;
 }
