@@ -71,6 +71,7 @@ class ScheduleDisplayPageTest {
   @Test
   void 상세에_일정_칸이_있고_표시_규칙_파일을_불러옴() throws Exception {
     assertThat(page()).contains("id=\"modalSchedule\"", "<script src=\"/schedule-format.js\"></script>");
+    assertThat(page()).contains("<script src=\"/js/index.js\"></script>"); // 화면 스크립트 본체
 
     MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     assertThat(mockMvc.perform(get("/schedule-format.js")).andReturn().getResponse().getStatus()).isEqualTo(200);

@@ -60,6 +60,7 @@
 - [x] 인스타 재개 결정: 공식 계정만, 문서 기준 판단 (11/2, 결정 문서에 Meta 원문 확인 표)
 - [ ] 인플루언서(개인) 계정 추가 검토 — 개인정보보호법 확인 먼저 (사용자 희망, 11/2)
 - [ ] CSP `script-src` 제한 — `index.html` 인라인 스크립트를 파일로 분리한 뒤 카카오 SDK 도메인만 허용 (보안 헤더 PR 에서 보류: 지금 넣으면 지도가 안 뜸)
+- [ ] 정적 파일 캐시: Cache-Control 설정이 없어 브라우저가 추정 캐시 → index.html 과 js/index.js 를 같이 고치면 옛 js 가 섞일 수 있음 → `?v=` 버전 또는 `spring.web.resources.cache.cachecontrol.no-cache=true` 검토 (CSP PR 검증 지적)
 - [ ] 카카오톡 공유 버튼이 항상 "불러오지 못했어요" 토스트 (운영도 같음, CSP 와 무관 · 11/3 발견): SDK v2 는 `Kakao.init()` 뒤에야 `Kakao.Share` 가 생기는데 `js/index.js` 공유 처리에서 init 전에 `Kakao.Share` 를 검사 → `!window.Kakao` 만 검사하고 init 뒤 `Kakao.Share` 확인으로 고치는 fix PR (init 후 sendDefault 는 CSP 아래에서 위반 0건 확인)
 - [ ] `deploy/deploy.sh` 는 Caddyfile 만 바뀌면 Caddy 를 다시 띄우지 않음(설정 그대로 유지) → Caddyfile 수정 시 `docker compose up -d --force-recreate caddy` 단계 추가
 - [ ] GitHub 예약 실행은 공개 저장소에 60일 동안 커밋이 없으면 자동 정지 → 정지되면 Actions 화면에서 Uptime 다시 켜기 (메일 안내 옴)
