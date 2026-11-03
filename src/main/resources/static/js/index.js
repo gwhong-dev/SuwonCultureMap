@@ -125,30 +125,7 @@ function createClusterMarkerIcon(count, hasFavorite) {
   return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
 }
 
-// ===== info 텍스트에서 "장소" 값만 뽑기 (목록 팝업 제목용) =====
-// 라벨이 "장소" 하나로만 안 오고 "행사장소", "공연장소" 등으로도 와서
-// 포함 여부로 찾음. "장소" 계열이 아예 없으면 "주소/소재지"로 대체
-function extractPlaceName(infoText) {
-  if (!infoText) return null;
-  var lines = infoText.split("\n");
-  var addressFallback = null;
-
-  for (var i = 0; i < lines.length; i++) {
-    var idx = lines[i].indexOf(":");
-    if (idx === -1) continue;
-    var label = lines[i].substring(0, idx).trim();
-    var value = lines[i].substring(idx + 1).trim();
-
-    if (label.indexOf("장소") !== -1) {
-      return value;
-    }
-    if (!addressFallback && label.indexOf("주소") !== -1) {
-      addressFallback = value;
-    }
-  }
-
-  return addressFallback;
-}
+// info 에서 장소명 뽑기(extractPlaceName · eventPlace)는 /event-detail.js
 
 // ===== 이벤트 배열을 좌표(위치)별로 묶기 =====
 function groupByLocation(items) {
@@ -216,7 +193,7 @@ function renderLocationMarkers(visibleItems) {
 
     var infowindowContent;
     if (group.length === 1) {
-      var singlePlaceName = extractPlaceName(first.info);
+      var singlePlaceName = eventPlace(first);
       infowindowContent =
         '<div class="iw-single">' +
         (singlePlaceName
@@ -258,7 +235,7 @@ function renderLocationMarkers(visibleItems) {
           );
         })
         .join("");
-      var placeName = extractPlaceName(first.info) || first.title;
+      var placeName = eventPlace(first) || first.title;
       infowindowContent =
         '<div class="iw-group">' +
         '<div class="iw-place">' +
@@ -731,9 +708,20 @@ var isAppleMobile =
   /iPhone|iPad|iPod/.test(navigator.userAgent) ||
   (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
+// 상세 사진 칸 보이기 · 숨기기. 숨기면 PC 의 흰 × 가 안 보이므로 카드에 no-image 를 붙여 색을 바꿈
+function showModalImage(visible) {
+  document.getElementById("modalImage").hidden = !visible;
+  document.querySelector("#detailModal .modal-card").classList.toggle("no-image", !visible);
+}
+document.getElementById("modalImage").addEventListener("error", function () {
+  if (this.getAttribute("src")) showModalImage(false); // src="" 로 비울 때 나는 error 는 무시
+});
+
 // ===== 상세정보 큰 팝업창 열기/닫기 =====
 function openDetailModal(event) {
+  // 사진이 없으면(인스타 행사) 회색 빈 칸 대신 사진 칸을 숨김. 불러오다 실패해도 숨김 (아래 error 처리)
   document.getElementById("modalImage").src = event.imageUrl || "";
+  showModalImage(!!event.imageUrl);
   document.getElementById("modalTitle").textContent = event.title;
   document.getElementById("modalBadges").innerHTML = badgeRowHtml(event);
   // 날짜 필터 중이면 카드와 같이 "기간 중 · 일정 확인" 을 붙임 (상세만 보고 오늘 한다고 믿지 않게)
@@ -746,12 +734,14 @@ function openDetailModal(event) {
   var scheduleText = formatScheduleDetail(event);
   scheduleEl.textContent = scheduleText;
   scheduleEl.style.display = scheduleText ? "block" : "none";
-  document.getElementById("modalInfo").textContent = event.info || "";
+  document.getElementById("modalInfo").textContent = detailInfoText(event); // info 가 없으면 장소 · 시간 · 출처
 
   // ===== 원문 링크 버튼: link 없으면 숨김 =====
   var linkBtn = document.getElementById("modalLinkBtn");
-  if (event.link) {
-    linkBtn.href = event.link;
+  var link = safeLink(event.link);
+  if (link) {
+    linkBtn.href = link;
+    linkBtn.textContent = linkButtonText(event); // 인스타 행사는 "인스타그램에서 보기"
     linkBtn.style.display = "inline-flex";
   } else {
     linkBtn.style.display = "none";
@@ -860,12 +850,14 @@ function renderDetailMobile(event) {
   if (event.startDate) rows.push(["기간", document.getElementById("modalDate").textContent]);
   var schedule = formatScheduleDetail(event);
   if (schedule) rows.push(["진행", schedule]); // 값 안에 "일정 원문:" 이 있어 라벨은 "진행"
-  var time = findInfo(lines, ["시간", "요일"]);
+  var time = findInfo(lines, ["시간", "요일"]) || fallbackTime(event); // info 가 없으면 timeText
   if (time) rows.push(["시간", time]);
-  var place = extractPlaceName(event.info);
+  var place = eventPlace(event);
   if (place) rows.push(["장소", place]);
   var fee = findInfo(lines, ["이용료", "요금", "입장료", "관람료", "참가비"], ["주차"]); // "주차요금" 은 제외
   if (fee) rows.push(["요금", fee]);
+  var source = sourceLabel(event); // 인스타 행사만 "인스타그램 @계정"
+  if (source) rows.push(["출처", source]);
   var dl = document.getElementById("detailRows");
   dl.innerHTML = rows
     .map(function (row) {
@@ -1010,7 +1002,7 @@ document.getElementById("shareKakaoBtn").addEventListener("click", function () {
   var event = detailEvent;
   var url = eventShareUrl(event);
   var link = { mobileWebUrl: url, webUrl: url };
-  var place = extractPlaceName(event.info);
+  var place = eventPlace(event);
   var description = [document.getElementById("modalDate").textContent, place].filter(Boolean).join(" · ");
   try {
     if (event.imageUrl) {
@@ -1435,7 +1427,7 @@ function renderPreviewStrip(sortedItems) {
         sub.push('<span class="preview-stack">같은 장소 ' + (item.groupIndex + 1) + "/" + item.groupSize + "</span>");
       }
       sub.push(escapeHtml(cardDateText(item)));
-      var place = extractPlaceName(item.event.info);
+      var place = eventPlace(item.event);
       if (place) sub.push(escapeHtml(place));
       var district = extractDistrict(item.event.info);
       if (district) sub.push(district);
@@ -1627,7 +1619,7 @@ function copyText(text) {
 var routeEvent = null;
 function openRouteSheet(event) {
   routeEvent = event;
-  var place = extractPlaceName(event.info) || event.title;
+  var place = eventPlace(event) || event.title;
   var address = extractAddress(event.info);
   document.getElementById("routeEvent").textContent = event.title;
   document.getElementById("routePlace").textContent = place;
