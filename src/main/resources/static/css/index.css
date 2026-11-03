@@ -1,0 +1,1597 @@
+:root {
+  --sidebar-width: 450px; /* PC 사이드바 폭 (모바일은 바텀시트라 사용 안 함) */
+
+  /* ===== 모바일 디자인 값 (docs/design/mobile-design-v1.md 1번) — 모바일 화면에서만 사용 ===== */
+  --bg: #ffffff; /* 바탕 */
+  --surface: #f4f2ef; /* 회색 칸 (주소 박스 등) */
+  --line: #e3dfd9; /* 구분선 · 테두리 */
+  --text: #1c1b1a; /* 본문 */
+  --sub: #5f5a54; /* 보조 글자 */
+  --accent: #b4472a; /* 주 색 (화성 벽돌) · 버튼 · 선택 탭 */
+  --on-accent: #ffffff; /* 주 색 위 글자 */
+  --accent-soft: #f7e9e3; /* D-day 배지 · 선택 칩 바탕 */
+  --accent-ink: #93391f; /* D-day 배지 · 선택 칩 글자 */
+  --blue-soft: #e6eef6; /* 오픈예정 배지 바탕 */
+  --blue: #2d5b88; /* 오픈예정 배지 글자 */
+  --gray-soft: #eceae6; /* 종료 배지 바탕 */
+  --gray: #6b6660; /* 종료 배지 글자 */
+  --shadow-float: 0 6px 18px rgba(0, 0, 0, 0.12); /* 지도 위에 떠 있는 카드에만 */
+  --dim: rgba(20, 19, 18, 0.5); /* 하단 시트 뒤 덮개 */
+  --font-mobile: "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --tab-height: 64px; /* 하단 탭 높이 */
+  --sheet-bar-height: 52px; /* "검색 결과 N개 · 목록 보기" 바 높이 */
+}
+/* 어두운 테마: 기기 설정을 따름 (토글은 나중). PC 는 토큰을 안 쓰므로 영향 없음 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141312;
+    --surface: #1e1c1a;
+    --line: #35322e;
+    --text: #f2efea;
+    --sub: #a9a39b;
+    --accent: #e07a57;
+    --on-accent: #141312;
+    --accent-soft: #3a241c;
+    --accent-ink: #f0a285;
+    --blue-soft: #1c2733;
+    --blue: #8db4dc;
+    --gray-soft: #2a2825;
+    --gray: #a9a39b;
+    --shadow-float: 0 6px 18px rgba(0, 0, 0, 0.5);
+    --dim: rgba(0, 0, 0, 0.62);
+  }
+}
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh; /* 모바일 브라우저 주소창 높이를 뺀 실제 화면 높이 */
+}
+
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  background: #222;
+  color: #fff;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+}
+#topbar input,
+#topbar select {
+  padding: 0.375rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+/* 로그인 상태 + 버튼 묶음 (PC: 상단바 오른쪽 / 모바일: ☰ 메뉴 안) */
+#topbarActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+#authStatus {
+  margin-right: 0.25rem;
+}
+.past-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+.login-btn {
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 0.8rem;
+  border: none;
+  cursor: pointer;
+}
+.login-btn.kakao {
+  background: #fee500;
+  color: #000;
+}
+.login-btn.google {
+  background: #fff;
+  color: #000;
+}
+.login-btn.naver {
+  background: #03c75a;
+  color: #fff;
+}
+.login-btn.logout {
+  background: #555;
+  color: #fff;
+}
+.login-btn.login {
+  background: #4a90d9;
+  color: #fff;
+}
+
+#app {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  position: relative; /* 토글 버튼 절대 위치 기준점 */
+}
+#map {
+  flex: 1;
+  touch-action: none; /* 핀치·드래그를 브라우저가 가로채지 않고 지도에 바로 전달 */
+}
+
+#sidebar {
+  width: var(--sidebar-width);
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #ddd;
+  background: #fff;
+  overflow: hidden;
+  transition: width 0.25s ease;
+}
+#sidebar.collapsed {
+  width: 0;
+  border-left: none;
+}
+
+/* ===== 사이드바 접기/펼치기 토글 버튼 (네이버지도 스타일) ===== */
+#sidebarToggleBtn {
+  position: absolute;
+  top: 50%;
+  right: var(--sidebar-width);
+  transform: translate(50%, -50%);
+  width: 28px;
+  height: 48px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  font-size: 0.9rem;
+  z-index: 10;
+  transition: right 0.25s ease, transform 0.25s ease;
+}
+#sidebarToggleBtn.collapsed {
+  right: 8px; /* 접혔을 때는 화면 밖으로 안 밀려나가게 오른쪽에 여백만 두고 붙임 */
+  transform: translateY(-50%); /* 접힘 상태에선 절반을 화면 밖으로 미는 translateX 제거 */
+}
+#list {
+  flex: 1;
+  overflow-y: auto;
+}
+.event-item {
+  position: relative; /* 별 배지 위치 잡으려고 추가 */
+  display: flex;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+}
+/* ===== 찜한 행사 표시 (Side-bar 카드 우측 상단 별) ===== */
+.favorite-badge {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 1rem;
+  color: #f5a623;
+}
+.event-item:hover {
+  background: #f7f7f7;
+}
+.event-item .date {
+  font-size: 0.78rem;
+  color: #888;
+}
+.event-item .title {
+  font-size: 0.9rem;
+  margin-top: 0.125rem;
+}
+
+/* ===== Side-bar 이벤트 카드 ===== */
+.event-item {
+  display: flex;
+  position: relative; /* ← 이 줄 추가 */
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+}
+.event-item:hover {
+  background: #f7f7f7;
+}
+.event-thumb {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex: none;
+  background: #eee;
+}
+.event-body {
+  flex: 1;
+  min-width: 0;
+}
+.event-body .date {
+  font-size: 0.75rem;
+  color: #888;
+}
+.event-body .title {
+  font-size: 0.9rem;
+  margin-top: 0.125rem;
+  font-weight: 600;
+}
+.event-body .info {
+  font-size: 0.78rem;
+  color: #666;
+  margin-top: 0.25rem;
+  white-space: pre-line; /* info의 \n을 실제 줄바꿈으로 표시 (모달과 동일) */
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ===== 상세정보 큰 팝업창 ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal-card {
+  background: #fff;
+  width: 420px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  border-radius: 12px;
+  position: relative;
+}
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #fff;
+  z-index: 2;
+}
+.modal-image {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  display: block;
+  background: #ddd;
+}
+.modal-body {
+  padding: 1rem 1.25rem;
+}
+/* 상세창 '★ 찜한 행사' 표시 */
+.modal-fav-badge {
+  display: inline-block;
+  margin-bottom: 0.375rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  background: #fff4e0;
+  color: #c77d00;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.modal-fav-badge[hidden] {
+  display: none;
+}
+/* 목록 구분 제목 (찜한 행사 / 전체 행사) */
+.list-section-title {
+  padding: 0.625rem 0.875rem 0.375rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #666;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+}
+.modal-date {
+  font-size: 0.8rem;
+  color: #888;
+}
+.modal-title {
+  font-size: 1.15rem;
+  margin: 0.375rem 0 0.625rem;
+}
+.modal-cal-date {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.85rem;
+  color: #444;
+}
+.modal-ics-alt {
+  display: inline-block;
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: #777;
+}
+.modal-ics-alt[hidden],
+.modal-cal-date[hidden] {
+  display: none;
+}
+.modal-cal-date select {
+  font-size: 16px; /* 16px 미만이면 아이폰이 고를 때 화면을 확대함 */
+  padding: 4px 8px;
+}
+.modal-schedule {
+  font-size: 0.85rem;
+  color: #444;
+  white-space: pre-line;
+  line-height: 1.6;
+  margin-bottom: 0.625rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+.modal-info {
+  font-size: 0.88rem;
+  color: #444;
+  white-space: pre-line;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+.favorite-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #f5a623;
+  background: #fff;
+  color: #f5a623;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.favorite-btn.active {
+  background: #f5a623;
+  color: #fff;
+}
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap; /* 버튼이 늘어나도 좁은 창에서 다음 줄로 */
+  gap: 0.5rem;
+}
+.modal-link-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #4a90d9;
+  background: #fff;
+  color: #4a90d9;
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ===== PC 마커 InfoWindow (index.js 가 만드는 말풍선 내용) ===== */
+.iw-single {
+  width: 260px;
+}
+.iw-group {
+  width: 230px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+/* 말풍선 맨 위 장소 이름 */
+.iw-place {
+  padding: 0.5rem 0.625rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1f4e79;
+  background: #e8f0fa;
+  border-bottom: 1px solid #cddcee;
+  text-align: center;
+}
+/* 행사 하나: 밑줄 제목 (클릭 → 상세) */
+.iw-title {
+  padding: 0.25rem 0.5rem 0.5rem;
+  cursor: pointer;
+  color: #2f6f6b;
+  text-decoration: underline;
+  font-size: 0.85rem;
+  white-space: normal;
+  word-break: break-word;
+  text-align: center;
+}
+/* 같은 장소 여러 행사: 줄마다 클릭 → 상세, 흰색/회색 번갈아 */
+.iw-row {
+  padding: 0.5rem 0.375rem;
+  border-top: 1px solid #eee;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #2f6f6b;
+}
+.iw-row.stripe {
+  background: #f2f2f2;
+}
+/* 찜한 행사 앞 ★ */
+.iw-fav {
+  color: #f5a623;
+}
+
+/* 공유 창 '링크 복사' 아이콘 (PC 폭에서도 18px) */
+#shareCopyBtn .route-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* 첫 화면에서 숨김 → index.js 가 로그인 상태 · 상세 열기에 맞춰 보여 줌 */
+#mypageBtn,
+#logoutBtn,
+#detailModal {
+  display: none;
+}
+
+/* ===== 모바일 전용 요소: PC에서는 숨김 ===== */
+#mobileMenuBtn,
+#categoryChips,
+#sheetHeader,
+#previewArea,
+#tabBar,
+.card-fav,
+.badge-row,
+#detailHead,
+#detailMeta,
+#detailTabs,
+#detailRows,
+#detailIntro,
+#detailLocation,
+#detailBar,
+.skeleton-card,
+.load-error {
+  display: none;
+}
+#routeSheet[hidden],
+#shareSheet[hidden],
+#toast[hidden] {
+  display: none;
+}
+
+/* =====================================================
+   모바일 · 태블릿 세로 (화면 폭 1024px 이하)
+   에어비앤비 스타일: 지도 전체 화면 + 떠 있는 검색창
+                    + 아래에서 끌어올리는 목록(바텀시트)
+   ===================================================== */
+@media (max-width: 1024px) {
+  html {
+    background: var(--bg); /* 사파리 떠 있는 주소창 · 홈 바 뒤(body 밖)도 같은 바탕색으로 */
+  }
+  body {
+    overflow: hidden;
+    font-family: var(--font-mobile);
+    background: var(--bg);
+    color: var(--text);
+  }
+  #app {
+    overflow: hidden; /* 아래로 내려간 바텀시트(translateY)가 하단 탭 밑으로 비치지 않게 */
+  }
+  button,
+  .chip {
+    touch-action: manipulation; /* 더블탭 확대 지연 제거 */
+  }
+
+  /* ----- 상단: 지도 위에 떠 있는 검색창 ----- */
+  #topbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    background: transparent;
+    color: var(--text);
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 0;
+    gap: 8px;
+    pointer-events: none; /* 빈 공간은 통과 → 지도 드래그 가능 */
+    transition: background 0.2s;
+  }
+  #topbar > * {
+    pointer-events: auto;
+  }
+  /* 목록을 끝까지 올렸을 때는 상단을 흰 배경으로 */
+  body.sheet-full #topbar {
+    background: var(--bg);
+    box-shadow: 0 1px 0 var(--line);
+  }
+  /* 드롭다운·체크박스는 아래 칩 버튼으로 대체 */
+  #topbar #categorySelect,
+  #topbar #dateFilter,
+  #topbar .past-toggle {
+    display: none;
+  }
+  #topbar #searchInput {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 48px;
+    padding: 0 16px 0 40px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    font: inherit;
+    font-size: 16px; /* 16px 미만이면 아이폰이 입력할 때 화면을 확대함 */
+    color: var(--text);
+    background: var(--bg)
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235F5A54' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E")
+      no-repeat 12px center / 20px;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  #topbar #searchInput::placeholder {
+    color: var(--sub);
+  }
+  /* 어두운 테마: 돋보기 아이콘은 배경 이미지라 토큰을 못 써서 색을 따로 지정 (sub 어두운 값) */
+  @media (prefers-color-scheme: dark) {
+    #topbar #searchInput {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A9A39B' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E");
+    }
+  }
+  #mobileMenuBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 48px;
+    height: 48px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+
+  /* ----- ☰ 메뉴 (로그인 상태 · 로그인/로그아웃) ----- */
+  #topbarActions {
+    display: none;
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 64px);
+    right: 12px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    min-width: 200px;
+    margin-left: 0;
+    padding: 14px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    box-shadow: var(--shadow-float);
+  }
+  #topbar.menu-open #topbarActions {
+    display: flex;
+  }
+  #authStatus {
+    margin: 0 0 4px;
+    font-size: 0.85rem;
+    color: var(--sub);
+  }
+  #topbarActions .login-btn {
+    padding: 11px 12px;
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  /* ----- 카테고리 칩 (가로 스크롤) ----- */
+  #categoryChips {
+    display: flex;
+    flex-basis: 100%;
+    gap: 8px;
+    overflow-x: auto;
+    margin: 0 -12px;
+    padding: 2px 12px 10px;
+    scrollbar-width: none;
+  }
+  #categoryChips::-webkit-scrollbar {
+    display: none;
+  }
+  .chip {
+    flex: none;
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .chip.active {
+    background: var(--text);
+    border-color: var(--text);
+    color: var(--bg);
+    font-weight: 700;
+  }
+
+  /* ----- 사이드바 → 바텀시트 ----- */
+  #sidebarToggleBtn {
+    display: none;
+  }
+  #sidebar,
+  #sidebar.collapsed {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    z-index: 20;
+    border-left: none;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    background: var(--bg);
+    box-shadow: var(--shadow-float);
+    transform: translateY(100%); /* 실제 위치는 JS가 상태에 맞게 지정 */
+    transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+    will-change: transform;
+  }
+  #sheetHeader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: none;
+    box-sizing: border-box;
+    height: var(--sheet-bar-height);
+    padding: 6px 0 0;
+    border-bottom: 1px solid var(--line);
+    cursor: grab;
+    touch-action: none; /* 끌어올릴 때 페이지가 같이 움직이지 않게 */
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--line);
+  }
+  .sheet-bar {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0 20px;
+  }
+  #resultCount {
+    font-size: 14px;
+    color: var(--text);
+  }
+  #resultCount strong {
+    color: var(--accent);
+  }
+  #sheetHeader:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+  #sheetToggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  #sheetToggle svg {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s;
+  }
+  body:not(.sheet-peek) #sheetToggle svg {
+    transform: rotate(180deg); /* 열려 있으면 ⌄ */
+  }
+
+  /* ----- 목록 카드: 큰 사진 위 + 글 아래 (태블릿은 2열) ----- */
+  #list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px 16px;
+    align-content: start;
+    padding: 16px 16px 0;
+    overscroll-behavior: contain;
+  }
+  .event-item {
+    flex-direction: column;
+    gap: 10px;
+    padding: 0;
+    border-bottom: none;
+  }
+  .event-item:hover {
+    background: none;
+  }
+  .event-thumb {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    border-radius: 0;
+    background: var(--surface);
+  }
+  .event-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .event-body .title {
+    order: -1; /* 제목을 날짜보다 위로 */
+    margin-top: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .event-body .date {
+    font-size: 13px;
+    color: var(--sub);
+  }
+  .event-body .info {
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--sub);
+    -webkit-line-clamp: 2;
+  }
+  .favorite-badge {
+    display: none; /* 모바일은 ♥ 버튼으로 대체 */
+  }
+  .list-section-title {
+    grid-column: 1 / -1; /* 태블릿 2열에서도 한 줄 전체 */
+    margin: 0 -16px;
+    padding: 8px 16px;
+    background: var(--surface);
+    color: var(--sub);
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* ----- 찜 하트 버튼 (목록 카드 / 미리보기 카드) ----- */
+  .card-fav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 2px;
+    background: var(--bg);
+    color: var(--sub);
+    font-size: 1.15rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .card-fav.active {
+    color: var(--accent);
+  }
+
+  /* ----- 마커 탭 → 하단 카드 (가까운 순 · 좌우로 넘기기, 결과 바 위에 뜸) ----- */
+  #previewArea {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--sheet-bar-height) + 12px);
+    z-index: 25;
+    transform: translateY(160%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s;
+  }
+  #previewArea.show {
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  #previewLabel {
+    align-self: flex-start;
+    margin-left: 12px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--line);
+  }
+  #previewStrip {
+    display: flex;
+    gap: 8px;
+    padding: 2px 12px 6px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  #previewStrip::-webkit-scrollbar {
+    display: none;
+  }
+  .preview-card {
+    position: relative;
+    flex: 0 0 min(86%, 420px);
+    display: flex;
+    gap: 12px;
+    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    box-shadow: var(--shadow-float);
+    scroll-snap-align: center;
+    cursor: pointer;
+  }
+  .preview-poster {
+    flex: none;
+    width: 76px;
+    height: 96px;
+    object-fit: cover;
+    background: var(--surface);
+  }
+  .preview-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-right: 32px; /* ♡ 자리 */
+  }
+  .preview-title {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  /* 기간 · 장소 · 구. 일정이 길면 2줄까지 (상세 · 목록에는 전체가 나옴) */
+  .preview-sub {
+    font-size: 12px;
+    color: var(--sub);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .preview-stack {
+    display: inline-block;
+    margin-right: 4px;
+    padding: 0 5px;
+    background: var(--text);
+    color: var(--bg);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .preview-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .preview-detail,
+  .preview-route {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 2px;
+    font: inherit;
+    font-size: 13px;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .preview-detail {
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--text);
+  }
+  .preview-route {
+    border: 0;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 700;
+  }
+  .preview-route svg {
+    width: 14px;
+    height: 14px;
+  }
+  .preview-card .card-fav {
+    top: 4px;
+    right: 4px;
+    background: transparent;
+  }
+
+  /* ----- 스켈레톤 로딩 (행사 목록을 받는 동안 회색 블록) + 실패 안내 ----- */
+  .skeleton-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .sk {
+    position: relative;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .sk::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    animation: shimmer 1.4s infinite;
+  }
+  @media (prefers-color-scheme: dark) {
+    .sk::after {
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    }
+  }
+  .sk-thumb {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+  }
+  .sk-line {
+    height: 14px;
+  }
+  .sk-line.w60 {
+    width: 60%;
+  }
+  .sk-line.w40 {
+    width: 40%;
+  }
+  .sk-line.w80 {
+    width: 80%;
+  }
+  .load-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    grid-column: 1 / -1;
+    padding: 32px 16px;
+    text-align: center;
+    font-size: 14px;
+    color: var(--sub);
+  }
+  .load-error button {
+    height: 44px;
+    padding: 0 20px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  /* ----- 상태 배지 + D-day (docs/design/mobile-design-v1.md 2번) ----- */
+  .badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+  }
+  .status-badge,
+  .dday-badge {
+    box-sizing: border-box;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 16px;
+    white-space: nowrap;
+  }
+  .status-badge.open {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .status-badge.upcoming {
+    background: var(--blue-soft);
+    color: var(--blue);
+  }
+  .status-badge.ended {
+    background: var(--gray-soft);
+    color: var(--gray);
+  }
+  .dday-badge {
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+  }
+  /* 목록에서는 폭을 고정해 제목 시작선을 맞춤 */
+  #list .status-badge {
+    width: 60px;
+    text-align: center;
+  }
+  .event-body .badge-row {
+    order: -2; /* 제목(-1)보다 위 */
+    margin-bottom: 4px;
+  }
+  .preview-body .badge-row {
+    margin-bottom: 1px;
+  }
+  .modal-body .badge-row {
+    margin: 0 0 10px;
+  }
+
+  /* ----- 길찾기 · 공유 창 (하단 시트, docs/design/mobile-design-v1.md 3번) ----- */
+  #routeSheet,
+  #shareSheet {
+    position: fixed;
+    inset: 0;
+    z-index: 110; /* 상세창(100) 위에서도 열림 */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background: var(--dim);
+  }
+  .route-sheet {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    color: var(--text);
+    border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    animation: sheetUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .route-sheet .sheet-handle {
+    align-self: center;
+    margin-top: 8px;
+  }
+  .route-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 8px 0 20px;
+  }
+  .route-head h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+  }
+  .icon-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+  .route-place {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 8px 20px 0;
+    padding: 16px;
+    background: var(--surface);
+  }
+  .route-event {
+    font-size: 12px;
+    color: var(--sub);
+  }
+  .route-name {
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .route-addr-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .route-addr {
+    font-size: 14px;
+    color: var(--sub);
+  }
+  .copy-btn {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .copy-btn[hidden] {
+    display: none; /* display:flex 가 hidden 속성을 덮지 않게 */
+  }
+  .route-links {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 20px 0;
+  }
+  .route-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 60px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: none;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .route-icon.kakao {
+    background: #fee500; /* 카카오 노랑 */
+    color: #191919;
+  }
+  .route-icon {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .route-link.google .route-icon {
+    background: var(--surface);
+    color: var(--text);
+  }
+  .route-link-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .route-link-text small {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--sub);
+  }
+  .route-link svg {
+    width: 18px;
+    height: 18px;
+    color: var(--sub);
+  }
+  .route-note {
+    padding-top: 10px;
+    font-size: 12px;
+    color: var(--sub);
+  }
+  .route-cancel {
+    padding: 16px 20px 12px;
+  }
+  .route-cancel button {
+    width: 100%;
+    height: 52px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  /* ----- 토스트 (text 바탕 + bg 글자, 확인 버튼 없이 사라짐) ----- */
+  #toast {
+    position: fixed;
+    left: 20px;
+    right: 20px;
+    bottom: calc(var(--tab-height) + env(safe-area-inset-bottom, 0px) + 16px);
+    z-index: 130;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 6px 0 14px;
+    background: var(--text);
+    color: var(--bg);
+    font-size: 14px;
+    box-shadow: var(--shadow-float);
+  }
+  #toastAction {
+    height: 44px;
+    padding: 0 10px;
+    border: 0;
+    background: none;
+    color: var(--bg);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  #toastAction[hidden] {
+    display: none;
+  }
+  /* 길찾기 · 공유 창이 열려 있으면 토스트는 시트 위(덮개 위쪽)에 */
+  #routeSheet:not([hidden]) ~ #toast,
+  #shareSheet:not([hidden]) ~ #toast {
+    bottom: auto;
+    top: calc(env(safe-area-inset-top, 0px) + 80px);
+  }
+
+  /* ----- 하단 탭 (높이 64px, 아이콘 22px + 글자 11px, 선택 = 주 색 + 굵게) ----- */
+  #tabBar {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    flex: none;
+    height: var(--tab-height);
+    padding-bottom: env(safe-area-inset-bottom, 0px); /* 아이폰 홈 바 아래로 내려가지 않게 */
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+    z-index: 40;
+  }
+  .tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 44px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--sub);
+    font: inherit;
+    font-size: 11px;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .tab-item svg {
+    width: 22px;
+    height: 22px;
+  }
+  .tab-item.active {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* ----- 상세정보: 전체 화면 페이지처럼 ----- */
+  .modal-overlay {
+    align-items: stretch;
+  }
+  .modal-card {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    background: var(--bg);
+    color: var(--text);
+    animation: sheetUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  /* 상단: 뒤로 · 공유 · ♡ (스크롤해도 위에 붙음) */
+  .modal-close {
+    display: none; /* PC 용 × 대신 아래 헤더의 뒤로 */
+  }
+  #detailHead {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    height: calc(52px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 4px 0;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  #detailHead .head-actions {
+    display: flex;
+  }
+  .icon-btn.active {
+    color: var(--accent);
+  }
+  .modal-image {
+    height: 300px;
+    aspect-ratio: auto;
+    max-height: none;
+    background: var(--surface);
+  }
+  .modal-fav-badge,
+  .modal-date,
+  .modal-schedule,
+  .modal-info {
+    display: none; /* 모바일은 아래 표(기간 · 시간 · 장소 · 요금) 와 소개로 대신 */
+  }
+  .modal-body {
+    padding: 20px 20px calc(env(safe-area-inset-bottom, 0px) + 96px);
+  }
+  #detailMeta {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: var(--sub);
+  }
+  #detailMeta:empty {
+    display: none;
+  }
+  .modal-title {
+    margin: 0 0 8px;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: -0.4px;
+  }
+  /* 고정 탭: 정보 | 주변 */
+  #detailTabs {
+    position: sticky;
+    top: calc(52px + env(safe-area-inset-top, 0px));
+    z-index: 3;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 18px -20px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .detail-tab {
+    height: 48px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--sub);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .detail-tab.active {
+    color: var(--text);
+    font-weight: 700;
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+  /* 탭을 눌러 옮길 때 붙어 있는 상단(52px) + 탭(48px) 아래로 8px 띄움 (JS 가 이 값을 읽어 씀) */
+  #detailRows,
+  #detailLocation {
+    scroll-margin-top: calc(52px + 48px + env(safe-area-inset-top, 0px) + 8px);
+  }
+  /* 정보 표: 라벨 56px + 값 */
+  #detailRows {
+    display: block;
+    margin: 0;
+    padding: 8px 0 0;
+  }
+  .detail-row {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .detail-row dt {
+    font-size: 14px;
+    color: var(--sub);
+  }
+  .detail-row dd {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-line;
+    word-break: break-word;
+  }
+  .modal-cal-date {
+    margin: 12px 0 0;
+    color: var(--sub);
+  }
+  .modal-cal-date select {
+    font-family: inherit;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+  }
+  .modal-ics-alt {
+    margin: 8px 0 0;
+    color: var(--sub);
+  }
+  /* 캘린더 · 원문 보기는 정보 탭 안의 버튼 2개 (♡ 는 상단 · 하단 바로) */
+  .modal-actions {
+    margin-top: 12px;
+  }
+  .modal-actions .favorite-btn {
+    display: none;
+  }
+  .modal-link-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 44px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  #detailIntro,
+  #detailLocation {
+    display: flex; /* PC 숨김(id 선택자)보다 우선하도록 id 로 */
+    flex-direction: column;
+    gap: 8px;
+    padding: 20px 0 0;
+  }
+  /* 내용이 짧아도 "주변" 을 누르면 위치 칸이 탭 바로 아래까지 올라오도록 화면 높이만큼 아래 여백 확보
+     (화면 - 상단 52 - 탭 48 - 본문 아래 여백 96 - 안전 영역) */
+  #detailLocation {
+    box-sizing: border-box;
+    min-height: calc(100vh - 196px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100dvh - 196px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+  #detailIntro[hidden] {
+    display: none;
+  }
+  .detail-section h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  #detailIntroText {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--sub);
+    white-space: pre-line;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  #detailIntroText.expanded {
+    display: block;
+    -webkit-line-clamp: unset;
+  }
+  #detailIntroMore {
+    align-self: flex-start;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  #detailIntroMore[hidden] {
+    display: none;
+  }
+  #modalMap {
+    height: 150px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+  /* 하단 고정: ♡ + 길찾기 */
+  #detailBar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-sizing: border-box;
+    height: calc(80px + env(safe-area-inset-bottom, 0px));
+    padding: 0 20px env(safe-area-inset-bottom, 0px);
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+  }
+  #detailFavBtn {
+    flex: none;
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--bg);
+    color: var(--sub);
+    font: inherit;
+    cursor: pointer;
+  }
+  #detailFavBtn.active {
+    color: var(--accent);
+  }
+  #detailFavBtn svg,
+  #detailHeadFav svg,
+  #detailShareBtn svg {
+    width: 22px;
+    height: 22px;
+  }
+  #detailRouteBtn {
+    flex: 1;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 0;
+    border-radius: 2px;
+    background: var(--accent);
+    color: var(--on-accent);
+    font: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  #detailRouteBtn svg {
+    width: 18px;
+    height: 18px;
+  }
+  /* 상세창이 열려 있을 때 토스트는 하단 바(80px) 위 */
+  body.detail-open #toast {
+    bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes sheetUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sidebar,
+  #previewArea,
+  .modal-card,
+  .sk::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

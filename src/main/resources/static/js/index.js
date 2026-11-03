@@ -45,7 +45,7 @@ function cleanEventText(event) {
 // PC 팝업에서 찜한 행사 앞에 붙는 ★
 function favoriteMark(eventId) {
   return favoriteEventIds.has(eventId)
-    ? '<span style="color:#F5A623;">★ </span>'
+    ? '<span class="iw-fav">★ </span>'
     : "";
 }
 
@@ -218,13 +218,13 @@ function renderLocationMarkers(visibleItems) {
     if (group.length === 1) {
       var singlePlaceName = extractPlaceName(first.info);
       infowindowContent =
-        '<div style="width:260px;">' +
+        '<div class="iw-single">' +
         (singlePlaceName
-          ? '<div style="padding: 0.5rem 0.625rem; font-size:0.8rem; font-weight:700; color:#1f4e79; background:#e8f0fa; border-bottom:1px solid #cddcee; text-align:center;">' +
+          ? '<div class="iw-place">' +
             escapeHtml(singlePlaceName) +
             "</div>"
           : "") +
-        '<div style="padding: 0.25rem 0.5rem 0.5rem; cursor:pointer; color:#2f6f6b; text-decoration:underline; font-size:0.85rem; white-space:normal; word-break:break-word; text-align:center;" data-open-detail="' +
+        '<div class="iw-title" data-open-detail="' +
         first.id +
         '">' +
         favoriteMark(first.id) +
@@ -246,12 +246,11 @@ function renderLocationMarkers(visibleItems) {
       var rows = sorted
         .map(function (item, i) {
           // 위에서부터 순서대로 흰색/회색 번갈아 표시 (첫 줄은 항상 흰색이라 헤더랑 안 붙음)
-          var stripeStyle = i % 2 === 1 ? "background:#f2f2f2;" : "";
           return (
-            '<div data-open-detail="' +
+            '<div class="iw-row' +
+            (i % 2 === 1 ? " stripe" : "") +
+            '" data-open-detail="' +
             item.event.id +
-            '" style="padding: 0.5rem 0.375rem; border-top:1px solid #eee; cursor:pointer; font-size:0.85rem; color:#2f6f6b; ' +
-            stripeStyle +
             '">' +
             favoriteMark(item.event.id) +
             escapeHtml(item.event.title) +
@@ -261,8 +260,8 @@ function renderLocationMarkers(visibleItems) {
         .join("");
       var placeName = extractPlaceName(first.info) || first.title;
       infowindowContent =
-        '<div style="width:230px; max-height:220px; overflow-y:auto;">' +
-        '<div style="padding: 0.5rem 0.625rem; font-size:0.8rem; font-weight:700; color:#1f4e79; background:#e8f0fa; border-bottom:1px solid #cddcee; text-align:center;">' +
+        '<div class="iw-group">' +
+        '<div class="iw-place">' +
         escapeHtml(placeName) +
         "</div>" +
         rows +
