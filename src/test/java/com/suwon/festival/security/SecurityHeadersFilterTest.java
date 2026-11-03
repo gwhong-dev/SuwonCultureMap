@@ -57,8 +57,16 @@ class SecurityHeadersFilterTest {
   }
 
   @Test
+  void CSP_style_src는_우리서버와_구글폰트_CSS만_허용() {
+    // 인라인 스타일(<style> · style 속성)을 풀어 주면 style-src 를 둔 의미가 없음. 해시 예외('unsafe-hashes')도 두지 않음
+    assertThat(SecurityHeadersFilter.CSP)
+        .contains("style-src 'self' fonts.googleapis.com;")
+        .doesNotContain("'unsafe-hashes'");
+  }
+
+  @Test
   void CSP에_default_src는_넣지_않음() {
-    // default-src 를 넣으면 지도 타일 · 이미지 · 글꼴 · 스타일까지 막힘 (style-src 정리는 CSS 분리 뒤)
+    // default-src 를 넣으면 지도 타일 · 이미지 · 글꼴까지 막힘 → 필요한 항목만 따로 둠
     assertThat(SecurityHeadersFilter.CSP).doesNotContain("default-src");
   }
 
