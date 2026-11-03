@@ -166,6 +166,7 @@
 | 11/3 | 작업 세션 | #103 chore Thymeleaf 제거(S) — templates 폴더 · `org.thymeleaf` import · `spring.thymeleaf.*` 없음 확인 후 starter · test starter 삭제. `mvnw verify` 436 통과, jar 안 thymeleaf 0, 로컬 5개 페이지 200 · 지도 로드 |
 | 11/3 | 작업 세션 | #104 feat CSP `script-src` 제한(L) — index · login · mypage 인라인 스크립트를 `static/js/*.js` 로 그대로 옮김, innerHTML 안 `onclick` 2 · `onerror` 2 → `bindOpenDetail` · `hideOnError`. `script-src 'self' dapi.kakao.com t1.kakaocdn.net`(지도 로더가 `t1.kakaocdn.net/mapjsapi` 를 이어 부름 → 리소스 목록으로 확인, scheme 생략으로 로컬 http 도 동작). `StaticScriptPolicyTest`(인라인 · on* · eval · javascript: 재유입 차단). 로컬 · 운영 콘솔 위반 0건. 검증 ⚠️ 3건: 검사식 보강 반영 · 지도 SDK eval 은 실행 안 됨 확인 · 정적 파일 캐시는 나중에 할 일. 발견: 카카오톡 공유 버튼 기존 버그(init 전에 `Kakao.Share` 검사, 운영도 같음) → 나중에 할 일 |
 | 11/3 | 작업 세션 | fix 카카오톡 공유 버튼(S) — 항상 "불러오지 못했어요"(운영도 같음, #104 때 발견). 원인: SDK v2 는 `Kakao.init()` 뒤에야 `Kakao.Share` 가 생기는데 init 전에 검사 → init 먼저(실패해도 안내 토스트) 후 Share 확인. `KakaoShareScriptTest`(옛 코드 실패 · 새 코드 통과). 로컬 모바일 화면에서 버튼 → init · Share 생김 · `kapi.kakao.com/v2/api/kakaolink/talk/template/default` 200, CSP 위반 0건 |
+| 11/3 | 작업 세션 | #107 chore 운영 앱 로그 파일 보관(M) — 배포로 컨테이너를 새로 만들면 `docker logs` 가 사라지는 문제 → `LOGGING_FILE_NAME` + `app-logs` 볼륨, 날짜 · 10MB 단위 `.gz`, 14일 · 100MB. `/app/logs` 를 spring 소유로 미리 생성, CI 배포 파일 확인에서 파일 기록 검사, `ProdSyncProtectionTest` 보관 설정 시험, deploy-ec2 "로그 보기". 검증 머지 가능(⚠️ 문서 2건 반영 · 처리방침 14일 명시는 보류), 441 통과, 운영 배포 15:09 헬스 UP |
 
 ## 🧰 나중에 할 일 중 끝난 것
 
