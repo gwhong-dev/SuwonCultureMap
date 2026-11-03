@@ -161,6 +161,7 @@
 | 11/2 | 작업 세션 | 머지 방식 변경 — GitHub 기본 auto-merge 사용(저장소 설정 켬). Claude는 PR 후 "auto-merge 눌러주세요" 안내, 사용자 버튼 = 머지 승인. 라벨로 Claude가 스스로 머지하는 방식은 안전 장치 우회라 채택 안 함 (`CLAUDE.md` 3 · 4-7번) |
 | 11/2 | 작업 세션 | 아이폰 1차 확인 5건 보완 PR — ① `#app overflow:hidden` + `html` 바탕색(탭 · 사파리 주소창 뒤 비침) ② `kakaoRouteAppUrl`(kakaomap://route 대중교통) → 폰은 앱 먼저, 2초 안에 안 떠나면 웹 `/link/to/` ③ 상세 · 길찾기 열림을 `history.replaceState` 로 `?event=번호&route=1` 기록, 다시 열리면 복원 ④ 위치 칸 `min-height` + `scroll-margin-top`, 탭 스크롤을 화면 좌표로 계산 ⑤ 공유 하단 창(카카오톡 `Kakao.Share.sendDefault` 피드 · 링크 복사). node 시험 +1, Playwright(아이폰 13 크기 · SDK 가짜)로 복원 · 탭 · 공유 · 앱→웹 대체 확인. 검증 ⚠️ 3건 반영: 길찾기 창 복원은 모바일만(PC 노출 회귀) · 앱 확인창에서 망설여도 웹이 같이 열리지 않게 2.5초 + 경과 시간 검사 · CSP `form-action` 에 `sharer.kakao.com` 허용(테스트 +1) |
 | 11/3 | 사용자 | 머지 규칙 재변경 — auto-merge 버튼(#98) 대신 **Claude 가 직접 머지** (CI 통과 + M · L 검증 댓글 뒤, "머지하지 마" 한 PR 만 보류). #99 를 이 방식으로 머지 (`CLAUDE.md` 3 · 4-7번) |
+| 11/3 | 작업 세션 | 포트폴리오 v1 완료 표시 — 시점 고정 스냅샷 = #97(`43a1b9c`, 11/2 기준), 사이트는 계속 개선 · 변경은 Releases로. Release 본문 `docs/releases/portfolio-v1.md` 추가. 클라우드 세션은 태그 push · Release API 모두 403 → 로컬 세션에서 생성 |
 
 ## 🧰 나중에 할 일 중 끝난 것
 
