@@ -69,7 +69,8 @@ docker compose up --build   # 앱 + MySQL (.env 는 scripts/setup-docker.cmd)
 4. 로컬에서 mvn test 통과 확인
 5. push → PR 생성
 6. CI 통과 확인 (빌드 + 테스트, Docker 이미지 빌드 — main 브랜치 보호로 필수)
-7. 머지는 Claude 가 직접 (GitHub 머지 버튼, 머지 커밋 방식 — 11/3 사용자 결정)
+7. 머지는 Claude 가 직접 (`gh pr merge --merge`, 머지 커밋 방식 — 11/3 사용자 결정)
+   - `gh pr merge` 가 권한 등으로 막히면 멈추고 사용자에게 허용 방법을 단계별로 안내
    - 조건: CI 전부 통과 + 충돌 없음. M · L 등급은 검증 댓글(판정)까지 끝난 뒤
    - 사용자 승인은 따로 기다리지 않음. 사용자가 "머지하지 마" 라고 한 PR 만 보류
    - CI 실패 → 머지하지 않음. Claude가 고쳐서 다시 push 한 뒤 CI 재확인
