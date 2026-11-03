@@ -1,6 +1,7 @@
 package com.suwon.festival.service.instagram;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.EnumMap;
@@ -31,11 +32,16 @@ import com.suwon.festival.service.caption.CaptionParser;
 import com.suwon.festival.service.caption.CaptionParser.BlockResult;
 import com.suwon.festival.service.caption.ParsedEvent;
 import com.suwon.festival.service.place.PlaceGeocoder;
+import com.suwon.festival.service.schedule.EventScheduleWriter;
+import com.suwon.festival.service.schedule.ScheduleExtractor;
+import com.suwon.festival.service.schedule.ScheduleInput;
+import com.suwon.festival.service.schedule.ScheduleResult;
 
 // 인스타 5단계: 게시물 1개 → 블록 정리 → 좌표 → 저장 (게시물 하나가 한 트랜잭션)
 //  - 게시물 1개에서 오류가 나도 그 게시물만 되돌리고 다음 게시물은 계속 (InstagramSyncService 가 잡음)
 //  - 캡션 원문은 DB · 로그에 남기지 않음 (설계 문서 8번)
 //  - 이미 READY 인 블록은 키(제목 + 시작일 + 장소)가 같으므로 좌표를 다시 찾지 않고 나머지 값만 갱신 → 카카오 호출 절약
+//  - READY 행사는 진행 날짜도 매번 다시 계산해 저장 (규칙을 고치면 창 안의 글은 다음 동기화에 반영)
 @Component
 public class InstagramPostProcessor {
 
@@ -43,6 +49,8 @@ public class InstagramPostProcessor {
 
   static final ZoneId KST = ZoneId.of("Asia/Seoul");
   private static final Pattern MEDIA_ID = Pattern.compile("^[0-9]{1,64}$");
+  // 하루짜리로 읽혔어도 다른 날이 있다는 말 ("11. 7.(토)부터 매주 토요일" · "11. 30.(월)까지" · "외 3회") → "그날만"으로 저장하지 않음
+  private static final Pattern MORE_DAYS = Pattern.compile("부터|까지|매주|매일|외\\s*\\d|\\d\\s*회|회차");
 
   // 게시물 1개 처리 결과 (개수만)
   public record Outcome(boolean newMedia, Map<InstagramBlock.Status, Integer> blocks,
@@ -56,19 +64,20 @@ public class InstagramPostProcessor {
   private final CaptionParser parser;
   private final Clock clock;
   private final StaleBlockRetirer retirer;
+  private final EventScheduleWriter scheduleWriter;
 
   @Autowired
   public InstagramPostProcessor(InstagramMediaRepository mediaRepository, InstagramBlockRepository blockRepository,
       EventRepository eventRepository, PlaceGeocoder geocoder, ObjectProvider<CaptionAiClient> ai,
-      StaleBlockRetirer retirer) {
+      StaleBlockRetirer retirer, EventScheduleWriter scheduleWriter) {
     // AI 구현이 아직 없음 → null → 규칙으로 못 읽은 블록은 PENDING (AI 를 붙이면 다음 실행에서 다시 처리)
     this(mediaRepository, blockRepository, eventRepository, geocoder, new CaptionParser(ai.getIfAvailable()),
-        Clock.system(KST), retirer);
+        Clock.system(KST), retirer, scheduleWriter);
   }
 
   InstagramPostProcessor(InstagramMediaRepository mediaRepository, InstagramBlockRepository blockRepository,
       EventRepository eventRepository, PlaceGeocoder geocoder, CaptionParser parser, Clock clock,
-      StaleBlockRetirer retirer) {
+      StaleBlockRetirer retirer, EventScheduleWriter scheduleWriter) {
     this.mediaRepository = mediaRepository;
     this.blockRepository = blockRepository;
     this.eventRepository = eventRepository;
@@ -76,6 +85,7 @@ public class InstagramPostProcessor {
     this.parser = parser;
     this.clock = clock;
     this.retirer = retirer;
+    this.scheduleWriter = scheduleWriter;
   }
 
   @Transactional
@@ -166,7 +176,10 @@ public class InstagramPostProcessor {
         default -> status = InstagramBlock.Status.FAILED;
       }
 
-      if (status == InstagramBlock.Status.READY) ready.add(event);
+      if (status == InstagramBlock.Status.READY) {
+        ready.add(event);
+        scheduleWriter.apply(event.getId(), schedule(r.event()), null);
+      }
       // 예전에 READY 였던 블록이 이번엔 READY 가 아니어도 행사 연결은 남겨 둠
       if (event == null && block != null) event = block.getEvent();
 
@@ -210,6 +223,17 @@ public class InstagramPostProcessor {
     }
   }
 
+  // 진행 날짜: 재단과 같은 추출기 · 검사로 날짜 줄(+ 시간 원문)을 읽음 (설계 docs/event-schedule.md 9번)
+  //  하루짜리 → 그날 / 여러 회차 · 기간 + 매주 요일 → 펼침 / 그 밖의 여러 날 → 모름 (매일로 단정하지 않음)
+  static ScheduleResult schedule(ParsedEvent e) {
+    LocalDate start = e.startDate();
+    boolean oneDay = start != null && (e.endDate() == null || start.equals(e.endDate()));
+    if (oneDay && (MORE_DAYS.matcher(nullToEmpty(e.scheduleText())).find() || MORE_DAYS.matcher(nullToEmpty(e.timeText())).find())) {
+      return new ScheduleResult(ScheduleResult.Status.UNKNOWN, List.of(), null, false, "하루짜리인데 다른 날을 뜻하는 말이 있음");
+    }
+    return ScheduleExtractor.extract(new ScheduleInput(e.startDate(), e.endDate(), e.scheduleText(), e.timeText(), null));
+  }
+
   private static Event toEvent(ParsedEvent e, double lat, double lng, InstagramPost post, LocalDateTime postedAt,
       LocalDateTime now, String sourceKey) {
     return Event.builder()
@@ -227,6 +251,10 @@ public class InstagramPostProcessor {
         .source(Event.SOURCE_INSTAGRAM)
         .sourceKey(sourceKey)
         .build();
+  }
+
+  private static String nullToEmpty(String s) {
+    return s == null ? "" : s;
   }
 
   private static String cut(String s, int max) {

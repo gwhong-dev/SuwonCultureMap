@@ -14,6 +14,7 @@ import java.util.regex.Pattern;
 // - 종료일 연도가 생략되면 시작일 연도를 쓰고, 종료가 시작보다 앞서면 해를 넘긴 것으로 보고 +1
 // - (요일)이 적혀 있으면 달력과 맞는지 확인 → 안 맞으면 INVALID
 // - 시작일 없이 "~ 종료일"만, "YYYY. M월"(일 없음), "매주 금~일" 반복 → NO_DATE (시간 원문은 보관)
+// - 여러 회차("11. 5.(목), 11. 12.(목)")는 날짜마다 요일이 맞을 때만 시작 = 처음 · 종료 = 마지막. 기간 + 다른 날짜는 AI 몫
 public final class CaptionDateParser {
 
   private CaptionDateParser() {
@@ -37,6 +38,11 @@ public final class CaptionDateParser {
   // 연도 없는 "M. D." (시작일 없는 줄 판단 · 날짜 여러 개 판단용)
   private static final Pattern MONTH_DAY = Pattern.compile("(?<![\\d:])(\\d{1,2})\\s*\\.\\s*(\\d{1,2})(?![\\d:])");
   private static final Pattern TIME = Pattern.compile("\\d{1,2}:\\d{2}");
+  // 여러 회차의 다음 날짜: 구분자(, · /) 뒤 연도 생략 가능, 요일 필수
+  private static final Pattern NEXT_DATE = Pattern.compile(
+      "[\\s,·/]*(?:(\\d{4})\\s*\\.\\s*)?(\\d{1,2})\\s*\\.\\s*(\\d{1,2})(?!\\d)\\s*\\.?\\s*\\(\\s*([월화수목금토일])\\s*\\)");
+  private static final Pattern TIME_RANGE = Pattern.compile("\\d{1,2}:\\d{2}\\s*[~-]\\s*\\d{1,2}:\\d{2}");
+  private static final Pattern TAIL_LEFTOVER = Pattern.compile("[가-힣\\d]");
   private static final Pattern YEAR = Pattern.compile("(?<!\\d)(?:19|20)\\d{2}(?!\\d)");
 
   private static final Map<String, DayOfWeek> WEEKDAYS = Map.of(
@@ -95,13 +101,49 @@ public final class CaptionDateParser {
       rest = rest.substring(endM.end());
     }
 
-    // 범위가 아닌 날짜가 더 있으면(여러 회차) 규칙으로 하나를 고르지 않음
+    // 범위가 아닌 날짜가 더 있으면(여러 회차) 전부 읽어 시작일 = 처음, 종료일 = 마지막 (날짜 목록은 ScheduleExtractor 가 같은 줄에서 다시 읽음)
     if (FULL.matcher(rest).find() || MONTH_DAY.matcher(rest).find()) {
-      return unreadable(v, "날짜가 여러 개 (여러 회차)");
+      if (hasTilde) return unreadable(v, "날짜가 여러 개 (기간 + 다른 날짜)");
+      return dateList(v, start, full.group(4) != null, rest);
     }
 
-    String timeText = TIME.matcher(rest).find() ? CaptionText.blankToNull(rest.replaceFirst("^[\\s,·/]+", "")) : null;
+    // "매주 금~일" 은 시간이 없어도 보관 → 진행 날짜를 요일로 펼칠 때 씀 (설계 docs/event-schedule.md 9번)
+    String timeText = TIME.matcher(rest).find() || rest.contains("매주")
+        ? CaptionText.blankToNull(rest.replaceFirst("^[\\s,·/]+", "")) : null;
     return new Result(Kind.OK, start, end, timeText, null);
+  }
+
+  // 여러 회차: "2026. 11. 5.(목), 11. 12.(목) 14:00" — 날짜마다 요일이 있고(달력 확인), 날짜 · 구분자 뒤에 시간만 올 때
+  private static Result dateList(String v, LocalDate start, boolean startHasWeekday, String rest) {
+    if (!startHasWeekday) return unreadable(v, "날짜가 여러 개인데 요일이 없음");
+    LocalDate last = start;
+    String tail = rest;
+    Matcher m = NEXT_DATE.matcher(tail);
+    while (m.lookingAt()) {
+      boolean yearGiven = m.group(1) != null;
+      LocalDate date;
+      try {
+        date = LocalDate.of(yearGiven ? num(m.group(1)) : last.getYear(), num(m.group(2)), num(m.group(3)));
+        // 해 넘김은 12월 → 1월만. 그 밖에 앞 날짜보다 이르면 거꾸로 적은 것 → 추측하지 않음
+        if (!yearGiven && date.isBefore(last)) {
+          if (last.getMonthValue() != 12 || date.getMonthValue() != 1) return unreadable(v, "회차 날짜가 차례대로가 아님");
+          date = date.plusYears(1);
+        }
+      } catch (DateTimeException e) {
+        return invalid("없는 날짜(회차)");
+      }
+      if (!date.isAfter(last)) return unreadable(v, "회차 날짜가 차례대로가 아님");
+      if (!weekdayMatches(date, m.group(4))) return invalid("회차 요일이 달력과 다름");
+      last = date;
+      tail = tail.substring(m.end());
+      m = NEXT_DATE.matcher(tail);
+    }
+    tail = tail.replaceFirst("^[\\s,·/]+", "");
+    // 시간 · 구분자 말고 한글 · 숫자가 남으면 다른 회차("/ 19.(목)" · "11월 19일" · "외 2회")일 수 있음 → 종료일을 줄여 저장하지 않게 AI 몫
+    if (TAIL_LEFTOVER.matcher(TIME_RANGE.matcher(tail).replaceAll(" ").replaceAll(TIME.pattern(), " ")).find()) {
+      return unreadable(v, "회차 날짜 뒤에 다른 글자");
+    }
+    return new Result(Kind.OK, start, last, CaptionText.blankToNull(tail), null);
   }
 
   private static boolean weekdayMatches(LocalDate date, String weekday) {

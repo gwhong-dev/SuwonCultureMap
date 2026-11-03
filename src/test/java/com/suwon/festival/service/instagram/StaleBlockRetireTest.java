@@ -33,6 +33,7 @@ import com.suwon.festival.service.merge.EventMergeService;
 import com.suwon.festival.service.place.PlaceCandidate;
 import com.suwon.festival.service.place.PlaceGeocoder;
 import com.suwon.festival.service.place.PlaceSearchClient;
+import com.suwon.festival.service.schedule.EventScheduleWriter;
 
 import jakarta.persistence.EntityManager;
 
@@ -53,6 +54,7 @@ class StaleBlockRetireTest {
   @Autowired private MemberRepository memberRepository;
   @Autowired private EventMergeService mergeService;
   @Autowired private StaleBlockRetirer retirer;
+  @Autowired private EventScheduleWriter scheduleWriter;
   @Autowired private EntityManager em;
 
   private InstagramSyncServiceTest.FakeClient client;
@@ -82,7 +84,7 @@ class StaleBlockRetireTest {
     search = new SwitchableSearch();
     Clock clock = Clock.fixed(Instant.parse("2026-10-31T03:00:00Z"), InstagramPostProcessor.KST);
     InstagramPostProcessor processor = new InstagramPostProcessor(mediaRepository, blockRepository, eventRepository,
-        new PlaceGeocoder(search), new CaptionParser(null), clock, retirer);
+        new PlaceGeocoder(search), new CaptionParser(null), clock, retirer, scheduleWriter);
     service = new InstagramSyncService(client, processor, new InstagramTokenExpiry("", clock), new InstagramSwitch(true), ACCOUNT, 10);
   }
 

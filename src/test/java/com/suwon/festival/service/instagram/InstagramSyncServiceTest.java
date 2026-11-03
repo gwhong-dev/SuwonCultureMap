@@ -22,8 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import com.suwon.festival.entity.Event;
+import com.suwon.festival.entity.EventDate;
 import com.suwon.festival.entity.InstagramBlock;
 import com.suwon.festival.entity.InstagramMedia;
+import com.suwon.festival.repository.EventDateRepository;
 import com.suwon.festival.repository.EventRepository;
 import com.suwon.festival.repository.InstagramBlockRepository;
 import com.suwon.festival.repository.InstagramMediaRepository;
@@ -32,6 +34,7 @@ import com.suwon.festival.service.instagram.InstagramFetchException.Kind;
 import com.suwon.festival.service.place.PlaceCandidate;
 import com.suwon.festival.service.place.PlaceGeocoder;
 import com.suwon.festival.service.place.PlaceSearchClient;
+import com.suwon.festival.service.schedule.EventScheduleWriter;
 
 // 인스타 5단계 흐름: 수집(가짜) → 정리(실제 규칙 파서) → 좌표(가짜 검색) → 저장(H2)
 // 캡션은 직접 만든 가상 문장, 외부 호출 없음
@@ -43,7 +46,9 @@ class InstagramSyncServiceTest {
   @Autowired private InstagramMediaRepository mediaRepository;
   @Autowired private InstagramBlockRepository blockRepository;
   @Autowired private EventRepository eventRepository;
+  @Autowired private EventDateRepository eventDateRepository;
   @Autowired private StaleBlockRetirer retirer;
+  @Autowired private EventScheduleWriter scheduleWriter;
 
   static final String ROUNDUP = String.join("\n",
       "가상시 11월 행사 모음",
@@ -117,7 +122,7 @@ class InstagramSyncServiceTest {
   private InstagramSyncService service(String accounts, String tokenExpiresAt) {
     Clock clock = Clock.fixed(Instant.parse("2026-10-31T03:00:00Z"), InstagramPostProcessor.KST);
     InstagramPostProcessor processor = new InstagramPostProcessor(mediaRepository, blockRepository, eventRepository,
-        new PlaceGeocoder(search), new CaptionParser(null), clock, retirer);
+        new PlaceGeocoder(search), new CaptionParser(null), clock, retirer, scheduleWriter);
     return new InstagramSyncService(client, processor, new InstagramTokenExpiry(tokenExpiresAt, clock), new InstagramSwitch(true), accounts, 10);
   }
 
@@ -148,6 +153,71 @@ class InstagramSyncServiceTest {
 
     assertThat(r.configured()).isFalse();
     assertThat(r.tokenWarning()).contains("만료됨");
+  }
+
+  @Test
+  void 행사의_진행_날짜를_날짜_줄에서_읽어_저장() {
+    String caption = String.join("\n",
+        "가상시 행사 모음",
+        "",
+        "하루 음악회",
+        "🗓️ 2026. 11. 5.(목) 19:00",
+        "📍 가상 아트홀",
+        "",
+        "회차 강연",
+        "🗓️ 2026. 11. 5.(목), 11. 12.(목) 14:00",
+        "📍 가상 아트홀",
+        "",
+        "주말 전시",
+        "🗓️ 2026. 11. 6.(금) ~ 11. 15.(일) 매주 토~일",
+        "📍 가상 아트홀",
+        "",
+        "사흘 공연",
+        "🗓️ 2026. 11. 5.(목) ~ 11. 7.(토) 19:00",
+        "📍 가상 아트홀");
+    client.answers.put("suwon_city", List.of(post("1790000000000009", caption)));
+
+    service("suwon_city").sync();
+
+    Map<String, Event> byTitle = new HashMap<>();
+    instagramEvents().forEach(e -> byTitle.put(e.getTitle(), e));
+    assertThat(byTitle).hasSize(4);
+    assertThat(runDates(byTitle.get("하루 음악회"))).containsExactly(LocalDate.of(2026, 11, 5));
+    Event lecture = byTitle.get("회차 강연");
+    assertThat(lecture.getEndDate()).isEqualTo(LocalDate.of(2026, 11, 12));
+    assertThat(runDates(lecture)).containsExactly(LocalDate.of(2026, 11, 5), LocalDate.of(2026, 11, 12));
+    assertThat(runDates(byTitle.get("주말 전시"))).containsExactly(
+        LocalDate.of(2026, 11, 7), LocalDate.of(2026, 11, 8), LocalDate.of(2026, 11, 14), LocalDate.of(2026, 11, 15));
+    Event threeDays = byTitle.get("사흘 공연"); // 매일인지 원문에 없음 → 모름 (기간만)
+    assertThat(threeDays.getScheduleStatus()).isEqualTo(Event.SCHEDULE_UNKNOWN);
+    assertThat(eventDateRepository.findByEventId(threeDays.getId())).isEmpty();
+  }
+
+  @Test
+  void 글이_고쳐지면_다음_동기화에서_진행_날짜도_바뀜() {
+    String id = "1790000000000010";
+    client.answers.put("suwon_city", List.of(post(id, "회차 강연\n🗓️ 2026. 11. 5.(목), 11. 12.(목) 14:00\n📍 가상 아트홀")));
+    service("suwon_city").sync();
+
+    // 회차가 바뀜 (시작일 · 장소 · 제목이 같아 같은 블록 → 같은 행사를 갱신)
+    client.answers.put("suwon_city", List.of(post(id, "회차 강연\n🗓️ 2026. 11. 5.(목), 11. 19.(목) 14:00\n📍 가상 아트홀")));
+    service("suwon_city").sync();
+    Event lecture = instagramEvents().get(0);
+    assertThat(instagramEvents()).hasSize(1);
+    assertThat(runDates(lecture)).containsExactly(LocalDate.of(2026, 11, 5), LocalDate.of(2026, 11, 19));
+
+    // 기간으로 바뀌어 요일을 알 수 없게 됨 → 모름, 저장된 날짜도 지움
+    client.answers.put("suwon_city", List.of(post(id, "회차 강연\n🗓️ 2026. 11. 5.(목) ~ 11. 19.(목) 14:00\n📍 가상 아트홀")));
+    service("suwon_city").sync();
+    Event updated = eventRepository.findById(lecture.getId()).orElseThrow();
+    assertThat(updated.getScheduleStatus()).isEqualTo(Event.SCHEDULE_UNKNOWN);
+    assertThat(eventDateRepository.findByEventId(lecture.getId())).isEmpty();
+  }
+
+  private List<LocalDate> runDates(Event event) {
+    assertThat(event.getScheduleStatus()).isEqualTo(Event.SCHEDULE_DATES);
+    return eventDateRepository.findByEventIdInOrderByRunDate(List.of(event.getId())).stream()
+        .map(EventDate::getRunDate).toList();
   }
 
   @Test
