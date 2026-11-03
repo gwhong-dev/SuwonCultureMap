@@ -21,40 +21,51 @@ class ScheduleDisplayPageTest {
   @Autowired private WebApplicationContext context;
 
   private String page() throws Exception {
+    return fetch("/index.html");
+  }
+
+  // 화면 스크립트는 CSP(script-src) 때문에 js/index.js 로 분리됨
+  private String script() throws Exception {
+    return fetch("/js/index.js");
+  }
+
+  private String fetch(String path) throws Exception {
     MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     // Windows 체크아웃은 줄바꿈이 \r\n 이라 여러 줄 문자열 비교가 실패함 → \n 으로 맞춤
-    return mockMvc.perform(get("/index.html")).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8)
+    return mockMvc.perform(get(path)).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8)
         .replace("\r\n", "\n");
   }
 
   @Test
   void 목록_미리보기_상세가_같은_표시_함수를_씀() throws Exception {
-    String html = page();
+    String js = script();
 
     // 목록 · 미리보기는 날짜 필터의 "기간 중 · 일정 확인" 을 붙이는 cardDateText 를 거침
-    assertThat(html).contains("var text = formatEventDates(item.event)");
-    assertThat(html).contains("var dateText = cardDateText(item)");
-    assertThat(html).contains("escapeHtml(cardDateText(item))");
-    assertThat(html).contains("document.getElementById(\"modalDate\").textContent = cardDateText({");
+    assertThat(js).contains("var text = formatEventDates(item.event)");
+    assertThat(js).contains("var dateText = cardDateText(item)");
+    assertThat(js).contains("escapeHtml(cardDateText(item))");
+    assertThat(js).contains("document.getElementById(\"modalDate\").textContent = cardDateText({");
   }
 
   @Test
   void 캘린더_버튼은_아이폰만_ics_나머지는_구글_캘린더() throws Exception {
     String html = page();
+    String js = script();
 
     assertThat(html).contains("id=\"modalCalBtn\"", "id=\"modalIcsAltLink\"", "id=\"modalCalDate\"");
     assertThat(html).doesNotContain("id=\"modalGoogleBtn\""); // 구글 버튼을 따로 두지 않음
-    assertThat(html).contains("if (isAppleMobile) {\n            calBtn.href = icsUrl;");
-    assertThat(html).contains("calBtn.href = googleUrl;");
+    assertThat(js).contains("if (isAppleMobile) {\n      calBtn.href = icsUrl;");
+    assertThat(js).contains("calBtn.href = googleUrl;");
   }
 
   @Test
   void 날짜_필터가_목록_필터에_연결됨() throws Exception {
     String html = page();
+    String js = script();
 
     assertThat(html).contains("<select id=\"dateFilter\"", "<option value=\"today\">", "<option value=\"weekend\">");
-    assertThat(html).contains("filterDays(document.getElementById(\"dateFilter\").value)");
-    assertThat(html).contains("matchRunDays(item.event, runDays)");
+    assertThat(js).contains("filterDays(document.getElementById(\"dateFilter\").value)");
+    assertThat(js).contains("matchRunDays(item.event, runDays)");
   }
 
   @Test

@@ -30,7 +30,7 @@
   - [x] ① 토큰 · 하단 탭 #85 · [x] ② 상태 배지 · D-day #86 · [x] ③ 마커 카드 · 결과 바 #87 · [x] ④ 길찾기 창 #89 · [x] ⑤ 상세 #90 · [x] ⑦ 스켈레톤 #91 (11/2 머지)
   - [ ] ⑥ 찜 토스트 + 찜 탭 빈 상태 (FavoriteService 합치는 방식 결정 후)
   - [ ] 홈 탭 + 홈 · 검색 화면(01 · 06 · 07) — 1단계 뒤 따로 계획
-  - [ ] 1단계 끝나면 `index.html` 을 `static/css/index.css` · `static/js/mobile.js` 로 나누는 refactor PR 1개 (CSP `script-src` 강화의 선행 작업)
+  - [ ] 1단계 끝나면 `index.html` 정리 refactor — **JS 분리 완료**(CSP `script-src` PR, `static/js/index.js` · `login.js` · `mypage.js`), **CSS 남음**(`static/css/index.css` 로 분리 · `style` 속성 정리 → 그 뒤 `style-src` 제한)
 - [ ] 진행 날짜 7번 PR 합치기 대표 날짜 표시 (`docs/event-schedule.md` 11번) — 묶음이 거의 인스타라 인스타를 켠 뒤 8번과 함께
 - [ ] 로드맵 6단계 운영 · 유지보수 — ✅ 헬스체크 · ✅ 가동 감시 + 장애 Issue 자동 기록(#96) · 남은 것: 로그 정리
 - [ ] (선택) Jenkins로 같은 파이프라인 재구성해 비교
@@ -60,6 +60,7 @@
 - [x] 인스타 재개 결정: 공식 계정만, 문서 기준 판단 (11/2, 결정 문서에 Meta 원문 확인 표)
 - [ ] 인플루언서(개인) 계정 추가 검토 — 개인정보보호법 확인 먼저 (사용자 희망, 11/2)
 - [ ] CSP `script-src` 제한 — `index.html` 인라인 스크립트를 파일로 분리한 뒤 카카오 SDK 도메인만 허용 (보안 헤더 PR 에서 보류: 지금 넣으면 지도가 안 뜸)
+- [ ] 카카오톡 공유 버튼이 항상 "불러오지 못했어요" 토스트 (운영도 같음, CSP 와 무관 · 11/3 발견): SDK v2 는 `Kakao.init()` 뒤에야 `Kakao.Share` 가 생기는데 `js/index.js` 공유 처리에서 init 전에 `Kakao.Share` 를 검사 → `!window.Kakao` 만 검사하고 init 뒤 `Kakao.Share` 확인으로 고치는 fix PR (init 후 sendDefault 는 CSP 아래에서 위반 0건 확인)
 - [ ] `deploy/deploy.sh` 는 Caddyfile 만 바뀌면 Caddy 를 다시 띄우지 않음(설정 그대로 유지) → Caddyfile 수정 시 `docker compose up -d --force-recreate caddy` 단계 추가
 - [ ] GitHub 예약 실행은 공개 저장소에 60일 동안 커밋이 없으면 자동 정지 → 정지되면 Actions 화면에서 Uptime 다시 켜기 (메일 안내 옴)
 - [ ] 카카오 JS SDK(`t1.kakaocdn.net/kakao_js_sdk/2.7.9`) `integrity` 속성 없음 — 클라우드에서 카카오 문서 도메인이 막혀 해시를 확인 못 함 → PC 에서 developers.kakao.com "JavaScript 시작하기" 의 script 태그를 그대로 복사해 넣기

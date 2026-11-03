@@ -48,9 +48,18 @@ class SecurityHeadersFilterTest {
   }
 
   @Test
-  void CSP는_카카오지도_스크립트를_막지_않음() {
-    // script-src · default-src 를 넣으면 카카오 SDK · 인라인 스크립트가 막혀 지도가 안 뜸
-    assertThat(SecurityHeadersFilter.CSP).doesNotContain("script-src").doesNotContain("default-src");
+  void CSP_script_src는_우리서버와_카카오_SDK만_허용() {
+    // 인라인 · eval 을 풀어 주면 script-src 를 둔 의미가 없음
+    assertThat(SecurityHeadersFilter.CSP)
+        .contains("script-src 'self' dapi.kakao.com t1.kakaocdn.net;")
+        .doesNotContain("'unsafe-inline'")
+        .doesNotContain("'unsafe-eval'");
+  }
+
+  @Test
+  void CSP에_default_src는_넣지_않음() {
+    // default-src 를 넣으면 지도 타일 · 이미지 · 글꼴 · 스타일까지 막힘 (style-src 정리는 CSS 분리 뒤)
+    assertThat(SecurityHeadersFilter.CSP).doesNotContain("default-src");
   }
 
   @Test
