@@ -1,6 +1,7 @@
 package com.suwon.festival.service.instagram;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.EnumMap;
@@ -48,6 +49,8 @@ public class InstagramPostProcessor {
 
   static final ZoneId KST = ZoneId.of("Asia/Seoul");
   private static final Pattern MEDIA_ID = Pattern.compile("^[0-9]{1,64}$");
+  // 하루짜리로 읽혔어도 다른 날이 있다는 말 ("11. 7.(토)부터 매주 토요일" · "11. 30.(월)까지" · "외 3회") → "그날만"으로 저장하지 않음
+  private static final Pattern MORE_DAYS = Pattern.compile("부터|까지|매주|매일|외\\s*\\d|\\d\\s*회|회차");
 
   // 게시물 1개 처리 결과 (개수만)
   public record Outcome(boolean newMedia, Map<InstagramBlock.Status, Integer> blocks,
@@ -223,6 +226,11 @@ public class InstagramPostProcessor {
   // 진행 날짜: 재단과 같은 추출기 · 검사로 날짜 줄(+ 시간 원문)을 읽음 (설계 docs/event-schedule.md 9번)
   //  하루짜리 → 그날 / 여러 회차 · 기간 + 매주 요일 → 펼침 / 그 밖의 여러 날 → 모름 (매일로 단정하지 않음)
   static ScheduleResult schedule(ParsedEvent e) {
+    LocalDate start = e.startDate();
+    boolean oneDay = start != null && (e.endDate() == null || start.equals(e.endDate()));
+    if (oneDay && (MORE_DAYS.matcher(nullToEmpty(e.scheduleText())).find() || MORE_DAYS.matcher(nullToEmpty(e.timeText())).find())) {
+      return new ScheduleResult(ScheduleResult.Status.UNKNOWN, List.of(), null, false, "하루짜리인데 다른 날을 뜻하는 말이 있음");
+    }
     return ScheduleExtractor.extract(new ScheduleInput(e.startDate(), e.endDate(), e.scheduleText(), e.timeText(), null));
   }
 
@@ -243,6 +251,10 @@ public class InstagramPostProcessor {
         .source(Event.SOURCE_INSTAGRAM)
         .sourceKey(sourceKey)
         .build();
+  }
+
+  private static String nullToEmpty(String s) {
+    return s == null ? "" : s;
   }
 
   private static String cut(String s, int max) {

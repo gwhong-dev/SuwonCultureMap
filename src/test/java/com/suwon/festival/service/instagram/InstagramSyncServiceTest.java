@@ -193,6 +193,27 @@ class InstagramSyncServiceTest {
     assertThat(eventDateRepository.findByEventId(threeDays.getId())).isEmpty();
   }
 
+  @Test
+  void 글이_고쳐지면_다음_동기화에서_진행_날짜도_바뀜() {
+    String id = "1790000000000010";
+    client.answers.put("suwon_city", List.of(post(id, "회차 강연\n🗓️ 2026. 11. 5.(목), 11. 12.(목) 14:00\n📍 가상 아트홀")));
+    service("suwon_city").sync();
+
+    // 회차가 바뀜 (시작일 · 장소 · 제목이 같아 같은 블록 → 같은 행사를 갱신)
+    client.answers.put("suwon_city", List.of(post(id, "회차 강연\n🗓️ 2026. 11. 5.(목), 11. 19.(목) 14:00\n📍 가상 아트홀")));
+    service("suwon_city").sync();
+    Event lecture = instagramEvents().get(0);
+    assertThat(instagramEvents()).hasSize(1);
+    assertThat(runDates(lecture)).containsExactly(LocalDate.of(2026, 11, 5), LocalDate.of(2026, 11, 19));
+
+    // 기간으로 바뀌어 요일을 알 수 없게 됨 → 모름, 저장된 날짜도 지움
+    client.answers.put("suwon_city", List.of(post(id, "회차 강연\n🗓️ 2026. 11. 5.(목) ~ 11. 19.(목) 14:00\n📍 가상 아트홀")));
+    service("suwon_city").sync();
+    Event updated = eventRepository.findById(lecture.getId()).orElseThrow();
+    assertThat(updated.getScheduleStatus()).isEqualTo(Event.SCHEDULE_UNKNOWN);
+    assertThat(eventDateRepository.findByEventId(lecture.getId())).isEmpty();
+  }
+
   private List<LocalDate> runDates(Event event) {
     assertThat(event.getScheduleStatus()).isEqualTo(Event.SCHEDULE_DATES);
     return eventDateRepository.findByEventIdInOrderByRunDate(List.of(event.getId())).stream()

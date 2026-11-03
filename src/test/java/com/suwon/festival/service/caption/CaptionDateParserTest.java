@@ -119,7 +119,29 @@ class CaptionDateParserTest {
   void 여러_회차에_다른_글자가_섞이면_AI_몫() {
     assertThat(CaptionDateParser.parse("2026. 11. 5.(목), 11. 12.(목) 우천 시 11. 19.(목)").kind()).isEqualTo(Kind.UNREADABLE);
     assertThat(CaptionDateParser.parse("2026. 11. 5.(목) 및 11. 12.(목)").kind()).isEqualTo(Kind.UNREADABLE);
-    assertThat(CaptionDateParser.parse("2026. 11. 12.(목), 11. 5.(목)").kind()).isEqualTo(Kind.INVALID); // 거꾸로 → 해 넘김으로 읽혀 요일이 안 맞음
+    assertThat(CaptionDateParser.parse("2026. 11. 12.(목), 11. 5.(목)").kind()).isEqualTo(Kind.UNREADABLE); // 거꾸로 → 해 넘김(12월→1월)이 아니면 AI 몫
+  }
+
+  @Test
+  void 여러_회차_뒤에_다른_모양의_날짜가_있으면_종료일을_줄이지_않고_AI_몫() {
+    // 검증 #125: 시간으로 시작하기만 하면 통과해 11/19 가 빠진 채 11/5~11/12 로 저장됐음
+    assertThat(CaptionDateParser.parse("2026. 11. 5.(목), 11. 12.(목) 14:00 / 19.(목) 16:00").kind()).isEqualTo(Kind.UNREADABLE);
+    assertThat(CaptionDateParser.parse("2026. 11. 5.(목), 11. 12.(목) 14:00 / 11월 19일(목) 14:00").kind()).isEqualTo(Kind.UNREADABLE);
+    assertThat(CaptionDateParser.parse("2026. 11. 5.(목), 11. 12.(목) 14:00, 19일(목) 14:00").kind()).isEqualTo(Kind.UNREADABLE);
+    assertThat(CaptionDateParser.parse("2026. 11. 5.(목), 11. 12.(목) 14:00 외 2회").kind()).isEqualTo(Kind.UNREADABLE);
+  }
+
+  @Test
+  void 여러_회차_뒤의_시간_범위는_그대로() {
+    Result r = CaptionDateParser.parse("2026. 11. 5.(목), 11. 12.(목) 14:00~16:00");
+    assertThat(r.kind()).isEqualTo(Kind.OK);
+    assertThat(r.timeText()).isEqualTo("14:00~16:00");
+  }
+
+  @Test
+  void 여러_회차가_12월에서_1월로_넘어갈_때만_해_넘김() {
+    assertThat(CaptionDateParser.parse("2026. 12. 31.(목), 1. 2.(토)").end()).isEqualTo(LocalDate.of(2027, 1, 2));
+    assertThat(CaptionDateParser.parse("2026. 11. 30.(월), 1. 4.(월)").kind()).isEqualTo(Kind.UNREADABLE);
   }
 
   @Test

@@ -41,7 +41,8 @@ public final class CaptionDateParser {
   // 여러 회차의 다음 날짜: 구분자(, · /) 뒤 연도 생략 가능, 요일 필수
   private static final Pattern NEXT_DATE = Pattern.compile(
       "[\\s,·/]*(?:(\\d{4})\\s*\\.\\s*)?(\\d{1,2})\\s*\\.\\s*(\\d{1,2})(?!\\d)\\s*\\.?\\s*\\(\\s*([월화수목금토일])\\s*\\)");
-  private static final Pattern LEADING_TIME = Pattern.compile("\\d{1,2}:\\d{2}");
+  private static final Pattern TIME_RANGE = Pattern.compile("\\d{1,2}:\\d{2}\\s*[~-]\\s*\\d{1,2}:\\d{2}");
+  private static final Pattern TAIL_LEFTOVER = Pattern.compile("[가-힣\\d]");
   private static final Pattern YEAR = Pattern.compile("(?<!\\d)(?:19|20)\\d{2}(?!\\d)");
 
   private static final Map<String, DayOfWeek> WEEKDAYS = Map.of(
@@ -123,7 +124,11 @@ public final class CaptionDateParser {
       LocalDate date;
       try {
         date = LocalDate.of(yearGiven ? num(m.group(1)) : last.getYear(), num(m.group(2)), num(m.group(3)));
-        if (!yearGiven && date.isBefore(last)) date = date.plusYears(1); // 해 넘김
+        // 해 넘김은 12월 → 1월만. 그 밖에 앞 날짜보다 이르면 거꾸로 적은 것 → 추측하지 않음
+        if (!yearGiven && date.isBefore(last)) {
+          if (last.getMonthValue() != 12 || date.getMonthValue() != 1) return unreadable(v, "회차 날짜가 차례대로가 아님");
+          date = date.plusYears(1);
+        }
       } catch (DateTimeException e) {
         return invalid("없는 날짜(회차)");
       }
@@ -134,8 +139,10 @@ public final class CaptionDateParser {
       m = NEXT_DATE.matcher(tail);
     }
     tail = tail.replaceFirst("^[\\s,·/]+", "");
-    if (!tail.isEmpty() && !LEADING_TIME.matcher(tail).lookingAt()) return unreadable(v, "회차 날짜 뒤에 다른 글자");
-    if (FULL.matcher(tail).find() || MONTH_DAY.matcher(tail).find()) return unreadable(v, "회차 날짜 모양을 못 읽음");
+    // 시간 · 구분자 말고 한글 · 숫자가 남으면 다른 회차("/ 19.(목)" · "11월 19일" · "외 2회")일 수 있음 → 종료일을 줄여 저장하지 않게 AI 몫
+    if (TAIL_LEFTOVER.matcher(TIME_RANGE.matcher(tail).replaceAll(" ").replaceAll(TIME.pattern(), " ")).find()) {
+      return unreadable(v, "회차 날짜 뒤에 다른 글자");
+    }
     return new Result(Kind.OK, start, last, CaptionText.blankToNull(tail), null);
   }
 
