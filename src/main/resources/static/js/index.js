@@ -1267,14 +1267,27 @@ function setSheetY(y, animate) {
   sidebar.style.transform = "translateY(" + y + "px)";
 }
 
+// 목록 전체 = 페이지 전체가 스크롤 (index.css, 사파리 주소창이 줄어들게)
+// 켜고 끌 때 보던 목록 위치를 목록 상자 ↔ 페이지 사이로 옮김 (절반 ↔ 전체 전환에도 위치 유지)
+function setListPageScroll(on) {
+  if (document.body.classList.contains("sheet-full") === on) return;
+  var list = document.getElementById("list");
+  var top = on ? list.scrollTop : window.scrollY;
+  document.body.classList.toggle("sheet-full", on);
+  if (on) {
+    window.scrollTo(0, top);
+  } else {
+    window.scrollTo(0, 0);
+    list.scrollTop = top;
+  }
+}
+
 function setSheetState(state) {
   if (!mobileQuery.matches) return;
-  var leavingFull = sheetState === "full" && state !== "full";
   sheetState = state;
-  // 목록 전체 = 페이지 전체가 스크롤 (index.css). 배치가 바뀌므로 클래스를 먼저 바꾼 뒤 위치 계산
-  document.body.classList.toggle("sheet-full", state === "full");
+  // 배치가 바뀌므로 클래스를 먼저 바꾼 뒤 위치 계산
+  setListPageScroll(state === "full");
   document.body.classList.toggle("sheet-peek", state === "peek");
-  if (leavingFull) window.scrollTo(0, 0);
   var y = getSheetPositions()[state];
   setSheetY(y, true);
   // 시트가 내려가 있는 만큼 목록 아래 여백 → 마지막 카드까지 스크롤 가능 (전체는 CSS 가 하단 탭 자리만큼)
@@ -1316,7 +1329,6 @@ function nearestSheetState(y) {
 
   header.addEventListener("pointerdown", function (e) {
     if (!mobileQuery.matches) return;
-    if (sheetState === "full") window.scrollTo(0, 0); // 페이지를 내린 채로 끌면 시트가 어긋나 보여서 맨 위부터
     dragging = true;
     startY = lastY = e.clientY;
     lastTime = Date.now();
@@ -1327,6 +1339,8 @@ function nearestSheetState(y) {
 
   header.addEventListener("pointermove", function (e) {
     if (!dragging) return;
+    // 실제로 끌기 시작하면 페이지 스크롤을 끄고 목록 상자 스크롤로 (페이지를 내린 채 시트만 움직이면 어긋나 보임)
+    if (Math.abs(e.clientY - startY) >= 6) setListPageScroll(false);
     var pos = getSheetPositions();
     var y = startSheetY + (e.clientY - startY);
     y = Math.max(pos.full, Math.min(pos.peek, y)); // 위·아래 끝 제한

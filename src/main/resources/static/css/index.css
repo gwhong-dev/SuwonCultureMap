@@ -1618,6 +1618,11 @@ body {
   body.detail-open #app {
     overflow: hidden;
   }
+  /* 길찾기 · 공유 창이 떠 있으면 뒤 페이지는 스크롤 안 되게 */
+  body:has(#routeSheet:not([hidden])),
+  body:has(#shareSheet:not([hidden])) {
+    overflow: hidden;
+  }
 }
 
 @keyframes shimmer {
