@@ -827,10 +827,13 @@ function openDetailModal(event) {
 
   renderDetailMobile(event); // 모바일 전용 부분 (분류 · 구, 정보 표, 소개, 위치, 하단 바)
 
+  // 모바일은 페이지 전체가 스크롤됨 → 닫을 때 돌아갈 목록 위치를 기억하고 맨 위에서 시작
+  if (!document.body.classList.contains("detail-open")) detailReturnScrollY = window.scrollY;
   document.getElementById("detailModal").style.display = "flex";
   document.body.classList.add("detail-open");
   var card = document.querySelector("#detailModal .modal-card");
   card.scrollTop = 0;
+  if (mobileQuery.matches) window.scrollTo(0, 0);
   selectDetailTab("detailRows", false);
   renderDetailMap(event); // 지도는 창이 보인 뒤에 그려야 크기를 잡음
   measureIntro();
@@ -839,6 +842,7 @@ function openDetailModal(event) {
 
 // ===== 상세 (모바일 디자인 04): 분류 · 구 → 정보 표 → 소개 → 위치 =====
 var detailEvent = null;
+var detailReturnScrollY = 0; // 상세를 열기 전 페이지 스크롤 위치 (목록 전체에서 열었다 닫으면 그 자리로)
 
 // info 원문을 "라벨: 값" 으로 나눠 시간 · 요금 줄을 찾음 (라벨 이름이 API 마다 달라 포함 여부로)
 function infoLines(infoText) {
@@ -932,24 +936,30 @@ function selectDetailTab(targetId, scroll) {
     tab.setAttribute("aria-selected", active ? "true" : "false");
   });
   if (!scroll) return;
-  var card = document.querySelector("#detailModal .modal-card");
-  card.scrollTo({ top: Math.max(0, sectionScrollTop(card, document.getElementById(targetId))), behavior: "smooth" });
+  var scroller = detailScroller();
+  scroller.scrollTo({ top: Math.max(0, sectionScrollTop(scroller, document.getElementById(targetId))), behavior: "smooth" });
+}
+// 상세가 스크롤되는 곳: 모바일 = 페이지 전체 (사파리 주소창이 줄어들게), PC = 팝업 카드 안
+function detailScroller() {
+  return mobileQuery.matches ? document.scrollingElement : document.querySelector("#detailModal .modal-card");
 }
 // 칸(정보 표 · 위치)이 붙어 있는 상단 + 탭 바로 아래(scroll-margin-top 만큼 띄움)에 오는 스크롤 위치
-function sectionScrollTop(card, section) {
+function sectionScrollTop(scroller, section) {
   var margin = parseFloat(getComputedStyle(section).scrollMarginTop) || 0;
-  return section.getBoundingClientRect().top - card.getBoundingClientRect().top + card.scrollTop - margin;
+  var base = scroller === document.scrollingElement ? 0 : scroller.getBoundingClientRect().top;
+  return section.getBoundingClientRect().top - base + scroller.scrollTop - margin;
 }
 document.querySelectorAll("#detailTabs .detail-tab").forEach(function (tab) {
   tab.addEventListener("click", function () {
     selectDetailTab(tab.dataset.target, true);
   });
 });
-// 스크롤하면 보이는 칸에 맞춰 탭 표시
-document.querySelector("#detailModal .modal-card").addEventListener("scroll", function () {
-  if (!mobileQuery.matches || document.getElementById("detailLocation").hidden) return;
-  var card = this;
-  var atLocation = sectionScrollTop(card, document.getElementById("detailLocation")) <= card.scrollTop + 2;
+// 스크롤하면 보이는 칸에 맞춰 탭 표시 (탭은 모바일에만 있음 → 페이지 스크롤)
+window.addEventListener("scroll", function () {
+  if (!mobileQuery.matches || !document.body.classList.contains("detail-open")) return;
+  if (document.getElementById("detailLocation").hidden) return;
+  var scroller = document.scrollingElement;
+  var atLocation = sectionScrollTop(scroller, document.getElementById("detailLocation")) <= scroller.scrollTop + 2;
   selectDetailTab(atLocation ? "detailLocation" : "detailRows", false);
 });
 
@@ -1068,8 +1078,10 @@ function openDetailFromMarker(eventId) {
 }
 
 function closeDetailModal() {
+  var wasOpen = document.body.classList.contains("detail-open");
   document.getElementById("detailModal").style.display = "none";
   document.body.classList.remove("detail-open");
+  if (wasOpen && mobileQuery.matches) window.scrollTo(0, detailReturnScrollY); // 보던 목록 위치로
   detailEvent = null;
   closeShareSheet();
   syncUrlState();
@@ -1320,15 +1332,31 @@ function setSheetY(y, animate) {
   sidebar.style.transform = "translateY(" + y + "px)";
 }
 
+// 목록 전체 = 페이지 전체가 스크롤 (index.css, 사파리 주소창이 줄어들게)
+// 켜고 끌 때 보던 목록 위치를 목록 상자 ↔ 페이지 사이로 옮김 (절반 ↔ 전체 전환에도 위치 유지)
+function setListPageScroll(on) {
+  if (document.body.classList.contains("sheet-full") === on) return;
+  var list = document.getElementById("list");
+  var top = on ? list.scrollTop : window.scrollY;
+  document.body.classList.toggle("sheet-full", on);
+  if (on) {
+    window.scrollTo(0, top);
+  } else {
+    window.scrollTo(0, 0);
+    list.scrollTop = top;
+  }
+}
+
 function setSheetState(state) {
   if (!mobileQuery.matches) return;
   sheetState = state;
+  // 배치가 바뀌므로 클래스를 먼저 바꾼 뒤 위치 계산
+  setListPageScroll(state === "full");
+  document.body.classList.toggle("sheet-peek", state === "peek");
   var y = getSheetPositions()[state];
   setSheetY(y, true);
-  // 시트가 내려가 있는 만큼 목록 아래 여백 → 마지막 카드까지 스크롤 가능
-  document.getElementById("list").style.paddingBottom = y + 24 + "px";
-  document.body.classList.toggle("sheet-full", state === "full");
-  document.body.classList.toggle("sheet-peek", state === "peek");
+  // 시트가 내려가 있는 만큼 목록 아래 여백 → 마지막 카드까지 스크롤 가능 (전체는 CSS 가 하단 탭 자리만큼)
+  document.getElementById("list").style.paddingBottom = state === "full" ? "" : y + 24 + "px";
   document.getElementById("sheetToggleText").textContent = state === "peek" ? "목록 보기" : "접기";
   updateSheetHeaderLabel();
   if (state !== "peek") hidePreview(); // 목록이 올라오면 하단 카드는 닫음
@@ -1376,6 +1404,8 @@ function nearestSheetState(y) {
 
   header.addEventListener("pointermove", function (e) {
     if (!dragging) return;
+    // 실제로 끌기 시작하면 페이지 스크롤을 끄고 목록 상자 스크롤로 (페이지를 내린 채 시트만 움직이면 어긋나 보임)
+    if (Math.abs(e.clientY - startY) >= 6) setListPageScroll(false);
     var pos = getSheetPositions();
     var y = startSheetY + (e.clientY - startY);
     y = Math.max(pos.full, Math.min(pos.peek, y)); // 위·아래 끝 제한
