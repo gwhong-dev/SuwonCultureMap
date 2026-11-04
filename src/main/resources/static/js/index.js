@@ -1349,7 +1349,11 @@ function updateChipActive() {
     districtChip.hidden = !districtFilter;
     districtChip.classList.add("active");
     districtChip.textContent = districtFilter ? "📍 " + districtFilter + " ✕" : "";
-    districtChip.setAttribute("aria-label", districtFilter ? districtFilter + " 필터 해제" : "");
+    if (districtFilter) {
+      districtChip.setAttribute("aria-label", districtFilter + " 필터 해제");
+    } else {
+      districtChip.removeAttribute("aria-label");
+    }
   }
 }
 
@@ -1809,6 +1813,7 @@ function drawNearbyMap() {
   var view = nearbyMapView(picks, box.clientWidth || 335, box.clientHeight || 160);
   box.hidden = !view;
   if (!view || !window.kakao || !kakao.maps || !kakao.maps.StaticMap) return;
+  if (!box.clientWidth) return; // PC 너비로 바뀌어 홈이 안 보이면(폭 0) 그리지 않음
   if (box.clientWidth === nearbyMapWidth) return; // 같은 폭이면 그대로 (사파리 주소창 resize 마다 다시 받지 않게)
   nearbyMapWidth = box.clientWidth;
   box.innerHTML = "";
@@ -1867,6 +1872,13 @@ function fitMapToEvents(events) {
   map.setBounds(bounds, top, 32, bottom, 32);
 }
 
+// 구 칩은 HOME_DISTRICTS(시험 대상)로 만듦 — "팔달구" → "팔달"
+document.getElementById("homeDistrictChips").innerHTML = HOME_DISTRICTS.map(function (district) {
+  return (
+    '<button type="button" class="chip" data-district="' + district + '" aria-pressed="false">' +
+    district.slice(0, -1) + "</button>"
+  );
+}).join("");
 document.querySelectorAll("#homeDistrictChips .chip").forEach(function (chip) {
   chip.addEventListener("click", function () {
     if (homeDistrict === chip.dataset.district) return;

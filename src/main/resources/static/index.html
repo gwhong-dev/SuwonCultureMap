@@ -111,12 +111,8 @@
       <!-- 내 주변: 구 칩 4개 + 작은 지도 + "팔달구 행사 N개 · 지도에서 보기" (→ 지도 탭 + 구 필터). "가까운" 칩은 내 위치 버튼과 같이(나중) -->
       <section id="homeNearby" class="home-nearby" aria-labelledby="homeNearbyTitle" hidden>
         <h2 id="homeNearbyTitle" class="home-section-title">내 주변</h2>
-        <div id="homeDistrictChips" class="nearby-chips" role="group" aria-label="구 고르기">
-          <button type="button" class="chip" data-district="장안구" aria-pressed="false">장안</button>
-          <button type="button" class="chip" data-district="권선구" aria-pressed="false">권선</button>
-          <button type="button" class="chip" data-district="팔달구" aria-pressed="false">팔달</button>
-          <button type="button" class="chip" data-district="영통구" aria-pressed="false">영통</button>
-        </div>
+        <!-- 구 칩 4개: js/index.js 가 HOME_DISTRICTS(home-picks.js)로 만듦 -->
+        <div id="homeDistrictChips" class="nearby-chips" role="group" aria-label="구 고르기"></div>
         <!-- 카카오 StaticMap (그림). 누르면 아래 버튼과 같음 — 읽기 · 탭 이동은 버튼이 맡음 -->
         <div id="homeNearbyMap" class="nearby-map" aria-hidden="true"></div>
         <p id="homeNearbyEmpty" class="home-empty" hidden></p>
