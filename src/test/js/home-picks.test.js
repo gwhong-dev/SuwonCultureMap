@@ -275,6 +275,7 @@ test("검색 강조: 원래 제목 기준 자리 (띄어쓰기 · 대소문자 �
   assert.deepStrictEqual(searchHighlight("수원 화성 문화제", "화성문화"), { start: 3, end: 8 });
   assert.strictEqual(searchHighlight("발레", "SK"), null); // 장소로만 맞으면 강조 없음
   assert.strictEqual(searchHighlight("발레", ""), null);
+  assert.deepStrictEqual(searchHighlight("İstanbul 재즈", "재즈"), { start: 9, end: 11 }); // 소문자가 길어지는 글자 (검증 ⚠️)
 });
 
 test("검색어가 구 이름이면 그 구 (두 글자부터)", () => {

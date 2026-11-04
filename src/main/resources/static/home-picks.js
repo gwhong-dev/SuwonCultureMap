@@ -199,8 +199,11 @@ function searchHighlight(title, keyword) {
   var index = [];
   for (var i = 0; i < title.length; i++) {
     if (/\s/.test(title[i])) continue;
-    chars.push(title[i].toLowerCase());
-    index.push(i);
+    var lower = title[i].toLowerCase(); // 소문자로 바꾸면 길어지는 글자(İ → i̇)도 있어 바뀐 글자마다 원래 자리를 적음
+    for (var j = 0; j < lower.length; j++) {
+      chars.push(lower[j]);
+      index.push(i);
+    }
   }
   var pos = chars.join("").indexOf(kw);
   if (pos === -1) return null;

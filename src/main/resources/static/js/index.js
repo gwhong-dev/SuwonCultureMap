@@ -328,8 +328,11 @@ function renderLoadError() {
   updateSheetHeaderLabel();
 }
 
+var eventsLoadFailed = false; // 마지막 불러오기가 실패했나 (검색 화면 안내용)
+
 function loadEvents() {
   eventsLoaded = false;
+  eventsLoadFailed = false;
   renderSkeleton();
   document.getElementById("resultCount").textContent = "행사 불러오는 중…";
   updateSheetHeaderLabel(); // 다시 시도 때 "불러오지 못했어요" 라벨이 남지 않게
@@ -373,6 +376,8 @@ function loadEvents() {
       console.error("행사 불러오기 실패", err);
       renderLoadError();
       renderHomeError();
+      eventsLoadFailed = true;
+      if (searchOpen) renderSearchSuggest();
     });
 }
 
@@ -2042,7 +2047,9 @@ function renderSearchSuggest() {
   var keyword = searchViewInput.value;
   document.getElementById("searchClearBtn").hidden = !keyword;
   if (!eventsLoaded) {
-    list.innerHTML = '<p class="search-empty">행사를 불러오는 중이에요</p>';
+    list.innerHTML = eventsLoadFailed
+      ? '<p class="search-empty" role="alert">행사를 불러오지 못했어요. 닫은 뒤 다시 시도해 주세요</p>'
+      : '<p class="search-empty">행사를 불러오는 중이에요</p>';
     return;
   }
   if (!keyword.trim()) {
@@ -2084,7 +2091,7 @@ function renderSearchSuggest() {
 }
 
 // 엔터: 지도 탭 검색어로 넣고 목록 전체로 (결과 화면 07 은 S2). 빈 검색어 엔터 = 검색어 지우기
-// 분류 · 날짜 · 구 필터는 풀어서 검색어로만 거름
+// 분류 · 날짜 · 구 필터는 풂. "지난 행사 보기"는 그대로라 종료 행사는 목록에서 빠질 수 있음 → 결과 화면(S2)에서 정리
 function applySearch() {
   document.getElementById("searchInput").value = searchViewInput.value.trim();
   document.getElementById("categorySelect").value = "all";
