@@ -94,6 +94,38 @@ function carouselPicks(events, now) {
     .slice(0, HOME_CAROUSEL_MAX);
 }
 
+var HOME_MONTH_MAX = 10; // 이달의 행사 카드 수 (끝에 "전체 보기" 카드 따로)
+
+// 이번 달 = 한국 시간 1일 ~ 말일
+function monthRange(now) {
+  var today = homeSchedule.koreaToday(now);
+  var parts = today.split("-");
+  var lastDay = new Date(Date.UTC(Number(parts[0]), Number(parts[1]), 0)).getUTCDate(); // 다음 달 0일 = 이달 말일
+  return { start: parts[0] + "-" + parts[1] + "-01", end: parts[0] + "-" + parts[1] + "-" + lastDay };
+}
+
+// "11월의 수원 행사"
+function monthTitle(now) {
+  return Number(monthRange(now).start.split("-")[1]) + "월의 수원 행사";
+}
+
+// 이달의 행사: 이번 달과 기간이 겹치고 종료 안 된 행사, 시작일 순 최대 10개 (날짜 없는 행사는 뺌)
+function monthEvents(events, now) {
+  var month = monthRange(now);
+  return events
+    .filter(function (event) {
+      var status = homeSchedule.eventStatus(event, now);
+      if (status !== "open" && status !== "upcoming") return false;
+      return !event.startDate || event.startDate <= month.end; // 종료 안 됨 = 끝나는 날 ≥ 오늘 ≥ 1일
+    })
+    .sort(
+      byDateThenTitle(function (event) {
+        return event.startDate || event.endDate;
+      }),
+    )
+    .slice(0, HOME_MONTH_MAX);
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     carouselPicks: carouselPicks,
@@ -102,5 +134,8 @@ if (typeof module !== "undefined") {
     thisWeekEvents: thisWeekEvents,
     endingSoon: endingSoon,
     startingSoon: startingSoon,
+    monthRange: monthRange,
+    monthTitle: monthTitle,
+    monthEvents: monthEvents,
   };
 }

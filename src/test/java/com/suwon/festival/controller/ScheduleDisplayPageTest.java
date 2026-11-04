@@ -134,4 +134,14 @@ class ScheduleDisplayPageTest {
         .contains("data-date=\"today\"", "data-date=\"weekend\"", "data-date=\"week\"", "+7일");
     assertThat(html).contains("<option value=\"week\">7일 안</option>");
   }
+
+  @Test
+  void 홈_이달의_행사가_날짜_칩과_곧_종료_사이에_있고_처음엔_숨김() throws Exception {
+    // monthEvents 로 고른 행사가 있을 때만 index.js 가 보이게 함 (제목 "11월의 수원 행사"도 index.js 가 채움)
+    String html = page();
+    int month = html.indexOf("<section id=\"homeMonth\"");
+    assertThat(month).isGreaterThan(html.indexOf("id=\"homeDateChips\"")).isLessThan(html.indexOf("id=\"homeSoonList\""));
+    assertThat(html.substring(month, html.indexOf(">", month))).contains(" hidden");
+    assertThat(html).contains("id=\"homeMonthTitle\"", "id=\"homeMonthTrack\"");
+  }
 }
