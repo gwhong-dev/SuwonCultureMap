@@ -9,6 +9,8 @@ const {
   safeLink,
   linkButtonText,
   detailInfoText,
+  cardImageUrl,
+  cardFallbackInfo,
 } = require("../../main/resources/static/event-detail.js");
 
 const instagram = {
@@ -74,4 +76,22 @@ test("링크 버튼 글: 인스타 행사는 인스타그램에서 보기", () =
 test("extractPlaceName 은 옮긴 뒤에도 장소 라벨 → 주소 순", () => {
   assert.strictEqual(extractPlaceName("행사장소: 광장\n주소: 수원"), "광장");
   assert.strictEqual(extractPlaceName("소개: 없음"), null);
+});
+
+test("목록 카드 사진: 주소가 없거나 http · https 가 아니면 null (사진 칸 없이 그림)", () => {
+  assert.strictEqual(cardImageUrl({ imageUrl: "https://www.swcf.or.kr/a.jpg" }), "https://www.swcf.or.kr/a.jpg");
+  assert.strictEqual(cardImageUrl({ imageUrl: null }), null);
+  assert.strictEqual(cardImageUrl({ imageUrl: "" }), null);
+  assert.strictEqual(cardImageUrl(instagram), null);
+  assert.strictEqual(cardImageUrl({ imageUrl: "javascript:alert(1)" }), null);
+});
+
+test("목록 카드 요약: info 가 없으면 장소 · 시간 줄 (출처는 상세에만)", () => {
+  assert.strictEqual(cardFallbackInfo(instagram), "장소: 가상 공연장\n시간: 오후 7시");
+  assert.strictEqual(cardFallbackInfo({ info: null, place: "광장" }), "장소: 광장");
+  assert.strictEqual(cardFallbackInfo({ info: null }), "");
+});
+
+test("목록 카드 요약: 재단 행사(info 있음)는 빈 값 → 기존 이용료/장소/시간 요약을 씀", () => {
+  assert.strictEqual(cardFallbackInfo(foundation), "");
 });

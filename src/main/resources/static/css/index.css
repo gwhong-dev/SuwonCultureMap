@@ -218,6 +218,10 @@ body {
   flex: 1;
   min-width: 0;
 }
+/* 사진 없는 카드(인스타 행사 등): 사진 칸 없이 글만, 오른쪽 위 ★ 와 안 겹치게 */
+.event-item.no-photo .event-body {
+  padding-right: 1.5rem;
+}
 .event-body .date {
   font-size: 0.75rem;
   color: #888;
@@ -854,6 +858,11 @@ body {
   }
   .card-fav.active {
     color: var(--accent);
+  }
+  /* 사진 없는 목록 카드: ♥ 버튼(44px)이 제목 위에 겹치지 않게 오른쪽을 비움 */
+  .event-item.no-photo .event-body {
+    min-height: 64px;
+    padding: 10px 56px 0 0;
   }
 
   /* ----- 마커 탭 → 하단 카드 (가까운 순 · 좌우로 넘기기, 결과 바 위에 뜸) ----- */
