@@ -1646,6 +1646,47 @@ body {
     font-size: 14px;
     text-align: center;
   }
+  /* 내 주변: 구 칩(지도 칩과 같은 모양) + 작은 지도 + "○○구 행사 N개 · 지도에서 보기" */
+  .home-nearby {
+    padding-top: 28px;
+  }
+  .home-nearby[hidden] {
+    display: none;
+  }
+  .home-districts {
+    display: flex;
+    gap: 8px;
+    padding: 0 20px 12px;
+  }
+  .nearby-map {
+    height: 160px;
+    margin: 0 20px;
+    border: 1px solid var(--line);
+    background: var(--surface); /* 지도 그리기 전 */
+    cursor: pointer;
+  }
+  .nearby-go {
+    display: block;
+    box-sizing: border-box;
+    width: calc(100% - 40px);
+    height: 48px;
+    margin: 0 20px;
+    padding: 0 16px;
+    border: 1px solid var(--line);
+    border-top: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+  }
+  .nearby-go:disabled {
+    color: var(--sub);
+    font-weight: 400;
+    cursor: default;
+  }
   .home-empty button {
     height: 44px;
     padding: 0 20px;

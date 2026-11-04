@@ -154,4 +154,18 @@ class ScheduleDisplayPageTest {
     assertThat(html.substring(month, html.indexOf(">", month))).contains(" hidden");
     assertThat(html).contains("id=\"homeMonthTitle\"", "id=\"homeMonthTrack\"");
   }
+
+  @Test
+  void 홈_내_주변이_곧_종료_아래에_있고_처음엔_숨김_지도에서_보기는_구_필터를_켬() throws Exception {
+    // 구 칩 · 작은 지도 · "○○구 행사 N개" 는 index.js 가 채움 (고르는 규칙은 home-picks.js districtEvents)
+    String html = page();
+    int nearby = html.indexOf("<section id=\"homeNearby\"");
+    assertThat(nearby).isGreaterThan(html.indexOf("id=\"homeSoonList\""));
+    assertThat(html.substring(nearby, html.indexOf(">", nearby))).contains(" hidden");
+    assertThat(html).contains("id=\"homeDistrictChips\"", "id=\"homeNearbyMap\"", "id=\"homeNearbyGo\"");
+
+    String js = script();
+    assertThat(js).contains("districtEvents(homeEvents(), homeDistrict)", "districtFilter = homeDistrict;");
+    assertThat(js).contains("setDistrictFilter(null)"); // 지도 칩 줄 "📍 ○○구 ✕" 로 해제
+  }
 }

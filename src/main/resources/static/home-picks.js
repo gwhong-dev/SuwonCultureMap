@@ -140,8 +140,22 @@ function matchesDistrict(event, district) {
   return !district || eventDistrict(event) === district;
 }
 
+// 홈 "내 주변" 구 칩 순서 (디자인 01: 장안 · 권선 · 팔달 · 영통). 처음 고른 구 = 팔달구 (지도 첫 위치 행궁동)
+var HOME_DISTRICTS = ["장안구", "권선구", "팔달구", "영통구"];
+var HOME_DEFAULT_DISTRICT = "팔달구";
+
+// 내 주변 "○○구 행사 N개": 그 구의 종료 안 된 행사 (지도 탭 기본 = 지난 행사 숨김과 같은 기준, 날짜 없는 행사 포함)
+function districtEvents(events, district, now) {
+  return events.filter(function (event) {
+    return matchesDistrict(event, district) && homeSchedule.eventStatus(event, now) !== "ended";
+  });
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
+    HOME_DISTRICTS: HOME_DISTRICTS,
+    HOME_DEFAULT_DISTRICT: HOME_DEFAULT_DISTRICT,
+    districtEvents: districtEvents,
     eventDistrict: eventDistrict,
     matchesDistrict: matchesDistrict,
     carouselPicks: carouselPicks,
