@@ -463,6 +463,7 @@ body {
 #previewArea,
 #tabBar,
 #homeView,
+#searchView,
 .card-fav,
 .badge-row,
 #detailHead,
@@ -1646,6 +1647,113 @@ body {
     font-size: 14px;
     text-align: center;
   }
+  /* ----- 검색 화면 (디자인 06 입력 중): 화면 전체, 글자만 있는 행 56px ----- */
+  #searchView:not([hidden]) {
+    position: fixed;
+    inset: 0;
+    z-index: 90; /* 홈(35) · 하단 탭(40) 위, 상세창(100) 아래 */
+    display: flex;
+    flex-direction: column;
+    padding-top: env(safe-area-inset-top, 0px);
+    background: var(--bg);
+    color: var(--text);
+  }
+  body.search-open:not(.detail-open) {
+    overflow: hidden; /* 뒤 페이지(홈 · 목록)는 안 움직이게 */
+  }
+  body.detail-open #searchView {
+    display: none; /* 행을 눌러 연 상세가 위. 상세를 닫으면 다시 검색 화면 */
+  }
+  .search-head {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 56px;
+    padding: 0 8px 0 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  #searchViewInput {
+    flex: 1;
+    min-width: 0;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 16px; /* 16px 미만이면 아이폰이 화면을 확대함 */
+  }
+  #searchViewInput::-webkit-search-cancel-button {
+    display: none; /* 지우기는 옆 ✕ 버튼 */
+  }
+  #searchClearBtn[hidden] {
+    display: none;
+  }
+  .search-suggest {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .search-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-sizing: border-box;
+    width: 100%;
+    height: 56px;
+    padding: 0 20px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: 15px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .search-row .status-badge {
+    flex: none;
+    width: 60px; /* 폭 고정 → 제목 시작선 맞춤 */
+    text-align: center;
+  }
+  .search-row .status-badge.none {
+    background: none;
+  }
+  .search-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .search-hit {
+    background: none;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .search-where {
+    flex: none;
+    color: var(--sub);
+    font-size: 13px;
+  }
+  .search-pin {
+    flex: none;
+    width: 60px;
+    text-align: center;
+  }
+  .search-district strong {
+    color: var(--accent);
+  }
+  .search-empty {
+    margin: 0;
+    padding: 32px 20px;
+    color: var(--sub);
+    font-size: 14px;
+    text-align: center;
+  }
+
   /* 내 주변: 구 칩(지도 칩과 같은 모양) + 작은 지도 + "○○구 행사 N개 · 지도에서 보기" */
   .home-nearby {
     padding-top: 28px;

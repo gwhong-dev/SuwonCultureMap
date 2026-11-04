@@ -16,6 +16,10 @@ const {
   HOME_DISTRICTS,
   HOME_DEFAULT_DISTRICT,
   districtEvents,
+  matchesSearch,
+  searchEvents,
+  searchHighlight,
+  searchDistrict,
 } = require("../../main/resources/static/home-picks.js");
 
 // 한국 시간 → 밀리초 (UTC 로 9시간 빼서)
@@ -237,4 +241,47 @@ test("내 주변 행사 수: 그 구의 종료 안 된 행사 (날짜 없는 행
     [5],
   );
   assert.deepStrictEqual(districtEvents(events, "영통구", WED), []);
+});
+
+test("검색 일치: 띄어쓰기 · 대소문자 무시, 제목 + 장소", () => {
+  const event = { title: "발레 <돈키호테>", place: "수원SK아트리움 대공연장" };
+  assert.ok(matchesSearch(event, "돈키"));
+  assert.ok(matchesSearch(event, "발레<돈")); // 제목 띄어쓰기 무시
+  assert.ok(matchesSearch(event, "sk 아트리움")); // 장소 · 소문자 · 검색어 띄어쓰기
+  assert.ok(matchesSearch(event, "  ")); // 빈 검색어 = 전체
+  assert.ok(!matchesSearch(event, "재즈"));
+  assert.ok(!matchesSearch({ title: "행사", place: null }, "광교"));
+});
+
+test("검색 정렬: 운영중 · 오픈예정(종료 임박순) → 날짜 없음 → 종료(최근 끝난 순)", () => {
+  const events = [
+    { id: 1, title: "재즈 A", startDate: "2026-10-01", endDate: "2026-10-05" }, // 종료
+    { id: 2, title: "재즈 B", startDate: "2026-11-20", endDate: "2026-11-30" }, // 오픈예정
+    { id: 3, title: "재즈 C" }, // 날짜 없음
+    { id: 4, title: "재즈 D", startDate: "2026-11-01", endDate: "2026-11-10" }, // 운영중
+    { id: 5, title: "재즈 E", startDate: "2026-10-01", endDate: "2026-11-02" }, // 종료 (더 최근)
+    { id: 6, title: "클래식", startDate: "2026-11-01", endDate: "2026-11-10" }, // 안 맞음
+  ];
+  assert.deepStrictEqual(
+    searchEvents(events, "재즈", WED).map((e) => e.id),
+    [4, 2, 3, 5, 1],
+  );
+  assert.deepStrictEqual(searchEvents(events, " ", WED), []);
+});
+
+test("검색 강조: 원래 제목 기준 자리 (띄어쓰기 · 대소문자 무시)", () => {
+  assert.deepStrictEqual(searchHighlight("ASSA 재즈페스티벌", "재즈"), { start: 5, end: 7 });
+  assert.deepStrictEqual(searchHighlight("ASSA 재즈페스티벌", "assa재"), { start: 0, end: 6 });
+  assert.deepStrictEqual(searchHighlight("수원 화성 문화제", "화성문화"), { start: 3, end: 8 });
+  assert.strictEqual(searchHighlight("발레", "SK"), null); // 장소로만 맞으면 강조 없음
+  assert.strictEqual(searchHighlight("발레", ""), null);
+  assert.deepStrictEqual(searchHighlight("İstanbul 재즈", "재즈"), { start: 9, end: 11 }); // 소문자가 길어지는 글자 (검증 ⚠️)
+});
+
+test("검색어가 구 이름이면 그 구 (두 글자부터)", () => {
+  assert.strictEqual(searchDistrict("팔달"), "팔달구");
+  assert.strictEqual(searchDistrict(" 영통 구"), "영통구");
+  assert.strictEqual(searchDistrict("팔"), null);
+  assert.strictEqual(searchDistrict("팔달구청"), null);
+  assert.strictEqual(searchDistrict("재즈"), null);
 });

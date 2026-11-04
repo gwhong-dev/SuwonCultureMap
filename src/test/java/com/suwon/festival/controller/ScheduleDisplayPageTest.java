@@ -165,9 +165,24 @@ class ScheduleDisplayPageTest {
     assertThat(html).contains("id=\"homeDistrictChips\"", "id=\"homeNearbyMap\"", "id=\"homeNearbyGo\"");
 
     String js = script();
-    assertThat(js).contains("districtEvents(homeEvents(), homeDistrict)", "districtFilter = homeDistrict;");
+    assertThat(js).contains("districtEvents(homeEvents(), homeDistrict)", "showDistrictOnMap(homeDistrict, nearbyPicks)", "districtFilter = district;");
     assertThat(js).contains("setDistrictFilter(null)"); // 지도 칩 줄 "📍 ○○구 ✕" 로 해제
     // 칩 줄 선택 표시 루프(updateChipActive)가 다시 돌아도 구 칩은 켜진 모양 유지 (검증 ❌ 반영)
     assertThat(js).contains("updateDistrictChip();\n}", "chip.classList.add(\"active\");");
+  }
+
+  @Test
+  void 모바일_검색_화면이_있고_처음엔_숨김_지도_필터도_같은_검색_규칙() throws Exception {
+    // 홈 검색 버튼 · 지도 탭 검색창 → #searchView. 고르기 · 강조 규칙은 home-picks.js (searchEvents · searchHighlight)
+    String html = page();
+    int search = html.indexOf("<section id=\"searchView\"");
+    assertThat(search).isPositive();
+    assertThat(html.substring(search, html.indexOf(">", search))).contains(" hidden");
+    assertThat(html).contains("id=\"searchViewInput\"", "id=\"searchSuggest\"", "id=\"searchBackBtn\"");
+
+    String js = script();
+    assertThat(js).contains("addEventListener(\"click\", openSearch)", "searchEvents(events, keyword)");
+    assertThat(js).contains("matchesSearch(item.event, keyword)"); // 지도 · 목록도 제목 + 장소, 띄어쓰기 무시
+    assertThat(js).doesNotContain("item.event.title.includes(keyword)");
   }
 }
