@@ -100,4 +100,17 @@ class ScheduleDisplayPageTest {
     MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     assertThat(mockMvc.perform(get("/favorite-ui.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
   }
+
+  @Test
+  void 모바일_홈_화면과_홈_탭이_있고_홈_규칙_파일을_화면_스크립트보다_먼저_불러옴() throws Exception {
+    // 이번 주 · 곧 종료 · 곧 시작 고르기(weekRange · endingSoon …)가 home-picks.js 에 있음 → index.js 보다 앞
+    String html = page();
+    int rules = html.indexOf("<script src=\"/home-picks.js\"></script>");
+    assertThat(rules).isPositive().isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
+    assertThat(rules).isGreaterThan(html.indexOf("<script src=\"/schedule-format.js\"></script>")); // 상태 계산을 씀
+    assertThat(html).contains("id=\"homeView\"", "id=\"homeSoonList\"", "data-tab=\"home\"");
+
+    MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+    assertThat(mockMvc.perform(get("/home-picks.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
+  }
 }

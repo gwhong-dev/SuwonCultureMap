@@ -462,6 +462,7 @@ body {
 #sheetHeader,
 #previewArea,
 #tabBar,
+#homeView,
 .card-fav,
 .badge-row,
 #detailHead,
@@ -1358,7 +1359,7 @@ body {
   /* ----- 하단 탭 (높이 64px, 아이콘 22px + 글자 11px, 선택 = 주 색 + 굵게) ----- */
   #tabBar {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     flex: none;
     height: var(--tab-height);
     padding-bottom: env(safe-area-inset-bottom, 0px); /* 아이폰 홈 바 아래로 내려가지 않게 */
@@ -1390,6 +1391,166 @@ body {
   .tab-item.active {
     color: var(--accent);
     font-weight: 700;
+  }
+
+  /* ----- 홈 (디자인 01): 헤더 · 이번 주 행사 수 · 곧 종료 / 곧 시작 ----- */
+  body.home-open #homeView {
+    display: block;
+  }
+  #homeView {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 35; /* 검색창(30) 위, 하단 탭(40) 아래 */
+    box-sizing: border-box;
+    min-height: 100%;
+    padding: env(safe-area-inset-top, 0px) 0 calc(var(--tab-height) + env(safe-area-inset-bottom, 0px) + 24px);
+    background: var(--bg);
+    color: var(--text);
+  }
+  .home-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    padding: 0 8px 0 20px;
+  }
+  .home-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .home-logo-mark {
+    width: 20px;
+    height: 20px;
+    background: var(--accent);
+  }
+  .home-week {
+    padding: 8px 20px 20px;
+  }
+  #homeWeekRange {
+    font-size: 13px;
+    color: var(--sub);
+  }
+  .home-week h1 {
+    margin: 4px 0 0;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+  .home-week strong {
+    color: var(--accent);
+  }
+  .home-tabs {
+    display: flex;
+    gap: 20px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .home-tab {
+    height: 44px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--sub);
+    font: inherit;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .home-tab.active {
+    color: var(--text);
+    font-weight: 700;
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+  .home-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding: 32px 20px;
+    color: var(--sub);
+    font-size: 14px;
+    text-align: center;
+  }
+  .home-empty button {
+    height: 44px;
+    padding: 0 20px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  /* 행사 행 (디자인 2번): 포스터 56×70 + 배지 + 제목 15px + 보조 줄. 홈 · (나중) 검색 결과 공통 */
+  .event-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 12px 20px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .row-poster {
+    position: relative;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 70px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .row-poster-text {
+    color: var(--sub);
+    font-size: 11px;
+  }
+  .row-poster img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .row-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    flex: 1;
+  }
+  .row-badges {
+    display: flex;
+    gap: 4px;
+  }
+  .row-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+  .row-sub {
+    overflow: hidden;
+    color: var(--sub);
+    font-size: 13px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   /* ----- 상세정보: 전체 화면 페이지처럼 -----
@@ -1725,6 +1886,27 @@ body {
     flex: none;
     overflow: visible;
     padding-bottom: calc(var(--tab-height) + env(safe-area-inset-bottom, 0px) + 24px);
+  }
+  /* 홈: 지도 위를 덮는 화면. 하단 탭은 화면에 고정, 홈은 페이지 길이만큼 늘림 */
+  body.home-open {
+    overflow: visible;
+    box-sizing: border-box;
+    padding-bottom: calc(var(--tab-height) + 1px + env(safe-area-inset-bottom, 0px)); /* 고정한 하단 탭 자리 → 뒤 지도 크기 그대로 */
+  }
+  body.home-open #tabBar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+  /* 홈 뒤의 지도 · 검색창은 안 보이고 화면 읽기 프로그램도 건너뜀 (지도 크기는 그대로라 돌아와도 다시 계산 안 함) */
+  body.home-open #topbar,
+  body.home-open #app {
+    visibility: hidden;
+  }
+  /* 상세가 열려 있으면 뒤의 홈은 빼서 페이지 길이에 안 들어가게 */
+  body.detail-open #homeView {
+    display: none;
   }
   /* 상세가 열려 있으면 뒤의 목록은 잘라서 페이지 길이에 안 들어가게 */
   body.detail-open #app {
