@@ -13,6 +13,9 @@ const {
   monthEvents,
   eventDistrict,
   matchesDistrict,
+  HOME_DISTRICTS,
+  HOME_DEFAULT_DISTRICT,
+  districtEvents,
 } = require("../../main/resources/static/home-picks.js");
 
 // 한국 시간 → 밀리초 (UTC 로 9시간 빼서)
@@ -207,4 +210,31 @@ test("구 필터: null 이면 전체, 고르면 그 구만 (구를 모르면 빠
   assert.ok(matchesDistrict(paldal, "팔달구"));
   assert.ok(!matchesDistrict(paldal, "권선구"));
   assert.ok(!matchesDistrict(unknown, "팔달구"));
+});
+
+test("내 주변 구 칩: 장안 · 권선 · 팔달 · 영통, 처음은 팔달구", () => {
+  assert.deepStrictEqual(HOME_DISTRICTS, ["장안구", "권선구", "팔달구", "영통구"]);
+  assert.ok(HOME_DISTRICTS.includes(HOME_DEFAULT_DISTRICT));
+  assert.strictEqual(HOME_DEFAULT_DISTRICT, "팔달구");
+});
+
+test("내 주변 행사 수: 그 구의 종료 안 된 행사 (날짜 없는 행사 포함, 구 모르면 빠짐)", () => {
+  const events = [
+    { id: 1, district: "팔달구", startDate: "2026-11-01", endDate: "2026-11-10" }, // 운영중
+    { id: 2, district: "팔달구", startDate: "2026-11-20", endDate: "2026-11-30" }, // 오픈예정
+    { id: 3, district: "팔달구", startDate: "2026-10-01", endDate: "2026-11-03" }, // 종료 (어제)
+    { id: 4, district: "팔달구" }, // 날짜 없음 → 지도처럼 보임
+    { id: 5, district: "권선구", startDate: "2026-11-01", endDate: "2026-11-10" },
+    { id: 6, district: null, info: "장소: 수원시 팔달구 가상홀", startDate: "2026-11-04" }, // 서버 값 없으면 원문 글
+    { id: 7, district: null, info: "", startDate: "2026-11-04" }, // 구 모름
+  ];
+  assert.deepStrictEqual(
+    districtEvents(events, "팔달구", WED).map((e) => e.id),
+    [1, 2, 4, 6],
+  );
+  assert.deepStrictEqual(
+    districtEvents(events, "권선구", WED).map((e) => e.id),
+    [5],
+  );
+  assert.deepStrictEqual(districtEvents(events, "영통구", WED), []);
 });

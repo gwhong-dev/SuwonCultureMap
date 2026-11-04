@@ -108,6 +108,14 @@
         </div>
         <div id="homeSoonList" role="tabpanel" aria-labelledby="homeTabEnding"></div>
       </section>
+      <!-- 내 주변: 구 칩 4개 + 작은 지도(그 구 행사 위치, 손으로 못 움직임) + "○○구 행사 N개 · 지도에서 보기" → 지도 탭 + 구 필터
+           구 칩 · 작은 지도는 index.js 가 채움. 행사를 받기 전 · 실패하면 숨김 -->
+      <section id="homeNearby" class="home-nearby" aria-labelledby="homeNearbyTitle" hidden>
+        <h2 id="homeNearbyTitle" class="home-section-title">내 주변</h2>
+        <div id="homeDistrictChips" class="home-districts" role="group" aria-label="구 고르기"></div>
+        <div id="homeNearbyMap" class="nearby-map" aria-hidden="true"></div>
+        <button type="button" id="homeNearbyGo" class="nearby-go"></button>
+      </section>
     </section>
     <!-- 모바일 전용: 하단 탭 (docs/design/mobile-design-v1.md 2번) -->
     <nav id="tabBar" aria-label="하단 탭">

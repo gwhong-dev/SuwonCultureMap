@@ -436,7 +436,7 @@ function cardDateText(item) {
   return item.runMatch === "maybe" ? text + " · " + MAYBE_RUN_NOTE : text;
 }
 
-// 구 필터 (null = 전체). 화면 버튼은 아직 없음 — 홈 "내 주변"(H5)이 setDistrictFilter 로 켬
+// 구 필터 (null = 전체). 홈 "내 주변"의 "지도에서 보기"가 켜고, 지도 칩 줄 맨 앞 "📍 ○○구 ✕" 칩으로 끔
 var districtFilter = null;
 
 function setDistrictFilter(district) {
@@ -1104,6 +1104,7 @@ function closeDetailModal() {
   document.getElementById("detailModal").style.display = "none";
   document.body.classList.remove("detail-open");
   if (wasOpen && mobileQuery.matches) window.scrollTo(0, detailReturnScrollY); // 보던 목록 위치로
+  if (wasOpen && homeOpen) drawNearbyMap(); // 상세가 덮은 동안 화면이 돌았으면 작은 지도 크기 다시 맞춤
   detailEvent = null;
   closeShareSheet();
   syncUrlState();
@@ -1333,6 +1334,31 @@ function updateChipActive() {
           : chip.dataset.value === selected;
       chip.classList.toggle("active", active);
     });
+  updateDistrictChip();
+}
+
+// 구 필터가 켜져 있으면 칩 줄 맨 앞에 "📍 팔달구 ✕" — 누르면 구 필터 해제
+function updateDistrictChip() {
+  var chips = document.getElementById("categoryChips");
+  var chip = document.getElementById("districtChip");
+  if (!districtFilter) {
+    if (chip) chip.remove();
+    return;
+  }
+  if (!chip) {
+    chip = document.createElement("button");
+    chip.type = "button";
+    chip.id = "districtChip";
+    chip.className = "chip";
+    chip.addEventListener("click", function () {
+      setDistrictFilter(null);
+    });
+    chips.insertBefore(chip, chips.firstChild);
+    chips.scrollLeft = 0; // 가로 스크롤 뒤에 숨지 않게
+  }
+  chip.classList.add("active"); // 위 updateChipActive 루프가 data-value 없는 이 칩의 active 를 지우므로 매번 다시 켬
+  chip.textContent = "📍 " + districtFilter + " ✕";
+  chip.setAttribute("aria-label", districtFilter + " 필터 해제");
 }
 
 // ----- 바텀시트 (사이드바 목록을 아래에서 끌어올리는 방식) -----
@@ -1530,6 +1556,7 @@ function showHome() {
   document.body.classList.add("home-open");
   window.scrollTo(0, 0);
   carouselJump(carouselIndex); // 숨어 있을 때는 폭이 0 이라 자리를 못 맞춤 → 보일 때 맞춤
+  drawNearbyMap(); // 작은 지도도 같은 이유로 보일 때 그림
   updateTabBar();
 }
 
@@ -1551,6 +1578,7 @@ function renderHome() {
   renderHomeCarousel();
   renderHomeMonth();
   renderHomeSoon();
+  renderHomeNearby();
 }
 
 // ----- 포스터 캐러셀 (디자인 01): 카드 280px · 스와이프 · 끝에서 처음으로 · 진행 막대 + "1 / 5" -----
@@ -1664,7 +1692,9 @@ var homeCarouselTrack = document.getElementById("homeCarouselTrack");
 homeCarouselTrack.addEventListener("scroll", onCarouselScroll, { passive: true });
 homeCarouselTrack.addEventListener("scrollend", settleCarousel);
 window.addEventListener("resize", function () {
-  if (homeOpen) carouselJump(carouselIndex); // 화면 회전 · 폭 변화 뒤 카드 자리 맞춤
+  if (!homeOpen) return;
+  carouselJump(carouselIndex); // 화면 회전 · 폭 변화 뒤 카드 자리 맞춤
+  drawNearbyMap(); // 작은 지도 크기 · 범위 다시 맞춤
 });
 
 // 행사 행 (디자인 2번 공통 부품): 포스터 56×70 + 배지 + 제목 + 보조 줄(분류 · 구 · 기간)
@@ -1766,6 +1796,7 @@ function renderHomeLoading() {
   carousel.hidden = false;
   carousel.querySelector(".carousel-progress").hidden = true;
   document.getElementById("homeMonth").hidden = true; // 불러오는 동안은 칸을 비워 둠 (캐러셀 스켈레톤만)
+  document.getElementById("homeNearby").hidden = true;
   document.getElementById("homeCarouselTrack").innerHTML =
     '<div class="poster-slide" aria-hidden="true"><span class="poster-img sk"></span>' +
     '<span class="sk sk-line w40"></span><span class="sk sk-line w80"></span></div>';
@@ -1782,6 +1813,7 @@ function renderHomeError() {
   document.getElementById("homeWeekCount").textContent = "-";
   document.getElementById("homeCarousel").hidden = true;
   document.getElementById("homeMonth").hidden = true;
+  document.getElementById("homeNearby").hidden = true;
   var list = document.getElementById("homeSoonList");
   list.removeAttribute("aria-busy");
   list.innerHTML =
@@ -1821,12 +1853,138 @@ document.querySelectorAll("#homeView .home-tab").forEach(function (tab) {
 document.querySelectorAll("#homeDateChips .chip").forEach(function (chip) {
   chip.addEventListener("click", function () {
     document.getElementById("dateFilter").value = chip.dataset.date;
+    districtFilter = null; // "내 주변"에서 켠 구 필터가 남아 날짜만 고른 결과가 줄지 않게
     selectTab("map"); // filterMarkers 가 지도 칩 표시까지 맞춤
   });
 });
 
+// ----- 내 주변 (디자인 01): 구 칩 4개 + 작은 지도 + "○○구 행사 N개 · 지도에서 보기" → 지도 탭 + 구 필터 -----
+// 구 · 행사 고르기는 home-picks.js (districtEvents). "가까운" 칩은 위치 권한이 필요해 나중 (계획 4번)
+var homeDistrict = HOME_DEFAULT_DISTRICT;
+var nearbyPicks = []; // 고른 구의 종료 안 된 행사
+var nearbyMap = null; // 작은 지도 (홈이 처음 보일 때 만듦 — 숨은 칸에 만들면 크기가 0)
+var nearbyMarkers = [];
+var NEARBY_DOT_ICON =
+  "data:image/svg+xml;charset=UTF-8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14">' +
+      '<rect x="1" y="1" width="12" height="12" fill="#b4472a" stroke="#fff" stroke-width="2"/></svg>', // --accent
+  );
+
+function renderHomeNearby() {
+  var chips = document.getElementById("homeDistrictChips");
+  if (!chips.children.length) {
+    HOME_DISTRICTS.forEach(function (district) {
+      var chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "chip";
+      chip.dataset.district = district;
+      chip.textContent = district.replace(/구$/, ""); // 장안 · 권선 · 팔달 · 영통
+      chip.addEventListener("click", function () {
+        homeDistrict = district;
+        renderHomeNearby();
+      });
+      chips.appendChild(chip);
+    });
+  }
+  chips.querySelectorAll(".chip").forEach(function (chip) {
+    var active = chip.dataset.district === homeDistrict;
+    chip.classList.toggle("active", active);
+    chip.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+
+  nearbyPicks = districtEvents(homeEvents(), homeDistrict).filter(function (event) {
+    return event.latitude && event.longitude;
+  });
+  var go = document.getElementById("homeNearbyGo");
+  go.disabled = nearbyPicks.length === 0;
+  go.textContent = nearbyPicks.length
+    ? homeDistrict + " 행사 " + nearbyPicks.length + "개 · 지도에서 보기 →"
+    : homeDistrict + "에는 지금 볼 수 있는 행사가 없어요";
+  document.getElementById("homeNearby").hidden = false;
+  drawNearbyMap();
+}
+
+// 지도를 행사들이 다 보이게 맞춤. 한 곳이면 그 자리 확대, 없으면 수원 전체쯤 (padding = [위, 오른쪽, 아래, 왼쪽] px)
+function fitMapToEvents(target, events, padding) {
+  if (events.length === 0) {
+    target.setLevel(8);
+    target.setCenter(new kakao.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng));
+    return;
+  }
+  var bounds = new kakao.maps.LatLngBounds();
+  events.forEach(function (event) {
+    bounds.extend(new kakao.maps.LatLng(event.latitude, event.longitude));
+  });
+  if (bounds.getSouthWest().equals(bounds.getNorthEast())) {
+    target.setLevel(4);
+    target.setCenter(bounds.getSouthWest());
+    return;
+  }
+  target.setBounds(bounds, padding[0], padding[1], padding[2], padding[3]);
+}
+
+// 작은 지도: 고른 구 행사 자리에 작은 벽돌색 네모. 손으로 움직이지 않고, 누르면 "지도에서 보기"와 같음
+function drawNearbyMap() {
+  var box = document.getElementById("homeNearbyMap");
+  if (!map || !eventsLoaded || !box.offsetWidth) return; // SDK 전 · 행사 받기 전 · 홈이 안 보이면 (PC · 상세 위) 건너뜀
+  if (!nearbyMap) {
+    nearbyMap = new kakao.maps.Map(box, {
+      center: new kakao.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng),
+      level: 7,
+      draggable: false,
+      scrollwheel: false,
+      disableDoubleClick: true,
+      disableDoubleClickZoom: true,
+      keyboardShortcuts: false,
+    });
+    kakao.maps.event.addListener(nearbyMap, "click", goNearbyOnMap);
+  } else {
+    nearbyMap.relayout(); // 화면 회전 등으로 칸 크기가 바뀌었을 수 있음
+  }
+  nearbyMarkers.forEach(function (marker) {
+    marker.setMap(null);
+  });
+  var image = new kakao.maps.MarkerImage(NEARBY_DOT_ICON, new kakao.maps.Size(14, 14));
+  nearbyMarkers = groupByLocation(
+    nearbyPicks.map(function (event) {
+      return { event: event };
+    }),
+  ).map(function (group) {
+    return new kakao.maps.Marker({
+      map: nearbyMap,
+      position: new kakao.maps.LatLng(group[0].event.latitude, group[0].event.longitude),
+      image: image,
+      clickable: false, // 누르면 지도 클릭으로 → goNearbyOnMap
+    });
+  });
+  fitMapToEvents(nearbyMap, nearbyPicks, [20, 20, 20, 20]);
+}
+
+// "지도에서 보기": 다른 필터(검색어 · 분류 · 날짜 · 지난 행사)는 풀고 그 구만 → "N개"와 지도 결과 수가 같음
+function goNearbyOnMap() {
+  if (!nearbyPicks.length) return;
+  document.getElementById("searchInput").value = "";
+  document.getElementById("categorySelect").value = "all";
+  document.getElementById("dateFilter").value = "all";
+  document.getElementById("showPastCheckbox").checked = false;
+  districtFilter = homeDistrict; // selectTab 이 filterMarkers 로 지도 · 목록 · 칩을 다시 그림
+  selectTab("map");
+  var top = document.getElementById("topbar").offsetHeight + 16; // 검색창 · 칩 줄 아래
+  var bottom = document.getElementById("sheetHeader").offsetHeight + 16; // 결과 바 위
+  fitMapToEvents(map, nearbyPicks, [top, 40, bottom, 40]);
+}
+
+document.getElementById("homeNearbyGo").addEventListener("click", goNearbyOnMap);
+
+// PC 너비로 바뀌면 구 칩이 없어 끌 방법이 없음 → 구 필터를 풂
+mobileQuery.addEventListener("change", function (e) {
+  if (!e.matches && districtFilter) setDistrictFilter(null);
+});
+
 // 검색 버튼: 검색 화면(06)이 생기기 전까지는 지도 탭의 검색창으로
 document.getElementById("homeSearchBtn").addEventListener("click", function () {
+  districtFilter = null; // 검색은 수원 전체에서
   selectTab("map");
   document.getElementById("searchInput").focus();
 });
