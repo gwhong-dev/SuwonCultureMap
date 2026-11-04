@@ -87,3 +87,19 @@ test("곧 종료 · 곧 시작: 해당 행사가 없으면 빈 배열", () => {
   assert.deepStrictEqual(endingSoon([ev(1, "2026-12-01", "2026-12-02")], WED), []);
   assert.deepStrictEqual(startingSoon([ev(1, "2026-10-01", "2026-11-30")], WED), []);
 });
+
+test("이번 주: 해를 넘기는 주", () => {
+  assert.deepStrictEqual(weekRange(kst(2027, 1, 1)), { start: "2026-12-28", end: "2027-01-03" });
+});
+
+test("곧 종료 · 곧 시작: 날짜 없는 행사는 빼고, 한쪽 날짜만 있는 행사는 그 날 기준", () => {
+  const events = [
+    ev(1, null, null), // 날짜 없음 → 둘 다 뺌
+    ev(2, "2026-11-04", null), // 시작일만 = 오늘 하루 → 운영중, 오늘 종료
+    ev(3, null, "2026-11-10"), // 종료일만 → 운영중
+    ev(4, "2026-11-06", null), // 시작일만(앞으로) → 오픈예정
+    ev(5, "2026-10-01", "2026-11-05"),
+  ];
+  assert.deepStrictEqual(endingSoon(events, WED).map((e) => e.id), [2, 5, 3]);
+  assert.deepStrictEqual(startingSoon(events, WED).map((e) => e.id), [4]);
+});
