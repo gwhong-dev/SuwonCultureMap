@@ -436,7 +436,7 @@ function cardDateText(item) {
   return item.runMatch === "maybe" ? text + " · " + MAYBE_RUN_NOTE : text;
 }
 
-// 구 필터 (null = 전체). 화면 버튼은 아직 없음 — 홈 "내 주변"(H5)이 setDistrictFilter 로 켬
+// 구 필터 (null = 전체). 홈 "내 주변"이 켜고, 지도 칩 "📍 ○○구 ✕" 로 끔 (칩 줄이 없는 PC 로 바뀌면 끔)
 var districtFilter = null;
 
 function setDistrictFilter(district) {
@@ -1316,6 +1316,17 @@ function renderCategoryChips() {
   });
   chips.appendChild(pastChip);
 
+  // 구 칩: 홈 "내 주변"에서 왔을 때만 맨 앞에 보임. 누르면 구 필터 해제
+  var districtChip = document.createElement("button");
+  districtChip.type = "button";
+  districtChip.className = "chip active";
+  districtChip.id = "districtChip";
+  districtChip.hidden = true;
+  districtChip.addEventListener("click", function () {
+    setDistrictFilter(null);
+  });
+  chips.insertBefore(districtChip, chips.firstChild);
+
   updateChipActive();
 }
 
@@ -1333,6 +1344,13 @@ function updateChipActive() {
           : chip.dataset.value === selected;
       chip.classList.toggle("active", active);
     });
+  var districtChip = document.getElementById("districtChip");
+  if (districtChip) {
+    districtChip.hidden = !districtFilter;
+    districtChip.classList.add("active");
+    districtChip.textContent = districtFilter ? "📍 " + districtFilter + " ✕" : "";
+    districtChip.setAttribute("aria-label", districtFilter ? districtFilter + " 필터 해제" : "");
+  }
 }
 
 // ----- 바텀시트 (사이드바 목록을 아래에서 끌어올리는 방식) -----
@@ -1530,6 +1548,7 @@ function showHome() {
   document.body.classList.add("home-open");
   window.scrollTo(0, 0);
   carouselJump(carouselIndex); // 숨어 있을 때는 폭이 0 이라 자리를 못 맞춤 → 보일 때 맞춤
+  drawNearbyMap(); // 작은 지도도 보일 때 그림
   updateTabBar();
 }
 
@@ -1551,6 +1570,7 @@ function renderHome() {
   renderHomeCarousel();
   renderHomeMonth();
   renderHomeSoon();
+  renderHomeNearby();
 }
 
 // ----- 포스터 캐러셀 (디자인 01): 카드 280px · 스와이프 · 끝에서 처음으로 · 진행 막대 + "1 / 5" -----
@@ -1757,6 +1777,109 @@ function renderHomeMonth() {
   });
 }
 
+// ----- 내 주변 (디자인 01): 구 칩 4개 + 작은 지도 + "○○구 행사 N개 · 지도에서 보기" → 지도 탭 + 구 필터 -----
+var homeDistrict = HOME_DISTRICT_DEFAULT;
+var nearbyMapWidth = 0; // 작은 지도를 그린 폭 (0 = 다시 그려야 함)
+var NEARBY_MARKER_MAX = 15; // 그림 주소가 너무 길어지지 않게
+
+function renderHomeNearby() {
+  document.getElementById("homeNearby").hidden = false;
+  var picks = districtEvents(homeEvents(), homeDistrict);
+  document.querySelectorAll("#homeDistrictChips .chip").forEach(function (chip) {
+    var active = chip.dataset.district === homeDistrict;
+    chip.classList.toggle("active", active);
+    chip.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+  var go = document.getElementById("homeNearbyGo");
+  var empty = document.getElementById("homeNearbyEmpty");
+  go.hidden = picks.length === 0;
+  go.innerHTML =
+    "<span>" + homeDistrict + " 행사 <strong>" + picks.length + "개</strong> · 지도에서 보기</span>";
+  empty.hidden = picks.length > 0;
+  empty.textContent = homeDistrict + "에는 지금 열리는 행사가 없어요";
+  nearbyMapWidth = 0;
+  drawNearbyMap();
+}
+
+// 카카오 StaticMap 은 그릴 때 상자 크기로 그림을 정함 → 홈이 보일 때만 그림 (숨어 있으면 폭 0)
+function drawNearbyMap() {
+  if (!homeOpen || !eventsLoaded) return;
+  var box = document.getElementById("homeNearbyMap");
+  var picks = districtEvents(homeEvents(), homeDistrict);
+  var view = nearbyMapView(picks, box.clientWidth || 335, box.clientHeight || 160);
+  box.hidden = !view;
+  if (!view || !window.kakao || !kakao.maps || !kakao.maps.StaticMap) return;
+  if (box.clientWidth === nearbyMapWidth) return; // 같은 폭이면 그대로 (사파리 주소창 resize 마다 다시 받지 않게)
+  nearbyMapWidth = box.clientWidth;
+  box.innerHTML = "";
+  var markers = picks
+    .filter(function (event) {
+      return event.latitude && event.longitude;
+    })
+    .slice(0, NEARBY_MARKER_MAX)
+    .map(function (event) {
+      return { position: new kakao.maps.LatLng(event.latitude, event.longitude) };
+    });
+  new kakao.maps.StaticMap(box, {
+    center: new kakao.maps.LatLng(view.lat, view.lng),
+    level: view.level,
+    marker: markers,
+  });
+  box.querySelectorAll("a").forEach(function (link) {
+    link.tabIndex = -1; // 탭 이동은 아래 버튼만
+  });
+}
+
+// 지도에서 보기: 다른 필터(검색어 · 분류 · 날짜 · 지난 행사)는 풀고 구만 → 지도 결과 수 = 버튼의 "N개"
+function openNearbyOnMap() {
+  document.getElementById("searchInput").value = "";
+  document.getElementById("categorySelect").value = "all";
+  document.getElementById("dateFilter").value = "all";
+  document.getElementById("showPastCheckbox").checked = false;
+  districtFilter = homeDistrict;
+  selectTab("map"); // filterMarkers 가 지도 칩(📍 구 ✕)까지 맞춤
+  fitMapToEvents(districtEvents(homeEvents(), homeDistrict));
+}
+
+// 행사 마커가 모두 보이게 지도 이동 (위 검색창 · 아래 결과 바를 피해서). 한 곳뿐이면 그 자리로
+function fitMapToEvents(events) {
+  if (!map) return;
+  var points = events.filter(function (event) {
+    return event.latitude && event.longitude;
+  });
+  if (points.length === 0) return;
+  map.relayout(); // 홈에 덮여 있는 동안 크기가 바뀌었을 수 있음
+  var first = points[0];
+  var samePlace = points.every(function (event) {
+    return event.latitude === first.latitude && event.longitude === first.longitude;
+  });
+  if (samePlace) {
+    map.setLevel(4);
+    map.setCenter(new kakao.maps.LatLng(first.latitude, first.longitude));
+    return;
+  }
+  var bounds = new kakao.maps.LatLngBounds();
+  points.forEach(function (event) {
+    bounds.extend(new kakao.maps.LatLng(event.latitude, event.longitude));
+  });
+  var top = document.getElementById("topbar").offsetHeight + 16;
+  var bottom = document.getElementById("sheetHeader").offsetHeight + 16; // 하단 탭은 지도 상자(#app) 밖
+  map.setBounds(bounds, top, 32, bottom, 32);
+}
+
+document.querySelectorAll("#homeDistrictChips .chip").forEach(function (chip) {
+  chip.addEventListener("click", function () {
+    if (homeDistrict === chip.dataset.district) return;
+    homeDistrict = chip.dataset.district;
+    if (eventsLoaded) renderHomeNearby();
+  });
+});
+document.getElementById("homeNearbyGo").addEventListener("click", openNearbyOnMap);
+document.getElementById("homeNearbyMap").addEventListener("click", openNearbyOnMap);
+window.addEventListener("resize", function () {
+  if (homeOpen) drawNearbyMap(); // 화면 회전 등으로 폭이 바뀌었을 때만 다시 그림
+});
+
 function renderHomeLoading() {
   document.getElementById("homeWeekRange").textContent = weekLabel(weekRange());
   document.getElementById("homeWeekCount").textContent = "…";
@@ -1766,6 +1889,7 @@ function renderHomeLoading() {
   carousel.hidden = false;
   carousel.querySelector(".carousel-progress").hidden = true;
   document.getElementById("homeMonth").hidden = true; // 불러오는 동안은 칸을 비워 둠 (캐러셀 스켈레톤만)
+  document.getElementById("homeNearby").hidden = true;
   document.getElementById("homeCarouselTrack").innerHTML =
     '<div class="poster-slide" aria-hidden="true"><span class="poster-img sk"></span>' +
     '<span class="sk sk-line w40"></span><span class="sk sk-line w80"></span></div>';
@@ -1782,6 +1906,7 @@ function renderHomeError() {
   document.getElementById("homeWeekCount").textContent = "-";
   document.getElementById("homeCarousel").hidden = true;
   document.getElementById("homeMonth").hidden = true;
+  document.getElementById("homeNearby").hidden = true;
   var list = document.getElementById("homeSoonList");
   list.removeAttribute("aria-busy");
   list.innerHTML =
@@ -2184,6 +2309,7 @@ function applyLayout() {
     document.getElementById("list").style.paddingBottom = "";
     document.body.classList.remove("sheet-full");
     document.getElementById("topbar").classList.remove("menu-open");
+    if (districtFilter) setDistrictFilter(null); // PC 에는 구 칩이 없어 걸린 줄 모르게 됨
   }
   if (map) map.relayout(); // 카카오맵은 크기가 바뀌면 다시 계산시켜야 함
 }

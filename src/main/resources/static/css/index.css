@@ -1657,6 +1657,59 @@ body {
     cursor: pointer;
   }
 
+  /* 내 주변: 구 칩 + 작은 지도(카카오 StaticMap 그림) + "○○구 행사 N개 · 지도에서 보기" */
+  .home-nearby {
+    padding-top: 28px;
+  }
+  .home-nearby[hidden],
+  .nearby-map[hidden],
+  .nearby-go[hidden],
+  .home-empty[hidden] {
+    display: none;
+  }
+  .nearby-chips {
+    display: flex;
+    gap: 8px;
+    padding: 0 20px 12px;
+  }
+  .nearby-map {
+    height: 160px;
+    margin: 0 20px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    cursor: pointer;
+  }
+  /* StaticMap 이 넣는 카카오맵 링크는 막고, 누르면 상자(→ 지도 탭)가 받음 */
+  .nearby-map * {
+    pointer-events: none;
+  }
+  .nearby-go {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    width: calc(100% - 40px);
+    height: 48px;
+    margin: 8px 20px 0;
+    padding: 0;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .nearby-go strong {
+    color: var(--accent);
+  }
+  .nearby-go::after {
+    content: "→";
+    color: var(--sub);
+  }
+
   /* 행사 행 (디자인 2번): 포스터 56×70 + 배지 + 제목 15px + 보조 줄. 홈 · (나중) 검색 결과 공통 */
   .event-row {
     display: flex;

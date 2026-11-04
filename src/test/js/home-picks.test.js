@@ -13,6 +13,9 @@ const {
   monthEvents,
   eventDistrict,
   matchesDistrict,
+  HOME_DISTRICTS,
+  districtEvents,
+  nearbyMapView,
 } = require("../../main/resources/static/home-picks.js");
 
 // 한국 시간 → 밀리초 (UTC 로 9시간 빼서)
@@ -207,4 +210,64 @@ test("구 필터: null 이면 전체, 고르면 그 구만 (구를 모르면 빠
   assert.ok(matchesDistrict(paldal, "팔달구"));
   assert.ok(!matchesDistrict(paldal, "권선구"));
   assert.ok(!matchesDistrict(unknown, "팔달구"));
+});
+
+test("내 주변 구 칩: 장안 · 권선 · 팔달 · 영통 4개", () => {
+  assert.deepStrictEqual(HOME_DISTRICTS, ["장안구", "권선구", "팔달구", "영통구"]);
+});
+
+test("내 주변: 그 구의 종료 안 된 행사 (날짜 없는 행사는 지도처럼 넣음)", () => {
+  const events = [
+    { ...ev(1, "2026-11-01", "2026-11-10"), district: "팔달구" }, // 운영중
+    { ...ev(2, "2026-11-20", "2026-11-25"), district: "팔달구" }, // 오픈예정
+    { ...ev(3, "2026-10-01", "2026-10-05"), district: "팔달구" }, // 종료 → 뺌
+    { ...ev(4, null, null), district: "팔달구" }, // 날짜 없음 → 넣음
+    { ...ev(5, "2026-11-01", "2026-11-10"), district: "영통구" }, // 다른 구 → 뺌
+    { ...ev(6, "2026-11-01", "2026-11-10"), district: null, info: "장소: 수원시 팔달구 가상홀" }, // 글에서 구
+    { ...ev(7, "2026-11-01", "2026-11-10"), district: null, info: "" }, // 구 모름 → 뺌
+  ];
+  assert.deepStrictEqual(districtEvents(events, "팔달구", WED).map((e) => e.id), [1, 2, 4, 6]);
+  assert.deepStrictEqual(districtEvents(events, "권선구", WED), []);
+});
+
+test("작은 지도: 좌표 없으면 null", () => {
+  assert.strictEqual(nearbyMapView([], 343, 160), null);
+  assert.strictEqual(nearbyMapView([{ latitude: null, longitude: null }], 343, 160), null);
+});
+
+test("작은 지도: 한 곳이면 그 자리 · 가장 가까운 레벨", () => {
+  const view = nearbyMapView([{ latitude: 37.281, longitude: 127.016 }], 343, 160);
+  assert.deepStrictEqual(view, { lat: 37.281, lng: 127.016, level: 5 });
+});
+
+test("작은 지도: 좌표 범위의 가운데 · 넓게 퍼질수록 레벨이 오름 (최대 9)", () => {
+  const near = nearbyMapView(
+    [
+      { latitude: 37.28, longitude: 127.01 },
+      { latitude: 37.29, longitude: 127.03 }, // 약 1.8km × 1.1km
+    ],
+    343,
+    160,
+  );
+  assert.ok(Math.abs(near.lat - 37.285) < 1e-9);
+  assert.ok(Math.abs(near.lng - 127.02) < 1e-9);
+  const far = nearbyMapView(
+    [
+      { latitude: 37.24, longitude: 126.97 },
+      { latitude: 37.31, longitude: 127.07 }, // 약 8.8km × 7.8km
+    ],
+    343,
+    160,
+  );
+  assert.ok(far.level > near.level);
+  assert.ok(far.level <= 9);
+  const huge = nearbyMapView(
+    [
+      { latitude: 36.0, longitude: 126.0 },
+      { latitude: 38.0, longitude: 128.0 },
+    ],
+    343,
+    160,
+  );
+  assert.strictEqual(huge.level, 9);
 });
