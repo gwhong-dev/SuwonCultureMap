@@ -1540,6 +1540,12 @@ body {
     font-size: 12px;
     font-variant-numeric: tabular-nums;
   }
+  /* 날짜 칩: 지도 칩(.chip)과 같은 모양, 한 줄 */
+  .home-dates {
+    display: flex;
+    gap: 8px;
+    padding: 0 20px 24px;
+  }
   .home-tabs {
     display: flex;
     gap: 20px;

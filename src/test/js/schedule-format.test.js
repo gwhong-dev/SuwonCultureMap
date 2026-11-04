@@ -167,6 +167,25 @@ test("필터 없음이면 날짜 목록 없음", () => {
   assert.deepStrictEqual(filterDays("today", NOW_2026), ["2026-11-02"]);
 });
 
+test("+7일은 오늘 포함 7일 (한국 시간, 달 · 해 넘김)", () => {
+  assert.deepStrictEqual(filterDays("week", Date.UTC(2026, 10, 2, 3)), [
+    "2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07", "2026-11-08",
+  ]);
+  const yearEnd = filterDays("week", Date.UTC(2026, 11, 28, 3));
+  assert.strictEqual(yearEnd.length, 7);
+  assert.strictEqual(yearEnd[0], "2026-12-28");
+  assert.strictEqual(yearEnd[6], "2027-01-03");
+  // 한국은 이미 11/3 00:30 인데 UTC 로는 11/2
+  assert.strictEqual(filterDays("week", Date.UTC(2026, 10, 2, 15, 30))[0], "2026-11-03");
+});
+
+test("+7일 필터: 기간이 7일 안에 걸치면 나옴", () => {
+  const days = filterDays("week", Date.UTC(2026, 10, 2, 3)); // 11/2 ~ 11/8
+  assert.strictEqual(matchRunDays(event("2026-11-08", "2026-11-08"), days), "yes"); // 마지막 날 하루짜리
+  assert.strictEqual(matchRunDays(event("2026-11-09", "2026-11-09"), days), "no"); // 8일째
+  assert.strictEqual(matchRunDays(event("2026-10-01", "2026-12-31"), days), "maybe"); // 긴 기간 · 날짜 모름
+});
+
 test("날짜 확정 행사는 그날 진행할 때만", () => {
   const e = event("2026-05-16", "2026-09-19", ["2026-05-16", "2026-09-19"]);
   assert.strictEqual(matchRunDays(e, ["2026-05-16"]), "yes");
