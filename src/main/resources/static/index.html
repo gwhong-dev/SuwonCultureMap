@@ -96,6 +96,11 @@
         <button type="button" class="chip" data-date="weekend">이번 주말</button>
         <button type="button" class="chip" data-date="week">+7일</button>
       </nav>
+      <!-- 이달의 행사: 가로 카드 148px, 무한 반복 없이 끝에 "전체 보기 →" (→ 목록 탭). 고를 행사가 없으면 숨김 -->
+      <section id="homeMonth" class="home-month" aria-labelledby="homeMonthTitle" hidden>
+        <h2 id="homeMonthTitle" class="home-section-title"></h2>
+        <div id="homeMonthTrack" class="month-track"></div>
+      </section>
       <section class="home-section" aria-label="곧 종료 · 곧 시작">
         <div class="home-tabs" role="tablist" aria-label="곧 종료 · 곧 시작">
           <button type="button" class="home-tab active" data-soon="ending" id="homeTabEnding" role="tab" aria-selected="true" aria-controls="homeSoonList">곧 종료</button>

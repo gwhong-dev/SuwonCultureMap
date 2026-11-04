@@ -1510,7 +1510,7 @@ document.querySelectorAll("#tabBar button[data-tab]").forEach(function (tab) {
   });
 });
 
-// ----- 홈 화면 (디자인 01): 이번 주 행사 수 + 곧 종료 / 곧 시작 (고르는 규칙은 home-picks.js) -----
+// ----- 홈 화면 (디자인 01): 이번 주 행사 수 + 캐러셀 + 이달의 행사 + 곧 종료 / 곧 시작 (고르는 규칙은 home-picks.js) -----
 // 페이지 전체가 스크롤 (index.css body.home-open, 사파리 주소창이 줄어들게)
 var homeSoonMode = "ending"; // "ending" 곧 종료 | "starting" 곧 시작
 
@@ -1540,6 +1540,7 @@ function homeEvents() {
 function renderHome() {
   document.getElementById("homeWeekCount").textContent = thisWeekEvents(homeEvents()).length + "개";
   renderHomeCarousel();
+  renderHomeMonth();
   renderHomeSoon();
 }
 
@@ -1707,6 +1708,46 @@ function renderHomeSoon() {
   bindEventRows(list);
 }
 
+// ----- 이달의 행사 (디자인 01): 가로 카드 148px (포스터 + 배지 + 제목 + 기간), 끝에 "전체 보기 →" → 목록 탭 -----
+function monthCardHtml(event) {
+  var status = eventStatus(event);
+  return (
+    '<button type="button" class="month-card" data-event-id="' + event.id + '">' +
+    '<span class="poster-img">' +
+    '<span class="row-poster-text">' + escapeHtml(event.category || "") + "</span>" +
+    (event.imageUrl ? '<img src="' + escapeHtml(event.imageUrl) + '" alt="" loading="lazy">' : "") +
+    "</span>" +
+    (status
+      ? '<span class="row-badges"><span class="status-badge ' + status + '">' + statusLabel(status) + "</span></span>"
+      : "") +
+    '<span class="month-title">' + escapeHtml(event.title) + "</span>" +
+    '<span class="row-sub">' + escapeHtml(formatEventDates(event) || "") + "</span>" +
+    "</button>"
+  );
+}
+
+function renderHomeMonth() {
+  var section = document.getElementById("homeMonth");
+  var track = document.getElementById("homeMonthTrack");
+  var picks = monthEvents(homeEvents());
+  section.hidden = picks.length === 0;
+  document.getElementById("homeMonthTitle").textContent = monthTitle();
+  track.innerHTML =
+    picks.map(monthCardHtml).join("") +
+    '<button type="button" class="month-more" id="homeMonthMore">전체 보기 →</button>';
+  track.scrollLeft = 0; // 다시 그릴 때 처음 카드부터
+  track.querySelectorAll(".month-card").forEach(function (card) {
+    var img = card.querySelector("img");
+    if (img) hideOnError(img); // 못 불러오면 회색 칸 + 분류 글자
+    card.addEventListener("click", function () {
+      openDetailFromMarker(Number(card.dataset.eventId));
+    });
+  });
+  document.getElementById("homeMonthMore").addEventListener("click", function () {
+    selectTab("list"); // 하단 탭 "목록"과 같음 (지금 걸린 필터 그대로)
+  });
+}
+
 function renderHomeLoading() {
   document.getElementById("homeWeekRange").textContent = weekLabel(weekRange());
   document.getElementById("homeWeekCount").textContent = "…";
@@ -1715,6 +1756,7 @@ function renderHomeLoading() {
   carouselIndex = 0;
   carousel.hidden = false;
   carousel.querySelector(".carousel-progress").hidden = true;
+  document.getElementById("homeMonth").hidden = true; // 불러오는 동안은 칸을 비워 둠 (캐러셀 스켈레톤만)
   document.getElementById("homeCarouselTrack").innerHTML =
     '<div class="poster-slide" aria-hidden="true"><span class="poster-img sk"></span>' +
     '<span class="sk sk-line w40"></span><span class="sk sk-line w80"></span></div>';
@@ -1730,6 +1772,7 @@ function renderHomeLoading() {
 function renderHomeError() {
   document.getElementById("homeWeekCount").textContent = "-";
   document.getElementById("homeCarousel").hidden = true;
+  document.getElementById("homeMonth").hidden = true;
   var list = document.getElementById("homeSoonList");
   list.removeAttribute("aria-busy");
   list.innerHTML =

@@ -8,6 +8,9 @@ const {
   endingSoon,
   startingSoon,
   carouselPicks,
+  monthRange,
+  monthTitle,
+  monthEvents,
 } = require("../../main/resources/static/home-picks.js");
 
 // 한국 시간 → 밀리초 (UTC 로 9시간 빼서)
@@ -151,4 +154,38 @@ test("캐러셀: 종료일 없는 오픈예정은 시작일로 순서", () => {
     pic(2, "2026-11-06", "2026-11-20"),
   ];
   assert.deepStrictEqual(carouselPicks(events, WED).map((e) => e.id), [1, 2]);
+});
+
+test("이달: 한국 시간 1일 ~ 말일 (말일 새벽도 그달, 1일 새벽은 새 달)", () => {
+  assert.deepStrictEqual(monthRange(WED), { start: "2026-11-01", end: "2026-11-30" });
+  assert.deepStrictEqual(monthRange(kst(2026, 12, 1, 1)), { start: "2026-12-01", end: "2026-12-31" }); // UTC 로는 11/30
+  assert.deepStrictEqual(monthRange(kst(2028, 2, 10)), { start: "2028-02-01", end: "2028-02-29" }); // 윤년
+});
+
+test("이달 제목: \"11월의 수원 행사\"", () => {
+  assert.strictEqual(monthTitle(WED), "11월의 수원 행사");
+  assert.strictEqual(monthTitle(kst(2027, 1, 1, 0)), "1월의 수원 행사");
+});
+
+test("이달 행사: 이번 달과 겹치고 종료 안 된 것만, 시작일 순", () => {
+  const events = [
+    ev(1, "2026-11-20", "2026-11-25"), // 오픈예정, 이달
+    ev(2, "2026-10-01", "2026-11-10"), // 운영중, 지난달 시작
+    ev(3, "2026-11-01", "2026-11-03"), // 종료 → 뺌
+    ev(4, "2026-12-01", "2026-12-05"), // 다음 달 시작 → 뺌
+    ev(5, "2026-11-30", null), // 말일 하루
+    ev(6, null, null), // 날짜 없음 → 뺌
+    ev(7, null, "2026-11-15"), // 시작일 없이 끝만 → 운영중, 종료일로 순서
+  ];
+  assert.deepStrictEqual(monthEvents(events, WED).map((e) => e.id), [2, 7, 1, 5]);
+});
+
+test("이달 행사: 최대 10개, 같은 시작일이면 제목 순", () => {
+  const events = Array.from({ length: 12 }, (_, i) =>
+    ev(12 - i, "2026-11-10", "2026-11-20", "행사" + String(12 - i).padStart(2, "0")),
+  );
+  assert.deepStrictEqual(
+    monthEvents(events, WED).map((e) => e.id),
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  );
 });
