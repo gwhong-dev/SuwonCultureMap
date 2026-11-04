@@ -69,8 +69,32 @@
         <div id="previewStrip"></div>
       </div>
     </div>
-    <!-- 모바일 전용: 하단 탭 (docs/design/mobile-design-v1.md 2번). 홈 탭은 홈 화면(01)이 생길 때 추가 -->
+    <!-- 모바일 전용: 홈 화면 (docs/design/mobile-design-v1.md 01). 지도 위를 덮고 페이지 전체가 스크롤 -->
+    <section id="homeView" aria-label="홈">
+      <header class="home-head">
+        <span class="home-logo"><span class="home-logo-mark" aria-hidden="true"></span>수원바이블</span>
+        <button id="homeSearchBtn" type="button" class="icon-btn" aria-label="행사 검색">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+        </button>
+      </header>
+      <div class="home-week">
+        <span id="homeWeekRange"></span>
+        <h1>이번 주 수원 행사 <strong id="homeWeekCount">…</strong></h1>
+      </div>
+      <section class="home-section" aria-label="곧 종료 · 곧 시작">
+        <div class="home-tabs" role="tablist" aria-label="곧 종료 · 곧 시작">
+          <button type="button" class="home-tab active" data-soon="ending" id="homeTabEnding" role="tab" aria-selected="true" aria-controls="homeSoonList">곧 종료</button>
+          <button type="button" class="home-tab" data-soon="starting" id="homeTabStarting" role="tab" aria-selected="false" aria-controls="homeSoonList" tabindex="-1">곧 시작</button>
+        </div>
+        <div id="homeSoonList" role="tabpanel" aria-labelledby="homeTabEnding"></div>
+      </section>
+    </section>
+    <!-- 모바일 전용: 하단 탭 (docs/design/mobile-design-v1.md 2번) -->
     <nav id="tabBar" aria-label="하단 탭">
+      <button type="button" class="tab-item" data-tab="home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11 12 4l9 7" /><path d="M5 10v10h14V10" /><path d="M10 20v-6h4v6" /></svg>
+        <span>홈</span>
+      </button>
       <button type="button" class="tab-item" data-tab="map">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z" /><path d="M9 4v14M15 6v14" /></svg>
         <span>지도</span>
@@ -250,6 +274,7 @@
     <script src="/route-links.js"></script>
     <script src="/event-detail.js"></script>
     <script src="/favorite-ui.js"></script>
+    <script src="/home-picks.js"></script>
     <script src="/js/index.js"></script>
   </body>
 </html>

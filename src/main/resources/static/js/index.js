@@ -67,6 +67,7 @@ function syncUrlState() {
   if (location.search === query) return;
   history.replaceState(history.state, "", location.pathname + query + location.hash);
 }
+var homeOpen = false; // 모바일 홈 화면(하단 탭 "홈")이 지도 위를 덮고 있나
 var sheetState = "peek"; // "peek"(살짝 — 결과 바만) | "half"(절반) | "full"(전체)
 var sheetY = 0; // 바텀시트의 현재 위치 (위에서부터 px)
 var previewEventId = null; // 하단 카드로 보고 있는 행사 id
@@ -332,6 +333,7 @@ function loadEvents() {
   renderSkeleton();
   document.getElementById("resultCount").textContent = "행사 불러오는 중…";
   updateSheetHeaderLabel(); // 다시 시도 때 "불러오지 못했어요" 라벨이 남지 않게
+  renderHomeLoading();
   fetch("/api/events")
     .then(function (response) {
       if (!response.ok) throw new Error("HTTP " + response.status);
@@ -350,6 +352,7 @@ function loadEvents() {
       eventsLoaded = true;
 
       filterMarkers();
+      renderHome();
 
       // 공유 링크(?event=번호)로 들어오거나, 지도 앱에 갔다 와서 페이지가 다시 열리면 그 행사 상세를 복원
       // (길찾기 창까지 열려 있었으면 &route=1 → 길찾기 창도 다시 엶)
@@ -368,6 +371,7 @@ function loadEvents() {
     .catch(function (err) {
       console.error("행사 불러오기 실패", err);
       renderLoadError();
+      renderHomeError();
     });
 }
 
@@ -1459,10 +1463,12 @@ function nearestSheetState(y) {
   });
 })();
 
-// ----- 하단 탭 (지도 · 목록 · 찜 · 마이) -----
-// 한 화면(index.html) 안의 상태를 탭으로 오가게 함: 지도 = 목록 살짝, 목록 = 목록 전체, 찜 = '찜' 필터 + 목록 전체
+// ----- 하단 탭 (홈 · 지도 · 목록 · 찜 · 마이) -----
+// 한 화면(index.html) 안의 상태를 탭으로 오가게 함: 홈 = 지도 위를 덮는 홈 화면, 지도 = 목록 살짝,
+// 목록 = 목록 전체, 찜 = '찜' 필터 + 목록 전체
 // 마이는 mypage.html 링크 (로그인 안 했으면 그 페이지가 login.html 로 보냄)
 function activeTab() {
+  if (homeOpen) return "home";
   if (document.getElementById("categorySelect").value === "찜") return "fav";
   return sheetState === "full" ? "list" : "map";
 }
@@ -1481,6 +1487,11 @@ function updateTabBar() {
 }
 
 function selectTab(tab) {
+  if (tab === "home") {
+    showHome();
+    return;
+  }
+  hideHome();
   var select = document.getElementById("categorySelect");
   hidePreview();
   if (tab === "fav") {
@@ -1496,6 +1507,142 @@ document.querySelectorAll("#tabBar button[data-tab]").forEach(function (tab) {
   tab.addEventListener("click", function () {
     selectTab(tab.dataset.tab);
   });
+});
+
+// ----- 홈 화면 (디자인 01): 이번 주 행사 수 + 곧 종료 / 곧 시작 (고르는 규칙은 home-picks.js) -----
+// 페이지 전체가 스크롤 (index.css body.home-open, 사파리 주소창이 줄어들게)
+var homeSoonMode = "ending"; // "ending" 곧 종료 | "starting" 곧 시작
+
+function showHome() {
+  hidePreview();
+  if (sheetState !== "peek") setSheetState("peek"); // 목록 전체(페이지 스크롤)는 풀어 두고 홈으로
+  homeOpen = true;
+  document.body.classList.add("home-open");
+  window.scrollTo(0, 0);
+  updateTabBar();
+}
+
+function hideHome() {
+  if (!homeOpen) return;
+  homeOpen = false;
+  document.body.classList.remove("home-open");
+  window.scrollTo(0, 0);
+}
+
+function homeEvents() {
+  return markerList.map(function (item) {
+    return item.event;
+  });
+}
+
+function renderHome() {
+  document.getElementById("homeWeekCount").textContent = thisWeekEvents(homeEvents()).length + "개";
+  renderHomeSoon();
+}
+
+// 행사 행 (디자인 2번 공통 부품): 포스터 56×70 + 배지 + 제목 + 보조 줄(분류 · 구 · 기간)
+// 사진이 없거나 못 불러오면 회색 칸에 분류 글자. 홈 곧 종료 · 곧 시작에서 쓰고, 검색 결과(S2)에서도 같이 씀
+function eventRowHtml(event) {
+  var status = eventStatus(event);
+  var dday = ddayText(event);
+  var sub = [event.category, extractDistrict(event.info), formatEventDates(event)].filter(Boolean);
+  return (
+    '<button type="button" class="event-row" data-event-id="' + event.id + '">' +
+    '<span class="row-poster">' +
+    '<span class="row-poster-text">' + escapeHtml(event.category || "") + "</span>" +
+    (event.imageUrl ? '<img src="' + escapeHtml(event.imageUrl) + '" alt="" loading="lazy">' : "") +
+    "</span>" +
+    '<span class="row-body">' +
+    (status
+      ? '<span class="row-badges"><span class="status-badge ' + status + '">' + statusLabel(status) + "</span>" +
+        (dday ? '<span class="dday-badge">' + dday + "</span>" : "") +
+        "</span>"
+      : "") +
+    '<span class="row-title">' + escapeHtml(event.title) + "</span>" +
+    '<span class="row-sub">' + escapeHtml(sub.join(" · ")) + "</span>" +
+    "</span>" +
+    "</button>"
+  );
+}
+
+// 행 안의 사진 실패 → 숨겨서 회색 칸 + 분류 글자가 보이게 · 행을 누르면 상세
+function bindEventRows(root) {
+  root.querySelectorAll(".event-row").forEach(function (row) {
+    var img = row.querySelector("img");
+    if (img) hideOnError(img);
+    row.addEventListener("click", function () {
+      openDetailFromMarker(Number(row.dataset.eventId));
+    });
+  });
+}
+
+function renderHomeSoon() {
+  var list = document.getElementById("homeSoonList");
+  list.removeAttribute("aria-busy");
+  var ending = homeSoonMode === "ending";
+  var picks = ending ? endingSoon(homeEvents()) : startingSoon(homeEvents());
+  if (picks.length === 0) {
+    list.innerHTML =
+      '<p class="home-empty">' + (ending ? "곧 종료되는 행사가 없어요" : "곧 시작하는 행사가 없어요") + "</p>";
+    return;
+  }
+  list.innerHTML = picks.map(eventRowHtml).join("");
+  bindEventRows(list);
+}
+
+function renderHomeLoading() {
+  document.getElementById("homeWeekRange").textContent = weekLabel(weekRange());
+  document.getElementById("homeWeekCount").textContent = "…";
+  var list = document.getElementById("homeSoonList");
+  list.setAttribute("aria-busy", "true");
+  var row =
+    '<div class="event-row" aria-hidden="true"><span class="row-poster sk"></span>' +
+    '<span class="row-body"><span class="sk sk-line w40"></span><span class="sk sk-line w80"></span>' +
+    '<span class="sk sk-line w60"></span></span></div>';
+  list.innerHTML = row + row + row;
+}
+
+function renderHomeError() {
+  document.getElementById("homeWeekCount").textContent = "-";
+  var list = document.getElementById("homeSoonList");
+  list.removeAttribute("aria-busy");
+  list.innerHTML =
+    '<div class="home-empty" role="alert"><span>행사를 불러오지 못했어요.</span>' +
+    '<button type="button" id="homeRetryBtn">다시 시도</button></div>';
+  document.getElementById("homeRetryBtn").addEventListener("click", loadEvents);
+}
+
+// 곧 종료 / 곧 시작 탭 (좌우 화살표 키로도 바꿈)
+function selectHomeSoon(mode, focus) {
+  homeSoonMode = mode;
+  document.querySelectorAll("#homeView .home-tab").forEach(function (tab) {
+    var active = tab.dataset.soon === mode;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", active ? "true" : "false");
+    tab.tabIndex = active ? 0 : -1;
+    if (active) {
+      document.getElementById("homeSoonList").setAttribute("aria-labelledby", tab.id);
+      if (focus) tab.focus();
+    }
+  });
+  if (eventsLoaded) renderHomeSoon();
+}
+
+document.querySelectorAll("#homeView .home-tab").forEach(function (tab) {
+  tab.addEventListener("click", function () {
+    selectHomeSoon(tab.dataset.soon, false);
+  });
+  tab.addEventListener("keydown", function (e) {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    selectHomeSoon(homeSoonMode === "ending" ? "starting" : "ending", true);
+  });
+});
+
+// 검색 버튼: 검색 화면(06)이 생기기 전까지는 지도 탭의 검색창으로
+document.getElementById("homeSearchBtn").addEventListener("click", function () {
+  selectTab("map");
+  document.getElementById("searchInput").focus();
 });
 
 // ----- 마커 탭 → 하단 카드 (가까운 순, 좌우로 넘기면 지도도 그 마커로) -----
@@ -1867,4 +2014,7 @@ window.addEventListener("resize", function () {
   resizeTimer = setTimeout(applyLayout, 150);
 });
 
+// 모바일 첫 화면 = 홈 (11/4 결정). 공유 링크(?event=) · 지도 앱 복귀(&route=1)는 지금처럼 지도 위 상세부터
+renderHomeLoading();
+if (mobileQuery.matches && !initialParams.get("event")) showHome();
 applyLayout();
