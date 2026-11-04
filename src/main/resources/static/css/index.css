@@ -1747,11 +1747,46 @@ body {
     color: var(--accent);
   }
   .search-empty {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     margin: 0;
     padding: 32px 20px;
     color: var(--sub);
     font-size: 14px;
     text-align: center;
+  }
+  .search-empty strong {
+    color: var(--text);
+    font-size: 15px;
+  }
+  /* 검색 결과 (디자인 07): "검색 결과 N개 · 종료 임박순" + 행사 행 + ♡ */
+  .result-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+  }
+  .result-head strong {
+    color: var(--accent);
+  }
+  .result-sort {
+    color: var(--sub);
+    font-size: 13px;
+  }
+  .result-row {
+    position: relative;
+  }
+  .result-row .event-row {
+    padding-right: 64px; /* ♡ 버튼(44px) 자리 */
+  }
+  .result-row .card-fav {
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
   }
 
   /* 내 주변: 구 칩(지도 칩과 같은 모양) + 작은 지도 + "○○구 행사 N개 · 지도에서 보기" */
