@@ -7,6 +7,7 @@ const {
   thisWeekEvents,
   endingSoon,
   startingSoon,
+  carouselPicks,
 } = require("../../main/resources/static/home-picks.js");
 
 // 한국 시간 → 밀리초 (UTC 로 9시간 빼서)
@@ -102,4 +103,52 @@ test("곧 종료 · 곧 시작: 날짜 없는 행사는 빼고, 한쪽 날짜만
   ];
   assert.deepStrictEqual(endingSoon(events, WED).map((e) => e.id), [2, 5, 3]);
   assert.deepStrictEqual(startingSoon(events, WED).map((e) => e.id), [4]);
+});
+
+// 캐러셀용: 사진 주소까지 넣은 행사
+function pic(id, startDate, endDate, title) {
+  return { ...ev(id, startDate, endDate, title), imageUrl: "https://example.com/" + id + ".jpg" };
+}
+
+test("캐러셀: 이번 주 행사 중 사진 있는 것만, 운영중 먼저 → 종료일 가까운 순", () => {
+  const events = [
+    pic(1, "2026-11-06", "2026-11-07"), // 오픈예정 (이번 주 금 ~ 토)
+    pic(2, "2026-10-01", "2026-12-31"), // 운영중, 종료 늦음
+    pic(3, "2026-11-01", "2026-11-05"), // 운영중, 종료 빠름
+    ev(4, "2026-11-01", "2026-11-04"), // 사진 없음 → 뺌
+    pic(5, "2026-11-09", "2026-11-10"), // 다음 주 → 뺌
+    pic(6, "2026-11-01", "2026-11-03"), // 종료 → 뺌
+    pic(7, "2026-11-05", "2026-11-05"), // 오픈예정, 1번보다 빠름
+  ];
+  assert.deepStrictEqual(
+    carouselPicks(events, WED).map((e) => e.id),
+    [3, 2, 7, 1],
+  );
+});
+
+test("캐러셀: 최대 5개, 같은 종료일이면 제목 순", () => {
+  const events = [6, 5, 4, 3, 2, 1].map((n) =>
+    pic(n, "2026-10-01", "2026-11-30", "행사" + n),
+  );
+  assert.deepStrictEqual(
+    carouselPicks(events, WED).map((e) => e.id),
+    [1, 2, 3, 4, 5],
+  );
+});
+
+test("캐러셀: 사진 주소가 빈칸 · 공백이면 사진 없음으로 봄", () => {
+  const events = [
+    { ...ev(1, "2026-10-01", "2026-11-30"), imageUrl: "" },
+    { ...ev(2, "2026-10-01", "2026-11-30"), imageUrl: "  " },
+    { ...ev(3, "2026-10-01", "2026-11-30"), imageUrl: null },
+  ];
+  assert.deepStrictEqual(carouselPicks(events, WED), []);
+});
+
+test("캐러셀: 종료일 없는 오픈예정은 시작일로 순서", () => {
+  const events = [
+    pic(1, "2026-11-07", null), // 토요일 하루
+    pic(2, "2026-11-06", "2026-11-20"),
+  ];
+  assert.deepStrictEqual(carouselPicks(events, WED).map((e) => e.id), [1, 2]);
 });

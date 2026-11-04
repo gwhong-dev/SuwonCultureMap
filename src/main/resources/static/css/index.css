@@ -1444,6 +1444,102 @@ body {
   .home-week strong {
     color: var(--accent);
   }
+  /* 포스터 캐러셀: 카드 280px, 왼쪽 맞춤이라 다음 카드가 오른쪽에 살짝 보임. 한 번에 한 장씩 넘어감 */
+  .home-carousel {
+    padding-bottom: 24px;
+  }
+  .carousel-track {
+    --poster-w: min(280px, calc(100vw - 72px)); /* 320px 폰에서도 다음 카드가 보이게 */
+    position: relative; /* 카드 offsetLeft 기준 */
+    display: flex;
+    gap: 20px; /* = 왼쪽 여백 → 이전 카드는 화면 밖, 다음 카드만 보임 */
+    /* 오른쪽 여백 = 화면 폭 − (왼쪽 여백 20 + 카드 폭): 마지막 칸(첫 번째 복제)도 왼쪽 맞춤 자리까지 스크롤되게.
+       20px 만 두면 넓은 폭(아이패드 세로 · 폰 가로)에서 끝에 닿기 전에 스크롤이 멈춰 처음으로 못 넘어감 */
+    padding: 0 max(20px, calc(100% - 20px - var(--poster-w))) 0 20px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: 20px;
+    scrollbar-width: none;
+  }
+  .carousel-track::-webkit-scrollbar {
+    display: none;
+  }
+  .poster-slide {
+    flex: 0 0 var(--poster-w);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+  .poster-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .poster-img {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 4 / 5; /* 280 × 350, 행사 행 포스터 56×70 과 같은 비율 */
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .poster-img img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .poster-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+  .carousel-progress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px 0;
+  }
+  .carousel-progress[hidden] {
+    display: none;
+  }
+  .carousel-bar {
+    position: relative;
+    flex: 1;
+    height: 2px;
+    background: var(--line);
+  }
+  .carousel-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    background: var(--text);
+    transition: width 0.2s ease;
+  }
+  .carousel-count {
+    color: var(--sub);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
   .home-tabs {
     display: flex;
     gap: 20px;
@@ -1938,6 +2034,7 @@ body {
   #sidebar,
   #previewArea,
   .modal-card,
+  .carousel-fill,
   .sk::after {
     transition: none !important;
     animation: none !important;

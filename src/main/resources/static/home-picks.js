@@ -75,8 +75,28 @@ function startingSoon(events, now) {
     .slice(0, HOME_SOON_MAX);
 }
 
+var HOME_CAROUSEL_MAX = 5; // 포스터 캐러셀 카드 수
+
+// 포스터 캐러셀: 이번 주 행사 중 사진 있는 것 → 운영중 먼저 → 종료일 가까운 순 → 최대 5
+function carouselPicks(events, now) {
+  var byEnd = byDateThenTitle(function (event) {
+    return event.endDate || event.startDate;
+  });
+  return thisWeekEvents(events, now)
+    .filter(function (event) {
+      return Boolean(event.imageUrl && event.imageUrl.trim());
+    })
+    .sort(function (a, b) {
+      var aOpen = homeSchedule.eventStatus(a, now) === "open" ? 0 : 1;
+      var bOpen = homeSchedule.eventStatus(b, now) === "open" ? 0 : 1;
+      return aOpen !== bOpen ? aOpen - bOpen : byEnd(a, b);
+    })
+    .slice(0, HOME_CAROUSEL_MAX);
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
+    carouselPicks: carouselPicks,
     weekRange: weekRange,
     weekLabel: weekLabel,
     thisWeekEvents: thisWeekEvents,

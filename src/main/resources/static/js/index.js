@@ -1519,6 +1519,7 @@ function showHome() {
   homeOpen = true;
   document.body.classList.add("home-open");
   window.scrollTo(0, 0);
+  carouselJump(carouselIndex); // 숨어 있을 때는 폭이 0 이라 자리를 못 맞춤 → 보일 때 맞춤
   updateTabBar();
 }
 
@@ -1537,8 +1538,123 @@ function homeEvents() {
 
 function renderHome() {
   document.getElementById("homeWeekCount").textContent = thisWeekEvents(homeEvents()).length + "개";
+  renderHomeCarousel();
   renderHomeSoon();
 }
+
+// ----- 포스터 캐러셀 (디자인 01): 카드 280px · 스와이프 · 끝에서 처음으로 · 진행 막대 + "1 / 5" -----
+// 무한: [마지막 복제] 1 … N [첫 번째 복제] 로 놓고, 복제 카드에서 멈추면 같은 모양의 진짜 카드로 순간 이동
+var carouselIndex = 0; // 지금 보이는 진짜 카드 (0부터)
+var carouselCount = 0;
+var carouselSettleTimer = null;
+
+function posterSlideHtml(event, index, count, clone) {
+  var status = eventStatus(event);
+  var dday = ddayText(event);
+  var sub = [event.category, extractDistrict(event.info), formatEventDates(event)].filter(Boolean);
+  return (
+    '<div class="poster-slide"' +
+    (clone
+      ? ' aria-hidden="true" inert'
+      : ' role="group" aria-roledescription="슬라이드" aria-label="' + (index + 1) + " / " + count + '"') +
+    ">" +
+    '<button type="button" class="poster-card" data-event-id="' + event.id + '"' + (clone ? ' tabindex="-1"' : "") + ">" +
+    '<span class="poster-img">' +
+    '<span class="row-poster-text">' + escapeHtml(event.category || "") + "</span>" +
+    '<img src="' + escapeHtml(event.imageUrl) + '" alt="" loading="' + (index === 0 && !clone ? "eager" : "lazy") + '">' +
+    "</span>" +
+    (status
+      ? '<span class="row-badges"><span class="status-badge ' + status + '">' + statusLabel(status) + "</span>" +
+        (dday ? '<span class="dday-badge">' + dday + "</span>" : "") +
+        "</span>"
+      : "") +
+    '<span class="poster-title">' + escapeHtml(event.title) + "</span>" +
+    '<span class="row-sub">' + escapeHtml(sub.join(" · ")) + "</span>" +
+    "</button>" +
+    "</div>"
+  );
+}
+
+function renderHomeCarousel() {
+  var section = document.getElementById("homeCarousel");
+  var track = document.getElementById("homeCarouselTrack");
+  var picks = carouselPicks(homeEvents());
+  carouselCount = picks.length;
+  carouselIndex = 0;
+  section.hidden = picks.length === 0;
+  var slides = picks.map(function (event, i) {
+    return posterSlideHtml(event, i, picks.length, false);
+  });
+  if (picks.length > 1) {
+    var last = picks.length - 1;
+    slides.unshift(posterSlideHtml(picks[last], last, picks.length, true));
+    slides.push(posterSlideHtml(picks[0], 0, picks.length, true));
+  }
+  track.innerHTML = slides.join("");
+  track.querySelectorAll(".poster-card").forEach(function (card) {
+    var img = card.querySelector("img");
+    if (img) hideOnError(img); // 못 불러오면 회색 칸 + 분류 글자
+    card.addEventListener("click", function () {
+      openDetailFromMarker(Number(card.dataset.eventId));
+    });
+  });
+  carouselJump(0);
+  updateCarouselProgress();
+}
+
+// 진짜 카드 번호 → 줄 안의 칸 번호 (앞에 복제 1장이 있으면 +1)
+function carouselSlot(index) {
+  return carouselCount > 1 ? index + 1 : index;
+}
+
+// 그 칸이 왼쪽 여백 자리에 오도록 순간 이동 (홈이 숨어 있으면 폭이 0 → showHome 때 다시)
+function carouselJump(index) {
+  var track = document.getElementById("homeCarouselTrack");
+  var slide = track.children[carouselSlot(index)];
+  if (!slide || track.clientWidth === 0) return; // 칸이 없음(스켈레톤 · 빈 캐러셀) · 숨어 있음
+  track.scrollLeft = slide.offsetLeft - track.children[0].offsetLeft;
+}
+
+// 지금 스크롤 위치에서 가장 가까운 칸 번호
+function carouselNearestSlot() {
+  var track = document.getElementById("homeCarouselTrack");
+  var slides = track.children;
+  if (slides.length < 2) return 0;
+  var step = slides[1].offsetLeft - slides[0].offsetLeft;
+  return Math.max(0, Math.min(slides.length - 1, Math.round(track.scrollLeft / step)));
+}
+
+function updateCarouselProgress() {
+  var show = carouselCount > 1;
+  document.querySelector("#homeCarousel .carousel-progress").hidden = !show;
+  if (!show) return;
+  document.getElementById("homeCarouselFill").style.width = ((carouselIndex + 1) / carouselCount) * 100 + "%";
+  document.getElementById("homeCarouselCount").textContent = carouselIndex + 1 + " / " + carouselCount;
+}
+
+// 스와이프 중에도 번호 · 막대를 바로 갱신
+function onCarouselScroll() {
+  if (carouselCount < 2) return;
+  carouselIndex = (carouselNearestSlot() - 1 + carouselCount) % carouselCount;
+  updateCarouselProgress();
+  clearTimeout(carouselSettleTimer);
+  carouselSettleTimer = setTimeout(settleCarousel, 150); // scrollend 를 모르는 브라우저용
+}
+
+// 멈춘 곳이 복제 카드면 진짜 카드로 (같은 그림이라 눈에 안 띔)
+function settleCarousel() {
+  clearTimeout(carouselSettleTimer);
+  if (carouselCount < 2) return;
+  var slot = carouselNearestSlot();
+  if (slot === 0 || slot === carouselCount + 1) carouselJump(carouselIndex);
+}
+
+var homeCarouselTrack = document.getElementById("homeCarouselTrack");
+homeCarouselTrack.addEventListener("scroll", onCarouselScroll, { passive: true });
+homeCarouselTrack.addEventListener("scrollend", settleCarousel);
+window.addEventListener("resize", function () {
+  if (homeOpen) carouselJump(carouselIndex); // 화면 회전 · 폭 변화 뒤 카드 자리 맞춤
+});
 
 // 행사 행 (디자인 2번 공통 부품): 포스터 56×70 + 배지 + 제목 + 보조 줄(분류 · 구 · 기간)
 // 사진이 없거나 못 불러오면 회색 칸에 분류 글자. 홈 곧 종료 · 곧 시작에서 쓰고, 검색 결과(S2)에서도 같이 씀
@@ -1593,6 +1709,14 @@ function renderHomeSoon() {
 function renderHomeLoading() {
   document.getElementById("homeWeekRange").textContent = weekLabel(weekRange());
   document.getElementById("homeWeekCount").textContent = "…";
+  var carousel = document.getElementById("homeCarousel");
+  carouselCount = 0; // 다시 시도 때 이전 칸 수가 남아 스켈레톤 위에서 없는 칸을 찾지 않게
+  carouselIndex = 0;
+  carousel.hidden = false;
+  carousel.querySelector(".carousel-progress").hidden = true;
+  document.getElementById("homeCarouselTrack").innerHTML =
+    '<div class="poster-slide" aria-hidden="true"><span class="poster-img sk"></span>' +
+    '<span class="sk sk-line w40"></span><span class="sk sk-line w80"></span></div>';
   var list = document.getElementById("homeSoonList");
   list.setAttribute("aria-busy", "true");
   var row =
@@ -1604,6 +1728,7 @@ function renderHomeLoading() {
 
 function renderHomeError() {
   document.getElementById("homeWeekCount").textContent = "-";
+  document.getElementById("homeCarousel").hidden = true;
   var list = document.getElementById("homeSoonList");
   list.removeAttribute("aria-busy");
   list.innerHTML =
