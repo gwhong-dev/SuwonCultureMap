@@ -167,5 +167,7 @@ class ScheduleDisplayPageTest {
     String js = script();
     assertThat(js).contains("districtEvents(homeEvents(), homeDistrict)", "districtFilter = homeDistrict;");
     assertThat(js).contains("setDistrictFilter(null)"); // 지도 칩 줄 "📍 ○○구 ✕" 로 해제
+    // 칩 줄 선택 표시 루프(updateChipActive)가 다시 돌아도 구 칩은 켜진 모양 유지 (검증 ❌ 반영)
+    assertThat(js).contains("updateDistrictChip();\n}", "chip.classList.add(\"active\");");
   }
 }

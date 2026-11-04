@@ -1104,6 +1104,7 @@ function closeDetailModal() {
   document.getElementById("detailModal").style.display = "none";
   document.body.classList.remove("detail-open");
   if (wasOpen && mobileQuery.matches) window.scrollTo(0, detailReturnScrollY); // 보던 목록 위치로
+  if (wasOpen && homeOpen) drawNearbyMap(); // 상세가 덮은 동안 화면이 돌았으면 작은 지도 크기 다시 맞춤
   detailEvent = null;
   closeShareSheet();
   syncUrlState();
@@ -1348,13 +1349,14 @@ function updateDistrictChip() {
     chip = document.createElement("button");
     chip.type = "button";
     chip.id = "districtChip";
-    chip.className = "chip active";
+    chip.className = "chip";
     chip.addEventListener("click", function () {
       setDistrictFilter(null);
     });
     chips.insertBefore(chip, chips.firstChild);
     chips.scrollLeft = 0; // 가로 스크롤 뒤에 숨지 않게
   }
+  chip.classList.add("active"); // 위 updateChipActive 루프가 data-value 없는 이 칩의 active 를 지우므로 매번 다시 켬
   chip.textContent = "📍 " + districtFilter + " ✕";
   chip.setAttribute("aria-label", districtFilter + " 필터 해제");
 }
@@ -1851,6 +1853,7 @@ document.querySelectorAll("#homeView .home-tab").forEach(function (tab) {
 document.querySelectorAll("#homeDateChips .chip").forEach(function (chip) {
   chip.addEventListener("click", function () {
     document.getElementById("dateFilter").value = chip.dataset.date;
+    districtFilter = null; // "내 주변"에서 켠 구 필터가 남아 날짜만 고른 결과가 줄지 않게
     selectTab("map"); // filterMarkers 가 지도 칩 표시까지 맞춤
   });
 });
@@ -1981,6 +1984,7 @@ mobileQuery.addEventListener("change", function (e) {
 
 // 검색 버튼: 검색 화면(06)이 생기기 전까지는 지도 탭의 검색창으로
 document.getElementById("homeSearchBtn").addEventListener("click", function () {
+  districtFilter = null; // 검색은 수원 전체에서
   selectTab("map");
   document.getElementById("searchInput").focus();
 });
