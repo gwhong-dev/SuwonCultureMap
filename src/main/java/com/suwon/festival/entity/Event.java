@@ -1,6 +1,7 @@
 package com.suwon.festival.entity;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 import org.hibernate.annotations.DynamicUpdate;
 
@@ -115,6 +116,13 @@ public class Event {
   private boolean scheduleHolidayNote;
   // 원문에 공휴일 조건이 있음. 달력 없이 요일로만 펼쳤으므로 "공휴일은 원문 확인" 표시 (설계 6번)
 
+  public static final String DISTRICT_OUTSIDE = "OUTSIDE";
+
+  @Column(length = 20)
+  private String district;
+  // 좌표가 있는 구 (V6): 장안구 · 권선구 · 팔달구 · 영통구 / 수원 밖 = DISTRICT_OUTSIDE / null = 아직 모름
+  // 동기화 뒤 EventDistrictFiller 가 채움. 좌표가 바뀌면 null 로 돌려 다시 계산
+
   @Builder
   public Event(Long idx, String title, String category, Double latitude,
       Double longitude, String imageUrl, String info, LocalDateTime pubDate, LocalDate startDate, LocalDate endDate,
@@ -139,6 +147,10 @@ public class Event {
   // 재단 원본이 바뀌었거나, 예전에 저장할 때 빠진 값(link 등)이 있으면 최신 값으로 덮어씀
   // (idx·id는 그대로 → 찜 목록 연결이 끊기지 않음)
   public void updateFrom(Event latest) {
+    // 좌표가 바뀌면 예전 좌표로 구한 구는 틀릴 수 있음 → 비워서 다음 계산 때 다시 구함
+    if (!Objects.equals(this.latitude, latest.latitude) || !Objects.equals(this.longitude, latest.longitude)) {
+      this.district = null;
+    }
     this.title = latest.title;
     this.category = latest.category;
     this.latitude = latest.latitude;

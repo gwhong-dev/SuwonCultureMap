@@ -126,8 +126,24 @@ function monthEvents(events, now) {
     .slice(0, HOME_MONTH_MAX);
 }
 
+// 행사의 구: 서버가 좌표로 구한 값(D1) 먼저, 없으면(동기화 전 · 수원 밖) 원문 장소 글에서 찾음
+var HOME_DISTRICT_PATTERN = /(장안|권선|팔달|영통)구/;
+function eventDistrict(event) {
+  if (!event) return null;
+  if (event.district) return event.district;
+  var m = HOME_DISTRICT_PATTERN.exec(event.info || "");
+  return m ? m[0] : null;
+}
+
+// 구 필터 (null = 전체). 구를 모르는 행사는 구를 고르면 빠짐
+function matchesDistrict(event, district) {
+  return !district || eventDistrict(event) === district;
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
+    eventDistrict: eventDistrict,
+    matchesDistrict: matchesDistrict,
     carouselPicks: carouselPicks,
     weekRange: weekRange,
     weekLabel: weekLabel,

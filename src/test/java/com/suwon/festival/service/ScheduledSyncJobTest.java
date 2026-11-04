@@ -22,6 +22,7 @@ import com.suwon.festival.service.instagram.InstagramSyncResult;
 import com.suwon.festival.service.instagram.InstagramSyncService;
 import com.suwon.festival.service.merge.EventMergeRunner;
 import com.suwon.festival.service.merge.MergeSummary;
+import com.suwon.festival.service.place.EventDistrictFiller;
 
 // 자동 동기화 순서 · 실패 분리 · 겹침 방지 · 빈 DB 시작 실행
 class ScheduledSyncJobTest {
@@ -29,9 +30,10 @@ class ScheduledSyncJobTest {
   private final EventSyncService eventSyncService = mock(EventSyncService.class);
   private final InstagramSyncService instagramSyncService = mock(InstagramSyncService.class);
   private final EventMergeRunner eventMergeRunner = mock(EventMergeRunner.class);
+  private final EventDistrictFiller eventDistrictFiller = mock(EventDistrictFiller.class);
   private final EventRepository eventRepository = mock(EventRepository.class);
   private final ScheduledSyncJob job =
-      new ScheduledSyncJob(eventSyncService, instagramSyncService, eventMergeRunner, eventRepository);
+      new ScheduledSyncJob(eventSyncService, instagramSyncService, eventMergeRunner, eventDistrictFiller, eventRepository);
 
   @BeforeEach
   void setUp() throws Exception {
@@ -42,12 +44,13 @@ class ScheduledSyncJobTest {
   }
 
   @Test
-  void 재단_인스타_합치기_순서로_실행() throws Exception {
+  void 재단_인스타_구정보_합치기_순서로_실행() throws Exception {
     job.runScheduled();
 
-    InOrder order = inOrder(eventSyncService, instagramSyncService, eventMergeRunner);
+    InOrder order = inOrder(eventSyncService, instagramSyncService, eventDistrictFiller, eventMergeRunner);
     order.verify(eventSyncService).syncEvents();
     order.verify(instagramSyncService).sync();
+    order.verify(eventDistrictFiller).fillMissing();
     order.verify(eventMergeRunner).runAfterSync();
   }
 
@@ -58,6 +61,7 @@ class ScheduledSyncJobTest {
     job.runScheduled();
 
     verify(instagramSyncService).sync();
+    verify(eventDistrictFiller).fillMissing();
     verify(eventMergeRunner).runAfterSync();
   }
 

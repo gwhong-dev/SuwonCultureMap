@@ -14,6 +14,7 @@ import com.suwon.festival.service.EventSyncService;
 import com.suwon.festival.service.merge.EventMergeResult;
 import com.suwon.festival.service.merge.EventMergeRunner;
 import com.suwon.festival.service.merge.EventMergeService;
+import com.suwon.festival.service.place.EventDistrictFiller;
 import com.suwon.festival.service.schedule.SchedulePreviewResult;
 import com.suwon.festival.service.schedule.SchedulePreviewService;
 
@@ -29,6 +30,7 @@ public class ManualSyncController {
   private final EventSyncService eventSyncService;
   private final EventMergeService eventMergeService;
   private final EventMergeRunner eventMergeRunner;
+  private final EventDistrictFiller eventDistrictFiller;
   private final SchedulePreviewService schedulePreviewService;
 
   // 같은 행사 합치기 결과 미리보기 (저장 안 함)
@@ -60,11 +62,14 @@ public class ManualSyncController {
       result = eventSyncService.syncEvents();
     } catch (Exception e) {
       // 행 하나가 실패해도 앞 행들은 이미 저장됨. 같은 행이 매번 실패하면 합치기가 계속 안 도니 여기서도 실행
+      eventDistrictFiller.fillMissing();
       eventMergeRunner.runAfterSync();
       throw e;
     }
+    String district = eventDistrictFiller.fillMissing().text();
     return "새 행사 " + result.saved() + "개 저장 · 기존 행사 " + result.updated() + "개 갱신 완료"
         + (result.skipped() > 0 ? " · 형식 오류로 " + result.skipped() + "개 건너뜀" : "") + "\n"
+        + district + "\n"
         + eventMergeRunner.runAfterSync().text();
   }
 }

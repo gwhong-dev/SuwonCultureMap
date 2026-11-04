@@ -11,6 +11,8 @@ const {
   monthRange,
   monthTitle,
   monthEvents,
+  eventDistrict,
+  matchesDistrict,
 } = require("../../main/resources/static/home-picks.js");
 
 // 한국 시간 → 밀리초 (UTC 로 9시간 빼서)
@@ -188,4 +190,21 @@ test("이달 행사: 최대 10개, 같은 시작일이면 제목 순", () => {
     monthEvents(events, WED).map((e) => e.id),
     [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
   );
+});
+
+test("구: 서버 값(좌표 기준)이 원문 글보다 먼저", () => {
+  assert.strictEqual(eventDistrict({ district: "영통구", info: "장소: 팔달구 가상홀" }), "영통구");
+  assert.strictEqual(eventDistrict({ district: null, info: "장소: 수원시 팔달구 가상홀" }), "팔달구");
+  assert.strictEqual(eventDistrict({ info: "장소: 화성시 가상홀" }), null);
+  assert.strictEqual(eventDistrict(null), null);
+});
+
+test("구 필터: null 이면 전체, 고르면 그 구만 (구를 모르면 빠짐)", () => {
+  const paldal = { district: "팔달구" };
+  const unknown = { district: null, info: "" };
+  assert.ok(matchesDistrict(paldal, null));
+  assert.ok(matchesDistrict(unknown, null));
+  assert.ok(matchesDistrict(paldal, "팔달구"));
+  assert.ok(!matchesDistrict(paldal, "권선구"));
+  assert.ok(!matchesDistrict(unknown, "팔달구"));
 });
