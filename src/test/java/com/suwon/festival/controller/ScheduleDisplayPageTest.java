@@ -123,4 +123,15 @@ class ScheduleDisplayPageTest {
     assertThat(html.substring(carousel, html.indexOf(">", carousel))).contains(" hidden");
     assertThat(html).contains("id=\"homeCarouselTrack\"", "id=\"homeCarouselFill\"", "id=\"homeCarouselCount\"");
   }
+
+  @Test
+  void 홈_날짜_칩_3개가_캐러셀과_곧_종료_사이에_있고_PC_선택상자에_7일_안() throws Exception {
+    // 칩 값은 #dateFilter 값과 같아야 지도 탭으로 넘길 때 그대로 씀
+    String html = page();
+    int chips = html.indexOf("id=\"homeDateChips\"");
+    assertThat(chips).isGreaterThan(html.indexOf("id=\"homeCarousel\"")).isLessThan(html.indexOf("id=\"homeSoonList\""));
+    assertThat(html.substring(chips, html.indexOf("</nav>", chips)))
+        .contains("data-date=\"today\"", "data-date=\"weekend\"", "data-date=\"week\"", "+7일");
+    assertThat(html).contains("<option value=\"week\">7일 안</option>");
+  }
 }

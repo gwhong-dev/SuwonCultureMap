@@ -115,7 +115,7 @@ function formatScheduleDetail(event) {
   return lines.join("\n");
 }
 
-// ===== "오늘 진행" · "이번 주말" 필터 (설계 7번) =====
+// ===== "오늘 진행" · "이번 주말" · "7일 안" 필터 (설계 7번) =====
 // 오늘은 한국 시간 기준 (toISOString 은 UTC 라 오전 9시 전엔 전날이 됨)
 function koreaToday(now) {
   return new Date((now === undefined ? Date.now() : now) + 9 * 3600000).toISOString().slice(0, 10);
@@ -134,9 +134,18 @@ function upcomingWeekend(now) {
   return [saturday, addDays(saturday, 1)];
 }
 
+// 오늘 포함 7일 (홈 "+7일" 칩 · PC "7일 안")
+function nextSevenDays(now) {
+  var today = koreaToday(now);
+  var days = [];
+  for (var i = 0; i < 7; i++) days.push(addDays(today, i));
+  return days;
+}
+
 function filterDays(filter, now) {
   if (filter === "today") return [koreaToday(now)];
   if (filter === "weekend") return upcomingWeekend(now);
+  if (filter === "week") return nextSevenDays(now);
   return null;
 }
 

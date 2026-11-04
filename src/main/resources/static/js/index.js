@@ -1276,11 +1276,12 @@ function renderCategoryChips() {
     chips.appendChild(chip);
   });
 
-  // 날짜 칩 2개: 누르면 그 날짜 필터, 한 번 더 누르면 해제 (카테고리 칩과 함께 쓸 수 있음)
+  // 날짜 칩 3개: 누르면 그 날짜 필터, 한 번 더 누르면 해제 (카테고리 칩과 함께 쓸 수 있음)
   var dateSelect = document.getElementById("dateFilter");
   [
     { value: "today", label: "📅 오늘 진행" },
     { value: "weekend", label: "📅 이번 주말" },
+    { value: "week", label: "📅 7일 안" },
   ].forEach(function (option, index) {
     var chip = document.createElement("button");
     chip.type = "button";
@@ -1761,6 +1762,14 @@ document.querySelectorAll("#homeView .home-tab").forEach(function (tab) {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
     e.preventDefault();
     selectHomeSoon(homeSoonMode === "ending" ? "starting" : "ending", true);
+  });
+});
+
+// 날짜 칩: 지도 탭으로 넘어가며 그 날짜 필터 (지도 칩과 달리 누를 때마다 켬, 해제는 지도 칩에서)
+document.querySelectorAll("#homeDateChips .chip").forEach(function (chip) {
+  chip.addEventListener("click", function () {
+    document.getElementById("dateFilter").value = chip.dataset.date;
+    selectTab("map"); // filterMarkers 가 지도 칩 표시까지 맞춤
   });
 });
 

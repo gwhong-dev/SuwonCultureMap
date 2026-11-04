@@ -24,6 +24,7 @@
         <option value="all">전체 날짜</option>
         <option value="today">오늘 진행</option>
         <option value="weekend">이번 주말</option>
+        <option value="week">7일 안</option>
       </select>
       <input type="text" id="searchInput" placeholder="행사 이름 검색" enterkeyhint="search" />
       <label class="past-toggle">
@@ -89,6 +90,12 @@
           <span id="homeCarouselCount" class="carousel-count"></span>
         </div>
       </section>
+      <!-- 날짜 칩: 누르면 지도 탭으로 넘어가며 그 날짜 필터 (값은 #dateFilter 와 같음) -->
+      <nav id="homeDateChips" class="home-dates" aria-label="날짜로 행사 보기">
+        <button type="button" class="chip" data-date="today">오늘</button>
+        <button type="button" class="chip" data-date="weekend">이번 주말</button>
+        <button type="button" class="chip" data-date="week">+7일</button>
+      </nav>
       <section class="home-section" aria-label="곧 종료 · 곧 시작">
         <div class="home-tabs" role="tablist" aria-label="곧 종료 · 곧 시작">
           <button type="button" class="home-tab active" data-soon="ending" id="homeTabEnding" role="tab" aria-selected="true" aria-controls="homeSoonList">곧 종료</button>
