@@ -184,5 +184,7 @@ class ScheduleDisplayPageTest {
     assertThat(js).contains("addEventListener(\"click\", openSearch)", "searchEvents(events, keyword)");
     assertThat(js).contains("matchesSearch(item.event, keyword)"); // 지도 · 목록도 제목 + 장소, 띄어쓰기 무시
     assertThat(js).doesNotContain("item.event.title.includes(keyword)");
+    // 엔터 → 결과(07): 홈과 같은 행사 행 + ♡, 찜이 바뀌면 filterMarkers 끝에서 ♡ 표시를 맞춤
+    assertThat(js).contains("searchMode = \"results\"", "eventRowHtml(event) +", "updateSearchFavs();\n}");
   }
 }

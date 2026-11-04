@@ -20,6 +20,7 @@ const {
   searchEvents,
   searchHighlight,
   searchDistrict,
+  SEARCH_SUGGEST_MAX,
 } = require("../../main/resources/static/home-picks.js");
 
 // 한국 시간 → 밀리초 (UTC 로 9시간 빼서)
@@ -284,4 +285,17 @@ test("검색어가 구 이름이면 그 구 (두 글자부터)", () => {
   assert.strictEqual(searchDistrict("팔"), null);
   assert.strictEqual(searchDistrict("팔달구청"), null);
   assert.strictEqual(searchDistrict("재즈"), null);
+});
+
+test("검색 결과(07)는 개수 제한 없음 — 입력 중 행(최대 20)과 같은 순서의 전체", () => {
+  const events = Array.from({ length: 25 }, (_, i) => ({
+    id: i + 1,
+    title: "재즈 " + String(i + 1).padStart(2, "0"),
+    startDate: "2026-11-01",
+    endDate: "2026-11-" + String(5 + i).padStart(2, "0"),
+  }));
+  const all = searchEvents(events, "재즈", WED);
+  assert.strictEqual(all.length, 25);
+  assert.ok(all.length > SEARCH_SUGGEST_MAX);
+  assert.deepStrictEqual(all.slice(0, 3).map((e) => e.id), [1, 2, 3]); // 종료 임박순
 });

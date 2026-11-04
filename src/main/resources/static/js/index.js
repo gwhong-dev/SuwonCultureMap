@@ -356,7 +356,7 @@ function loadEvents() {
 
       filterMarkers();
       renderHome();
-      if (searchOpen) renderSearchSuggest(); // 받는 중에 검색 화면을 열었으면 행을 채움
+      if (searchOpen) renderSearch(); // 받는 중에 검색 화면을 열었으면 행을 채움
 
       // 공유 링크(?event=번호)로 들어오거나, 지도 앱에 갔다 와서 페이지가 다시 열리면 그 행사 상세를 복원
       // (길찾기 창까지 열려 있었으면 &route=1 → 길찾기 창도 다시 엶)
@@ -377,7 +377,7 @@ function loadEvents() {
       renderLoadError();
       renderHomeError();
       eventsLoadFailed = true;
-      if (searchOpen) renderSearchSuggest();
+      if (searchOpen) renderSearch();
     });
 }
 
@@ -495,6 +495,7 @@ function filterMarkers() {
 
   renderLocationMarkers(visibleItems); // 장소별로 묶어서 마커 다시 그리기
   renderSidebar(visibleItems);
+  updateSearchFavs();
 }
 
 // ===== Side-bar용 info 요약 (이용료/장소/시간만 추출) =====
@@ -1217,6 +1218,7 @@ function goToLogin() {
 // 토스트 "보기" → 찜 목록 (상세창이 열려 있으면 닫고)
 function showFavoriteList() {
   if (detailEvent) closeDetailModal();
+  closeSearch(); // 검색 결과에서 찜 → 토스트 "보기" 면 찜 탭이 보이게
   if (mobileQuery.matches) {
     selectTab("fav");
     return;
@@ -2004,10 +2006,10 @@ function openSearch() {
   if (!mobileQuery.matches || searchOpen) return;
   hidePreview();
   searchOpen = true;
-  searchViewInput.value = document.getElementById("searchInput").value; // 지도 탭에 걸린 검색어부터
+  searchMode = "suggest"; // 지난 검색어는 남겨 두고 입력 중 화면부터
   document.getElementById("searchView").hidden = false;
   document.body.classList.add("search-open");
-  renderSearchSuggest();
+  renderSearch();
   searchViewInput.focus();
 }
 
@@ -2042,9 +2044,35 @@ function searchRowHtml(event, keyword) {
   );
 }
 
-function renderSearchSuggest() {
+var searchMode = "suggest"; // "suggest" 입력 중(06) | "results" 엔터 뒤 결과(07)
+
+// 맨 위 "📍 팔달구 · 지도에서 행사 N개" (검색어가 구 이름일 때, N 은 홈 내 주변과 같은 기준). 해당 없으면 ""
+function searchDistrictRowHtml(district, count) {
+  if (!district || !count) return "";
+  return (
+    '<button type="button" class="search-row search-district" data-district="' + district + '">' +
+    '<span class="search-pin" aria-hidden="true">📍</span>' +
+    '<span class="search-title"><strong>' + district + "</strong> · 지도에서 행사 " + count + "개</span>" +
+    "</button>"
+  );
+}
+
+// 결과 행 (디자인 07): 홈과 같은 행사 행(포스터 56×70 · 배지 · D-day) + 오른쪽 ♡. 버튼 안에 버튼을 못 넣어 형제로 둠
+function searchResultRowHtml(event) {
+  return (
+    '<div class="result-row">' +
+    eventRowHtml(event) +
+    favButtonHtml(favoriteEventIds.has(event.id)).replace('class="card-fav', 'data-event-id="' + event.id + '" class="card-fav') +
+    "</div>"
+  );
+}
+
+// 입력 중 · 결과 화면을 그림. 행사 행 → 상세 (검색 화면은 상세 뒤에 남음 → 닫으면 다시 검색)
+function renderSearch() {
   var list = document.getElementById("searchSuggest");
   var keyword = searchViewInput.value;
+  var results = searchMode === "results";
+  list.classList.toggle("is-results", results);
   document.getElementById("searchClearBtn").hidden = !keyword;
   if (!eventsLoaded) {
     list.innerHTML = eventsLoadFailed
@@ -2057,28 +2085,39 @@ function renderSearchSuggest() {
     return;
   }
   var events = homeEvents();
-  var html = "";
-  // 맨 위: 검색어가 구 이름이면 "📍 팔달구 · 지도에서 행사 N개" (N 은 홈 내 주변과 같은 기준)
   var district = searchDistrict(keyword);
   var districtPicks = district ? districtEvents(events, district) : [];
-  if (districtPicks.length) {
+  var picks = searchEvents(events, keyword); // 운영중 · 오픈예정(종료 임박순) → 날짜 없음 → 종료
+  var html = searchDistrictRowHtml(district, districtPicks.length);
+  if (results) {
+    // 결과: 맞는 행사 전부 (입력 중 행과 같은 규칙이라 종료 행사도 맨 아래에 나옴)
     html +=
-      '<button type="button" class="search-row search-district" data-district="' + district + '">' +
-      '<span class="search-pin" aria-hidden="true">📍</span>' +
-      '<span class="search-title"><strong>' + district + "</strong> · 지도에서 행사 " + districtPicks.length + "개</span>" +
-      "</button>";
+      '<div class="result-head"><span>검색 결과 <strong>' + picks.length + "개</strong></span>" +
+      '<span class="result-sort">종료 임박순</span></div>';
+    html += picks.length
+      ? picks.map(searchResultRowHtml).join("")
+      : '<div class="search-empty" role="status"><strong>‘' + escapeHtml(keyword.trim()) + "’ 검색 결과가 없어요</strong>" +
+        "<span>띄어쓰기 없이 짧게 쓰거나, 장소 이름(예: 아트리움 · 행궁)으로 찾아보세요</span></div>";
+  } else {
+    html += picks
+      .slice(0, SEARCH_SUGGEST_MAX)
+      .map(function (event) {
+        return searchRowHtml(event, keyword);
+      })
+      .join("");
+    if (!html) html = '<p class="search-empty">‘' + escapeHtml(keyword.trim()) + "’와 맞는 행사가 없어요</p>";
   }
-  html += searchEvents(events, keyword)
-    .slice(0, SEARCH_SUGGEST_MAX)
-    .map(function (event) {
-      return searchRowHtml(event, keyword);
-    })
-    .join("");
-  list.innerHTML = html || '<p class="search-empty">‘' + escapeHtml(keyword.trim()) + "’와 맞는 행사가 없어요</p>";
+  list.innerHTML = html;
   list.scrollTop = 0;
   list.querySelectorAll(".search-row[data-event-id]").forEach(function (row) {
     row.addEventListener("click", function () {
-      openDetailFromMarker(Number(row.dataset.eventId)); // 검색 화면은 상세 뒤에 남음 → 뒤로 가면 다시 검색
+      openDetailFromMarker(Number(row.dataset.eventId));
+    });
+  });
+  bindEventRows(list); // 결과 행: 사진 실패 → 회색 칸, 누르면 상세
+  list.querySelectorAll(".result-row .card-fav").forEach(function (button) {
+    button.addEventListener("click", function () {
+      toggleFavorite(Number(button.dataset.eventId)); // 끝나면 filterMarkers → updateSearchFavs 가 ♡ 표시를 맞춤
     });
   });
   var districtRow = list.querySelector(".search-district");
@@ -2090,27 +2129,38 @@ function renderSearchSuggest() {
   }
 }
 
-// 엔터: 지도 탭 검색어로 넣고 목록 전체로 (결과 화면 07 은 S2). 빈 검색어 엔터 = 검색어 지우기
-// 분류 · 날짜 · 구 필터는 풂. "지난 행사 보기"는 그대로라 종료 행사는 목록에서 빠질 수 있음 → 결과 화면(S2)에서 정리
-function applySearch() {
-  document.getElementById("searchInput").value = searchViewInput.value.trim();
-  document.getElementById("categorySelect").value = "all";
-  document.getElementById("dateFilter").value = "all";
-  districtFilter = null;
-  closeSearch();
-  selectTab(document.getElementById("searchInput").value ? "list" : "map");
+// 결과 화면 ♡ 표시를 찜 목록에 맞춤 (찜 토글 · 로그인 확인 뒤 filterMarkers 가 부름)
+function updateSearchFavs() {
+  if (!searchOpen) return;
+  document.querySelectorAll("#searchSuggest .result-row .card-fav").forEach(function (button) {
+    var on = favoriteEventIds.has(Number(button.dataset.eventId));
+    button.classList.toggle("active", on);
+    button.textContent = on ? "♥" : "♡";
+  });
 }
 
-searchViewInput.addEventListener("input", renderSearchSuggest);
+// 엔터: 결과 화면(07)으로. 키보드는 내림. 빈 검색어 엔터는 그대로
+function showSearchResults() {
+  if (!searchViewInput.value.trim()) return;
+  searchMode = "results";
+  searchViewInput.blur();
+  renderSearch();
+}
+
+searchViewInput.addEventListener("input", function () {
+  searchMode = "suggest"; // 다시 입력하면 입력 중 화면으로
+  renderSearch();
+});
 searchViewInput.addEventListener("keydown", function (e) {
   if (e.key !== "Enter" || e.isComposing) return; // 한글 조합 중 엔터는 글자 확정
   e.preventDefault();
-  applySearch();
+  showSearchResults();
 });
 document.getElementById("searchBackBtn").addEventListener("click", closeSearch);
 document.getElementById("searchClearBtn").addEventListener("click", function () {
   searchViewInput.value = "";
-  renderSearchSuggest();
+  searchMode = "suggest";
+  renderSearch();
   searchViewInput.focus();
 });
 // ESC: 상세가 위에 있으면 상세만 닫음 → 캡처 단계에서 (상세 닫기 핸들러보다 먼저) 확인
