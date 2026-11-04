@@ -1449,10 +1449,13 @@ body {
     padding-bottom: 24px;
   }
   .carousel-track {
+    --poster-w: min(280px, calc(100vw - 72px)); /* 320px 폰에서도 다음 카드가 보이게 */
     position: relative; /* 카드 offsetLeft 기준 */
     display: flex;
     gap: 20px; /* = 왼쪽 여백 → 이전 카드는 화면 밖, 다음 카드만 보임 */
-    padding: 0 20px;
+    /* 오른쪽 여백 = 화면 폭 − (왼쪽 여백 20 + 카드 폭): 마지막 칸(첫 번째 복제)도 왼쪽 맞춤 자리까지 스크롤되게.
+       20px 만 두면 넓은 폭(아이패드 세로 · 폰 가로)에서 끝에 닿기 전에 스크롤이 멈춰 처음으로 못 넘어감 */
+    padding: 0 max(20px, calc(100% - 20px - var(--poster-w))) 0 20px;
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory;
@@ -1463,7 +1466,7 @@ body {
     display: none;
   }
   .poster-slide {
-    flex: 0 0 280px;
+    flex: 0 0 var(--poster-w);
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -1489,7 +1492,7 @@ body {
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: 350px; /* 4:5 (행사 행 포스터 56×70 과 같은 비율) */
+    aspect-ratio: 4 / 5; /* 280 × 350, 행사 행 포스터 56×70 과 같은 비율 */
     overflow: hidden;
     background: var(--surface);
   }

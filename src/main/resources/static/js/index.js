@@ -1610,9 +1610,9 @@ function carouselSlot(index) {
 // 그 칸이 왼쪽 여백 자리에 오도록 순간 이동 (홈이 숨어 있으면 폭이 0 → showHome 때 다시)
 function carouselJump(index) {
   var track = document.getElementById("homeCarouselTrack");
-  var slides = track.children;
-  if (slides.length === 0 || track.clientWidth === 0) return;
-  track.scrollLeft = slides[carouselSlot(index)].offsetLeft - slides[0].offsetLeft;
+  var slide = track.children[carouselSlot(index)];
+  if (!slide || track.clientWidth === 0) return; // 칸이 없음(스켈레톤 · 빈 캐러셀) · 숨어 있음
+  track.scrollLeft = slide.offsetLeft - track.children[0].offsetLeft;
 }
 
 // 지금 스크롤 위치에서 가장 가까운 칸 번호
@@ -1710,6 +1710,8 @@ function renderHomeLoading() {
   document.getElementById("homeWeekRange").textContent = weekLabel(weekRange());
   document.getElementById("homeWeekCount").textContent = "…";
   var carousel = document.getElementById("homeCarousel");
+  carouselCount = 0; // 다시 시도 때 이전 칸 수가 남아 스켈레톤 위에서 없는 칸을 찾지 않게
+  carouselIndex = 0;
   carousel.hidden = false;
   carousel.querySelector(".carousel-progress").hidden = true;
   document.getElementById("homeCarouselTrack").innerHTML =
