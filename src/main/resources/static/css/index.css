@@ -1656,6 +1656,50 @@ body {
     font: inherit;
     cursor: pointer;
   }
+  /* 내 주변: 구 칩 + 작은 지도(보기 전용) + "팔달구 행사 N개 · 지도에서 보기 →" */
+  .home-near {
+    padding: 28px 0;
+  }
+  .home-near .home-dates {
+    padding-bottom: 12px;
+  }
+  .home-near-map {
+    height: 160px;
+    margin: 0 20px;
+    border: 1px solid var(--line);
+    background: var(--line);
+    cursor: pointer;
+  }
+  /* 지도 안은 손가락이 닿지 않게 → 위아래로 밀면 페이지가 스크롤되고, 누르면 상자(지도 탭으로 이동)가 받음 */
+  .home-near-map > * {
+    pointer-events: none;
+  }
+  .home-near-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 20px 0;
+  }
+  .home-near-count {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .home-near-go {
+    flex: none;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .home-near-go[hidden] {
+    display: none;
+  }
 
   /* 행사 행 (디자인 2번): 포스터 56×70 + 배지 + 제목 15px + 보조 줄. 홈 · (나중) 검색 결과 공통 */
   .event-row {
