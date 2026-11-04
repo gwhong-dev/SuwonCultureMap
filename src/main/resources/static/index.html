@@ -81,6 +81,14 @@
         <span id="homeWeekRange"></span>
         <h1>이번 주 수원 행사 <strong id="homeWeekCount">…</strong></h1>
       </div>
+      <!-- 포스터 캐러셀: 스와이프 · 끝에서 처음으로 (앞뒤에 복제 카드 1장씩). 고를 행사가 없으면 숨김 -->
+      <section id="homeCarousel" class="home-carousel" aria-roledescription="캐러셀" aria-label="이번 주 추천 행사" hidden>
+        <div id="homeCarouselTrack" class="carousel-track"></div>
+        <div class="carousel-progress" aria-hidden="true">
+          <span class="carousel-bar"><span id="homeCarouselFill" class="carousel-fill"></span></span>
+          <span id="homeCarouselCount" class="carousel-count"></span>
+        </div>
+      </section>
       <section class="home-section" aria-label="곧 종료 · 곧 시작">
         <div class="home-tabs" role="tablist" aria-label="곧 종료 · 곧 시작">
           <button type="button" class="home-tab active" data-soon="ending" id="homeTabEnding" role="tab" aria-selected="true" aria-controls="homeSoonList">곧 종료</button>

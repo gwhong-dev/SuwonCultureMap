@@ -113,4 +113,14 @@ class ScheduleDisplayPageTest {
     MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     assertThat(mockMvc.perform(get("/home-picks.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
   }
+
+  @Test
+  void 홈_포스터_캐러셀이_곧_종료_탭보다_위에_있고_처음엔_숨김() throws Exception {
+    // carouselPicks 로 고른 행사가 있을 때만 index.js 가 보이게 함 (없으면 빈 칸이 남지 않게)
+    String html = page();
+    int carousel = html.indexOf("<section id=\"homeCarousel\"");
+    assertThat(carousel).isPositive().isLessThan(html.indexOf("id=\"homeSoonList\""));
+    assertThat(html.substring(carousel, html.indexOf(">", carousel))).contains(" hidden");
+    assertThat(html).contains("id=\"homeCarouselTrack\"", "id=\"homeCarouselFill\"", "id=\"homeCarouselCount\"");
+  }
 }
