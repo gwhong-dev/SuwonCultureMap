@@ -1832,7 +1832,6 @@ document.getElementById("homeSearchBtn").addEventListener("click", function () {
 });
 
 // ----- 마커 탭 → 하단 카드 (가까운 순, 좌우로 넘기면 지도도 그 마커로) -----
-// 주소 줄에서 수원 4개 구 이름 (없으면 null)
 // 두 행사 사이 거리 비교값 (정확한 km 는 필요 없고 순서만 — 위도 1도 ≈ 경도 1도 × cos(위도))
 function distanceSq(a, b) {
   var dLat = a.latitude - b.latitude;
