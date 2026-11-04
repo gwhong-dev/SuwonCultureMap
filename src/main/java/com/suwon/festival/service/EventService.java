@@ -56,7 +56,8 @@ public class EventService {
             event.getPlace(),
             event.getTimeText(),
             event.getSource(),
-            accounts.get(event.getId())))
+            accounts.get(event.getId()),
+            Event.DISTRICT_OUTSIDE.equals(event.getDistrict()) ? null : event.getDistrict()))
         .toList();
   }
 

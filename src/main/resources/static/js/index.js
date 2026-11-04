@@ -436,7 +436,15 @@ function cardDateText(item) {
   return item.runMatch === "maybe" ? text + " · " + MAYBE_RUN_NOTE : text;
 }
 
-// ===== 필터링 (검색어 + 카테고리 + 진행 날짜 + 지난 행사 여부, '찜'은 즐겨찾기 목록으로 필터) =====
+// 구 필터 (null = 전체). 화면 버튼은 아직 없음 — 홈 "내 주변"(H5)이 setDistrictFilter 로 켬
+var districtFilter = null;
+
+function setDistrictFilter(district) {
+  districtFilter = district || null;
+  filterMarkers();
+}
+
+// ===== 필터링 (검색어 + 카테고리 + 진행 날짜 + 구 + 지난 행사 여부, '찜'은 즐겨찾기 목록으로 필터) =====
 function filterMarkers() {
   if (!eventsLoaded) return; // 아직 받는 중(스켈레톤) 또는 실패 안내 표시 중 — 로그인 확인 등이 지우지 않게
   var keyword = document.getElementById("searchInput").value.trim();
@@ -471,7 +479,8 @@ function filterMarkers() {
     item.runMatch = runDays ? matchRunDays(item.event, runDays) : null;
     var matchesDate = item.runMatch !== "no";
 
-    var visible = matchesKeyword && matchesCategory && matchesPast && matchesDate;
+    var visible =
+      matchesKeyword && matchesCategory && matchesPast && matchesDate && matchesDistrict(item.event, districtFilter);
 
     if (visible) {
       visibleItems.push(item);
@@ -885,7 +894,7 @@ function findInfo(lines, keywords, excludes) {
 function renderDetailMobile(event) {
   detailEvent = event;
   var lines = infoLines(event.info);
-  var district = extractDistrict(event.info);
+  var district = eventDistrict(event);
   document.getElementById("detailMeta").textContent =
     [event.category, district].filter(Boolean).join(" · ");
 
@@ -1553,7 +1562,7 @@ var carouselSettleTimer = null;
 function posterSlideHtml(event, index, count, clone) {
   var status = eventStatus(event);
   var dday = ddayText(event);
-  var sub = [event.category, extractDistrict(event.info), formatEventDates(event)].filter(Boolean);
+  var sub = [event.category, eventDistrict(event), formatEventDates(event)].filter(Boolean);
   return (
     '<div class="poster-slide"' +
     (clone
@@ -1663,7 +1672,7 @@ window.addEventListener("resize", function () {
 function eventRowHtml(event) {
   var status = eventStatus(event);
   var dday = ddayText(event);
-  var sub = [event.category, extractDistrict(event.info), formatEventDates(event)].filter(Boolean);
+  var sub = [event.category, eventDistrict(event), formatEventDates(event)].filter(Boolean);
   return (
     '<button type="button" class="event-row" data-event-id="' + event.id + '">' +
     '<span class="row-poster">' +
@@ -1823,12 +1832,6 @@ document.getElementById("homeSearchBtn").addEventListener("click", function () {
 });
 
 // ----- 마커 탭 → 하단 카드 (가까운 순, 좌우로 넘기면 지도도 그 마커로) -----
-// 주소 줄에서 수원 4개 구 이름 (없으면 null)
-function extractDistrict(infoText) {
-  var m = /(장안|권선|팔달|영통)구/.exec(infoText || "");
-  return m ? m[0] : null;
-}
-
 // 두 행사 사이 거리 비교값 (정확한 km 는 필요 없고 순서만 — 위도 1도 ≈ 경도 1도 × cos(위도))
 function distanceSq(a, b) {
   var dLat = a.latitude - b.latitude;
@@ -1865,7 +1868,7 @@ function renderPreviewStrip(sortedItems) {
       sub.push(escapeHtml(cardDateText(item)));
       var place = eventPlace(item.event);
       if (place) sub.push(escapeHtml(place));
-      var district = extractDistrict(item.event.info);
+      var district = eventDistrict(item.event);
       if (district) sub.push(district);
 
       var card = document.createElement("article");

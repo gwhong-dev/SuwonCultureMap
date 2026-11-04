@@ -69,6 +69,16 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
+  void 구_필터_상태가_목록_필터에_연결됨() throws Exception {
+    // 버튼은 아직 없음 (H5 에서 setDistrictFilter 호출). 처음엔 전체(null)
+    String js = script();
+
+    assertThat(js).contains("var districtFilter = null;", "function setDistrictFilter(district)");
+    assertThat(js).contains("matchesDistrict(item.event, districtFilter)");
+    assertThat(js).doesNotContain("extractDistrict"); // 구 표시는 서버 값 우선인 eventDistrict 하나로
+  }
+
+  @Test
   void 상세에_일정_칸이_있고_표시_규칙_파일을_불러옴() throws Exception {
     assertThat(page()).contains("id=\"modalSchedule\"", "<script src=\"/schedule-format.js\"></script>");
     assertThat(page()).contains("<script src=\"/js/index.js\"></script>"); // 화면 스크립트 본체

@@ -17,10 +17,11 @@ import com.suwon.festival.service.instagram.InstagramSyncResult;
 import com.suwon.festival.service.instagram.InstagramSyncService;
 import com.suwon.festival.service.merge.EventMergeRunner;
 import com.suwon.festival.service.merge.MergeSummary;
+import com.suwon.festival.service.place.EventDistrictFiller;
 
 import lombok.RequiredArgsConstructor;
 
-// 재단 → 인스타 → 합치기를 한 작업으로 자동 실행. 재단 행사가 없는 DB 는 앱이 뜬 직후에도 1회 실행
+// 재단 → 인스타 → 구 정보 → 합치기를 한 작업으로 자동 실행. 재단 행사가 없는 DB 는 앱이 뜬 직후에도 1회 실행
 @Component
 @ConditionalOnProperty(name = "app.sync.enabled", havingValue = "true")
 @RequiredArgsConstructor
@@ -31,6 +32,7 @@ public class ScheduledSyncJob {
   private final EventSyncService eventSyncService;
   private final InstagramSyncService instagramSyncService;
   private final EventMergeRunner eventMergeRunner;
+  private final EventDistrictFiller eventDistrictFiller;
   private final EventRepository eventRepository;
 
   // 시작 직후 실행과 예약 실행이 겹치면 뒤의 것을 건너뜀 (서버 1대 기준)
@@ -58,7 +60,8 @@ public class ScheduledSyncJob {
     try {
       boolean foundationOk = syncFoundation();
       boolean instagramOk = syncInstagram();
-      // 앞 단계가 실패해도 저장된 행은 그대로라서 합치기는 실행
+      // 앞 단계가 실패해도 저장된 행은 그대로라서 구 정보 · 합치기는 실행 (구 정보 실패는 다음 동기화 때 다시 → 결과에 넣지 않음)
+      eventDistrictFiller.fillMissing();
       MergeSummary merge = eventMergeRunner.runAfterSync();
       if (foundationOk && instagramOk && merge.ok()) {
         log.info("자동 동기화 완료 · {}", merge.text());

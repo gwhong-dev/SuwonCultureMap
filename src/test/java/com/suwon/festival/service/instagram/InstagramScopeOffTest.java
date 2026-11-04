@@ -38,6 +38,7 @@ import com.suwon.festival.service.EventSyncService;
 import com.suwon.festival.service.FavoriteService;
 import com.suwon.festival.service.ScheduledSyncJob;
 import com.suwon.festival.service.merge.EventMergeRunner;
+import com.suwon.festival.service.place.EventDistrictFiller;
 import com.suwon.festival.service.merge.MergeSummary;
 
 import jakarta.persistence.EntityManager;
@@ -91,7 +92,8 @@ class InstagramScopeOffTest {
     when(foundationSync.syncEvents()).thenReturn(new SyncResult(0, 0));
     when(mergeRunner.runAfterSync()).thenReturn(new MergeSummary(true, 0, 0, 0));
 
-    new ScheduledSyncJob(foundationSync, instagramSyncService, mergeRunner, mock(EventRepository.class)).runScheduled();
+    new ScheduledSyncJob(foundationSync, instagramSyncService, mergeRunner, mock(EventDistrictFiller.class),
+        mock(EventRepository.class)).runScheduled();
 
     verify(client, never()).fetchRecent(anyString(), anyInt());
     verify(foundationSync).syncEvents();

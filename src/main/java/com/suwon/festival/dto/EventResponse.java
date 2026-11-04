@@ -26,5 +26,6 @@ public record EventResponse(
         String place,
         String timeText,
         String source,          // SWCF / INSTAGRAM
-        String sourceAccount) { // 인스타 행사를 올린 계정 이름 (재단 행사는 null)
+        String sourceAccount,   // 인스타 행사를 올린 계정 이름 (재단 행사는 null)
+        String district) {      // 장안구 · 권선구 · 팔달구 · 영통구. 수원 밖 · 아직 모름은 null
 }

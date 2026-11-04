@@ -30,6 +30,7 @@ import com.suwon.festival.service.EventSyncService;
 import com.suwon.festival.service.instagram.InstagramSyncResult;
 import com.suwon.festival.service.instagram.InstagramSyncService;
 import com.suwon.festival.service.merge.EventMergeService;
+import com.suwon.festival.service.place.RegionLookupClient;
 
 // 동기화 API 끝에 합치기가 실행되는지 (설계 5번). 실제 커밋 경로를 보려고 @Transactional 을 걸지 않고 직접 지움
 @SpringBootTest
@@ -43,6 +44,7 @@ class SyncMergeControllerTest {
   @MockitoBean private EventSyncService eventSyncService;
   @MockitoBean private InstagramSyncService instagramSyncService;
   @MockitoSpyBean private EventMergeService eventMergeService;
+  @MockitoBean private RegionLookupClient regionLookupClient; // 구 정보 채우기가 실제 카카오를 부르지 않게
 
   @AfterEach
   void cleanUp() {
@@ -61,7 +63,7 @@ class SyncMergeControllerTest {
     MockHttpServletResponse res = post("/api/events/sync");
 
     assertThat(res.getStatus()).isEqualTo(200);
-    assertThat(res.getContentAsString(StandardCharsets.UTF_8)).contains("새 행사 1개", "같은 행사 묶음", "숨김");
+    assertThat(res.getContentAsString(StandardCharsets.UTF_8)).contains("새 행사 1개", "구 정보", "같은 행사 묶음", "숨김");
     assertThat(eventRepository.findById(insta.getId()).orElseThrow().getMergedIntoId()).isEqualTo(foundation.getId());
   }
 

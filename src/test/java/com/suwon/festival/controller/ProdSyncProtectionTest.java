@@ -21,6 +21,7 @@ import com.suwon.festival.security.SecurityHeadersFilter;
 import com.suwon.festival.service.EventSyncService;
 import com.suwon.festival.service.ScheduledSyncJob;
 import com.suwon.festival.service.instagram.InstagramSyncService;
+import com.suwon.festival.service.place.RegionLookupClient;
 
 // 운영(prod) 프로필 실제 설정: 수동 동기화 · 미리보기 API 는 없고, 자동 동기화는 켜져 있음 (DB 와 키만 가짜)
 @SpringBootTest(properties = {
@@ -43,6 +44,7 @@ class ProdSyncProtectionTest {
 
   @Autowired private WebApplicationContext context;
   @MockitoBean private EventSyncService eventSyncService;
+  @MockitoBean private RegionLookupClient regionLookupClient; // 시작 직후 자동 동기화의 구 채우기가 실제 카카오를 부르지 않게
   @MockitoBean private InstagramSyncService instagramSyncService;
 
   @ParameterizedTest
