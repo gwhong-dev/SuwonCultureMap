@@ -70,6 +70,20 @@ function detailInfoText(event) {
   return lines.join("\n");
 }
 
+// 목록 카드 사진: http · https 주소만 (없으면 null → 사진 칸 없이 글만 그림)
+function cardImageUrl(event) {
+  return safeLink(event.imageUrl);
+}
+
+// 목록 카드 요약 (info 원문이 없을 때): 장소 · 시간 줄. info 가 있으면 "" (기존 이용료/장소/시간 요약을 씀)
+function cardFallbackInfo(event) {
+  if (event.info) return "";
+  var lines = [];
+  if (event.place) lines.push("장소: " + event.place);
+  if (event.timeText) lines.push("시간: " + event.timeText);
+  return lines.join("\n");
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     extractPlaceName: extractPlaceName,
@@ -79,5 +93,7 @@ if (typeof module !== "undefined") {
     safeLink: safeLink,
     linkButtonText: linkButtonText,
     detailInfoText: detailInfoText,
+    cardImageUrl: cardImageUrl,
+    cardFallbackInfo: cardFallbackInfo,
   };
 }

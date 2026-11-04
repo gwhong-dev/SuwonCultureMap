@@ -570,18 +570,20 @@ function renderSidebar(items) {
       addSectionTitle("전체 행사 (날짜순)");
     }
     var div = document.createElement("div");
-    div.className = "event-item";
 
     var dateText = cardDateText(item);
 
-    var imgSrc = item.event.imageUrl || "";
-    var infoText = extractSummaryInfo(item.event.info || ""); // 사이드바엔 이용료/장소/시간만
+    var imgSrc = cardImageUrl(item.event); // 사진이 없으면(인스타 행사 등) null → 사진 칸 없이
+    div.className = "event-item" + (imgSrc ? "" : " no-photo");
+    var infoText = item.event.info
+      ? extractSummaryInfo(item.event.info) // 사이드바엔 이용료/장소/시간만
+      : cardFallbackInfo(item.event); // info 원문이 없으면 장소 · 시간 칸
     var isFavorited = favoriteEventIds.has(item.event.id); // 찜 여부 확인
 
     div.innerHTML =
-      '<img class="event-thumb" src="' +
-      escapeHtml(imgSrc) +
-      '" loading="lazy">' +
+      (imgSrc
+        ? '<img class="event-thumb" src="' + escapeHtml(imgSrc) + '" loading="lazy">'
+        : "") +
       (isFavorited ? '<span class="favorite-badge">★</span>' : "") + // 찜한 행사만 별 표시
       favButtonHtml(isFavorited) + // 모바일: 사진 위 ♥ 버튼
       '<div class="event-body">' +
@@ -596,7 +598,14 @@ function renderSidebar(items) {
       escapeHtml(infoText) +
       "</div>" +
       "</div>";
-    hideOnError(div.querySelector(".event-thumb"));
+    var thumb = div.querySelector(".event-thumb");
+    if (thumb) {
+      // 사진을 못 불러오면 빈 칸을 남기지 않고 사진 없는 카드로 바꿈
+      thumb.addEventListener("error", function () {
+        thumb.remove();
+        div.classList.add("no-photo");
+      });
+    }
 
     div.addEventListener("click", function () {
       map.setCenter(
