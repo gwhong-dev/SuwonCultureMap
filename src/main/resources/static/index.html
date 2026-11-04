@@ -117,6 +117,20 @@
         <button type="button" id="homeNearbyGo" class="nearby-go"></button>
       </section>
     </section>
+    <!-- 모바일 전용: 검색 화면 (디자인 06 입력 중). 홈 검색 버튼 · 지도 탭 검색창을 누르면 화면 전체를 덮음
+         행은 글자만(사진 없음): [상태 배지] 제목(검색어 강조) … 구. 엔터 → 지도 탭 검색어로 넣고 목록 -->
+    <section id="searchView" aria-label="행사 검색" hidden>
+      <div class="search-head">
+        <button type="button" id="searchBackBtn" class="icon-btn" aria-label="검색 닫기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+        </button>
+        <input type="search" id="searchViewInput" placeholder="행사 이름 · 장소 검색" enterkeyhint="search" autocomplete="off" aria-label="행사 이름 · 장소 검색" aria-controls="searchSuggest" />
+        <button type="button" id="searchClearBtn" class="icon-btn" aria-label="검색어 지우기" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </div>
+      <div id="searchSuggest" class="search-suggest"></div>
+    </section>
     <!-- 모바일 전용: 하단 탭 (docs/design/mobile-design-v1.md 2번) -->
     <nav id="tabBar" aria-label="하단 탭">
       <button type="button" class="tab-item" data-tab="home">

@@ -151,8 +151,79 @@ function districtEvents(events, district, now) {
   });
 }
 
+// ----- 검색 (디자인 06 · 07): 띄어쓰기 · 대소문자 무시, 제목 + 장소 (11/4 결정 3번, 강조는 제목만) -----
+var SEARCH_SUGGEST_MAX = 20; // 입력 중 행 수
+
+function searchNormalize(text) {
+  return String(text || "").replace(/\s+/g, "").toLowerCase();
+}
+
+// 검색어가 비면 모두 맞음 (지도 탭 필터에서 씀)
+function matchesSearch(event, keyword) {
+  var kw = searchNormalize(keyword);
+  if (!kw) return true;
+  return searchNormalize(event.title).indexOf(kw) !== -1 || searchNormalize(event.place).indexOf(kw) !== -1;
+}
+
+// 묶음: 운영중 · 오픈예정 0 → 날짜 없음 1 → 종료 2
+function searchGroup(event, now) {
+  var status = homeSchedule.eventStatus(event, now);
+  if (status === "open" || status === "upcoming") return 0;
+  return status === "ended" ? 2 : 1;
+}
+
+// 맞는 행사: 운영중 · 오픈예정(종료 임박순) → 날짜 없음(제목 순) → 종료(최근에 끝난 순). 검색어가 비면 []
+function searchEvents(events, keyword, now) {
+  if (!searchNormalize(keyword)) return [];
+  var endOf = function (event) {
+    return event.endDate || event.startDate || "";
+  };
+  return events
+    .filter(function (event) {
+      return matchesSearch(event, keyword);
+    })
+    .sort(function (a, b) {
+      var ga = searchGroup(a, now);
+      var gb = searchGroup(b, now);
+      if (ga !== gb) return ga - gb;
+      var diff = ga === 2 ? endOf(b).localeCompare(endOf(a)) : endOf(a).localeCompare(endOf(b));
+      return diff !== 0 ? diff : (a.title || "").localeCompare(b.title || "");
+    });
+}
+
+// 제목에서 검색어 자리 (띄어쓰기 무시) → { start, end } (원래 제목 기준, end 는 제외). 없으면 null
+function searchHighlight(title, keyword) {
+  var kw = searchNormalize(keyword);
+  if (!kw || !title) return null;
+  var chars = [];
+  var index = [];
+  for (var i = 0; i < title.length; i++) {
+    if (/\s/.test(title[i])) continue;
+    chars.push(title[i].toLowerCase());
+    index.push(i);
+  }
+  var pos = chars.join("").indexOf(kw);
+  if (pos === -1) return null;
+  return { start: index[pos], end: index[pos + kw.length - 1] + 1 };
+}
+
+// 검색어가 구 이름 앞부분과 맞으면 그 구 ("팔달" · "팔달구" → 팔달구). 한 글자는 너무 넓어서 뺌
+function searchDistrict(keyword) {
+  var kw = searchNormalize(keyword);
+  if (kw.length < 2) return null;
+  for (var i = 0; i < HOME_DISTRICTS.length; i++) {
+    if (HOME_DISTRICTS[i].indexOf(kw) === 0) return HOME_DISTRICTS[i];
+  }
+  return null;
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
+    SEARCH_SUGGEST_MAX: SEARCH_SUGGEST_MAX,
+    matchesSearch: matchesSearch,
+    searchEvents: searchEvents,
+    searchHighlight: searchHighlight,
+    searchDistrict: searchDistrict,
     HOME_DISTRICTS: HOME_DISTRICTS,
     HOME_DEFAULT_DISTRICT: HOME_DEFAULT_DISTRICT,
     districtEvents: districtEvents,

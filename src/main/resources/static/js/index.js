@@ -353,6 +353,7 @@ function loadEvents() {
 
       filterMarkers();
       renderHome();
+      if (searchOpen) renderSearchSuggest(); // 받는 중에 검색 화면을 열었으면 행을 채움
 
       // 공유 링크(?event=번호)로 들어오거나, 지도 앱에 갔다 와서 페이지가 다시 열리면 그 행사 상세를 복원
       // (길찾기 창까지 열려 있었으면 &route=1 → 길찾기 창도 다시 엶)
@@ -463,7 +464,7 @@ function filterMarkers() {
   var visibleItems = [];
 
   markerList.forEach(function (item) {
-    var matchesKeyword = item.event.title.includes(keyword);
+    var matchesKeyword = matchesSearch(item.event, keyword); // 띄어쓰기 · 대소문자 무시, 제목 + 장소 (home-picks.js)
     var matchesCategory;
 
     if (selectedCategory === "all") {
@@ -1963,30 +1964,161 @@ function drawNearbyMap() {
 
 // "지도에서 보기": 다른 필터(검색어 · 분류 · 날짜 · 지난 행사)는 풀고 그 구만 → "N개"와 지도 결과 수가 같음
 function goNearbyOnMap() {
-  if (!nearbyPicks.length) return;
+  showDistrictOnMap(homeDistrict, nearbyPicks);
+}
+
+// 구 하나만 지도에: 다른 필터는 풀고 구 필터만 → 지도 결과 수 = events 수. 홈 "내 주변" · 검색 "📍 ○○구" 행이 씀
+function showDistrictOnMap(district, events) {
+  if (!events.length) return;
   document.getElementById("searchInput").value = "";
   document.getElementById("categorySelect").value = "all";
   document.getElementById("dateFilter").value = "all";
   document.getElementById("showPastCheckbox").checked = false;
-  districtFilter = homeDistrict; // selectTab 이 filterMarkers 로 지도 · 목록 · 칩을 다시 그림
+  districtFilter = district; // selectTab 이 filterMarkers 로 지도 · 목록 · 칩을 다시 그림
   selectTab("map");
   var top = document.getElementById("topbar").offsetHeight + 16; // 검색창 · 칩 줄 아래
   var bottom = document.getElementById("sheetHeader").offsetHeight + 16; // 결과 바 위
-  fitMapToEvents(map, nearbyPicks, [top, 40, bottom, 40]);
+  fitMapToEvents(map, events, [top, 40, bottom, 40]);
 }
 
 document.getElementById("homeNearbyGo").addEventListener("click", goNearbyOnMap);
 
 // PC 너비로 바뀌면 구 칩이 없어 끌 방법이 없음 → 구 필터를 풂
 mobileQuery.addEventListener("change", function (e) {
-  if (!e.matches && districtFilter) setDistrictFilter(null);
+  if (e.matches) return;
+  if (districtFilter) setDistrictFilter(null);
+  closeSearch(); // 검색 화면도 모바일 전용
 });
 
-// 검색 버튼: 검색 화면(06)이 생기기 전까지는 지도 탭의 검색창으로
-document.getElementById("homeSearchBtn").addEventListener("click", function () {
-  districtFilter = null; // 검색은 수원 전체에서
-  selectTab("map");
-  document.getElementById("searchInput").focus();
+// ----- 검색 화면 (디자인 06 입력 중): 홈 검색 버튼 · 지도 탭 검색창 → 화면 전체 -----
+// 고르기 · 정렬 · 강조 자리는 home-picks.js (searchEvents · searchHighlight · searchDistrict)
+var searchOpen = false;
+var searchViewInput = document.getElementById("searchViewInput");
+
+function openSearch() {
+  if (!mobileQuery.matches || searchOpen) return;
+  hidePreview();
+  searchOpen = true;
+  searchViewInput.value = document.getElementById("searchInput").value; // 지도 탭에 걸린 검색어부터
+  document.getElementById("searchView").hidden = false;
+  document.body.classList.add("search-open");
+  renderSearchSuggest();
+  searchViewInput.focus();
+}
+
+function closeSearch() {
+  if (!searchOpen) return;
+  searchOpen = false;
+  searchViewInput.blur();
+  document.getElementById("searchView").hidden = true;
+  document.body.classList.remove("search-open");
+}
+
+// 제목 + 검색어 강조 (띄어쓰기 무시한 자리). 장소로만 맞으면 강조 없음
+function searchTitleHtml(title, keyword) {
+  var range = searchHighlight(title, keyword);
+  if (!range) return escapeHtml(title);
+  return (
+    escapeHtml(title.slice(0, range.start)) +
+    '<mark class="search-hit">' + escapeHtml(title.slice(range.start, range.end)) + "</mark>" +
+    escapeHtml(title.slice(range.end))
+  );
+}
+
+// 행: [상태 배지(폭 고정)] 제목(한 줄 말줄임) … 구. 날짜 없는 행사는 배지 자리만 비움
+function searchRowHtml(event, keyword) {
+  var status = eventStatus(event);
+  return (
+    '<button type="button" class="search-row" data-event-id="' + event.id + '">' +
+    '<span class="status-badge ' + (status || "none") + '">' + (status ? statusLabel(status) : "") + "</span>" +
+    '<span class="search-title">' + searchTitleHtml(event.title || "", keyword) + "</span>" +
+    '<span class="search-where">' + escapeHtml(eventDistrict(event) || "") + "</span>" +
+    "</button>"
+  );
+}
+
+function renderSearchSuggest() {
+  var list = document.getElementById("searchSuggest");
+  var keyword = searchViewInput.value;
+  document.getElementById("searchClearBtn").hidden = !keyword;
+  if (!eventsLoaded) {
+    list.innerHTML = '<p class="search-empty">행사를 불러오는 중이에요</p>';
+    return;
+  }
+  if (!keyword.trim()) {
+    list.innerHTML = '<p class="search-empty">행사 이름이나 장소로 찾아보세요</p>';
+    return;
+  }
+  var events = homeEvents();
+  var html = "";
+  // 맨 위: 검색어가 구 이름이면 "📍 팔달구 · 지도에서 행사 N개" (N 은 홈 내 주변과 같은 기준)
+  var district = searchDistrict(keyword);
+  var districtPicks = district ? districtEvents(events, district) : [];
+  if (districtPicks.length) {
+    html +=
+      '<button type="button" class="search-row search-district" data-district="' + district + '">' +
+      '<span class="search-pin" aria-hidden="true">📍</span>' +
+      '<span class="search-title"><strong>' + district + "</strong> · 지도에서 행사 " + districtPicks.length + "개</span>" +
+      "</button>";
+  }
+  html += searchEvents(events, keyword)
+    .slice(0, SEARCH_SUGGEST_MAX)
+    .map(function (event) {
+      return searchRowHtml(event, keyword);
+    })
+    .join("");
+  list.innerHTML = html || '<p class="search-empty">‘' + escapeHtml(keyword.trim()) + "’와 맞는 행사가 없어요</p>";
+  list.scrollTop = 0;
+  list.querySelectorAll(".search-row[data-event-id]").forEach(function (row) {
+    row.addEventListener("click", function () {
+      openDetailFromMarker(Number(row.dataset.eventId)); // 검색 화면은 상세 뒤에 남음 → 뒤로 가면 다시 검색
+    });
+  });
+  var districtRow = list.querySelector(".search-district");
+  if (districtRow) {
+    districtRow.addEventListener("click", function () {
+      closeSearch();
+      showDistrictOnMap(district, districtPicks);
+    });
+  }
+}
+
+// 엔터: 지도 탭 검색어로 넣고 목록 전체로 (결과 화면 07 은 S2). 빈 검색어 엔터 = 검색어 지우기
+// 분류 · 날짜 · 구 필터는 풀어서 검색어로만 거름
+function applySearch() {
+  document.getElementById("searchInput").value = searchViewInput.value.trim();
+  document.getElementById("categorySelect").value = "all";
+  document.getElementById("dateFilter").value = "all";
+  districtFilter = null;
+  closeSearch();
+  selectTab(document.getElementById("searchInput").value ? "list" : "map");
+}
+
+searchViewInput.addEventListener("input", renderSearchSuggest);
+searchViewInput.addEventListener("keydown", function (e) {
+  if (e.key !== "Enter" || e.isComposing) return; // 한글 조합 중 엔터는 글자 확정
+  e.preventDefault();
+  applySearch();
+});
+document.getElementById("searchBackBtn").addEventListener("click", closeSearch);
+document.getElementById("searchClearBtn").addEventListener("click", function () {
+  searchViewInput.value = "";
+  renderSearchSuggest();
+  searchViewInput.focus();
+});
+// ESC: 상세가 위에 있으면 상세만 닫음 → 캡처 단계에서 (상세 닫기 핸들러보다 먼저) 확인
+document.addEventListener(
+  "keydown",
+  function (e) {
+    if (e.key === "Escape" && searchOpen && !document.body.classList.contains("detail-open")) closeSearch();
+  },
+  true,
+);
+
+// 홈 검색 버튼 · (모바일) 지도 탭 검색창 → 검색 화면
+document.getElementById("homeSearchBtn").addEventListener("click", openSearch);
+document.getElementById("searchInput").addEventListener("focus", function () {
+  if (mobileQuery.matches) openSearch(); // 검색 화면 입력칸으로 초점이 옮겨감
 });
 
 // ----- 마커 탭 → 하단 카드 (가까운 순, 좌우로 넘기면 지도도 그 마커로) -----
