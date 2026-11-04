@@ -145,11 +145,28 @@ var HOME_DISTRICTS = ["장안구", "권선구", "팔달구", "영통구"];
 var HOME_DEFAULT_DISTRICT = "팔달구";
 
 // 내 주변 "팔달구 행사 N개": 그 구의 종료 안 된 행사 = 지도 탭 기본 화면(지난 행사 숨김)과 같은 기준
-// (날짜 없는 행사도 지도에는 보이므로 셈에 넣음)
+// (날짜 없는 행사도 지도에는 보이므로 셈에 넣음, 좌표 없는 행사는 지도에 못 놓으니 뺌)
 function districtEvents(events, district, now) {
   return events.filter(function (event) {
-    return matchesDistrict(event, district) && homeSchedule.eventStatus(event, now) !== "ended";
+    return (
+      Boolean(event.latitude && event.longitude) &&
+      matchesDistrict(event, district) &&
+      homeSchedule.eventStatus(event, now) !== "ended"
+    );
   });
+}
+
+// 지도에 놓을 서로 다른 좌표 (같은 장소 행사 여러 개 = 한 점). 점이 1개면 setBounds 가 최대로 확대하므로 따로 처리
+function distinctPoints(events) {
+  var seen = {};
+  var points = [];
+  events.forEach(function (event) {
+    var key = event.latitude + "," + event.longitude;
+    if (seen[key]) return;
+    seen[key] = true;
+    points.push({ latitude: event.latitude, longitude: event.longitude, category: event.category });
+  });
+  return points;
 }
 
 if (typeof module !== "undefined") {
@@ -157,6 +174,7 @@ if (typeof module !== "undefined") {
     HOME_DISTRICTS: HOME_DISTRICTS,
     HOME_DEFAULT_DISTRICT: HOME_DEFAULT_DISTRICT,
     districtEvents: districtEvents,
+    distinctPoints: distinctPoints,
     eventDistrict: eventDistrict,
     matchesDistrict: matchesDistrict,
     carouselPicks: carouselPicks,

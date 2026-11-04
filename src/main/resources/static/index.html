@@ -111,12 +111,8 @@
       <!-- 내 주변: 구 칩 4개 + 작은 지도(보기 전용) + "팔달구 행사 N개 · 지도에서 보기" → 지도 탭 + 구 필터 -->
       <section class="home-near" aria-labelledby="homeNearTitle">
         <h2 id="homeNearTitle" class="home-section-title">내 주변</h2>
-        <div id="homeDistrictChips" class="home-dates" role="group" aria-label="구 고르기">
-          <button type="button" class="chip" data-district="장안구" aria-pressed="false">장안</button>
-          <button type="button" class="chip" data-district="권선구" aria-pressed="false">권선</button>
-          <button type="button" class="chip active" data-district="팔달구" aria-pressed="true">팔달</button>
-          <button type="button" class="chip" data-district="영통구" aria-pressed="false">영통</button>
-        </div>
+        <!-- 구 칩은 home-picks.js HOME_DISTRICTS 로 만듦 -->
+        <div id="homeDistrictChips" class="home-dates" role="group" aria-label="구 고르기"></div>
         <div id="homeNearMap" class="home-near-map" aria-hidden="true"></div>
         <div class="home-near-foot">
           <span id="homeNearCount" class="home-near-count" aria-live="polite"></span>

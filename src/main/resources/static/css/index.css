@@ -1670,6 +1670,9 @@ body {
     background: var(--line);
     cursor: pointer;
   }
+  .home-near-map.empty {
+    cursor: default; /* 행사 0개면 눌러도 이동 안 함 */
+  }
   /* 지도 안은 손가락이 닿지 않게 → 위아래로 밀면 페이지가 스크롤되고, 누르면 상자(지도 탭으로 이동)가 받음 */
   .home-near-map > * {
     pointer-events: none;

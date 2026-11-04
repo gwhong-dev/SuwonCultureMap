@@ -1686,7 +1686,8 @@ homeCarouselTrack.addEventListener("scrollend", settleCarousel);
 window.addEventListener("resize", function () {
   if (!homeOpen) return;
   carouselJump(carouselIndex); // 화면 회전 · 폭 변화 뒤 카드 자리 맞춤
-  drawHomeNearMap();
+  // 사파리는 주소창이 줄어들 때도 resize 가 옴 → 작은 지도는 폭이 바뀐 경우에만 다시 맞춤
+  if (document.getElementById("homeNearMap").clientWidth !== homeNearWidth) drawHomeNearMap();
 });
 
 // 행사 행 (디자인 2번 공통 부품): 포스터 56×70 + 배지 + 제목 + 보조 줄(분류 · 구 · 기간)
@@ -1848,7 +1849,26 @@ document.querySelectorAll("#homeView .home-tab").forEach(function (tab) {
 var homeDistrict = HOME_DEFAULT_DISTRICT;
 var homeNearMap = null; // 보기 전용 카카오 지도 — 홈이 처음 보일 때 만듦 (숨은 상자는 폭이 0 이라 지도가 깨짐)
 var homeNearMarkers = [];
-var homeNearPicks = []; // 지금 고른 구의 행사 (작은 지도 · 지도 탭 맞춤에 같이 씀)
+var homeNearPicks = []; // 지금 고른 구의 행사
+var homeNearPoints = []; // 그 행사들의 서로 다른 좌표 (작은 지도 · 지도 탭 맞춤에 같이 씀)
+var homeNearWidth = 0; // 작은 지도를 마지막으로 맞춘 폭
+
+// 구 칩 (HOME_DISTRICTS 순서, 글자는 "구" 를 뺀 이름)
+(function renderHomeDistrictChips() {
+  var box = document.getElementById("homeDistrictChips");
+  HOME_DISTRICTS.forEach(function (district) {
+    var chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip";
+    chip.dataset.district = district;
+    chip.textContent = district.replace(/구$/, "");
+    chip.addEventListener("click", function () {
+      homeDistrict = district;
+      renderHomeNear();
+    });
+    box.appendChild(chip);
+  });
+})();
 
 function renderHomeNear() {
   document.querySelectorAll("#homeDistrictChips .chip").forEach(function (chip) {
@@ -1857,14 +1877,14 @@ function renderHomeNear() {
     chip.setAttribute("aria-pressed", active ? "true" : "false");
   });
   if (!eventsLoaded) return; // 불러오는 중 · 실패면 renderHomeLoading · renderHomeError 가 글을 정함
-  homeNearPicks = districtEvents(homeEvents(), homeDistrict).filter(function (event) {
-    return event.latitude && event.longitude;
-  });
+  homeNearPicks = districtEvents(homeEvents(), homeDistrict);
+  homeNearPoints = distinctPoints(homeNearPicks);
   var count = homeNearPicks.length;
   document.getElementById("homeNearCount").textContent = count
     ? homeDistrict + " 행사 " + count + "개"
     : homeDistrict + "에는 지금 열리는 행사가 없어요";
   document.getElementById("homeNearGo").hidden = count === 0;
+  document.getElementById("homeNearMap").classList.toggle("empty", count === 0);
   drawHomeNearMap();
 }
 
@@ -1873,6 +1893,7 @@ function drawHomeNearMap() {
   if (!homeOpen || !mobileQuery.matches || !window.kakao || !kakao.maps || !kakao.maps.Map) return;
   var box = document.getElementById("homeNearMap");
   if (!box.clientWidth) return;
+  homeNearWidth = box.clientWidth;
   if (!homeNearMap) {
     homeNearMap = new kakao.maps.Map(box, {
       center: new kakao.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng),
@@ -1883,6 +1904,7 @@ function drawHomeNearMap() {
       disableDoubleClickZoom: true,
       keyboardShortcuts: false,
     });
+    homeNearMap.setZoomable(false); // 두 손가락 확대도 막음 (보기 전용)
   } else {
     homeNearMap.relayout(); // 화면 회전 · 다시 보일 때 크기 다시 계산
   }
@@ -1891,52 +1913,51 @@ function drawHomeNearMap() {
   });
   homeNearMarkers = [];
   var bounds = new kakao.maps.LatLngBounds();
-  homeNearPicks.forEach(function (event) {
-    var position = new kakao.maps.LatLng(event.latitude, event.longitude);
+  homeNearPoints.forEach(function (point) {
+    var position = new kakao.maps.LatLng(point.latitude, point.longitude);
     bounds.extend(position);
     homeNearMarkers.push(
       new kakao.maps.Marker({
         map: homeNearMap,
         position: position,
-        image: new kakao.maps.MarkerImage(createMarkerIcon(event.category, false), new kakao.maps.Size(24, 24)),
+        image: new kakao.maps.MarkerImage(createMarkerIcon(point.category, false), new kakao.maps.Size(24, 24)),
       }),
     );
   });
-  if (homeNearPicks.length > 1) {
+  if (homeNearPoints.length > 1) {
     homeNearMap.setBounds(bounds, 24, 24, 24, 24);
-  } else if (homeNearPicks.length === 1) {
-    homeNearMap.setLevel(5);
-    homeNearMap.setCenter(new kakao.maps.LatLng(homeNearPicks[0].latitude, homeNearPicks[0].longitude));
+  } else if (homeNearPoints.length === 1) {
+    homeNearMap.setLevel(5); // 한 곳이면 setBounds 가 가장 크게 확대해 버림
+    homeNearMap.setCenter(new kakao.maps.LatLng(homeNearPoints[0].latitude, homeNearPoints[0].longitude));
   } else {
     homeNearMap.setLevel(7);
     homeNearMap.setCenter(new kakao.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng));
   }
 }
 
-// "지도에서 보기": 지도 탭 + 구 필터 (지금 걸린 분류 · 날짜 필터는 그대로), 큰 지도를 그 구 행사에 맞춤
+// "지도에서 보기": 지도 탭 + 구 필터, 큰 지도를 그 구 행사에 맞춤
+// 검색어 · 분류 · 날짜 · 지난 행사는 풀어서 "팔달구 행사 N개" 와 지도 결과 수가 같게 함
 function openHomeDistrictOnMap() {
   if (!homeNearPicks.length) return;
+  document.getElementById("searchInput").value = "";
+  document.getElementById("categorySelect").value = "all";
+  document.getElementById("dateFilter").value = "all";
+  document.getElementById("showPastCheckbox").checked = false;
   districtFilter = homeDistrict; // selectTab 이 filterMarkers 를 부름 (setDistrictFilter 로 두 번 거르지 않게)
   selectTab("map");
   if (!map) return;
-  if (homeNearPicks.length === 1) {
+  if (homeNearPoints.length === 1) {
     map.setLevel(4); // 한 곳이면 setBounds 가 가장 크게 확대해 버림
-    map.setCenter(new kakao.maps.LatLng(homeNearPicks[0].latitude, homeNearPicks[0].longitude));
+    map.setCenter(new kakao.maps.LatLng(homeNearPoints[0].latitude, homeNearPoints[0].longitude));
     return;
   }
   var bounds = new kakao.maps.LatLngBounds();
-  homeNearPicks.forEach(function (event) {
-    bounds.extend(new kakao.maps.LatLng(event.latitude, event.longitude));
+  homeNearPoints.forEach(function (point) {
+    bounds.extend(new kakao.maps.LatLng(point.latitude, point.longitude));
   });
   map.setBounds(bounds, 40, 40, 40, 40);
 }
 
-document.querySelectorAll("#homeDistrictChips .chip").forEach(function (chip) {
-  chip.addEventListener("click", function () {
-    homeDistrict = chip.dataset.district;
-    renderHomeNear();
-  });
-});
 document.getElementById("homeNearGo").addEventListener("click", openHomeDistrictOnMap);
 document.getElementById("homeNearMap").addEventListener("click", openHomeDistrictOnMap);
 

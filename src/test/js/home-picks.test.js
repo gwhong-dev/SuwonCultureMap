@@ -14,6 +14,7 @@ const {
   eventDistrict,
   matchesDistrict,
   districtEvents,
+  distinctPoints,
   HOME_DISTRICTS,
   HOME_DEFAULT_DISTRICT,
 } = require("../../main/resources/static/home-picks.js");
@@ -218,15 +219,21 @@ test("내 주변 구 칩: 4개 구, 첫 선택은 팔달구", () => {
   assert.strictEqual(HOME_DEFAULT_DISTRICT, "팔달구");
 });
 
-test("내 주변 행사 수: 그 구의 종료 안 된 행사 (날짜 없는 행사 포함, 종료 · 다른 구 · 구 모름 제외)", () => {
+// 좌표가 있는 행사 (내 주변은 지도에 놓을 수 있는 행사만 셈)
+function at(event, district, lat, lng) {
+  return { ...event, district, latitude: lat || 37.28, longitude: lng || 127.01 };
+}
+
+test("내 주변 행사 수: 그 구의 종료 안 된 행사 (날짜 없는 행사 포함, 종료 · 다른 구 · 구 모름 · 좌표 없음 제외)", () => {
   const events = [
-    { ...ev(1, "2026-11-01", "2026-11-10"), district: "팔달구" }, // 운영중
-    { ...ev(2, "2026-11-20", "2026-11-22"), district: "팔달구" }, // 오픈예정
-    { ...ev(3, "2026-10-01", "2026-11-03"), district: "팔달구" }, // 종료 (어제)
-    { ...ev(4, null, null), district: "팔달구" }, // 날짜 없음 → 지도에는 보임
-    { ...ev(5, "2026-11-01", "2026-11-10"), district: "영통구" },
-    { ...ev(6, "2026-11-01", "2026-11-10"), info: "장소: 수원시 팔달구 가상홀" }, // 서버 값 없으면 글에서
-    ev(7, "2026-11-01", "2026-11-10"), // 구 모름
+    at(ev(1, "2026-11-01", "2026-11-10"), "팔달구"), // 운영중
+    at(ev(2, "2026-11-20", "2026-11-22"), "팔달구"), // 오픈예정
+    at(ev(3, "2026-10-01", "2026-11-03"), "팔달구"), // 종료 (어제)
+    at(ev(4, null, null), "팔달구"), // 날짜 없음 → 지도에는 보임
+    at(ev(5, "2026-11-01", "2026-11-10"), "영통구"),
+    { ...at(ev(6, "2026-11-01", "2026-11-10"), null), info: "장소: 수원시 팔달구 가상홀" }, // 서버 값 없으면 글에서
+    at(ev(7, "2026-11-01", "2026-11-10"), null), // 구 모름
+    { ...ev(8, "2026-11-01", "2026-11-10"), district: "팔달구" }, // 좌표 없음
   ];
   assert.deepStrictEqual(
     districtEvents(events, "팔달구", WED).map((e) => e.id),
@@ -240,7 +247,18 @@ test("내 주변 행사 수: 그 구의 종료 안 된 행사 (날짜 없는 행
 });
 
 test("내 주변 행사 수: 마지막 날(오늘 종료)은 셈에 넣음", () => {
-  const events = [{ ...ev(1, "2026-11-01", "2026-11-04"), district: "권선구" }];
+  const events = [at(ev(1, "2026-11-01", "2026-11-04"), "권선구")];
   assert.strictEqual(districtEvents(events, "권선구", WED).length, 1);
   assert.strictEqual(districtEvents(events, "권선구", kst(2026, 11, 5, 1)).length, 0); // 다음 날 새벽 1시(한국)
+});
+
+test("지도 점: 같은 장소 행사 여러 개는 한 점 (점 1개 = 한 곳 처리, setBounds 최대 확대 방지)", () => {
+  const same = [
+    { ...at(ev(1, "2026-11-01", "2026-11-10"), "팔달구", 37.2810212, 127.0162158), category: "공연" },
+    { ...at(ev(2, "2026-11-02", "2026-11-12"), "팔달구", 37.2810212, 127.0162158), category: "전시" },
+  ];
+  assert.deepStrictEqual(distinctPoints(same), [{ latitude: 37.2810212, longitude: 127.0162158, category: "공연" }]);
+  const two = [...same, { ...at(ev(3, "2026-11-01", "2026-11-10"), "팔달구", 37.29, 127.02), category: "축제" }];
+  assert.strictEqual(distinctPoints(two).length, 2);
+  assert.deepStrictEqual(distinctPoints([]), []);
 });
