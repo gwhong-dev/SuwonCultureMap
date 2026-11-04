@@ -1992,7 +1992,15 @@ document.getElementById("homeNearbyGo").addEventListener("click", goNearbyOnMap)
 
 // PC 너비로 바뀌면 구 칩이 없어 끌 방법이 없음 → 구 필터를 풂
 mobileQuery.addEventListener("change", function (e) {
-  if (e.matches) return;
+  if (e.matches) {
+    // 모바일에선 지도 검색창을 누르면 검색 화면이 열려 PC 에서 친 검색어를 지울 수 없음 → 넘어올 때 풂
+    var searchInput = document.getElementById("searchInput");
+    if (searchInput.value) {
+      searchInput.value = "";
+      filterMarkers();
+    }
+    return;
+  }
   if (districtFilter) setDistrictFilter(null);
   closeSearch(); // 검색 화면도 모바일 전용
 });
@@ -2062,7 +2070,10 @@ function searchResultRowHtml(event) {
   return (
     '<div class="result-row">' +
     eventRowHtml(event) +
-    favButtonHtml(favoriteEventIds.has(event.id)).replace('class="card-fav', 'data-event-id="' + event.id + '" class="card-fav') +
+    favButtonHtml(favoriteEventIds.has(event.id)).replace(
+      'class="card-fav',
+      'data-event-id="' + event.id + '" aria-pressed="' + favoriteEventIds.has(event.id) + '" class="card-fav',
+    ) +
     "</div>"
   );
 }
@@ -2072,7 +2083,6 @@ function renderSearch() {
   var list = document.getElementById("searchSuggest");
   var keyword = searchViewInput.value;
   var results = searchMode === "results";
-  list.classList.toggle("is-results", results);
   document.getElementById("searchClearBtn").hidden = !keyword;
   if (!eventsLoaded) {
     list.innerHTML = eventsLoadFailed
@@ -2135,6 +2145,7 @@ function updateSearchFavs() {
   document.querySelectorAll("#searchSuggest .result-row .card-fav").forEach(function (button) {
     var on = favoriteEventIds.has(Number(button.dataset.eventId));
     button.classList.toggle("active", on);
+    button.setAttribute("aria-pressed", on ? "true" : "false"); // 화면 낭독기도 찜 상태를 알게
     button.textContent = on ? "♥" : "♡";
   });
 }
