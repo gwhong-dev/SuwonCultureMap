@@ -10,7 +10,7 @@ pipeline {
         timestamps()                                   // 로그 줄마다 시각
         timeout(time: 30, unit: 'MINUTES')
         buildDiscarder(logRotator(numToKeepStr: '20')) // 기록은 최근 20번만
-        disableConcurrentBuilds()                      // ci.yml 의 concurrency 와 같은 역할
+        disableConcurrentBuilds(abortPrevious: true)   // 새 빌드가 오면 이전 빌드 취소 = ci.yml 의 cancel-in-progress
     }
 
     environment {
@@ -18,6 +18,8 @@ pipeline {
         JAVA_HOME = '/opt/jdk17'
         // Maven 라이브러리를 jenkins_home 볼륨에 보관 → 두 번째부터 빨라짐 (ci.yml 의 cache: maven)
         MAVEN_REPO = '/var/jenkins_home/.m2/repository'
+        // mvnw 가 받는 Maven 본체도 볼륨에 (기본 ~/.m2/wrapper 는 컨테이너를 다시 만들면 사라짐)
+        MAVEN_USER_HOME = '/var/jenkins_home/.m2'
     }
 
     stages {

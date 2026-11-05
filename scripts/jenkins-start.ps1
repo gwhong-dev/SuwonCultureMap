@@ -17,8 +17,12 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     Write-Host '[오류] docker 명령이 없음 → Docker Desktop 설치 후 다시 실행'
     exit 1
 }
+# PowerShell 5.1 은 stderr 를 오류로 바꿔 'Stop' 에서 예외로 끝남 → 이 줄만 Continue
+$ErrorActionPreference = 'Continue'
 docker info *> $null
-if ($LASTEXITCODE -ne 0) {
+$dockerOk = ($LASTEXITCODE -eq 0)
+$ErrorActionPreference = 'Stop'
+if (-not $dockerOk) {
     Write-Host '[오류] Docker 가 꺼져 있음 → 시작 메뉴에서 Docker Desktop 을 켜고, 고래 아이콘이 멈추면 다시 실행'
     exit 1
 }

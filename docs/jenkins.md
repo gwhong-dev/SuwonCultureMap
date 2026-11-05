@@ -13,7 +13,7 @@
 | `jenkins/Dockerfile` | Jenkins(최신 LTS) + 빌드용 JDK 17 + Node 22 + Docker CLI · compose · buildx |
 | `jenkins/plugins.txt` | 플러그인 목록 (이미지 만들 때 설치 → 설치 마법사 없음) |
 | `jenkins/casc.yaml` | 설정 자동화(JCasC): 관리자 계정 · 작업 `SuwonCultureMap` 생성 |
-| `jenkins/docker-compose.yml` | 포트 `127.0.0.1:8081` (앱 8080 과 안 겹침, 이 PC 안에서만), 볼륨 `jenkins-home`, `docker.sock` 연결 |
+| `jenkins/docker-compose.yml` | 포트 `127.0.0.1:8081` (앱 8080 과 안 겹침, 이 PC 안에서만), 볼륨 `jenkins-home`, `docker.sock` 연결 (root 실행 — 아래 주의) |
 | `jenkins/.env` | 관리자 비밀번호 (start 스크립트가 무작위로 만듦, **Git 제외**) |
 | `scripts/jenkins-start.cmd` · `.ps1` | 더블클릭 → Docker 확인 · 비밀번호 생성 · 빌드 · 실행 · 브라우저 열기 |
 | `scripts/jenkins-stop.cmd` | 끄기 (설정 · 기록 · Maven 캐시는 남음) |
@@ -26,11 +26,12 @@
 | ② 최신 받기 | 프로젝트 폴더에서 `git pull` | `Jenkinsfile` · `jenkins\` 폴더가 생김 | 충돌이 나면 Claude 에게 |
 | ③ Jenkins 켜기 | 탐색기 → `scripts\jenkins-start.cmd` 더블클릭 | 창에 `[성공] http://localhost:8081` + 아이디 · 비밀번호, 브라우저가 열림 (처음 3~5분) | 창의 `[오류]` 줄대로. 8081 을 다른 프로그램이 쓰면 그 프로그램 종료 |
 | ④ 로그인 | 브라우저 → 아이디 `admin` · 창에 나온 비밀번호 | 대시보드에 `SuwonCultureMap` 작업 | 비밀번호는 `jenkins\.env` 에도 있음 |
-| ⑤ 빌드 | `SuwonCultureMap` → **파라미터와 함께 빌드** → BRANCH `main` → 빌드 | 4단계 모두 초록 · `Test Result` 에 테스트 개수 (첫 빌드 5~10분) | 빨간 단계 → **Console Output** 마지막 30줄을 Claude 에게 |
+| ⑤ 빌드 | `SuwonCultureMap` → **파라미터와 함께 빌드** → BRANCH `main` → 빌드 | 5칸(Checkout + 4단계) 모두 초록 · `Test Result` 에 테스트 개수 (첫 빌드 5~10분) | 빨간 단계 → **Console Output** 마지막 30줄을 Claude 에게 |
 | ⑥ 끄기 | `scripts\jenkins-stop.cmd` | "Jenkins 를 껐습니다" | - |
 
-- 켜져 있는 동안 5분마다 `main` 에 새 커밋이 있는지 확인해 자동 빌드 (PC 는 외부에서 접속할 수 없어 GitHub 웹훅 대신 폴링)
-- 다른 브랜치(PR)도 ⑤에서 BRANCH 만 바꾸면 빌드
+- 켜져 있는 동안 5분마다 새 커밋이 있는지 확인해 자동 빌드 (PC 는 외부에서 접속할 수 없어 GitHub 웹훅 대신 폴링)
+- 다른 브랜치(PR)도 ⑤에서 BRANCH 만 바꾸면 빌드. ⚠️ 폴링은 **마지막으로 빌드한 브랜치**를 봄 → 다른 브랜치를 빌드했으면 끝난 뒤 `main` 으로 한 번 다시 빌드
+- ⚠️ 주의: Jenkins 컨테이너는 root + `docker.sock` 이라 사실상 **PC Docker 전체 권한**을 가짐 → 이 PC 안(127.0.0.1)에서만 열고, 믿을 수 있는 저장소(이 원본)만 빌드
 
 ## 3. 단계 대응
 
@@ -50,7 +51,7 @@
 |---|---|---|
 | 서버 | GitHub 가 준비 (설치 · 관리 없음) | 직접 설치 · 업데이트 · 플러그인 관리 |
 | 비용 | 공개 저장소 무료 | PC 에서 0원 / 서버에 두면 서버 비용 |
-| 실행 시점 | PR · push 때 바로 (웹훅) | 5분 폴링 또는 수동 (PC 라 웹훅 못 받음) |
+| 실행 시점 | PR · push 때 바로 (웹훅), 새 push 가 오면 이전 실행 취소 | 5분 폴링 또는 수동 (PC 라 웹훅 못 받음), 새 빌드가 오면 이전 빌드 취소(`abortPrevious`) |
 | PR 화면 연동 | 체크 결과가 PR 에 바로 표시, main 보호 규칙과 연결 | 이 구성은 PR 에 표시 안 함 (연동하려면 외부 접속 주소 + GitHub 플러그인 필요) |
 | 설정 위치 | `.github/workflows/*.yml` | `Jenkinsfile` + 서버 설정(이번엔 `casc.yaml` 로 코드화) |
 | 비밀값 | 저장소 Secrets · OIDC 임시 권한 | Jenkins Credentials (이번 CI 엔 비밀값 없음) |
