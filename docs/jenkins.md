@@ -66,4 +66,4 @@
 
 | 날짜 | 브랜치 · 커밋 | 결과 | 걸린 시간 | 메모 |
 |---|---|---|---|---|
-| (PC 첫 실행 후 기록) | | | | |
+| 2026-11-05 12:15 (빌드 #1) | `main` `580a3ba` (#149 머지) · 폴링(SCM change)으로 시작 | ✅ SUCCESS — JUnit 533개 전부 통과(실행 47초), 단계: 화면 표시 규칙 시험 1.3초 · 컴파일+테스트 1분 29초 · Docker 이미지 빌드 1분 22초 · 배포 파일 확인 10초 | 3분 12초 | 학원 PC · 첫 빌드 · 공용 PC라 실행 후 `down -v` 로 정리. 패키지별 테스트: service 111 · service.instagram 81 · controller 73 · service.schedule 72 · service.caption 68 · service.merge 54 · service.place 42 · security 23 · repository 7 · config 1 · (root) 1. JS `node --test` 93개는 Jenkins JUnit 집계에 안 들어감 |

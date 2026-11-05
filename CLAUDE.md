@@ -49,6 +49,7 @@ docker compose up --build   # 앱 + MySQL (.env 는 scripts/setup-docker.cmd)
 - 원본은 GitHub. PC 교체 대비는 저장소 문서(CLAUDE.md · PROGRESS.md)로 함
 - MySQL · 비밀값이 PC에 있음 → 빌드 · 테스트 · 앱 실행 · DB 조회 · API 확인까지 Claude가 직접 수행
 - 앱 실행 후 확인이 끝나면 띄운 프로세스는 종료해 둘 것
+- 작업 공간은 저장소 이름으로 나눈다. 요청한 저장소가 이 세션 저장소와 다르면 작업 · 저장소 추가 · 카드 생성 모두 하지 말고 멈춘 뒤, 맞는 프로젝트 세션에서 하라고만 알린다.
 
 ## 3. 작업 구조 (사용자는 중계하지 않음)
 
