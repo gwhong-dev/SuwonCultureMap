@@ -20,6 +20,7 @@
 | 인증 | 카카오 · 구글 · 네이버 OAuth 2.0 (직접 구현), 세션 기반 |
 | 인프라 | AWS EC2, Docker Compose, Caddy (HTTPS) |
 | CI/CD | GitHub Actions — 빌드 · 테스트 · Docker 이미지 → 자동 배포, 15분마다 가동 감시 |
+| CI 비교 | Jenkins(내 PC Docker, CI 만) 로 같은 파이프라인 재구성 · 비교 → [docs/jenkins.md](docs/jenkins.md) |
 
 ## 주요 기능
 
@@ -72,7 +73,7 @@ index.html (카카오맵 + 목록 + 상세)
 
 ## ERD
 
-스키마는 Flyway 로 관리합니다 (`src/main/resources/db/migration`, V1 ~ V5).
+스키마는 Flyway 로 관리합니다 (`src/main/resources/db/migration`, V1 ~ V6).
 
 ```mermaid
 erDiagram
@@ -101,6 +102,7 @@ erDiagram
         String category
         Double latitude
         Double longitude
+        String district "구 이름, 동기화 때 좌표로 저장"
         LocalDateTime pubDate "변경 감지용"
         String link "원문 URL"
         String source "재단 / 인스타"
@@ -222,4 +224,4 @@ erDiagram
 - **한 PR = 한 가지 목적**: 기능 브랜치 → PR → CI(빌드 · 테스트 · Docker 이미지) 통과 → 머지. main 은 브랜치 보호로 CI 통과가 필수
 - 작업 크기(S/M/L)에 따라 **작업 과정을 모르는 검증 에이전트**가 코드만 보고 파일 · 줄 근거로 검토 → PR 댓글 1개로 판정 → 지적 반영 뒤 머지. L 등급은 PC 에서 앱 · 화면 · DB 까지 직접 확인
 - 머지 뒤 자동 배포 · 운영 헬스체크까지 확인하고, 진행 현황은 [PROGRESS.md](PROGRESS.md) 에 기록
-- 11/3 기준 PR 121개 중 119개 머지, 테스트 `mvnw test` 475개 · `node --test` 50개
+- 11/5 기준 PR 149개 중 146개 머지, 테스트 `mvnw test` 533개 · `node --test` 93개
