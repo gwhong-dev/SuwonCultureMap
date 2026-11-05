@@ -1,0 +1,49 @@
+# =====================================================
+#  Jenkins 설정 자동화 (Configuration as Code)
+#  - 관리자 계정: admin / 비밀번호는 jenkins/.env 의 JENKINS_ADMIN_PASSWORD (Git 제외, start 스크립트가 만듦)
+#  - 작업 "SuwonCultureMap": GitHub 원본의 Jenkinsfile 로 실행. 5분마다 새 커밋 확인 + "파라미터와 함께 빌드"로 브랜치 지정
+# =====================================================
+jenkins:
+  systemMessage: "수원 문화지도 — 로컬 Jenkins (CI 비교용, 배포 안 함)"
+  numExecutors: 1
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: admin
+          password: "${JENKINS_ADMIN_PASSWORD}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+unclassified:
+  location:
+    url: "http://localhost:8081/"
+
+jobs:
+  - script: |
+      pipelineJob('SuwonCultureMap') {
+        description('GitHub Actions CI 와 같은 단계 (Jenkinsfile). 비교 문서: docs/jenkins.md')
+        parameters {
+          stringParam('BRANCH', 'main', '빌드할 브랜치 (예: main, feat/xxx)')
+        }
+        properties {
+          pipelineTriggers {
+            triggers {
+              pollSCM { scmpoll_spec('H/5 * * * *') }
+            }
+          }
+        }
+        definition {
+          cpsScm {
+            lightweight(false)
+            scriptPath('Jenkinsfile')
+            scm {
+              git {
+                remote { url('https://github.com/gwhong-dev/SuwonCultureMap.git') }
+                branch('^${BRANCH}')  // ^ = JCasC 가 미리 바꾸지 않게 (Jenkins 가 빌드 때 파라미터로 채움)
+              }
+            }
+          }
+        }
+      }
