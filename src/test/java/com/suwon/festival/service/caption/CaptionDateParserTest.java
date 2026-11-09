@@ -175,4 +175,26 @@ class CaptionDateParserTest {
   void 시간_앞_슬래시는_떼고_보관() {
     assertThat(CaptionDateParser.parse("2026. 11. 5.(목) / 19:00").timeText()).isEqualTo("19:00");
   }
+
+  @Test
+  void 한글_시간_표기도_시간_원문으로_보관() {
+    assertThat(CaptionDateParser.parse("2026. 11. 7.(토) 오후 7시").timeText()).isEqualTo("오후 7시");
+    assertThat(CaptionDateParser.parse("2026. 11. 7.(토) 저녁 7시 30분").timeText()).isEqualTo("저녁 7시 30분");
+    Result r = CaptionDateParser.parse("2026. 11. 5.(목) ~ 11. 7.(토) 19시~21시");
+    assertThat(r.kind()).isEqualTo(Kind.OK);
+    assertThat(r.end()).isEqualTo(LocalDate.of(2026, 11, 7)); // 날짜는 그대로
+    assertThat(r.timeText()).isEqualTo("19시~21시");
+  }
+
+  @Test
+  void 시간이_아닌_시_글자는_보관하지_않음() {
+    assertThat(CaptionDateParser.parse("2026. 11. 7.(토) 약 2시간 소요").timeText()).isNull();
+    assertThat(CaptionDateParser.parse("2026. 11. 7.(토) 수원시 주최").timeText()).isNull();
+  }
+
+  @Test
+  void 여러_회차_뒤_한글_시간은_그대로_AI_몫() {
+    // 진행 날짜 나열이 "다른 글자"로 모름이 되지 않게 회차 꼬리는 HH:MM 만 인정 (#125)
+    assertThat(CaptionDateParser.parse("2026. 11. 5.(목), 11. 12.(목) 오후 7시").kind()).isEqualTo(Kind.UNREADABLE);
+  }
 }

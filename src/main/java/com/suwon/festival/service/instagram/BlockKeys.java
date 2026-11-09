@@ -16,6 +16,7 @@ import com.suwon.festival.service.caption.ParsedEvent;
 public final class BlockKeys {
 
   static final int HASH_LENGTH = 32;
+  static final int SOURCE_KEY_MAX = 100; // event.source_key 칸 길이
 
   private BlockKeys() {
   }
@@ -30,6 +31,14 @@ public final class BlockKeys {
 
   public static String sourceKey(String mediaId, String blockKey) {
     return mediaId + "#" + blockKey;
+  }
+
+  // 저장 전 검사: source_key 가 NULL · 빈 값이면 (source, source_key) unique 가 중복을 못 막음
+  //  → "게시물 id#블록 키" 양쪽이 다 있고 칸 길이 안이어야 저장
+  public static boolean isValidSourceKey(String sourceKey) {
+    if (sourceKey == null || sourceKey.isBlank() || sourceKey.length() > SOURCE_KEY_MAX) return false;
+    int sep = sourceKey.indexOf('#');
+    return sep > 0 && sep < sourceKey.length() - 1 && !sourceKey.substring(sep + 1).isBlank();
   }
 
   // 공백 차이 · 대소문자는 같은 것으로
