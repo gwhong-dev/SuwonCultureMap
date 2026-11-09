@@ -218,4 +218,20 @@ class ScheduleDisplayPageTest {
     MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     assertThat(mockMvc.perform(get("/nav-history.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
   }
+
+  @Test
+  void 상세_길찾기_공유_창은_열리면_첫_버튼으로_닫히면_원래_자리로_포커스() throws Exception {
+    // 보조기기용 (#89 검증 지적) — dialog-focus.js
+    String html = page();
+    int rules = html.indexOf("<script src=\"/dialog-focus.js\"></script>");
+    assertThat(rules).isPositive().isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
+    assertThat(html).contains("class=\"modal-card\" role=\"dialog\" aria-modal=\"true\"");
+
+    String js = script();
+    assertThat(js).contains("dialogFocus.opened(\"detail\"", "dialogFocus.opened(\"route\"", "dialogFocus.opened(\"share\"");
+    assertThat(js).contains("dialogFocus.closed(\"detail\")", "dialogFocus.closed(\"route\")", "dialogFocus.closed(\"share\")");
+
+    MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+    assertThat(mockMvc.perform(get("/dialog-focus.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
+  }
 }

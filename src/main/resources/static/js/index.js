@@ -102,6 +102,9 @@ document.addEventListener("visibilitychange", function () {
   if (!document.hidden) nav.update();
 });
 
+// 상세 · 길찾기 · 공유 창: 열리면 첫 버튼으로, 닫히면 원래 자리로 포커스 (dialog-focus.js)
+var dialogFocus = createDialogFocus({ document: document });
+
 function syncUrlState() {
   nav.update();
 }
@@ -1106,6 +1109,7 @@ function openDetailModal(event) {
   selectDetailTab("detailRows", false);
   renderDetailMap(event); // 지도는 창이 보인 뒤에 그려야 크기를 잡음
   measureIntro();
+  dialogFocus.opened("detail", card);
   nav.open("detail");
   syncUrlState();
   rememberRecentView(event.id); // 찜 탭 "최근 본" (목록 순서는 다음에 그릴 때 바뀜 — 보던 자리가 밀리지 않게)
@@ -1275,10 +1279,12 @@ function eventShareUrl(event) {
 function openShareSheet(event) {
   document.getElementById("shareEvent").textContent = event.title;
   document.getElementById("shareSheet").hidden = false;
+  dialogFocus.opened("share", document.querySelector("#shareSheet .route-sheet"));
   nav.open("share");
 }
 function closeShareSheet() {
   document.getElementById("shareSheet").hidden = true;
+  dialogFocus.closed("share");
   nav.close("share");
 }
 document.getElementById("detailShareBtn").addEventListener("click", function () {
@@ -1366,6 +1372,7 @@ function closeDetailModal() {
   if (wasOpen && homeOpen) drawNearbyMap(); // 상세가 덮은 동안 화면이 돌았으면 작은 지도 크기 다시 맞춤
   detailEvent = null;
   closeShareSheet();
+  dialogFocus.closed("detail"); // 보던 목록 위치로 스크롤한 뒤 (포커스가 화면을 끌고 가지 않게)
   nav.close("detail");
   syncUrlState();
 }
@@ -2721,12 +2728,14 @@ function openRouteSheet(event) {
   document.getElementById("routeNaver").href = naverRouteUrl(place, event.latitude, event.longitude);
   document.getElementById("routeGoogle").href = googleRouteUrl(event.latitude, event.longitude);
   document.getElementById("routeSheet").hidden = false;
+  dialogFocus.opened("route", document.querySelector("#routeSheet .route-sheet"));
   nav.open("route");
   syncUrlState();
 }
 function closeRouteSheet() {
   routeEvent = null;
   document.getElementById("routeSheet").hidden = true;
+  dialogFocus.closed("route");
   nav.close("route");
   syncUrlState();
 }
