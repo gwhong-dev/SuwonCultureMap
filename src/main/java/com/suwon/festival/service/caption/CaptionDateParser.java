@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 // - 연도는 "같은 줄의 시작일"에서만 가져온다. 줄에 연도가 전혀 없으면 추측하지 않음 → NO_DATE
 // - 종료일 연도가 생략되면 시작일 연도를 쓰고, 종료가 시작보다 앞서면 해를 넘긴 것으로 보고 +1
 // - (요일)이 적혀 있으면 달력과 맞는지 확인 → 안 맞으면 INVALID
+// - 시간 원문: "HH:MM" 또는 한글 표기("오후 7시" · "19시 30분")가 있으면 날짜 뒤 나머지를 그대로 보관
 // - 시작일 없이 "~ 종료일"만, "YYYY. M월"(일 없음), "매주 금~일" 반복 → NO_DATE (시간 원문은 보관)
 // - 여러 회차("11. 5.(목), 11. 12.(목)")는 날짜마다 요일이 맞을 때만 시작 = 처음 · 종료 = 마지막. 기간 + 다른 날짜는 AI 몫
 public final class CaptionDateParser {
@@ -38,6 +39,8 @@ public final class CaptionDateParser {
   // 연도 없는 "M. D." (시작일 없는 줄 판단 · 날짜 여러 개 판단용)
   private static final Pattern MONTH_DAY = Pattern.compile("(?<![\\d:])(\\d{1,2})\\s*\\.\\s*(\\d{1,2})(?![\\d:])");
   private static final Pattern TIME = Pattern.compile("\\d{1,2}:\\d{2}");
+  // 한글 시간 표기: "오후 7시" · "저녁 7시 30분" · "19시" · "7시반". "3시간" · "10시작" 은 시간이 아님
+  private static final Pattern KOREAN_TIME = Pattern.compile("(?<!\\d)\\d{1,2}\\s*시(?![간작])");
   // 여러 회차의 다음 날짜: 구분자(, · /) 뒤 연도 생략 가능, 요일 필수
   private static final Pattern NEXT_DATE = Pattern.compile(
       "[\\s,·/]*(?:(\\d{4})\\s*\\.\\s*)?(\\d{1,2})\\s*\\.\\s*(\\d{1,2})(?!\\d)\\s*\\.?\\s*\\(\\s*([월화수목금토일])\\s*\\)");
@@ -108,7 +111,8 @@ public final class CaptionDateParser {
     }
 
     // "매주 금~일" 은 시간이 없어도 보관 → 진행 날짜를 요일로 펼칠 때 씀 (설계 docs/event-schedule.md 9번)
-    String timeText = TIME.matcher(rest).find() || rest.contains("매주")
+    // 여러 회차(dateList) 꼬리는 그대로 HH:MM 만 인정 → 진행 날짜 나열이 "다른 글자"로 모름이 되지 않게 AI 몫 유지
+    String timeText = TIME.matcher(rest).find() || KOREAN_TIME.matcher(rest).find() || rest.contains("매주")
         ? CaptionText.blankToNull(rest.replaceFirst("^[\\s,·/]+", "")) : null;
     return new Result(Kind.OK, start, end, timeText, null);
   }
