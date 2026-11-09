@@ -112,6 +112,18 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
+  void 찜_탭_최근_본_규칙_파일을_화면_스크립트보다_먼저_불러오고_탭_줄이_있음() throws Exception {
+    // 최근 본 번호 읽기 · 더하기 · 고르기(parseRecentIds · addRecentId · pickRecent)가 recent-views.js 에 있음 → index.js 보다 앞
+    String html = page();
+    int rules = html.indexOf("<script src=\"/recent-views.js\"></script>");
+    assertThat(rules).isPositive().isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
+    assertThat(html).contains("id=\"favTabs\"", "data-view=\"fav\"", "data-view=\"recent\"");
+
+    MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+    assertThat(mockMvc.perform(get("/recent-views.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
+  }
+
+  @Test
   void 모바일_홈_화면과_홈_탭이_있고_홈_규칙_파일을_화면_스크립트보다_먼저_불러옴() throws Exception {
     // 이번 주 · 곧 종료 · 곧 시작 고르기(weekRange · endingSoon …)가 home-picks.js 에 있음 → index.js 보다 앞
     String html = page();
