@@ -768,6 +768,13 @@ function renderSidebar(items) {
     }
   } else if (sorted.length === 0 && (onFavScreen() || document.getElementById("categorySelect").value === "찜")) {
     renderFavoriteEmpty(list);
+  } else if (!isLoggedIn && (onFavScreen() || document.getElementById("categorySelect").value === "찜")) {
+    // 비회원 찜 목록 맨 위: 이 기기에만 있다는 안내 + 로그인 (최근 본 안내와 같은 모양)
+    var guestNote = document.createElement("div");
+    guestNote.className = "recent-note guest-note";
+    guestNote.innerHTML = '<span>이 기기에만 저장돼요 · 로그인하면 계정에 합쳐져요</span><button type="button">로그인</button>';
+    guestNote.querySelector("button").addEventListener("click", goToLogin);
+    list.appendChild(guestNote);
   }
 
   // 찜한 행사가 있을 때만 구분 제목 표시
@@ -882,6 +889,40 @@ document
 // ===== 로그인 상태 + 내 즐겨찾기 목록 확인 =====
 var isLoggedIn = false;
 var favoriteEventIds = new Set();
+// 비회원 찜: 이 기기 브라우저 저장소 (guest-favorites.js). 로그인하면 계정에 합치고 비움
+var guestFavorites = createGuestFavoriteStore(
+  (function () {
+    try {
+      return window.localStorage;
+    } catch (e) {
+      return null;
+    }
+  })(),
+  "suwonbible.guestFavorites",
+);
+
+// 로그인 직후: 이 기기 찜을 계정 찜에 합침. 실패하면 기기 목록을 그대로 둠 → 다음 로그인 확인 때 다시
+function mergeGuestFavorites() {
+  var ids = guestFavorites.list();
+  if (!ids.length) return Promise.resolve();
+  return fetch("/api/favorites/merge", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventIds: ids }),
+  })
+    .then(function (response) {
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      return response.json();
+    })
+    .then(function (result) {
+      guestFavorites.clear();
+      var text = guestMergeToastText(result.added);
+      if (text) showToast(text, "보기", showFavoriteList);
+    })
+    .catch(function (err) {
+      console.error("비회원 찜 합치기 실패", err);
+    });
+}
 
 function checkAuth() {
   fetch("/api/auth/me")
@@ -900,13 +941,18 @@ function checkAuth() {
         loginPageBtn.style.display = "none";
         mypageBtn.style.display = "inline-block";
         logoutBtn.style.display = "inline-block";
-        return fetch("/api/favorites").then((r) => r.json()); // 로그인 상태면 즐겨찾기 목록도 받아옴
+        // 로그인 상태면 이 기기 찜을 먼저 합친 뒤 즐겨찾기 목록을 받아옴
+        return mergeGuestFavorites().then(function () {
+          return fetch("/api/favorites").then((r) => r.json());
+        });
       } else {
         status.textContent = "로그인 안 됨";
         loginPageBtn.style.display = "inline-block";
         mypageBtn.style.display = "none";
         logoutBtn.style.display = "none";
-        return [];
+        return guestFavorites.list().map(function (id) {
+          return { id: id }; // 비회원 찜 (이 기기)
+        });
       }
     })
     .then(function (favorites) {
@@ -1371,7 +1417,17 @@ function updateFavoriteButton(eventId) {
 
 function toggleFavorite(eventId) {
   if (!isLoggedIn) {
-    showToast(FAVORITE_LOGIN_TOAST.text, FAVORITE_LOGIN_TOAST.actionLabel, goToLogin); // 비회원 - 로그인 유도
+    // 비회원: 이 기기에 담고 빼기 (서버로 안 보냄, 로그인하면 계정에 합침)
+    var added = guestFavorites.toggle(eventId);
+    var guestToast = guestFavoriteToast(added);
+    if (added === null) {
+      showToast(guestToast.text, guestToast.actionLabel, goToLogin); // 가득 참 → 로그인 안내
+      return;
+    }
+    favoriteEventIds = new Set(guestFavorites.list());
+    updateFavoriteButton(eventId);
+    filterMarkers();
+    showToast(guestToast.text, guestToast.actionLabel, showFavoriteList);
     return;
   }
 

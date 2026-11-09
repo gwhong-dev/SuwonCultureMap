@@ -182,6 +182,34 @@ class MergedEventQueryTest {
         .hasMessageContaining("존재하지 않는 행사");
   }
 
+  // ===== 비회원 찜 합치기 (로그인 직후 이 기기 찜 번호를 계정에 더함) =====
+
+  @Test
+  void 비회원_찜을_합치면_없는_행사_중복_이미_찜한_것은_건너뜀() {
+    saveFavorite(plain); // 이미 계정에 있는 찜
+
+    int added = favoriteService.mergeFavorites(memberId,
+        java.util.Arrays.asList(plain.getId(), hiddenA.getId(), hiddenB.getId(), representative.getId(), -1L, null));
+
+    // hiddenA · hiddenB · 대표는 모두 같은 대표로 모임 → 1개만, plain 은 이미 있음, -1 · null 은 건너뜀
+    assertThat(added).isEqualTo(1);
+    assertThat(favoriteService.getFavoriteEvents(memberId)).extracting(EventResponse::id)
+        .containsExactlyInAnyOrder(plain.getId(), representative.getId());
+    assertThat(favoriteRepository.findByMemberId(memberId)).hasSize(2);
+  }
+
+  @Test
+  void 비회원_찜_합치기는_빈_목록이면_0_이고_최대_개수까지만() {
+    assertThat(favoriteService.mergeFavorites(memberId, java.util.List.of())).isZero();
+    assertThat(favoriteService.mergeFavorites(memberId, null)).isZero();
+
+    // 앞쪽 MERGE_MAX 개만 봄 → 101번째로 보낸 행사는 더하지 않음
+    java.util.List<Long> many = new java.util.ArrayList<>();
+    for (long i = 0; i < FavoriteService.MERGE_MAX; i++) many.add(-1000L - i);
+    many.add(plain.getId());
+    assertThat(favoriteService.mergeFavorites(memberId, many)).isZero();
+  }
+
   private void saveFavorite(Event event) {
     Member member = memberRepository.getReferenceById(memberId);
     favoriteRepository.saveAndFlush(Favorite.builder()

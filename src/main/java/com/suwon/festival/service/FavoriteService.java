@@ -53,6 +53,35 @@ public class FavoriteService {
     favoriteRepository.save(favorite);
   }
 
+  // 비회원 찜 합치기: 로그인 전에 이 기기에 담아 둔 행사 번호들을 계정 찜에 더함. 더한 개수를 돌려줌
+  // 없는 행사 · 숨김(인스타 스위치) · 이미 찜한 것 · 같은 대표로 모이는 번호는 건너뜀 (오류 없이)
+  public static final int MERGE_MAX = 100;
+
+  @Transactional
+  public int mergeFavorites(Long memberId, List<Long> eventIds) {
+    if (eventIds == null || eventIds.isEmpty()) return 0;
+    Member member = memberRepository.findById(memberId)
+        .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+    Set<Long> owned = new HashSet<>();
+    favoriteRepository.findByMemberId(memberId)
+        .forEach(favorite -> owned.add(representativeOf(favorite.getEvent()).getId()));
+    int added = 0;
+    for (Long eventId : eventIds.stream().filter(java.util.Objects::nonNull).distinct().limit(MERGE_MAX).toList()) {
+      Event event = eventRepository.findById(eventId)
+          .map(this::representativeOf)
+          .filter(instagramSwitch::isVisible)
+          .orElse(null);
+      if (event == null || !owned.add(event.getId())) continue;
+      favoriteRepository.save(Favorite.builder()
+          .member(member)
+          .event(event)
+          .createdAt(LocalDateTime.now())
+          .build());
+      added++;
+    }
+    return added;
+  }
+
   @Transactional
   public void removeFavorite(Long memberId, Long eventId) {
     Long representativeId = eventRepository.findById(eventId)

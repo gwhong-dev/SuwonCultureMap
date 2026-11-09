@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,6 +35,19 @@ public class FavoriteController {
     Long memberId = getMemberId(session);
     favoriteService.removeFavorite(memberId, eventId);
     return "즐겨찾기 삭제 완료";
+  }
+
+  // 비회원 찜 합치기 (로그인 직후 화면이 이 기기 찜 번호를 보냄) → 더한 개수
+  @PostMapping(value = "/merge", produces = "application/json")
+  public MergeResult mergeFavorites(@RequestBody MergeRequest request, HttpSession session) {
+    Long memberId = getMemberId(session);
+    return new MergeResult(favoriteService.mergeFavorites(memberId, request == null ? null : request.eventIds()));
+  }
+
+  public record MergeRequest(List<Long> eventIds) {
+  }
+
+  public record MergeResult(int added) {
   }
 
   @GetMapping(produces = "application/json")
