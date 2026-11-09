@@ -59,13 +59,43 @@ var mobileQuery = window.matchMedia("(max-width: 1024px)");
 var initialParams = new URLSearchParams(location.search); // 처음 들어온 주소의 ?event= · route=
 
 // 열린 창을 주소에 기록 (?event=번호[&route=1]) → 지도 앱 · 카카오톡에 갔다 와서 페이지가 다시 열려도 복원
-// pushState 가 아니라 replaceState: 뒤로 가기 동작은 그대로 두고 현재 주소만 바꿈
-function syncUrlState() {
-  if (!window.history || !history.replaceState) return;
+function currentQuery() {
   var id = detailEvent ? detailEvent.id : routeEvent ? routeEvent.id : null;
-  var query = id ? "?event=" + id + (routeEvent ? "&route=1" : "") : "";
-  if (location.search === query) return;
-  history.replaceState(history.state, "", location.pathname + query + location.hash);
+  return id ? "?event=" + id + (routeEvent ? "&route=1" : "") : "";
+}
+
+// 뒤로 가기 기록 (nav-history.js): 홈 → 지도 · 목록 · 찜, 검색 화면, 상세, 길찾기 · 공유 창이 열리면 칸을 쌓고
+// 브라우저 뒤로 가기면 맨 위 화면부터 닫음. 칸마다 그때 주소(?event=)를 같이 기록
+var nav = createNavHistory({
+  history: window.history,
+  getUrl: function () {
+    return location.pathname + currentQuery() + location.hash;
+  },
+  currentUrl: function () {
+    return location.pathname + location.search + location.hash;
+  },
+  onBack: function (layer) {
+    if (layer === "tab") {
+      if (mobileQuery.matches) showHome(); // 지도 · 목록 · 찜 → 홈
+    } else if (layer === "search") {
+      closeSearch();
+    } else if (layer === "detail") {
+      closeDetailModal();
+    } else if (layer === "route") {
+      closeRouteSheet();
+    } else if (layer === "share") {
+      closeShareSheet();
+    }
+  },
+});
+window.addEventListener("popstate", nav.onPopState);
+// 카카오톡 등에서 돌아오면 미뤄 둔 기록 칸을 맞춤 (nav.forget)
+document.addEventListener("visibilitychange", function () {
+  if (!document.hidden) nav.update();
+});
+
+function syncUrlState() {
+  nav.update();
 }
 var homeOpen = false; // 모바일 홈 화면(하단 탭 "홈")이 지도 위를 덮고 있나
 var sheetState = "peek"; // "peek"(살짝 — 결과 바만) | "half"(절반) | "full"(전체)
@@ -866,6 +896,7 @@ function openDetailModal(event) {
   selectDetailTab("detailRows", false);
   renderDetailMap(event); // 지도는 창이 보인 뒤에 그려야 크기를 잡음
   measureIntro();
+  nav.open("detail");
   syncUrlState();
 }
 
@@ -1027,9 +1058,11 @@ function eventShareUrl(event) {
 function openShareSheet(event) {
   document.getElementById("shareEvent").textContent = event.title;
   document.getElementById("shareSheet").hidden = false;
+  nav.open("share");
 }
 function closeShareSheet() {
   document.getElementById("shareSheet").hidden = true;
+  nav.close("share");
 }
 document.getElementById("detailShareBtn").addEventListener("click", function () {
   if (detailEvent) openShareSheet(detailEvent);
@@ -1089,6 +1122,8 @@ document.getElementById("shareKakaoBtn").addEventListener("click", function () {
         link: link,
       });
     }
+    // 카카오톡으로 넘어가는 중 → 기록 칸은 바로 되돌리지 않음 (go(-1) 이 그 이동을 끊을 수 있음). 돌아오면 맞춤
+    nav.forget("share");
     closeShareSheet();
   } catch (err) {
     console.error("카카오톡 공유 실패", err);
@@ -1114,6 +1149,7 @@ function closeDetailModal() {
   if (wasOpen && homeOpen) drawNearbyMap(); // 상세가 덮은 동안 화면이 돌았으면 작은 지도 크기 다시 맞춤
   detailEvent = null;
   closeShareSheet();
+  nav.close("detail");
   syncUrlState();
 }
 
@@ -1558,6 +1594,7 @@ document.querySelectorAll("#tabBar button[data-tab]").forEach(function (tab) {
 var homeSoonMode = "ending"; // "ending" 곧 종료 | "starting" 곧 시작
 
 function showHome() {
+  nav.close("tab"); // 홈에서 나가며 쌓은 칸을 되돌림 (뒤로 가기로 왔으면 이미 빠짐)
   hidePreview();
   if (sheetState !== "peek") setSheetState("peek"); // 목록 전체(페이지 스크롤)는 풀어 두고 홈으로
   homeOpen = true;
@@ -1570,6 +1607,7 @@ function showHome() {
 
 function hideHome() {
   if (!homeOpen) return;
+  nav.open("tab"); // 지도 · 목록 · 찜에서 뒤로 가기 → 홈 (탭끼리 옮겨도 이 한 칸)
   homeOpen = false;
   document.body.classList.remove("home-open");
   window.scrollTo(0, 0);
@@ -2019,10 +2057,12 @@ function openSearch() {
   document.body.classList.add("search-open");
   renderSearch();
   searchViewInput.focus();
+  nav.open("search");
 }
 
 function closeSearch() {
   if (!searchOpen) return;
+  nav.close("search");
   searchOpen = false;
   searchViewInput.blur();
   document.getElementById("searchView").hidden = true;
@@ -2443,11 +2483,13 @@ function openRouteSheet(event) {
   document.getElementById("routeNaver").href = naverRouteUrl(place, event.latitude, event.longitude);
   document.getElementById("routeGoogle").href = googleRouteUrl(event.latitude, event.longitude);
   document.getElementById("routeSheet").hidden = false;
+  nav.open("route");
   syncUrlState();
 }
 function closeRouteSheet() {
   routeEvent = null;
   document.getElementById("routeSheet").hidden = true;
+  nav.close("route");
   syncUrlState();
 }
 // 카카오맵 웹 링크(/link/to/)는 자동차로만 열림 → 폰에서는 앱 주소(kakaomap://route, 대중교통)를 먼저 열고,
@@ -2554,5 +2596,7 @@ window.addEventListener("resize", function () {
 
 // 모바일 첫 화면 = 홈 (11/4 결정). 공유 링크(?event=) · 지도 앱 복귀(&route=1)는 지금처럼 지도 위 상세부터
 renderHomeLoading();
+// ?event= 로 복원하면 앞 문서가 쌓은 기록 칸을 이어받음 (지도 앱에서 돌아와 다시 열린 경우), 아니면 비우고 시작
+nav.start(!!initialParams.get("event"));
 if (mobileQuery.matches && !initialParams.get("event")) showHome();
 applyLayout();
