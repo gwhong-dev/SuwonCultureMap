@@ -43,10 +43,11 @@ test("값이 하나도 없으면 빈 본문", () => {
   assert.strictEqual(detailInfoText({ source: "SWCF" }), "");
 });
 
-test("장소: info 가 있으면 원문에서만, 없으면 place 칸", () => {
-  assert.strictEqual(eventPlace(foundation), "가상 전시관");
+test("장소: 서버가 꺼낸 place 칸 먼저, 비면 info 원문", () => {
+  assert.strictEqual(eventPlace(foundation), "다른 장소 칸");
   assert.strictEqual(eventPlace(instagram), "가상 공연장");
-  assert.strictEqual(eventPlace({ info: "주소: 수원시 팔달구", place: "칸" }), "수원시 팔달구");
+  assert.strictEqual(eventPlace({ info: "주소: 수원시 팔달구", place: null }), "수원시 팔달구");
+  assert.strictEqual(eventPlace({ info: "장소: 가상 전시관", place: "" }), "가상 전시관");
   assert.strictEqual(eventPlace({ info: null, place: null }), null);
 });
 
@@ -74,9 +75,14 @@ test("링크 버튼 글: 인스타 행사는 인스타그램에서 보기", () =
   assert.strictEqual(linkButtonText(foundation), "원문 보기 →");
 });
 
-test("extractPlaceName 은 옮긴 뒤에도 장소 라벨 → 주소 순", () => {
-  assert.strictEqual(extractPlaceName("행사장소: 광장\n주소: 수원"), "광장");
+test("extractPlaceName 은 서버(InfoParser)와 같이 정확한 라벨만, 장소 → 주소/소재지 → 주소 순", () => {
+  assert.strictEqual(extractPlaceName("주소: 수원\n장소: 광장"), "광장");
+  assert.strictEqual(extractPlaceName("행사장소: 광장\n주소: 수원"), "수원");
+  assert.strictEqual(extractPlaceName("주소: 수원\n주소/소재지: 팔달구"), "팔달구");
+  assert.strictEqual(extractPlaceName("장소: \n주소: 수원"), "수원");
+  assert.strictEqual(extractPlaceName("주차장소: 없음"), null);
   assert.strictEqual(extractPlaceName("소개: 없음"), null);
+  assert.strictEqual(extractPlaceName(null), null);
 });
 
 test("목록 카드 사진: 주소가 없거나 http · https 가 아니면 null (사진 칸 없이 그림)", () => {
