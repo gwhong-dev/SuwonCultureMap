@@ -302,11 +302,14 @@ class InstagramSyncServiceTest {
   }
 
   @Test
-  void 검색_실패는_영구_4xx만_대기하고_429_5xx_네트워크는_다음_실행에서_다시() {
+  void 검색_실패는_영구_4xx만_대기하고_401_403_429_5xx_네트워크는_다음_실행에서_다시() {
     LocalDateTime now = LocalDateTime.of(2026, 10, 31, 12, 0);
     assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.NO_COORD, "수원 안 검색 결과 없음", now.minusDays(1)), now)).isTrue();
     assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.NO_COORD, "수원 안 검색 결과 없음", now.minusDays(3)), now)).isFalse();
-    assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.ERROR, "장소 검색 실패: HttpClientErrorException (HTTP 401)", now.minusHours(1)), now)).isTrue();
+    assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.ERROR, "장소 검색 실패: HttpClientErrorException (HTTP 400)", now.minusHours(1)), now)).isTrue();
+    assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.ERROR, "장소 검색 실패: HttpClientErrorException (HTTP 401)", now.minusHours(1)), now)).isFalse();
+    assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.ERROR, "장소 검색 실패: HttpClientErrorException (HTTP 403)", now.minusHours(1)), now)).isFalse();
+    assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.NO_COORD, "x", null), now)).isFalse();
     assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.ERROR, "장소 검색 실패: HttpClientErrorException (HTTP 429)", now.minusHours(1)), now)).isFalse();
     assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.ERROR, "장소 검색 실패: HttpServerErrorException (HTTP 503)", now.minusHours(1)), now)).isFalse();
     assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.ERROR, "장소 검색 실패: ResourceAccessException", now.minusHours(1)), now)).isFalse();
@@ -320,7 +323,7 @@ class InstagramSyncServiceTest {
       public Page search(String query) {
         queries.add(query);
         throw org.springframework.web.client.HttpClientErrorException.create(
-            org.springframework.http.HttpStatus.UNAUTHORIZED, "x", null, null, null);
+            org.springframework.http.HttpStatus.BAD_REQUEST, "x", null, null, null);
       }
     };
     client.answers.put("suwon_city", List.of(post("1790000000000001", ROUNDUP)));

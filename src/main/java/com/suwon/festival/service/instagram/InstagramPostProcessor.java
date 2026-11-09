@@ -41,7 +41,7 @@ import com.suwon.festival.service.schedule.ScheduleResult;
 //  - 게시물 1개에서 오류가 나도 그 게시물만 되돌리고 다음 게시물은 계속 (InstagramSyncService 가 잡음)
 //  - 캡션 원문은 DB · 로그에 남기지 않음 (설계 문서 8번)
 //  - 이미 READY 인 블록은 키(제목 + 시작일 + 장소)가 같으므로 좌표를 다시 찾지 않고 나머지 값만 갱신 → 카카오 호출 절약
-//  - NO_COORD · 영구 실패(HTTP 4xx, 429 제외) ERROR 블록은 마지막 검색(updatedAt) 뒤 RETRY_AFTER 동안 다시 검색하지 않음
+//  - NO_COORD · 영구 실패(HTTP 4xx, 401 · 403 · 429 제외) ERROR 블록은 마지막 검색(updatedAt) 뒤 RETRY_AFTER 동안 다시 검색하지 않음
 //    (키에 장소명이 들어 있어 키가 같으면 같은 장소명) → 동기화마다 같은 실패 검색을 반복하지 않음. updatedAt 은 그대로 둠
 //  - READY 행사는 진행 날짜도 매번 다시 계산해 저장 (규칙을 고치면 창 안의 글은 다음 동기화에 반영)
 @Component
@@ -54,8 +54,8 @@ public class InstagramPostProcessor {
   // 하루짜리로 읽혔어도 다른 날이 있다는 말 ("11. 7.(토)부터 매주 토요일" · "11. 30.(월)까지" · "외 3회") → "그날만"으로 저장하지 않음
   // 실패한 장소 검색을 다시 하기까지 기다리는 시간 (동기화 하루 2번 → 약 6번 중 1번만 검색)
   static final java.time.Duration RETRY_AFTER = java.time.Duration.ofDays(3);
-  // 다시 해도 같은 결과일 HTTP 실패 (400 · 401 · 403 …). 429(호출 한도)는 잠깐이라 제외
-  private static final Pattern PERMANENT_HTTP = Pattern.compile("\\(HTTP 4(?!29)\\d\\d\\)");
+  // 다시 해도 같은 결과일 HTTP 실패 (400 · 404 …). 429(호출 한도)는 잠깐, 401 · 403(키 설정)은 키를 고치면 바로 풀려야 해서 제외
+  private static final Pattern PERMANENT_HTTP = Pattern.compile("\\(HTTP 4(?!29|01|03)\\d\\d\\)");
   private static final Pattern MORE_DAYS = Pattern.compile("부터|까지|매주|매일|외\\s*\\d|\\d\\s*회|회차");
 
   // 게시물 1개 처리 결과 (개수만)
