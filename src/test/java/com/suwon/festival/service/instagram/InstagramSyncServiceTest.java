@@ -236,6 +236,9 @@ class InstagramSyncServiceTest {
     assertThat(r.blocks().get("READY")).isEqualTo(1);
     assertThat(r.blocks().get("NO_COORD")).isEqualTo(1); // 가상 광장: 검색 결과 없음
     assertThat(r.blocks().get("NO_DATE")).isEqualTo(1);  // 매주 금~일: 반복만 있음
+    assertThat(r.blocksByAccount().get("suwon_city"))
+        .containsEntry("READY", 1).containsEntry("NO_COORD", 1).containsEntry("NO_DATE", 1)
+        .doesNotContainKey("PENDING"); // 0 은 뺌
 
     List<Event> events = instagramEvents();
     assertThat(events).hasSize(1);
@@ -358,6 +361,22 @@ class InstagramSyncServiceTest {
     assertThat(r.accountsOk()).isEqualTo(1);
     assertThat(r.accountErrors()).singleElement().asString().contains("suwon_media").contains("NOT_FOUND");
     assertThat(r.eventsSaved()).isEqualTo(1);
+    assertThat(r.blocksByAccount()).containsOnlyKeys("suwon_city"); // 수집 실패 계정은 없음
+  }
+
+  @Test
+  void 계정별_블록_수를_계정_순서대로_나눠_담음() {
+    client.answers.put("suwon_media", List.of(post("1790000000000003", null))); // 캡션 없음 → 블록 0
+    client.answers.put("suwon_city", List.of(post("1790000000000001", ROUNDUP)));
+
+    InstagramSyncResult r = service("suwon_media, suwon_city").sync();
+
+    assertThat(r.blocksByAccount()).containsOnlyKeys("suwon_media", "suwon_city");
+    assertThat(r.blocksByAccount().keySet()).containsExactly("suwon_media", "suwon_city");
+    assertThat(r.blocksByAccount().get("suwon_media")).isEmpty();
+    assertThat(r.blocksByAccount().get("suwon_city")).containsEntry("READY", 1).containsEntry("NO_COORD", 1);
+    int sumReady = r.blocksByAccount().values().stream().mapToInt(m -> m.getOrDefault("READY", 0)).sum();
+    assertThat(sumReady).isEqualTo(r.blocks().get("READY")); // 계정별 합 = 전체
   }
 
   @Test

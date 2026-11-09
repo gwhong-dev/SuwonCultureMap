@@ -39,7 +39,7 @@ class ScheduledSyncJobTest {
   void setUp() throws Exception {
     when(eventSyncService.syncEvents()).thenReturn(new SyncResult(1, 2));
     when(instagramSyncService.sync())
-        .thenReturn(new InstagramSyncResult(true, null, 1, 1, List.of(), 1, 1, 0, Map.of("READY", 3), 3, 0, 0, null, null));
+        .thenReturn(new InstagramSyncResult(true, null, 1, 1, List.of(), 1, 1, 0, Map.of("READY", 3), Map.of(), 3, 0, 0, null, null));
     when(eventMergeRunner.runAfterSync()).thenReturn(new MergeSummary(true, 0, 0, 0));
   }
 
