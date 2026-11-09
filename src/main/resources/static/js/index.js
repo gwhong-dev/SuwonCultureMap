@@ -523,8 +523,15 @@ function filterMarkers() {
   }
 
   var visibleItems = [];
+  var favScreen = onFavScreen();
 
   markerList.forEach(function (item) {
+    if (favScreen) {
+      // 찜 탭(모바일) = 따로 된 화면: 지도 쪽 조건(검색어 · 분류 · 날짜 · 구 · 지난 행사)과 상관없이 찜 전부 (종료는 배지)
+      item.runMatch = null;
+      if (favoriteEventIds.has(item.event.id)) visibleItems.push(item);
+      return;
+    }
     var matchesKeyword = matchesSearch(item.event, keyword); // 띄어쓰기 · 대소문자 무시, 제목 + 장소 (home-picks.js)
     var matchesCategory;
 
@@ -550,9 +557,9 @@ function filterMarkers() {
   });
 
   // 찜 탭(모바일) "최근 본": 위 조건 대신 최근 본 순서 그대로 (기록이라 검색어 · 날짜 · 지난 행사와 상관없이)
-  if (selectedCategory !== "찜") favView = "fav"; // 찜 탭을 나가면 다음엔 '찜'부터
+  if (!favScreen) favView = "fav"; // 찜 탭을 나가면 다음엔 '찜'부터
   var recentItems = recentMarkerItems();
-  updateFavTabs(selectedCategory === "찜" && mobileQuery.matches, visibleItems.length, recentItems.length);
+  updateFavTabs(favScreen, visibleItems.length, recentItems.length);
   if (showingRecent()) {
     recentItems.forEach(function (item) {
       item.runMatch = null; // 날짜 필터 "기간 중 · 일정 확인" 표시도 빼고
@@ -594,8 +601,15 @@ function recentMarkerItems() {
   });
 }
 
+// 찜 탭(모바일)을 보는 중인가. 분류 드롭다운 값('찜' 칩 · PC '찜')과는 따로 — 탭을 오가도 지도 쪽 분류가 그대로 남게
+var favTabOpen = false;
+
+function onFavScreen() {
+  return favTabOpen && mobileQuery.matches;
+}
+
 function showingRecent() {
-  return favView === "recent" && mobileQuery.matches && document.getElementById("categorySelect").value === "찜";
+  return favView === "recent" && onFavScreen();
 }
 
 // 찜 | 최근 본 탭: 찜 탭(모바일)에서만 보임, 개수 · 선택 표시
@@ -618,10 +632,9 @@ function updateFavTabs(visible, favCount, recentCount) {
     list.removeAttribute("role");
     list.removeAttribute("aria-labelledby");
   }
-  // 최근 본엔 날짜 · 분류 · 지난 행사 칩이 걸리지 않음 → 흐리게 하고 못 누르게 (눌러도 목록이 그대로라 고장처럼 보여서)
-  var recent = showingRecent();
-  document.body.classList.toggle("recent-view", recent);
-  document.getElementById("categoryChips").toggleAttribute("inert", recent);
+  // 찜 탭(찜 · 최근 본)엔 날짜 · 분류 · 지난 행사 칩이 걸리지 않음 → 흐리게 하고 못 누르게 (눌러도 목록이 그대로라 고장처럼 보여서)
+  document.body.classList.toggle("fav-screen", visible);
+  document.getElementById("categoryChips").toggleAttribute("inert", visible);
 }
 
 function selectFavView(view, focus) {
@@ -749,7 +762,7 @@ function renderSidebar(items) {
       note.querySelector("button").addEventListener("click", clearRecentViews);
       list.appendChild(note);
     }
-  } else if (sorted.length === 0 && document.getElementById("categorySelect").value === "찜") {
+  } else if (sorted.length === 0 && (onFavScreen() || document.getElementById("categorySelect").value === "찜")) {
     renderFavoriteEmpty(list);
   }
 
@@ -834,7 +847,7 @@ function renderSidebar(items) {
 
   // ===== (모바일) 결과 개수 + 미리보기 카드도 같은 목록으로 갱신 =====
   document.getElementById("resultCount").innerHTML =
-    (recent ? "최근 본 " : "검색 결과 ") + "<strong>" + sorted.length + "개</strong>";
+    (recent ? "최근 본 " : onFavScreen() ? "찜 " : "검색 결과 ") + "<strong>" + sorted.length + "개</strong>";
   updateSheetHeaderLabel();
   lastSortedItems = sorted;
   renderPreviewStrip(sorted);
@@ -1694,11 +1707,11 @@ function nearestSheetState(y) {
 
 // ----- 하단 탭 (홈 · 지도 · 목록 · 찜 · 마이) -----
 // 한 화면(index.html) 안의 상태를 탭으로 오가게 함: 홈 = 지도 위를 덮는 홈 화면, 지도 = 목록 살짝,
-// 목록 = 목록 전체, 찜 = '찜' 필터 + 목록 전체
+// 목록 = 목록 전체, 찜 = 찜 화면(favTabOpen, 분류 값은 안 바꿈) + 목록 전체
 // 마이는 mypage.html 링크 (로그인 안 했으면 그 페이지가 login.html 로 보냄)
 function activeTab() {
   if (homeOpen) return "home";
-  if (document.getElementById("categorySelect").value === "찜") return "fav";
+  if (favTabOpen) return "fav";
   return sheetState === "full" ? "list" : "map";
 }
 
@@ -1721,13 +1734,8 @@ function selectTab(tab) {
     return;
   }
   hideHome();
-  var select = document.getElementById("categorySelect");
   hidePreview();
-  if (tab === "fav") {
-    select.value = "찜";
-  } else if (select.value === "찜") {
-    select.value = "all"; // 찜 탭에서 나오면 전체로
-  }
+  favTabOpen = tab === "fav"; // 분류 드롭다운은 건드리지 않음 → 공연 칩 → 찜 탭 → 지도 탭이면 공연 그대로
   filterMarkers();
   setSheetState(tab === "map" ? "peek" : "full");
 }
@@ -1744,7 +1752,8 @@ var homeSoonMode = "ending"; // "ending" 곧 종료 | "starting" 곧 시작
 
 function showHome() {
   nav.close("tab"); // 홈에서 나가며 쌓은 칸을 되돌림 (뒤로 가기로 왔으면 이미 빠짐)
-  favView = "fav"; // 찜 탭을 나감 → 다음엔 '찜'부터 (홈은 카테고리를 안 바꿔서 filterMarkers 의 초기화가 안 돎)
+  favView = "fav"; // 찜 탭을 나감 → 다음엔 '찜'부터
+  favTabOpen = false;
   hidePreview();
   if (sheetState !== "peek") setSheetState("peek"); // 목록 전체(페이지 스크롤)는 풀어 두고 홈으로
   homeOpen = true;
@@ -2196,7 +2205,7 @@ mobileQuery.addEventListener("change", function (e) {
 // 찜 | 최근 본 탭 줄도 모바일 전용 → 폭이 바뀌면 다시 그림 (PC 로 가면 찜 목록으로)
 mobileQuery.addEventListener("change", function (e) {
   if (!e.matches) favView = "fav";
-  if (document.getElementById("categorySelect").value === "찜") filterMarkers();
+  if (favTabOpen || document.getElementById("categorySelect").value === "찜") filterMarkers();
 });
 
 // ----- 검색 화면 (디자인 06 입력 중): 홈 검색 버튼 · 지도 탭 검색창 → 화면 전체 -----
