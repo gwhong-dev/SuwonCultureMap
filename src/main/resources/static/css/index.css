@@ -1142,8 +1142,8 @@ body {
     font-weight: 700;
     box-shadow: inset 0 -2px 0 var(--accent);
   }
-  /* 최근 본엔 칩(날짜 · 분류 · 지난 행사)이 걸리지 않음 → 흐리게 (JS 가 inert 로 못 누르게) */
-  body.recent-view #categoryChips {
+  /* 찜 탭(찜 · 최근 본)엔 칩(날짜 · 분류 · 지난 행사)이 걸리지 않음 → 흐리게 (JS 가 inert 로 못 누르게) */
+  body.fav-screen #categoryChips {
     opacity: 0.4;
     pointer-events: none;
   }
