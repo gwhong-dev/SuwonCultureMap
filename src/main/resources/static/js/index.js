@@ -570,6 +570,77 @@ function filterMarkers() {
   renderLocationMarkers(visibleItems); // 장소별로 묶어서 마커 다시 그리기
   renderSidebar(visibleItems);
   updateSearchFavs();
+  updateFavAlertDot();
+}
+
+// ===== 찜 알림 (화면 안 배지, favorite-alerts.js): 내일 시작 · 3일 안 종료 =====
+// 찜 목록 맨 위 알림 칸 + 하단 '찜' 탭 빨간 점. 알림 칸을 보면 점이 꺼짐 (본 알림 = 이 기기 브라우저 저장소)
+var alertSeenStore = createAlertSeenStore(
+  (function () {
+    try {
+      return window.localStorage;
+    } catch (e) {
+      return null;
+    }
+  })(),
+  "suwonbible.favAlertsSeen",
+);
+
+function currentFavAlerts() {
+  return favoriteAlerts(
+    markerList.map(function (item) {
+      return item.event;
+    }),
+    favoriteEventIds,
+  );
+}
+
+function updateFavAlertDot() {
+  var unseen = unseenAlertCount(currentFavAlerts(), alertSeenStore.list());
+  var tab = document.querySelector('#tabBar .tab-item[data-tab="fav"]');
+  document.getElementById("favTabDot").hidden = unseen === 0;
+  if (unseen > 0) {
+    tab.setAttribute("aria-label", "찜, 새 알림 " + unseen + "개");
+  } else {
+    tab.removeAttribute("aria-label");
+  }
+}
+
+// 찜 목록 맨 위 알림 칸. 알림이 없으면 아무것도 안 그림. 그리면 본 것으로 기록
+function renderFavAlerts(list) {
+  var alerts = currentFavAlerts();
+  if (!alerts.length) {
+    alertSeenStore.markSeen([]);
+    return;
+  }
+  var box = document.createElement("section");
+  box.className = "fav-alerts";
+  box.setAttribute("aria-label", "찜 알림");
+  var title = document.createElement("strong");
+  title.className = "fav-alerts-title";
+  title.textContent = "곧 시작 · 곧 종료 " + alerts.length + "개";
+  box.appendChild(title);
+  var ul = document.createElement("ul");
+  alerts.forEach(function (alert) {
+    var li = document.createElement("li");
+    var button = document.createElement("button");
+    button.type = "button";
+    var badge = document.createElement("span");
+    badge.className = "fav-alert-badge " + alert.kind;
+    badge.textContent = favoriteAlertLabel(alert);
+    var name = document.createElement("span");
+    name.className = "fav-alert-name";
+    name.textContent = alert.event.title;
+    button.append(badge, name);
+    button.addEventListener("click", function () {
+      openDetailModal(alert.event);
+    });
+    li.appendChild(button);
+    ul.appendChild(li);
+  });
+  box.appendChild(ul);
+  list.appendChild(box);
+  alertSeenStore.markSeen(alerts);
 }
 
 // ===== 찜 탭 "최근 본" (디자인 05): 상세를 연 행사 번호만 이 기기 브라우저 저장소에 (recent-views.js) =====
@@ -775,6 +846,11 @@ function renderSidebar(items) {
     guestNote.innerHTML = '<span>이 기기에만 저장돼요 · 로그인하면 계정에 합쳐져요</span><button type="button">로그인</button>';
     guestNote.querySelector("button").addEventListener("click", goToLogin);
     list.appendChild(guestNote);
+  }
+
+  // 찜 목록(모바일 찜 탭 '찜' · 분류 '찜')이면 맨 위에 곧 시작 · 곧 종료 알림
+  if (!recent && favorites.length > 0 && (onFavScreen() || document.getElementById("categorySelect").value === "찜")) {
+    renderFavAlerts(list);
   }
 
   // 찜한 행사가 있을 때만 구분 제목 표시

@@ -524,6 +524,59 @@ body {
   cursor: pointer;
 }
 
+/* 찜 알림 칸: 찜 목록 맨 위 "곧 시작 · 곧 종료" (PC 모양, 모바일은 아래 미디어 쿼리에서 토큰 색으로) */
+.fav-alerts {
+  margin: 0.5rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e3dfd9;
+  background: #faf8f5;
+}
+.fav-alerts-title {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.8125rem;
+}
+.fav-alerts ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fav-alerts button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 36px;
+  padding: 0.25rem 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+}
+.fav-alert-badge {
+  flex: none;
+  padding: 2px 6px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.fav-alert-badge.ending {
+  background: #f7e9e3;
+  color: #93391f;
+}
+.fav-alert-badge.starting {
+  background: #e6eef6;
+  color: #2d5b88;
+}
+.fav-alert-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* 찜 탭이 비었을 때 안내 (PC 모양, 모바일은 아래 미디어 쿼리에서 토큰 색으로) */
 .fav-empty {
   display: flex;
@@ -1187,6 +1240,49 @@ body {
     font: inherit;
     text-decoration: underline;
     cursor: pointer;
+  }
+
+  /* 찜 알림 칸 (모바일 토큰 색) */
+  .fav-alerts {
+    grid-column: 1 / -1; /* 태블릿 2열에서도 한 줄 전체 */
+    margin: 0;
+    padding: 12px 16px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .fav-alerts-title {
+    font-size: 13px;
+  }
+  .fav-alerts button {
+    min-height: 44px;
+    font-size: 14px;
+  }
+  .fav-alert-badge {
+    font-size: 11px;
+  }
+  .fav-alert-badge.ending {
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+  }
+  .fav-alert-badge.starting {
+    background: var(--blue-soft);
+    color: var(--blue);
+  }
+  /* 하단 '찜' 탭 빨간 점: 안 본 찜 알림이 있을 때 */
+  .tab-item {
+    position: relative;
+  }
+  .tab-dot {
+    position: absolute;
+    top: 8px;
+    left: calc(50% + 8px);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .tab-dot[hidden] {
+    display: none;
   }
 
   /* ----- 상태 배지 + D-day (docs/design/mobile-design-v1.md 2번) ----- */
