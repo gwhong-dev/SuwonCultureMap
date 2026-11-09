@@ -93,6 +93,33 @@ function cardFallbackInfo(event) {
   return lines.join("\n");
 }
 
+// 무료 행사 판정 ("💸 무료" 칩) — 요금 칸(V7), 없으면(동기화 전) 원문의 요금 계열 줄
+// 운영 재단 121건 점검(11/9): "무료" 54 · "무 료" · "전석 무료" · "무료 입장" 은 무료,
+// "무료(일부 공연 및 프로그램 유료)" 처럼 유료가 섞이거나 "어린이 무료, 성인 10,000원" 처럼 금액(숫자)이 있으면 무료 아님. 요금 정보가 없는 행사(인스타 등)도 무료 아님
+var FEE_INFO_LABELS = ["이용료", "관람료", "참가비용", "참가비", "입장료", "요금"];
+
+function eventFeeText(event) {
+  if (event.fee) return event.fee;
+  var lines = (event.info || "").split("\n");
+  for (var i = 0; i < FEE_INFO_LABELS.length; i++) {
+    for (var j = 0; j < lines.length; j++) {
+      var idx = lines[j].indexOf(":");
+      if (idx === -1) continue;
+      if (lines[j].substring(0, idx).trim() !== FEE_INFO_LABELS[i]) continue; // 정확히 같은 라벨만 ("주차요금" 제외)
+      var value = lines[j].substring(idx + 1).trim();
+      if (value) return value;
+    }
+  }
+  return null;
+}
+
+function isFreeEvent(event) {
+  var fee = eventFeeText(event);
+  if (!fee) return false;
+  var compact = fee.replace(/\s+/g, "");
+  return compact.indexOf("무료") !== -1 && compact.indexOf("유료") === -1 && !/\d/.test(compact);
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     extractPlaceName: extractPlaceName,
@@ -105,5 +132,7 @@ if (typeof module !== "undefined") {
     detailInfoText: detailInfoText,
     cardImageUrl: cardImageUrl,
     cardFallbackInfo: cardFallbackInfo,
+    eventFeeText: eventFeeText,
+    isFreeEvent: isFreeEvent,
   };
 }
