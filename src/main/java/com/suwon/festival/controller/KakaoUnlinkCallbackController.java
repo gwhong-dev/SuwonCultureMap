@@ -53,13 +53,21 @@ public class KakaoUnlinkCallbackController {
       log.warn("카카오 연결 끊기 알림: user_id 없음");
       return ResponseEntity.ok().build();
     }
-    KakaoUnlinkService.Result result = kakaoUnlinkService.handleUnlink(userId.trim());
+    KakaoUnlinkService.Result result;
+    try {
+      result = kakaoUnlinkService.handleUnlink(userId.trim());
+    } catch (RuntimeException e) {
+      // 같은 알림이 동시에 두 번 와서 늦은 쪽 삭제가 실패하는 경우 등. 오류 응답이 쌓이면 콜백이 꺼질 수 있어 200
+      // 메시지에 회원번호가 들어갈 수 있으므로 예외 종류만 남김
+      log.error("카카오 연결 끊기 알림 처리 실패 referrer_type={} {}", safe(referrerType), e.getClass().getSimpleName());
+      return ResponseEntity.ok().build();
+    }
     // 회원번호는 남기지 않음 → 경로 · 결과만
     log.info("카카오 연결 끊기 알림 처리 referrer_type={} result={}", safe(referrerType), result);
     return ResponseEntity.ok().build();
   }
 
-  // 길이 · 내용 비교 시간을 같게 (키를 한 글자씩 맞혀 보는 공격 방지)
+  // 내용 비교 시간을 같게 (키를 한 글자씩 맞혀 보는 공격 방지, 길이 차이는 드러날 수 있으나 키 형식이 정해져 있음)
   private static boolean sameKey(String given, String expected) {
     if (given == null) return false;
     return MessageDigest.isEqual(given.getBytes(StandardCharsets.UTF_8), expected.getBytes(StandardCharsets.UTF_8));
