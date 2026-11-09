@@ -25,6 +25,10 @@ public record EventResponse(
         // 장소 · 시간 원문 칸. 인스타 행사는 info 가 없어 상세 화면이 이 값으로 장소 · 시간을 보여 줌
         String place,
         String timeText,
+        // 상세 정보 분해 (V7): 요금 · 문의처 · 주최 원문. 재단 행사만, 없거나 아직 동기화 전이면 null
+        String fee,
+        String contact,
+        String host,
         String source,          // SWCF / INSTAGRAM
         String sourceAccount,   // 인스타 행사를 올린 계정 이름 (재단 행사는 null)
         String district) {      // 장안구 · 권선구 · 팔달구 · 영통구. 수원 밖 · 아직 모름은 null

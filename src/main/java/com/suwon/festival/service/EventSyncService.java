@@ -131,6 +131,9 @@ public class EventSyncService {
         .link(item.link)
         .place(InfoParser.findPlace(details(item))) // 캘린더 B안: 장소·시간은 합치기 전 XML 쌍에서 바로 꺼냄
         .timeText(InfoParser.findTimeText(details(item)))
+        .fee(InfoParser.findFee(details(item))) // 상세 정보 분해 (V7)
+        .contact(InfoParser.findContact(details(item)))
+        .host(InfoParser.findHost(details(item)))
         .build();
 
     Event existing = eventRepository.findByIdx(item.idx).orElse(null);
@@ -148,14 +151,17 @@ public class EventSyncService {
     // ① 재단 쪽 내용이 수정됐거나 (pubDate가 더 최신)
     // ② 예전에 저장할 때 link가 비어 있었는데 지금은 값이 있으면 (link 컬럼 추가 전에 저장된 행사)
     // ③ 저장된 제목이 지금 제목과 다르면 (htmlUnescape 적용 전에 &#39; 그대로 저장된 행사)
-    // ④ 정리 방식이 바뀌어 info·장소·시간이 달라졌으면 (태그 제거 적용 전 / 장소·시간 칸 추가 전에 저장된 행사)
+    // ④ 정리 방식이 바뀌어 info·장소·시간·요금·문의·주최가 달라졌으면 (태그 제거 적용 전 / 칸 추가(V7 포함) 전에 저장된 행사)
     // → 최신 값으로 갱신. 모두 아니면 그대로 건너뜀
     boolean changed = latest.getPubDate().isAfter(existing.getPubDate());
     boolean linkMissing = existing.getLink() == null && latest.getLink() != null;
     boolean titleFixed = !Objects.equals(existing.getTitle(), latest.getTitle());
     boolean detailFixed = !Objects.equals(existing.getInfo(), latest.getInfo())
         || !Objects.equals(existing.getPlace(), latest.getPlace())
-        || !Objects.equals(existing.getTimeText(), latest.getTimeText());
+        || !Objects.equals(existing.getTimeText(), latest.getTimeText())
+        || !Objects.equals(existing.getFee(), latest.getFee())
+        || !Objects.equals(existing.getContact(), latest.getContact())
+        || !Objects.equals(existing.getHost(), latest.getHost());
 
     // ⑤ 기간이 달라졌으면 (진행 날짜만 고쳐져 기간 밖 날짜가 나가지 않게)
     boolean periodFixed = !Objects.equals(existing.getStartDate(), latest.getStartDate())

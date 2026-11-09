@@ -88,6 +88,16 @@ public class Event {
   // 시간 원문 (XML "시간" 항목). 형식이 제각각이라 원문 그대로 보관,
   // 캘린더는 확실한 형식일 때만 시간 지정 일정으로 씀 (InfoParser.parseTime)
 
+  // 상세 정보 분해 (V7): XML "이용료 · 관람료 …" / "문의처" / "주최/주관" 항목 원문. 없으면 null
+  @Column(length = 500)
+  private String fee;
+
+  @Column(length = 200)
+  private String contact;
+
+  @Column(length = 500)
+  private String host;
+
   @Column(nullable = false, length = 20)
   private String source;
   // 출처 (SOURCE_SWCF / SOURCE_INSTAGRAM). Enum 이 아니라 String 인 이유는 category 와 같음 (출처가 늘어도 매핑 에러 없음)
@@ -126,7 +136,8 @@ public class Event {
   @Builder
   public Event(Long idx, String title, String category, Double latitude,
       Double longitude, String imageUrl, String info, LocalDateTime pubDate, LocalDate startDate, LocalDate endDate,
-      String link, String place, String timeText, String source, String sourceKey) {
+      String link, String place, String timeText, String fee, String contact, String host, String source,
+      String sourceKey) {
     this.idx = idx;
     this.title = title;
     this.category = category;
@@ -140,6 +151,9 @@ public class Event {
     this.link = link;
     this.place = place;
     this.timeText = timeText;
+    this.fee = fee;
+    this.contact = contact;
+    this.host = host;
     this.source = source == null ? SOURCE_SWCF : source; // 지정 안 하면 재단 행사 (기존 동기화 코드는 그대로)
     this.sourceKey = sourceKey;
   }
@@ -163,6 +177,9 @@ public class Event {
     this.link = latest.link;
     this.place = latest.place;
     this.timeText = latest.timeText;
+    this.fee = latest.fee;
+    this.contact = latest.contact;
+    this.host = latest.host;
   }
 
   public void updateSchedule(String status, String text, boolean holidayNote) {
