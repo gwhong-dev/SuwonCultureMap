@@ -146,7 +146,7 @@
 
 - [ ] PR #8 머지 후 dev 파일의 `kakao.redirect-uri`·`google.redirect-uri` 줄 삭제 (`app.base-url`로 자동 생성되게)
 - [x] 네이버 토큰 요청 URL `code` · `state` 인코딩 → #112 (11/3). 네이버 로그인 실제 이동은 사용자 PC 확인
-- [ ] `setup-docker.ps1` 의 properties 특수 표기(`\=` `\:` `\uXXXX`, 줄 끝 `\` 이어쓰기) 미처리 — 현재 dev 견본 형식엔 해당 없음 (PR #14 리뷰)
+- [x] `setup-docker.ps1` 의 properties 특수 표기(`\=` `\:` `\uXXXX`, 줄 끝 `\` 이어쓰기) 미처리 — 현재 dev 견본 형식엔 해당 없음 (PR #14 리뷰) → `Read-JavaProperties` 로 처리 (11/9, 실제 PowerShell 실행은 사용자 PC 확인 필요)
 - [ ] 행사 제목에 `&#39;`가 그대로 보임 (예: `&#39;어울야락(夜樂)&#39;`, 폰 테스트 중 발견) — `title`은 이미 `htmlUnescape` 함(`EventSyncService.java:63`). 사용자 PC에서 **재동기화 후에도 남는지** 확인 → 남으면 원문 XML 인코딩 횟수(이중 이상) 확인 (PR #20 리뷰)
 - [ ] 캘린더: 기간이 긴 상설 행사는 달력에 몇 달짜리 막대로 표시됨 (A안 종일 일정의 특성) → B안도 여러 날 행사는 종일 유지, 회차·요일 반영은 후속 검토 (PR #21 기기 확인)
 - [ ] 캘린더 테스트: 구글 메모에 `"원문: "` 접두어까지 확인하는 단언 추가 (PR #21 추가 커밋 리뷰, 선택)
