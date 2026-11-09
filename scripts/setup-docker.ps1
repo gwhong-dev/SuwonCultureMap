@@ -8,6 +8,80 @@ Set-Location -LiteralPath $root
 $dev     = 'src\main\resources\application-dev.properties'
 $envFile = Join-Path $root '.env'
 
+# application-dev.properties 를 Java properties 규칙대로 읽어 키→값 표로 돌려줌
+#  - 주석(# !) · 빈 줄 제외, 구분자는 첫 번째 이스케이프 안 된 = : 또는 공백
+#  - 줄 끝 \ (홀수 개) → 다음 줄과 이어붙임 (다음 줄 앞 공백 제거)
+#  - \= \: \# \! \\ \  → 그 글자, \t \n \r \f → 제어문자, \uXXXX → 유니코드 글자
+#  - 값 끝 공백은 지움 (이스케이프한 \  공백은 유지)
+function Read-JavaProperties([string]$path) {
+    $result = @{}
+    $natural = @(Get-Content -LiteralPath $path -Encoding UTF8)
+    $i = 0
+    while ($i -lt $natural.Count) {
+        $line = ([string]$natural[$i]).TrimStart(" `t`f"); $i++
+        if ($line.Length -eq 0 -or $line[0] -eq '#' -or $line[0] -eq '!') { continue }
+        # 이어쓰기: 끝의 \ 개수가 홀수면 마지막 \ 를 떼고 다음 줄을 붙임
+        while ($true) {
+            $n = 0; $k = $line.Length - 1
+            while ($k -ge 0 -and $line[$k] -eq '\') { $n++; $k-- }
+            if ($n % 2 -eq 0) { break }
+            $line = $line.Substring(0, $line.Length - 1)
+            if ($i -ge $natural.Count) { break }
+            $line += ([string]$natural[$i]).TrimStart(" `t`f"); $i++
+        }
+        # 키 끝 찾기
+        $p = 0
+        while ($p -lt $line.Length) {
+            $c = $line[$p]
+            if ($c -eq '\') { $p += 2; continue }
+            if ($c -eq '=' -or $c -eq ':' -or $c -eq ' ' -or $c -eq "`t" -or $c -eq "`f") { break }
+            $p++
+        }
+        if ($p -gt $line.Length) { $p = $line.Length }
+        $rawKey = $line.Substring(0, $p)
+        # 구분자: 공백* [= 또는 :]? 공백*
+        while ($p -lt $line.Length -and (' ', "`t", "`f") -contains [string]$line[$p]) { $p++ }
+        if ($p -lt $line.Length -and ($line[$p] -eq '=' -or $line[$p] -eq ':')) { $p++ }
+        while ($p -lt $line.Length -and (' ', "`t", "`f") -contains [string]$line[$p]) { $p++ }
+        $key = (Convert-PropertiesEscape $rawKey).Value
+        $val = Convert-PropertiesEscape $line.Substring($p)
+        # 값 끝 공백 제거 (이스케이프한 글자 위치 이후는 유지)
+        $v = $val.Value
+        $end = $v.Length
+        while ($end -gt $val.Keep -and (' ', "`t", "`f") -contains [string]$v[$end - 1]) { $end-- }
+        $result[$key] = $v.Substring(0, $end)
+    }
+    return $result
+}
+
+# 이스케이프 해석. Keep = 마지막 이스케이프 글자 다음 위치 (끝 공백 제거의 하한)
+function Convert-PropertiesEscape([string]$s) {
+    $sb = New-Object System.Text.StringBuilder
+    $keep = 0
+    $j = 0
+    while ($j -lt $s.Length) {
+        $c = $s[$j]
+        if ($c -ne '\') { [void]$sb.Append($c); $j++; continue }
+        $j++
+        if ($j -ge $s.Length) { break }
+        $e = $s[$j]; $j++
+        switch -CaseSensitive ([string]$e) {
+            't' { [void]$sb.Append("`t") }
+            'n' { [void]$sb.Append("`n") }
+            'r' { [void]$sb.Append("`r") }
+            'f' { [void]$sb.Append("`f") }
+            'u' {
+                $hex = if ($j + 4 -le $s.Length) { $s.Substring($j, 4) } else { '' }
+                if ($hex -notmatch '^[0-9A-Fa-f]{4}$') { throw ('properties 의 \u 표기가 잘못됨 (\uXXXX 형식 아님)') }
+                [void]$sb.Append([char][Convert]::ToInt32($hex, 16)); $j += 4
+            }
+            default { [void]$sb.Append($e) }
+        }
+        $keep = $sb.Length
+    }
+    return [pscustomobject]@{ Value = $sb.ToString(); Keep = $keep }
+}
+
 Write-Host ''
 Write-Host '===== 수원 문화지도 · Docker 준비 (.env 생성) ====='
 Write-Host ''
@@ -17,10 +91,7 @@ if (Test-Path -LiteralPath $envFile) {
     # 단, 나중에 생긴 선택 항목(인스타)이 dev 파일에 있고 .env 에 없으면 그 줄만 끝에 보충
     $added = @()
     if (Test-Path -LiteralPath $dev) {
-        $devProps = @{}
-        foreach ($l in Get-Content -LiteralPath $dev -Encoding UTF8) {
-            if ($l -match '^\s*([^#!\s=:][^=:]*?)\s*[=:]\s*(.*)$') { $devProps[$Matches[1].Trim()] = $Matches[2].Trim() }
-        }
+        $devProps = Read-JavaProperties $dev
         $existing = Get-Content -LiteralPath $envFile -Encoding UTF8
         $supplement = [ordered]@{ KAKAO_ADMIN_KEY = 'kakao.admin-key'; INSTAGRAM_ACCESS_TOKEN = 'instagram.access-token'; INSTAGRAM_USER_ID = 'instagram.user-id'; INSTAGRAM_ACCOUNTS = 'instagram.accounts' }
         foreach ($e in $supplement.GetEnumerator()) {
@@ -43,13 +114,8 @@ if (-not (Test-Path -LiteralPath $dev)) {
     exit 1
 }
 
-# key=value / key: value 형식만 읽음 (주석·빈 줄 제외)
-$props = @{}
-foreach ($l in Get-Content -LiteralPath $dev -Encoding UTF8) {
-    if ($l -match '^\s*([^#!\s=:][^=:]*?)\s*[=:]\s*(.*)$') {
-        $props[$Matches[1].Trim()] = $Matches[2].Trim()
-    }
-}
+# Java properties 규칙대로 읽음 (이스케이프 · 줄 이어쓰기 포함)
+$props = Read-JavaProperties $dev
 
 # .env 이름 ← dev 파일 키
 $map = [ordered]@{
