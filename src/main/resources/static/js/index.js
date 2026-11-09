@@ -417,15 +417,15 @@ function showEvents(events) {
     markerList.push({ event: event });
   });
   eventsLoaded = true;
-  // 이 기기 찜에서 지금 없는 행사(삭제 · 숨김) 번호를 정리 — 비로그인이면 ♥ 표시 기준도 다시
-  var removedGuest = guestFavorites.prune(
+  // 이 기기 찜이 가득 찼을 때 밀어낼 번호(화면에 없는 행사)를 고르는 기준. 저장된 번호는 지우지 않음
+  // (다른 행사에 합쳐 숨긴 번호도 로그인 때 서버가 대표 행사로 옮김)
+  guestFavorites.setKnownIds(
     new Set(
       events.map(function (event) {
         return event.id;
       }),
     ),
   );
-  if (removedGuest && !isLoggedIn) favoriteEventIds = new Set(guestFavorites.list());
 
   filterMarkers();
   renderHome();
