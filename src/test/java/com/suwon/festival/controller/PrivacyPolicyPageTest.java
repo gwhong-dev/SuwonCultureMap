@@ -70,6 +70,16 @@ class PrivacyPolicyPageTest {
   }
 
   @Test
+  void 비회원_찜은_기기에_두고_로그인하면_계정에_합친다고_적음() throws Exception {
+    // 비회원 찜(guest-favorites.js): 행사 번호만 localStorage, 로그인 때만 서버로 (POST /api/favorites/merge)
+    String html = mockMvc.perform(get("/privacy.html")).andReturn().getResponse()
+        .getContentAsString(StandardCharsets.UTF_8);
+
+    assertThat(html).contains("로그인하지 않고 찜한 행사 번호(최대 100개)", "회원의 찜 목록에 합치고",
+        "로그인하지 않으면 서버로 보내지 않습니다");
+  }
+
+  @Test
   void 메인_로그인_마이페이지에_링크가_있음() throws Exception {
     for (String page : new String[] { "/index.html", "/login.html", "/mypage.html" }) {
       String html = mockMvc.perform(get(page)).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);

@@ -503,6 +503,27 @@ body {
   cursor: pointer;
 }
 
+/* 비회원 찜 목록 맨 위 안내 (PC 모양, 모바일은 아래 미디어 쿼리의 .recent-note) */
+.guest-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  color: #666;
+  font-size: 0.8125rem;
+}
+.guest-note button {
+  flex: none;
+  padding: 0.25rem 0;
+  border: 0;
+  background: none;
+  color: #666;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* 찜 탭이 비었을 때 안내 (PC 모양, 모바일은 아래 미디어 쿼리에서 토큰 색으로) */
 .fav-empty {
   display: flex;

@@ -1,4 +1,4 @@
-// 찜 안내 문구 시험 — 토스트 · 찜 탭 빈 상태 (찜은 로그인 회원만)
+// 찜 안내 문구 시험 — 토스트 · 찜 탭 빈 상태 (회원 = 서버, 비회원 = 이 기기)
 const test = require("node:test");
 const assert = require("node:assert");
 const {
@@ -9,12 +9,13 @@ const {
   isLoginRequiredError,
 } = require("../../main/resources/static/favorite-ui.js");
 
-test("빈 찜 탭: 로그인 안 했으면 로그인 버튼 (찜 개수와 상관없이)", () => {
+test("빈 찜 탭: 비회원이 찜 0개면 둘러보기 + 이 기기 · 합치기 안내, 찜이 걸러졌으면 조건 안내", () => {
   const state = favoriteEmptyState(false, 0);
-  assert.strictEqual(state.title, "로그인하고 찜해 보세요");
-  assert.strictEqual(state.action, "login");
-  assert.strictEqual(state.actionLabel, "로그인");
-  assert.strictEqual(favoriteEmptyState(false, 3).action, "login");
+  assert.strictEqual(state.title, "아직 찜한 행사가 없어요");
+  assert.ok(state.body.includes("이 기기"));
+  assert.ok(state.body.includes("로그인하면 계정에 합쳐져요"));
+  assert.strictEqual(state.action, "browse");
+  assert.strictEqual(favoriteEmptyState(false, 3).title, "조건에 맞는 찜한 행사가 없어요");
 });
 
 test("빈 찜 탭: 로그인했는데 찜이 0개면 행사 둘러보기", () => {
@@ -37,8 +38,8 @@ test("찜 토스트: 담으면 '보기' 버튼, 해제는 글만", () => {
   assert.deepStrictEqual(favoriteToast(false), { text: "찜을 해제했어요", actionLabel: null });
 });
 
-test("비로그인 ♡ 토스트: 로그인 버튼", () => {
-  assert.deepStrictEqual(FAVORITE_LOGIN_TOAST, { text: "로그인하면 찜할 수 있어요", actionLabel: "로그인" });
+test("세션 만료 ♡ 토스트: 로그인 버튼", () => {
+  assert.deepStrictEqual(FAVORITE_LOGIN_TOAST, { text: "로그인이 풀렸어요. 다시 로그인해 주세요", actionLabel: "로그인" });
 });
 
 test("실패 토스트: 서버 안내 글은 그대로, 비었거나 HTML · 긴 본문이면 기본 문구", () => {
