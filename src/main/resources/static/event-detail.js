@@ -1,35 +1,29 @@
 // 상세 화면 표시 규칙 — 인스타 행사처럼 info 원문 · 사진이 없을 때 장소 · 시간 · 출처로 채움
 // 재단 행사(info 있음)는 지금처럼 info 원문 기준. 시험: node --test src/test/js/ (CI 에서 실행)
 
-// ===== info 텍스트에서 "장소" 값만 뽑기 (목록 팝업 제목용) =====
-// 라벨이 "장소" 하나로만 안 오고 "행사장소", "공연장소" 등으로도 와서
-// 포함 여부로 찾음. "장소" 계열이 아예 없으면 "주소/소재지"로 대체
+// ===== info 텍스트에서 "장소" 값만 뽑기 (place 칸이 빌 때만 씀) =====
+// 서버(InfoParser.findPlace)와 같은 규칙: 라벨이 정확히 "장소" → "주소/소재지" → "주소" 순 (빈 값은 건너뜀)
+// 운영 재단 121건 점검(11/9): 장소 121 · 주소/소재지 3 · 주소 1 — "행사장소" 같은 라벨은 없음
+var PLACE_INFO_LABELS = ["장소", "주소/소재지", "주소"];
+
 function extractPlaceName(infoText) {
   if (!infoText) return null;
   var lines = infoText.split("\n");
-  var addressFallback = null;
-
-  for (var i = 0; i < lines.length; i++) {
-    var idx = lines[i].indexOf(":");
-    if (idx === -1) continue;
-    var label = lines[i].substring(0, idx).trim();
-    var value = lines[i].substring(idx + 1).trim();
-
-    if (label.indexOf("장소") !== -1) {
-      return value;
-    }
-    if (!addressFallback && label.indexOf("주소") !== -1) {
-      addressFallback = value;
+  for (var i = 0; i < PLACE_INFO_LABELS.length; i++) {
+    for (var j = 0; j < lines.length; j++) {
+      var idx = lines[j].indexOf(":");
+      if (idx === -1) continue;
+      if (lines[j].substring(0, idx).trim() !== PLACE_INFO_LABELS[i]) continue;
+      var value = lines[j].substring(idx + 1).trim();
+      if (value) return value;
     }
   }
-
-  return addressFallback;
+  return null;
 }
 
-// 장소명: info 원문이 있으면 거기서만 (재단 행사는 그대로), 없으면 place 칸 (인스타 캡션에서 뽑은 장소)
+// 장소명: 서버가 꺼낸 place 칸(재단 = XML 장소 쌍, 인스타 = 캡션) 먼저, 비면 info 원문에서 같은 규칙으로
 function eventPlace(event) {
-  if (event.info) return extractPlaceName(event.info);
-  return event.place || null;
+  return event.place || extractPlaceName(event.info);
 }
 
 // 시간: info 원문이 없을 때만 timeText 칸 (있으면 원문에서 찾은 값을 씀 → null)
