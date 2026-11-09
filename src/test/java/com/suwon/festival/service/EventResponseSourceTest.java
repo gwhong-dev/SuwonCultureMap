@@ -66,7 +66,8 @@ class EventResponseSourceTest {
   void 재단_행사는_출처_계정이_없고_info_가_그대로() {
     Event event = eventRepository.saveAndFlush(Event.builder()
         .idx(990001L).title("가상 행사 재단").category("전시").latitude(37.28).longitude(127.01).pubDate(AT)
-        .info("장소: 가상 전시관").place("가상 전시관").build());
+        .info("장소: 가상 전시관").place("가상 전시관")
+        .fee("무료").contact("031-000-0000").host("가상 재단").build());
     em.clear();
 
     EventResponse response = find(event.getId());
@@ -74,6 +75,10 @@ class EventResponseSourceTest {
     assertThat(response.source()).isEqualTo(Event.SOURCE_SWCF);
     assertThat(response.sourceAccount()).isNull();
     assertThat(response.info()).isEqualTo("장소: 가상 전시관");
+    // 상세 정보 분해 (V7) 칸도 응답에 실림
+    assertThat(response.fee()).isEqualTo("무료");
+    assertThat(response.contact()).isEqualTo("031-000-0000");
+    assertThat(response.host()).isEqualTo("가상 재단");
   }
 
   @Test

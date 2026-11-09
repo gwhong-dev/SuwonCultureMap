@@ -24,6 +24,11 @@ public final class InfoParser {
   // 실제 데이터 141건 점검 결과: "장소" 141건으로 통일. 없을 때만 주소 계열을 씀
   private static final List<String> PLACE_LABELS = List.of("장소", "주소/소재지", "주소");
   private static final String TIME_LABEL = "시간";
+  // 상세 정보 분해 (V7). 운영 재단 121건 점검(11/9): 이용료 92 · 관람료 28 · 참가비용 1, 문의처 119, 주최/주관 121 · 주관 14
+  // 앞 라벨부터 찾고, 라벨은 정확히 같을 때만 ("주차요금" 같은 것은 안 걸림)
+  private static final List<String> FEE_LABELS = List.of("이용료", "관람료", "참가비용", "참가비", "입장료", "요금");
+  private static final List<String> CONTACT_LABELS = List.of("문의처", "문의");
+  private static final List<String> HOST_LABELS = List.of("주최/주관", "주최", "주관");
   private static final String WEEKDAY_LABEL = "요일";
 
   // 알려진 HTML 태그만 지움 → "<파랑새>" 같은 작품명 꺾쇠는 남김
@@ -38,6 +43,9 @@ public final class InfoParser {
   // DB 칸 길이 (Event.place / Event.timeText) — 넘으면 저장 실패하므로 미리 자름
   static final int PLACE_MAX = 500;
   static final int TIME_TEXT_MAX = 1000;
+  static final int FEE_MAX = 500;
+  static final int CONTACT_MAX = 200;
+  static final int HOST_MAX = 500;
 
   // 시간이 "딱 한 개"일 때만 인정: 14:00 / 19:00~19:40 / 16:30-18:00 / 10:00~ / 14:00~15:00 (60분) / 14:00 (60분)
   // 여러 회차(14:00, 17:00), 요일별, 부가설명이 붙은 것은 일부러 인정하지 않음
@@ -65,6 +73,26 @@ public final class InfoParser {
     for (String label : PLACE_LABELS) {
       String v = find(details, label);
       if (v != null) return limit(v, PLACE_MAX);
+    }
+    return null;
+  }
+
+  public static String findFee(List<ContentInfoDetail> details) {
+    return limit(findFirst(details, FEE_LABELS), FEE_MAX);
+  }
+
+  public static String findContact(List<ContentInfoDetail> details) {
+    return limit(findFirst(details, CONTACT_LABELS), CONTACT_MAX);
+  }
+
+  public static String findHost(List<ContentInfoDetail> details) {
+    return limit(findFirst(details, HOST_LABELS), HOST_MAX);
+  }
+
+  private static String findFirst(List<ContentInfoDetail> details, List<String> labels) {
+    for (String label : labels) {
+      String v = find(details, label);
+      if (v != null) return v;
     }
     return null;
   }

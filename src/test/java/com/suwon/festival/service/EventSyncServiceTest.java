@@ -137,6 +137,47 @@ class EventSyncServiceTest {
         .satisfies(e -> assertThat(e.getImageUrl()).isEqualTo("https://www.swcf.or.kr/b.jpg"));
   }
 
+  @Test
+  void 요금_문의처_주최를_저장하고_칸이_비어_있던_행사는_다음_동기화에_채움() {
+    EventItem it = withDetails(item(880303L, "분해 행사"),
+        "이용료", "무료", "문의처", "031-290-3600", "주최/주관", "수원문화재단", "장소", "수원화성");
+    eventSyncService.syncItems(List.of(it));
+    Event saved = eventRepository.findByIdx(880303L).orElseThrow();
+    assertThat(saved.getFee()).isEqualTo("무료");
+    assertThat(saved.getContact()).isEqualTo("031-290-3600");
+    assertThat(saved.getHost()).isEqualTo("수원문화재단");
+
+    // V7 전에 저장된 행(요금 · 문의 · 주최 칸이 빈 상태)을 흉내 → pubDate 가 같아도 다음 동기화에 채워야 함
+    saved.updateFrom(Event.builder().idx(880303L).title(saved.getTitle()).category(saved.getCategory())
+        .latitude(saved.getLatitude()).longitude(saved.getLongitude()).imageUrl(saved.getImageUrl())
+        .info(saved.getInfo()).pubDate(saved.getPubDate()).startDate(saved.getStartDate())
+        .endDate(saved.getEndDate()).link(saved.getLink()).place(saved.getPlace()).timeText(saved.getTimeText())
+        .build());
+    eventRepository.saveAndFlush(saved);
+    assertThat(eventRepository.findByIdx(880303L).orElseThrow().getFee()).isNull();
+
+    SyncResult result = eventSyncService.syncItems(List.of(it));
+
+    assertThat(result.updated()).isEqualTo(1);
+    assertThat(eventRepository.findByIdx(880303L)).get().satisfies(e -> {
+      assertThat(e.getFee()).isEqualTo("무료");
+      assertThat(e.getContact()).isEqualTo("031-290-3600");
+      assertThat(e.getHost()).isEqualTo("수원문화재단");
+    });
+  }
+
+  private static EventItem withDetails(EventItem it, String... labelAndContent) {
+    it.contentInfo = new com.suwon.festival.dto.xml.ContentInfo();
+    it.contentInfo.contentInfoDetail = new java.util.ArrayList<>();
+    for (int i = 0; i < labelAndContent.length; i += 2) {
+      com.suwon.festival.dto.xml.ContentInfoDetail d = new com.suwon.festival.dto.xml.ContentInfoDetail();
+      d.infoItem = labelAndContent[i];
+      d.infoContent = labelAndContent[i + 1];
+      it.contentInfo.contentInfoDetail.add(d);
+    }
+    return it;
+  }
+
   private static EventItem withPhoto(EventItem it, String url) {
     PhotoInfo photo = new PhotoInfo();
     photo.photoUrl = url;

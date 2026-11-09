@@ -42,7 +42,7 @@ class RepositorySchemaTest {
   @Test
   void Flyway가_마지막_버전까지_적용함() {
     assertThat(flyway.info().current()).isNotNull();
-    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("6"); // V6 = event.district
+    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("7"); // V7 = event.fee · contact · host
     assertThat(flyway.info().pending()).isEmpty();
   }
 
@@ -65,6 +65,7 @@ class RepositorySchemaTest {
         .pubDate(LocalDateTime.of(2026, 10, 31, 12, 0))
         .startDate(LocalDate.of(2026, 11, 5)).endDate(LocalDate.of(2026, 11, 7))
         .link("l".repeat(1000)).place("p".repeat(500)).timeText("t".repeat(1000))
+        .fee("f".repeat(500)).contact("c".repeat(200)).host("h".repeat(500)) // V7 칸 길이 끝까지
         .build());
 
     favoriteRepository.saveAndFlush(Favorite.builder()
@@ -76,6 +77,9 @@ class RepositorySchemaTest {
     assertThat(eventRepository.findById(event.getId())).get()
         .satisfies(e -> {
           assertThat(e.getPlace()).hasSize(500);
+          assertThat(e.getFee()).hasSize(500);
+          assertThat(e.getContact()).hasSize(200);
+          assertThat(e.getHost()).hasSize(500);
           assertThat(e.getInfo()).hasSize("긴 설명 ".length() * 200);
           assertThat(e.getEndDate()).isEqualTo(LocalDate.of(2026, 11, 7));
         });

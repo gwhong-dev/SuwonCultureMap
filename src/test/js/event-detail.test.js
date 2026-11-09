@@ -11,6 +11,7 @@ const {
   detailInfoText,
   cardImageUrl,
   cardFallbackInfo,
+  detailFields,
 } = require("../../main/resources/static/event-detail.js");
 
 const instagram = {
@@ -94,4 +95,15 @@ test("목록 카드 요약: info 가 없으면 장소 · 시간 줄 (출처는 �
 
 test("목록 카드 요약: 재단 행사(info 있음)는 빈 값 → 기존 이용료/장소/시간 요약을 씀", () => {
   assert.strictEqual(cardFallbackInfo(foundation), "");
+});
+
+test("detailFields: 서버가 분해한 요금 · 문의 · 주최 칸 (V7), 없으면 null → 화면이 원문에서 찾음", () => {
+  assert.deepStrictEqual(detailFields({ fee: "무료", contact: "031-290-3600", host: "수원문화재단" }), {
+    fee: "무료",
+    contact: "031-290-3600",
+    host: "수원문화재단",
+  });
+  // 동기화 전 옛 행(칸 없음) · 빈 글자
+  assert.deepStrictEqual(detailFields({ info: "이용료: 무료" }), { fee: null, contact: null, host: null });
+  assert.deepStrictEqual(detailFields({ fee: "", contact: null }), { fee: null, contact: null, host: null });
 });

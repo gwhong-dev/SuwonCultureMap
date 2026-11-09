@@ -55,6 +55,9 @@ public class EventService {
             runDates.get(event.getId()).confirmedDates(),
             event.getPlace(),
             event.getTimeText(),
+            event.getFee(),
+            event.getContact(),
+            event.getHost(),
             event.getSource(),
             accounts.get(event.getId()),
             Event.DISTRICT_OUTSIDE.equals(event.getDistrict()) ? null : event.getDistrict()))

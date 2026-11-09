@@ -38,6 +38,15 @@ function fallbackTime(event) {
   return event.timeText || null;
 }
 
+// 상세 정보 분해 (V7): 서버가 원문에서 꺼낸 요금 · 문의처 · 주최 칸. 동기화 전(옛 행)이면 null → 화면이 원문에서 찾음
+function detailFields(event) {
+  return {
+    fee: event.fee || null,
+    contact: event.contact || null,
+    host: event.host || null,
+  };
+}
+
 function isInstagramEvent(event) {
   return event.source === "INSTAGRAM";
 }
@@ -89,6 +98,7 @@ if (typeof module !== "undefined") {
     extractPlaceName: extractPlaceName,
     eventPlace: eventPlace,
     fallbackTime: fallbackTime,
+    detailFields: detailFields,
     sourceLabel: sourceLabel,
     safeLink: safeLink,
     linkButtonText: linkButtonText,

@@ -83,6 +83,39 @@ class InfoParserTest {
     assertThat(InfoParser.findTimeText(null)).isNull();
   }
 
+  // ===== 요금 · 문의처 · 주최 꺼내기 (V7, 상세 정보 분해) =====
+
+  @Test
+  void 요금_문의처_주최를_XML_쌍에서_꺼냄() {
+    List<ContentInfoDetail> d = details(
+        "문의처", "031-244-2164",
+        "주최/주관", "예술경영지원센터/수원문화원 빛누리아트홀",
+        "이용료", "전석 10,000원",
+        "장소", "수원문화원 빛누리아트홀");
+    assertThat(InfoParser.findFee(d)).isEqualTo("전석 10,000원");
+    assertThat(InfoParser.findContact(d)).isEqualTo("031-244-2164");
+    assertThat(InfoParser.findHost(d)).isEqualTo("예술경영지원센터/수원문화원 빛누리아트홀");
+  }
+
+  @Test
+  void 요금은_관람료_참가비용도_찾고_주차요금은_안_걸림() {
+    assertThat(InfoParser.findFee(details("관람료", "R석 30,000원 / S석 20,000원"))).isEqualTo("R석 30,000원 / S석 20,000원");
+    assertThat(InfoParser.findFee(details("참가비용", "무료"))).isEqualTo("무료");
+    assertThat(InfoParser.findFee(details("주차요금", "1,000원"))).isNull();
+    // 이용료가 비어 있으면 다음 라벨로
+    assertThat(InfoParser.findFee(details("이용료", "<br>", "관람료", "5,000원"))).isEqualTo("5,000원");
+    assertThat(InfoParser.findHost(details("주관", "수원문화재단"))).isEqualTo("수원문화재단");
+    assertThat(InfoParser.findContact(details("장소", "행궁"))).isNull();
+    assertThat(InfoParser.findFee(null)).isNull();
+  }
+
+  @Test
+  void 너무_긴_요금_문의처_주최는_칸_길이에_맞춰_자름() {
+    assertThat(InfoParser.findFee(details("이용료", "가".repeat(600)))).hasSize(InfoParser.FEE_MAX);
+    assertThat(InfoParser.findContact(details("문의처", "1".repeat(300)))).hasSize(InfoParser.CONTACT_MAX);
+    assertThat(InfoParser.findHost(details("주최/주관", "나".repeat(600)))).hasSize(InfoParser.HOST_MAX);
+  }
+
   // ===== 시간 해석: 확실한 1개만 =====
 
   @Test

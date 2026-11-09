@@ -667,8 +667,9 @@ function clearRecentViews() {
   showToast("최근 본 기록을 지웠어요");
 }
 
-// ===== Side-bar용 info 요약 (이용료/장소/시간만 추출) =====
-function extractSummaryInfo(infoText) {
+// ===== Side-bar용 info 요약 (요금/장소/시간만 추출) =====
+// fee = 서버가 꺼낸 요금 칸(V7, 관람료 · 참가비용 포함). 없으면(동기화 전) 원문의 "이용료" 줄
+function extractSummaryInfo(infoText, fee) {
   if (!infoText) return "";
 
   // "라벨: 내용" 형태의 줄들을 라벨 기준으로 매핑
@@ -682,10 +683,13 @@ function extractSummaryInfo(infoText) {
 
   var result = [];
 
-  // 1) 이용료, 장소 순서로 먼저 추가
-  ["이용료", "장소"].forEach(function (label) {
-    if (map[label]) result.push(map[label]);
-  });
+  // 1) 요금, 장소 순서로 먼저 추가
+  if (fee) {
+    result.push("요금: " + fee);
+  } else if (map["이용료"]) {
+    result.push(map["이용료"]);
+  }
+  if (map["장소"]) result.push(map["장소"]);
 
   // 2) 요일/시간 관련 라벨은 API마다 이름이 달라서 포함 여부로 탐색
   Object.keys(map).forEach(function (label) {
@@ -786,7 +790,7 @@ function renderSidebar(items) {
     var imgSrc = cardImageUrl(item.event); // 사진이 없으면(인스타 행사 등) null → 사진 칸 없이
     div.className = "event-item" + (imgSrc ? "" : " no-photo");
     var infoText = item.event.info
-      ? extractSummaryInfo(item.event.info) // 사이드바엔 이용료/장소/시간만
+      ? extractSummaryInfo(item.event.info, item.event.fee) // 사이드바엔 요금/장소/시간만
       : cardFallbackInfo(item.event); // info 원문이 없으면 장소 · 시간 칸
     var isFavorited = favoriteEventIds.has(item.event.id); // 찜 여부 확인
 
@@ -1097,7 +1101,9 @@ function renderDetailMobile(event) {
   document.getElementById("detailMeta").textContent =
     [event.category, district].filter(Boolean).join(" · ");
 
-  // 정보 표: 기간 · 일정 · 시간 · 장소 · 요금 (값이 있는 줄만). 원문 분해 전까지는 라벨 포함 여부로 찾음
+  // 정보 표: 기간 · 일정 · 시간 · 장소 · 요금 · 문의 · 주최 (값이 있는 줄만)
+  // 요금 · 문의 · 주최는 서버가 분해한 칸(V7), 동기화 전 옛 행이면 원문에서 라벨 포함 여부로 찾음
+  var fields = detailFields(event);
   var rows = [];
   if (event.startDate) rows.push(["기간", document.getElementById("modalDate").textContent]);
   var schedule = formatScheduleDetail(event);
@@ -1106,8 +1112,12 @@ function renderDetailMobile(event) {
   if (time) rows.push(["시간", time]);
   var place = eventPlace(event);
   if (place) rows.push(["장소", place]);
-  var fee = findInfo(lines, ["이용료", "요금", "입장료", "관람료", "참가비"], ["주차"]); // "주차요금" 은 제외
+  var fee = fields.fee || findInfo(lines, ["이용료", "요금", "입장료", "관람료", "참가비"], ["주차"]); // "주차요금" 은 제외
   if (fee) rows.push(["요금", fee]);
+  var contact = fields.contact || findInfo(lines, ["문의"]);
+  if (contact) rows.push(["문의", contact]);
+  var host = fields.host || findInfo(lines, ["주최", "주관"]);
+  if (host) rows.push(["주최", host]);
   var source = sourceLabel(event); // 인스타 행사만 "인스타그램 @계정"
   if (source) rows.push(["출처", source]);
   var dl = document.getElementById("detailRows");
