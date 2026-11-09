@@ -551,40 +551,30 @@ function filterMarkers() {
 }
 
 // ===== 찜 탭 "최근 본" (디자인 05): 상세를 연 행사 번호만 이 기기 브라우저 저장소에 (recent-views.js) =====
-var RECENT_STORAGE_KEY = "suwonbible.recentEvents";
-var recentMemory = []; // 저장소를 못 쓰는 브라우저(사생활 보호 모드 등)에선 이 페이지에서만 기억
 var favView = "fav"; // 찜 탭 안: "fav" 찜 | "recent" 최근 본
-
-function readRecentIds() {
-  try {
-    var raw = window.localStorage.getItem(RECENT_STORAGE_KEY);
-    if (raw !== null) return parseRecentIds(raw); // 다른 창에서 본 것도 같이
-  } catch (e) {
-    // 저장소 막힘 → 아래 메모리
-  }
-  return recentMemory;
-}
-
-function writeRecentIds(ids) {
-  recentMemory = ids;
-  try {
-    if (ids.length) {
-      window.localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(ids));
-    } else {
-      window.localStorage.removeItem(RECENT_STORAGE_KEY);
+// 저장소를 못 쓰는 브라우저(막힘 · 가득 참)에선 이 페이지에서만 기억. 접근만 해도 오류가 나는 브라우저가 있어 try
+var recentStore = createRecentStore(
+  (function () {
+    try {
+      return window.localStorage;
+    } catch (e) {
+      return null;
     }
-  } catch (e) {
-    // 가득 찼거나 막힘 → 이 페이지에서만 기억
-  }
-}
+  })(),
+  "suwonbible.recentEvents",
+);
 
 function rememberRecentView(eventId) {
-  writeRecentIds(addRecentId(readRecentIds(), eventId));
+  recentStore.add(eventId);
+  // '찜'을 보는 중이면 탭 숫자만 맞춤. 최근 본 목록은 다시 그리지 않음 (보던 자리가 밀리지 않게, 다음에 그릴 때 순서 · 숫자를 같이 맞춤)
+  if (!document.getElementById("favTabs").hidden && !showingRecent()) {
+    document.getElementById("favTabRecentCount").textContent = recentMarkerItems().length;
+  }
 }
 
 // 최근 본 순서대로 지금 받아 온 행사 (지워진 행사는 건너뜀)
 function recentMarkerItems() {
-  return pickRecent(readRecentIds(), markerList, function (item) {
+  return pickRecent(recentStore.list(), markerList, function (item) {
     return item.event.id;
   });
 }
@@ -598,12 +588,25 @@ function updateFavTabs(visible, favCount, recentCount) {
   document.getElementById("favTabs").hidden = !visible;
   document.getElementById("favTabFavCount").textContent = favCount;
   document.getElementById("favTabRecentCount").textContent = recentCount;
+  var list = document.getElementById("list");
   document.querySelectorAll("#favTabs .fav-tab").forEach(function (tab) {
     var active = tab.dataset.view === favView;
     tab.classList.toggle("active", active);
     tab.setAttribute("aria-selected", active ? "true" : "false");
     tab.tabIndex = active ? 0 : -1;
+    if (active) list.setAttribute("aria-labelledby", tab.id);
   });
+  // 탭 줄이 있을 때만 목록 = 탭 내용 (보조기기)
+  if (visible) {
+    list.setAttribute("role", "tabpanel");
+  } else {
+    list.removeAttribute("role");
+    list.removeAttribute("aria-labelledby");
+  }
+  // 최근 본엔 날짜 · 분류 · 지난 행사 칩이 걸리지 않음 → 흐리게 하고 못 누르게 (눌러도 목록이 그대로라 고장처럼 보여서)
+  var recent = showingRecent();
+  document.body.classList.toggle("recent-view", recent);
+  document.getElementById("categoryChips").toggleAttribute("inert", recent);
 }
 
 function selectFavView(view, focus) {
@@ -628,10 +631,11 @@ document.querySelectorAll("#favTabs .fav-tab").forEach(function (tab) {
   });
 });
 
-// "모두 지우기" → 기록을 비우고 빈 안내
+// "모두 지우기" → 기록을 비우고 빈 안내. 누른 버튼이 사라지므로 초점은 "최근 본" 탭으로
 function clearRecentViews() {
-  writeRecentIds([]);
+  recentStore.clear();
   filterMarkers();
+  document.getElementById("favTabRecent").focus();
   showToast("최근 본 기록을 지웠어요");
 }
 
@@ -1725,6 +1729,7 @@ var homeSoonMode = "ending"; // "ending" 곧 종료 | "starting" 곧 시작
 
 function showHome() {
   nav.close("tab"); // 홈에서 나가며 쌓은 칸을 되돌림 (뒤로 가기로 왔으면 이미 빠짐)
+  favView = "fav"; // 찜 탭을 나감 → 다음엔 '찜'부터 (홈은 카테고리를 안 바꿔서 filterMarkers 의 초기화가 안 돎)
   hidePreview();
   if (sheetState !== "peek") setSheetState("peek"); // 목록 전체(페이지 스크롤)는 풀어 두고 홈으로
   homeOpen = true;

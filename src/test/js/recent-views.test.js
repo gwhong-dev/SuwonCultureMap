@@ -6,6 +6,7 @@ const {
   parseRecentIds,
   addRecentId,
   pickRecent,
+  createRecentStore,
   recentEmptyState,
 } = require("../../main/resources/static/recent-views.js");
 
@@ -68,6 +69,83 @@ test("행사 고르기: 목록 항목에서 번호 꺼내는 법을 줄 수 있�
     [8, 7],
   );
   assert.strictEqual(picked[0], items[1]); // 같은 항목을 그대로 (복사 안 함)
+});
+
+// 가짜 저장소 (localStorage 와 같은 getItem · setItem · removeItem)
+function fakeStorage() {
+  const data = new Map();
+  return {
+    data,
+    getItem: (k) => (data.has(k) ? data.get(k) : null),
+    setItem: (k, v) => data.set(k, String(v)),
+    removeItem: (k) => data.delete(k),
+  };
+}
+
+test("저장소: 본 순서대로 저장 · 읽기, 모두 지우면 키를 지움", () => {
+  const storage = fakeStorage();
+  const store = createRecentStore(storage, "k");
+  assert.deepStrictEqual(store.list(), []);
+  store.add(1);
+  store.add(2);
+  assert.deepStrictEqual(store.add(1), [1, 2]);
+  assert.strictEqual(storage.getItem("k"), "[1,2]");
+  store.clear();
+  assert.strictEqual(storage.getItem("k"), null);
+  assert.deepStrictEqual(store.list(), []);
+});
+
+test("저장소: 다른 창에서 지운 기록을 이 창이 되살리지 않음 (#158 검증 ⚠️)", () => {
+  const storage = fakeStorage();
+  const store = createRecentStore(storage, "k");
+  store.add(1);
+  store.add(2);
+  storage.removeItem("k"); // 다른 창의 "모두 지우기" · 사이트 데이터 삭제
+  assert.deepStrictEqual(store.list(), []);
+  assert.deepStrictEqual(store.add(9), [9]);
+});
+
+test("저장소: 다른 창에서 본 것도 같이 보임", () => {
+  const storage = fakeStorage();
+  const a = createRecentStore(storage, "k");
+  const b = createRecentStore(storage, "k");
+  a.add(1);
+  assert.deepStrictEqual(b.add(2), [2, 1]);
+  assert.deepStrictEqual(a.list(), [2, 1]);
+});
+
+test("저장소가 막혔으면(접근 오류 · 없음) 이 페이지 메모리로 기억 (화면이 멈추지 않게)", () => {
+  const blocked = {
+    getItem() {
+      throw new Error("SecurityError");
+    },
+    setItem() {
+      throw new Error("SecurityError");
+    },
+    removeItem() {
+      throw new Error("SecurityError");
+    },
+  };
+  for (const storage of [blocked, null]) {
+    const store = createRecentStore(storage, "k");
+    assert.deepStrictEqual(store.list(), []);
+    store.add(3);
+    assert.deepStrictEqual(store.add(4), [4, 3]);
+    store.clear();
+    assert.deepStrictEqual(store.list(), []);
+  }
+});
+
+test("저장소 쓰기만 실패하면(가득 참) 그 뒤로는 메모리로 이어서 기억", () => {
+  const storage = fakeStorage();
+  storage.setItem("k", "[5]");
+  storage.setItem = () => {
+    throw new Error("QuotaExceededError");
+  };
+  const store = createRecentStore(storage, "k");
+  assert.deepStrictEqual(store.add(6), [6, 5]); // 읽기는 됐으니 이전 기록 + 새 것
+  assert.deepStrictEqual(store.list(), [6, 5]); // 쓰기 실패 뒤엔 메모리 값
+  assert.deepStrictEqual(store.add(7), [7, 6, 5]);
 });
 
 test("최근 본이 비었을 때: 안내 + 행사 둘러보기", () => {

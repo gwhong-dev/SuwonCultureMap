@@ -1,6 +1,6 @@
 // 찜 탭 "최근 본" 규칙 (docs/design/mobile-design-v1.md 05 "찜 N | 최근 본 N")
 // 상세를 연 행사 번호만 이 기기의 브라우저 저장소(localStorage)에 최근 순으로 둠 — 서버로 보내지 않음, 비로그인도 사용
-// 저장소 읽기 · 쓰기는 index.js, 여기는 값만 다룸. 시험: node --test src/test/js/ (CI 에서 실행)
+// 화면(탭 줄 · 목록)은 index.js, 여기는 값 · 저장소만 다룸. 시험: node --test src/test/js/ (CI 에서 실행)
 
 var RECENT_MAX = 20; // 오래된 것부터 밀려남
 
@@ -60,6 +60,52 @@ function pickRecent(ids, items, getId) {
     });
 }
 
+// 저장소 읽기 · 쓰기. storage = window.localStorage (시험에선 가짜), 못 쓰면 null
+// 저장소가 막혔거나 쓰기에 실패하면 이 페이지에서만 메모리로 기억.
+// 저장소가 되면 늘 저장소 값이 기준 → 다른 창에서 지운 기록을 이 창이 되살리지 않음
+function createRecentStore(storage, key) {
+  var memory = [];
+  var usable = !!storage;
+
+  function list() {
+    if (usable) {
+      try {
+        var raw = storage.getItem(key);
+        return raw === null ? [] : parseRecentIds(raw);
+      } catch (e) {
+        usable = false;
+      }
+    }
+    return memory;
+  }
+
+  function write(ids) {
+    memory = ids;
+    if (!usable) return;
+    try {
+      if (ids.length) {
+        storage.setItem(key, JSON.stringify(ids));
+      } else {
+        storage.removeItem(key);
+      }
+    } catch (e) {
+      usable = false; // 가득 찼거나 막힘 → 이제부터 메모리
+    }
+  }
+
+  return {
+    list: list,
+    add: function (id) {
+      var next = addRecentId(list(), id);
+      write(next);
+      return next;
+    },
+    clear: function () {
+      write([]);
+    },
+  };
+}
+
 // "최근 본" 이 비었을 때 안내 (action: "browse" = 전체 행사로)
 function recentEmptyState() {
   return {
@@ -76,6 +122,7 @@ if (typeof module !== "undefined") {
     parseRecentIds: parseRecentIds,
     addRecentId: addRecentId,
     pickRecent: pickRecent,
+    createRecentStore: createRecentStore,
     recentEmptyState: recentEmptyState,
   };
 }
