@@ -41,6 +41,8 @@ import com.suwon.festival.service.schedule.ScheduleResult;
 //  - 게시물 1개에서 오류가 나도 그 게시물만 되돌리고 다음 게시물은 계속 (InstagramSyncService 가 잡음)
 //  - 캡션 원문은 DB · 로그에 남기지 않음 (설계 문서 8번)
 //  - 이미 READY 인 블록은 키(제목 + 시작일 + 장소)가 같으므로 좌표를 다시 찾지 않고 나머지 값만 갱신 → 카카오 호출 절약
+//  - NO_COORD · 영구 실패(HTTP 4xx, 429 제외) ERROR 블록은 마지막 검색(updatedAt) 뒤 RETRY_AFTER 동안 다시 검색하지 않음
+//    (키에 장소명이 들어 있어 키가 같으면 같은 장소명) → 동기화마다 같은 실패 검색을 반복하지 않음. updatedAt 은 그대로 둠
 //  - READY 행사는 진행 날짜도 매번 다시 계산해 저장 (규칙을 고치면 창 안의 글은 다음 동기화에 반영)
 @Component
 public class InstagramPostProcessor {
@@ -50,6 +52,10 @@ public class InstagramPostProcessor {
   static final ZoneId KST = ZoneId.of("Asia/Seoul");
   private static final Pattern MEDIA_ID = Pattern.compile("^[0-9]{1,64}$");
   // 하루짜리로 읽혔어도 다른 날이 있다는 말 ("11. 7.(토)부터 매주 토요일" · "11. 30.(월)까지" · "외 3회") → "그날만"으로 저장하지 않음
+  // 실패한 장소 검색을 다시 하기까지 기다리는 시간 (동기화 하루 2번 → 약 6번 중 1번만 검색)
+  static final java.time.Duration RETRY_AFTER = java.time.Duration.ofDays(3);
+  // 다시 해도 같은 결과일 HTTP 실패 (400 · 401 · 403 …). 429(호출 한도)는 잠깐이라 제외
+  private static final Pattern PERMANENT_HTTP = Pattern.compile("\\(HTTP 4(?!29)\\d\\d\\)");
   private static final Pattern MORE_DAYS = Pattern.compile("부터|까지|매주|매일|외\\s*\\d|\\d\\s*회|회차");
 
   // 게시물 1개 처리 결과 (개수만)
@@ -128,6 +134,7 @@ public class InstagramPostProcessor {
       InstagramBlock.Status status;
       String reason = r.reason();
       Event event = null;
+      boolean waiting = false; // 검색 대기 중이라 이전 상태 · 시각을 그대로 둠
 
       switch (r.status()) {
         case PARSED -> {
@@ -141,6 +148,10 @@ public class InstagramPostProcessor {
             status = InstagramBlock.Status.READY;
             reason = null;
             updated++;
+          } else if (block != null && waitBeforeRetry(block, now)) {
+            status = block.getStatus();
+            reason = block.getReason();
+            waiting = true;
           } else {
             PlaceGeocoder.Result geo = geocoder.geocode(e.placeName());
             switch (geo.status()) {
@@ -188,10 +199,10 @@ public class InstagramPostProcessor {
             .media(media).blockKey(key).status(status).reason(reason).updatedAt(now).build());
         if (event != null) block.update(status, reason, event, now);
       } else {
-        block.update(status, reason, event, now);
+        block.update(status, reason, event, waiting ? block.getUpdatedAt() : now);
       }
       counts.merge(status, 1, Integer::sum);
-      logLines.add(BlockLog.line(post.id(), key, r, status, reason));
+      logLines.add(BlockLog.line(post.id(), key, r, status, waiting ? reason + " (재검색 대기)" : reason));
     }
 
     // 캡션을 못 받았거나 블록이 하나도 안 나오면 판단할 근거가 없음 → 아무것도 내리지 않음
@@ -206,6 +217,16 @@ public class InstagramPostProcessor {
     media.markProcessed(now);
     logAfterCommit(logLines);
     return new Outcome(isNew, counts, saved, updated, duplicates);
+  }
+
+  // 같은 키(= 같은 장소명)로 최근에 검색해 실패했으면 다시 검색하지 않음
+  static boolean waitBeforeRetry(InstagramBlock block, LocalDateTime now) {
+    boolean retryLater = switch (block.getStatus()) {
+      case NO_COORD -> true;
+      case ERROR -> block.getReason() != null && PERMANENT_HTTP.matcher(block.getReason()).find();
+      default -> false;
+    };
+    return retryLater && block.getUpdatedAt() != null && block.getUpdatedAt().plus(RETRY_AFTER).isAfter(now);
   }
 
   // 블록 로그는 커밋된 뒤에 찍음 → 롤백된 게시물의 "저장 안 된 상태"가 로그에 남지 않게
