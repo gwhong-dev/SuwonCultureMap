@@ -73,6 +73,17 @@ main() {
     return 1
   fi
 
+  # Caddyfile 은 파일 하나만 연결(bind mount)돼 git 이 파일을 바꿔 쓰면 실행 중인 Caddy 는 옛 내용을 계속 봄
+  # → 컨테이너 안 내용과 저장소 파일이 다를 때만 Caddy 를 새로 만듦 (같으면 건드리지 않아 HTTPS 끊김 없음)
+  if docker compose config --services 2>/dev/null | grep -qx caddy && ! caddy_config_same; then
+    echo "[Caddy] Caddyfile 바뀜 → Caddy 다시 띄움"
+    if ! docker compose up -d --force-recreate --no-deps caddy >>"$build_log" 2>&1 || ! caddy_config_same; then
+      echo "[실패] Caddy 다시 띄우기 오류. 최근 로그:" >&2
+      docker compose logs --no-color --tail 40 caddy >&2 || true
+      return 1
+    fi
+  fi
+
   # 옛 이미지 정리 (디스크 20GB). 빌드 캐시는 3일 넘은 것만 지워 다음 빌드를 빠르게
   docker image prune -f >/dev/null
   docker builder prune -f --filter until=72h >/dev/null
@@ -89,6 +100,13 @@ wait_app() {
     sleep 5
   done
   return 1
+}
+
+# 실행 중인 Caddy 가 보는 설정 = 저장소의 deploy/Caddyfile 인지 (Caddy 가 안 떠 있으면 다름으로 봄)
+caddy_config_same() {
+  local running
+  running="$(docker compose exec -T caddy cat /etc/caddy/Caddyfile 2>/dev/null)" || return 1
+  [ "$running" = "$(cat deploy/Caddyfile)" ]
 }
 
 main "$@"
