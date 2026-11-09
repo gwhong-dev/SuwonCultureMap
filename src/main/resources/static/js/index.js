@@ -324,9 +324,10 @@ function compareStartDate(a, b) {
   return da.localeCompare(db);
 }
 
-// 지도를 처음 열었을 때의 기본 위치: 정조테마공연장 (팔달구 정조로 817)
-// 좌표는 재단 API(XML)가 정조테마공연장 행사에 주는 값과 같게 맞춤 → 기본 위치가 그 장소 마커와 정확히 겹침
-var DEFAULT_CENTER = { lat: 37.2810212008746, lng: 127.016215843564 };
+// 지도를 처음 열었을 때의 기본 위치: 행궁동 중심 = 화성행궁 광장 (팔달구 정조로 825, 디자인 02)
+// 좌표는 재단 API(XML)가 "화성행궁 광장 · 우화관 바깥마당" 행사에 주는 값과 같게 맞춤 → 그 장소 마커와 정확히 겹침
+// level 6 첫 화면에 정조테마공연장 · 수원전통문화관 · 미디어센터 등 성곽 안 행사가 모두 들어옴 (11/9 운영 API 확인)
+var DEFAULT_CENTER = { lat: 37.2818820191942, lng: 127.014394463798 };
 
 kakao.maps.load(function () {
   var mapContainer = document.getElementById("map");
