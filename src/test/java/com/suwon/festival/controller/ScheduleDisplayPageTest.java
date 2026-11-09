@@ -124,6 +124,19 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
+  void 찜_알림_규칙_파일을_상태_계산_뒤_화면_스크립트보다_먼저_불러오고_찜_탭_점이_있음() throws Exception {
+    // 내일 시작 · 3일 안 종료 고르기(favoriteAlerts)가 favorite-alerts.js 에 있음 → schedule-format.js 뒤, index.js 앞
+    String html = page();
+    int rules = html.indexOf("<script src=\"/favorite-alerts.js\"></script>");
+    assertThat(rules).isPositive().isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
+    assertThat(rules).isGreaterThan(html.indexOf("<script src=\"/schedule-format.js\"></script>"));
+    assertThat(html).contains("id=\"favTabDot\"");
+
+    MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+    assertThat(mockMvc.perform(get("/favorite-alerts.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
+  }
+
+  @Test
   void 모바일_홈_화면과_홈_탭이_있고_홈_규칙_파일을_화면_스크립트보다_먼저_불러옴() throws Exception {
     // 이번 주 · 곧 종료 · 곧 시작 고르기(weekRange · endingSoon …)가 home-picks.js 에 있음 → index.js 보다 앞
     String html = page();
@@ -199,7 +212,7 @@ class ScheduleDisplayPageTest {
     assertThat(js).contains("matchesSearch(item.event, keyword)"); // 지도 · 목록도 제목 + 장소, 띄어쓰기 무시
     assertThat(js).doesNotContain("item.event.title.includes(keyword)");
     // 엔터 → 결과(07): 홈과 같은 행사 행 + ♡, 찜이 바뀌면 filterMarkers 끝에서 ♡ 표시를 맞춤
-    assertThat(js).contains("searchMode = \"results\"", "eventRowHtml(event) +", "updateSearchFavs();\n}");
+    assertThat(js).contains("searchMode = \"results\"", "eventRowHtml(event) +", "updateSearchFavs();\n  updateFavAlertDot();\n}");
   }
 
   @Test
