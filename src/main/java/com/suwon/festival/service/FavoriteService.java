@@ -72,7 +72,8 @@ public class FavoriteService {
           .filter(instagramSwitch::isVisible)
           .orElse(null);
       if (event == null || !owned.add(event.getId())) continue;
-      favoriteRepository.save(Favorite.builder()
+      // 바로 flush → 동시에 합친 다른 탭과 겹치면 여기서 DataIntegrityViolationException (커밋 때 다른 예외로 감싸지지 않게)
+      favoriteRepository.saveAndFlush(Favorite.builder()
           .member(member)
           .event(event)
           .createdAt(LocalDateTime.now())

@@ -241,5 +241,6 @@ if (typeof module !== "undefined") {
     eventStatus: eventStatus,
     statusLabel: statusLabel,
     ddayText: ddayText,
+    daysUntil: daysUntil,
   };
 }

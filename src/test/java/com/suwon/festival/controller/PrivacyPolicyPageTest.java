@@ -80,6 +80,15 @@ class PrivacyPolicyPageTest {
   }
 
   @Test
+  void 찜_알림은_본_표시만_기기에_두고_메일_푸시는_보내지_않는다고_적음() throws Exception {
+    // 찜 알림(favorite-alerts.js): 본 알림 열쇠(행사 번호 · 날짜)만 localStorage
+    String html = mockMvc.perform(get("/privacy.html")).andReturn().getResponse()
+        .getContentAsString(StandardCharsets.UTF_8);
+
+    assertThat(html).contains("찜 알림(내일 시작 · 곧 종료)", "메일이나 푸시 알림은 보내지 않습니다");
+  }
+
+  @Test
   void 메인_로그인_마이페이지에_링크가_있음() throws Exception {
     for (String page : new String[] { "/index.html", "/login.html", "/mypage.html" }) {
       String html = mockMvc.perform(get(page)).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);

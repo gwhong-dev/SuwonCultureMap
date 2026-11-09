@@ -417,6 +417,15 @@ function showEvents(events) {
     markerList.push({ event: event });
   });
   eventsLoaded = true;
+  // 이 기기 찜에서 지금 없는 행사(삭제 · 숨김) 번호를 정리 — 비로그인이면 ♥ 표시 기준도 다시
+  var removedGuest = guestFavorites.prune(
+    new Set(
+      events.map(function (event) {
+        return event.id;
+      }),
+    ),
+  );
+  if (removedGuest && !isLoggedIn) favoriteEventIds = new Set(guestFavorites.list());
 
   filterMarkers();
   renderHome();
@@ -503,6 +512,8 @@ function cardDateText(item) {
 
 // 구 필터 (null = 전체). 홈 "내 주변"의 "지도에서 보기"가 켜고, 지도 칩 줄 맨 앞 "📍 ○○구 ✕" 칩으로 끔
 var districtFilter = null;
+// 무료만 (지도 칩 줄 "💸 무료", 한 번 더 누르면 해제). 판정은 event-detail.js isFreeEvent
+var freeOnly = false;
 
 function setDistrictFilter(district) {
   districtFilter = district || null;
@@ -552,7 +563,12 @@ function filterMarkers() {
     var matchesDate = item.runMatch !== "no";
 
     var visible =
-      matchesKeyword && matchesCategory && matchesPast && matchesDate && matchesDistrict(item.event, districtFilter);
+      matchesKeyword &&
+      matchesCategory &&
+      matchesPast &&
+      matchesDate &&
+      matchesDistrict(item.event, districtFilter) &&
+      (!freeOnly || isFreeEvent(item.event));
 
     if (visible) {
       visibleItems.push(item);
@@ -573,6 +589,75 @@ function filterMarkers() {
   renderLocationMarkers(visibleItems); // 장소별로 묶어서 마커 다시 그리기
   renderSidebar(visibleItems);
   updateSearchFavs();
+  updateFavAlertDot();
+}
+
+// ===== 찜 알림 (화면 안 배지, favorite-alerts.js): 내일 시작 · 3일 안 종료 =====
+// 찜 목록 맨 위 알림 칸 + 하단 '찜' 탭 빨간 점. 알림 칸을 보면 점이 꺼짐 (본 알림 = 이 기기 브라우저 저장소)
+var alertSeenStore = createAlertSeenStore(
+  (function () {
+    try {
+      return window.localStorage;
+    } catch (e) {
+      return null;
+    }
+  })(),
+  "suwonbible.favAlertsSeen",
+);
+
+function currentFavAlerts(items) {
+  return favoriteAlerts(
+    (items || markerList).map(function (item) {
+      return item.event;
+    }),
+    favoriteEventIds,
+  );
+}
+
+function updateFavAlertDot() {
+  var unseen = unseenAlertCount(currentFavAlerts(), alertSeenStore.list());
+  var tab = document.querySelector('#tabBar .tab-item[data-tab="fav"]');
+  document.getElementById("favTabDot").hidden = unseen === 0;
+  if (unseen > 0) {
+    tab.setAttribute("aria-label", "찜, 새 알림 " + unseen + "개");
+  } else {
+    tab.removeAttribute("aria-label");
+  }
+}
+
+// 찜 목록 맨 위 알림 칸 = 지금 목록에 보이는 찜(PC 검색어 · 날짜 조건과 같게). 알림이 없으면 안 그림
+// 화면에 보일 때만 본 것으로 기록 (shouldMarkAlertsSeen)
+function renderFavAlerts(list, favoriteItems) {
+  var alerts = currentFavAlerts(favoriteItems);
+  if (!alerts.length) return;
+  var box = document.createElement("section");
+  box.className = "fav-alerts";
+  box.setAttribute("aria-label", "찜 알림");
+  var title = document.createElement("strong");
+  title.className = "fav-alerts-title";
+  title.textContent = "곧 시작 · 곧 종료 " + alerts.length + "개";
+  box.appendChild(title);
+  var ul = document.createElement("ul");
+  alerts.forEach(function (alert) {
+    var li = document.createElement("li");
+    var button = document.createElement("button");
+    button.type = "button";
+    var badge = document.createElement("span");
+    badge.className = "fav-alert-badge " + alert.kind;
+    badge.textContent = favoriteAlertLabel(alert);
+    var name = document.createElement("span");
+    name.className = "fav-alert-name";
+    name.textContent = alert.event.title;
+    button.append(badge, name);
+    button.addEventListener("click", function () {
+      openDetailModal(alert.event);
+    });
+    li.appendChild(button);
+    ul.appendChild(li);
+  });
+  box.appendChild(ul);
+  list.appendChild(box);
+  if (shouldMarkAlertsSeen(mobileQuery.matches, onFavScreen())) alertSeenStore.markSeen(alerts);
 }
 
 // ===== 찜 탭 "최근 본" (디자인 05): 상세를 연 행사 번호만 이 기기 브라우저 저장소에 (recent-views.js) =====
@@ -778,6 +863,11 @@ function renderSidebar(items) {
     guestNote.innerHTML = '<span>이 기기에만 저장돼요 · 로그인하면 계정에 합쳐져요</span><button type="button">로그인</button>';
     guestNote.querySelector("button").addEventListener("click", goToLogin);
     list.appendChild(guestNote);
+  }
+
+  // 찜 목록(모바일 찜 탭 '찜' · 분류 '찜')이면 맨 위에 곧 시작 · 곧 종료 알림
+  if (!recent && favorites.length > 0 && (onFavScreen() || document.getElementById("categorySelect").value === "찜")) {
+    renderFavAlerts(list, favorites);
   }
 
   // 찜한 행사가 있을 때만 구분 제목 표시
@@ -1586,6 +1676,18 @@ function renderCategoryChips() {
     chips.insertBefore(chip, chips.children[index] || null); // 맨 앞에 (가로 스크롤 뒤에 숨지 않게)
   });
 
+  // '무료' 칩: 날짜 칩 바로 뒤 (분류 칩과 함께 쓸 수 있음)
+  var freeChip = document.createElement("button");
+  freeChip.type = "button";
+  freeChip.className = "chip";
+  freeChip.dataset.value = "__free";
+  freeChip.textContent = "💸 무료";
+  freeChip.addEventListener("click", function () {
+    freeOnly = !freeOnly;
+    filterMarkers();
+  });
+  chips.insertBefore(freeChip, chips.children[3] || null);
+
   // '지난 행사' 칩은 기존 체크박스를 대신 눌러줌
   var pastChip = document.createElement("button");
   pastChip.type = "button";
@@ -1612,7 +1714,9 @@ function updateChipActive() {
         ? chip.dataset.date === dateFilter
         : chip.dataset.value === "__past"
           ? showPast
-          : chip.dataset.value === selected;
+          : chip.dataset.value === "__free"
+            ? freeOnly
+            : chip.dataset.value === selected;
       chip.classList.toggle("active", active);
     });
   updateDistrictChip();
@@ -2256,6 +2360,7 @@ function showDistrictOnMap(district, events) {
   document.getElementById("categorySelect").value = "all";
   document.getElementById("dateFilter").value = "all";
   document.getElementById("showPastCheckbox").checked = false;
+  freeOnly = false;
   districtFilter = district; // selectTab 이 filterMarkers 로 지도 · 목록 · 칩을 다시 그림
   selectTab("map");
   var top = document.getElementById("topbar").offsetHeight + 16; // 검색창 · 칩 줄 아래
@@ -2276,7 +2381,11 @@ mobileQuery.addEventListener("change", function (e) {
     }
     return;
   }
-  if (districtFilter) setDistrictFilter(null);
+  // PC 엔 칩 줄이 없어 구 · 무료 필터를 끌 수 없음 → 넘어갈 때 풂
+  if (districtFilter || freeOnly) {
+    freeOnly = false;
+    setDistrictFilter(null);
+  }
   closeSearch(); // 검색 화면도 모바일 전용
 });
 
