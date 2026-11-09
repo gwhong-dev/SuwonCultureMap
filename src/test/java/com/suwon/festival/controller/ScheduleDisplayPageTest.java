@@ -181,7 +181,9 @@ class ScheduleDisplayPageTest {
     assertThat(html).contains("id=\"searchViewInput\"", "id=\"searchSuggest\"", "id=\"searchBackBtn\"");
 
     String js = script();
-    assertThat(js).contains("addEventListener(\"click\", openSearch)", "searchEvents(events, keyword)");
+    assertThat(js).contains("addEventListener(\"click\", openSearch)", "searchEvents(events, keyword, undefined, typing)");
+    // 입력 중에만 치는 중 규칙 ("숭" → 수원), 엔터 결과는 그대로 (11/9)
+    assertThat(js).contains("var typing = !results && searchTyping(events, keyword);");
     assertThat(js).contains("matchesSearch(item.event, keyword)"); // 지도 · 목록도 제목 + 장소, 띄어쓰기 무시
     assertThat(js).doesNotContain("item.event.title.includes(keyword)");
     // 엔터 → 결과(07): 홈과 같은 행사 행 + ♡, 찜이 바뀌면 filterMarkers 끝에서 ♡ 표시를 맞춤

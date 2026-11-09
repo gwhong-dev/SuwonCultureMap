@@ -2080,9 +2080,9 @@ function closeSearch() {
   document.body.classList.remove("search-open");
 }
 
-// 제목 + 검색어 강조 (띄어쓰기 무시한 자리). 장소로만 맞으면 강조 없음
-function searchTitleHtml(title, keyword) {
-  var range = searchHighlight(title, keyword);
+// 제목 + 검색어 강조 (띄어쓰기 무시한 자리). 장소로만 맞으면 강조 없음. typing = 치는 중 규칙 (home-picks.js searchTyping)
+function searchTitleHtml(title, keyword, typing) {
+  var range = searchHighlight(title, keyword, typing);
   if (!range) return escapeHtml(title);
   return (
     escapeHtml(title.slice(0, range.start)) +
@@ -2092,12 +2092,12 @@ function searchTitleHtml(title, keyword) {
 }
 
 // 행: [상태 배지(폭 고정)] 제목(한 줄 말줄임) … 구. 날짜 없는 행사는 배지 자리만 비움
-function searchRowHtml(event, keyword) {
+function searchRowHtml(event, keyword, typing) {
   var status = eventStatus(event);
   return (
     '<button type="button" class="search-row" data-event-id="' + event.id + '">' +
     '<span class="status-badge ' + (status || "none") + '">' + (status ? statusLabel(status) : "") + "</span>" +
-    '<span class="search-title">' + searchTitleHtml(event.title || "", keyword) + "</span>" +
+    '<span class="search-title">' + searchTitleHtml(event.title || "", keyword, typing) + "</span>" +
     '<span class="search-where">' + escapeHtml(eventDistrict(event) || "") + "</span>" +
     "</button>"
   );
@@ -2148,7 +2148,9 @@ function renderSearch() {
   var events = homeEvents();
   var district = searchDistrict(keyword);
   var districtPicks = district ? districtEvents(events, district) : [];
-  var picks = searchEvents(events, keyword); // 운영중 · 오픈예정(종료 임박순) → 날짜 없음 → 종료
+  // 입력 중: 그대로 찾아 없으면 치는 중인 마지막 글자를 넓혀 찾음 ("숭" → 수원, "수워" → 수원). 엔터 결과는 그대로
+  var typing = !results && searchTyping(events, keyword);
+  var picks = searchEvents(events, keyword, undefined, typing); // 운영중 · 오픈예정(종료 임박순) → 날짜 없음 → 종료
   var html = searchDistrictRowHtml(district, districtPicks.length);
   if (results) {
     // 결과: 맞는 행사 전부 (입력 중 행과 같은 규칙이라 종료 행사도 맨 아래에 나옴)
@@ -2163,7 +2165,7 @@ function renderSearch() {
     html += picks
       .slice(0, SEARCH_SUGGEST_MAX)
       .map(function (event) {
-        return searchRowHtml(event, keyword);
+        return searchRowHtml(event, keyword, typing);
       })
       .join("");
     if (!html) html = '<p class="search-empty">‘' + escapeHtml(keyword.trim()) + "’와 맞는 행사가 없어요</p>";

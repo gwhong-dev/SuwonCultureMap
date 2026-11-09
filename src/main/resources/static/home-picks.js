@@ -158,11 +158,92 @@ function searchNormalize(text) {
   return String(text || "").replace(/\s+/g, "").toLowerCase();
 }
 
-// 검색어가 비면 모두 맞음 (지도 탭 필터에서 씀)
-function matchesSearch(event, keyword) {
+// ----- 한글 자음 · 치는 중 글자 (11/9) -----
+// 자음만 친 글자(ㅁ)는 그 자음으로 시작하는 글자(마 · 모 · 미 …)와 맞음 → "ㅁ" · "ㅅㅇ"(수원)도 찾음
+// 치는 중(typing): 마지막 글자가 아직 바뀔 수 있음 → "숭"(수 + ㅇ 받침) = 수원, "수워" = 수원 처럼 넓혀 찾음
+var HANGUL_FIRST = 0xac00;
+var HANGUL_LAST = 0xd7a3;
+var INITIALS = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"; // 첫소리 순서 (유니코드 한글 글자 순서와 같음)
+// 받침 → [남는 받침, 다음 글자 첫소리]: 받침 뒤에 모음을 치면 받침(또는 겹받침의 뒤 자음)이 다음 글자로 넘어감
+var FINAL_SPLIT = [
+  null, [0, 0], [0, 1], [1, 9], [0, 2], [4, 12], [4, 18], [0, 3], [0, 5], [8, 0], [8, 6], [8, 7], [8, 9], [8, 16],
+  [8, 17], [8, 18], [0, 6], [0, 7], [17, 9], [0, 9], [0, 10], [0, 11], [0, 12], [0, 14], [0, 15], [0, 16], [0, 17], [0, 18],
+];
+// 받침 → 이어서 치면 될 수 있는 겹받침 (ㄱ → ㄳ, ㄴ → ㄵ ㄶ, ㄹ → ㄺ ~ ㅀ, ㅂ → ㅄ): "달" → 닭
+var FINAL_NEXT = { 1: [3], 4: [5, 6], 8: [9, 10, 11, 12, 13, 14, 15], 17: [18] };
+// 모음 → 이어서 치면 될 수 있는 겹모음 (ㅗ → ㅘ ㅙ ㅚ, ㅜ → ㅝ ㅞ ㅟ, ㅡ → ㅢ, ㅘ → ㅙ, ㅝ → ㅞ)
+var VOWEL_NEXT = { 8: [9, 10, 11], 9: [10], 13: [14, 15, 16], 14: [15], 18: [19] };
+
+function syllable(initial, vowel, final) {
+  return String.fromCharCode(HANGUL_FIRST + (initial * 21 + vowel) * 28 + final);
+}
+// 그 첫소리로 시작하는 글자 전부 + 자음 그 자체
+function initialClass(initial) {
+  return "[" + syllable(initial, 0, 0) + "-" + syllable(initial, 20, 27) + INITIALS[initial] + "]";
+}
+function escapeRegExp(ch) {
+  return ch.replace(/[.*+?^${}()|[\]\\\-]/g, "\\$&");
+}
+
+// 검색어 → 정규식 (띄어쓰기 · 대소문자는 searchNormalize 로 이미 뺌). 빈 검색어면 null
+var searchPatternCache = {};
+function searchPattern(keyword, typing) {
   var kw = searchNormalize(keyword);
-  if (!kw) return true;
-  return searchNormalize(event.title).indexOf(kw) !== -1 || searchNormalize(event.place).indexOf(kw) !== -1;
+  if (!kw) return null;
+  var key = (typing ? "1" : "0") + kw;
+  if (searchPatternCache[key]) return searchPatternCache[key];
+  var chars = Array.from(kw);
+  var source = chars
+    .map(function (ch, i) {
+      var initial = INITIALS.indexOf(ch);
+      if (initial !== -1) return initialClass(initial);
+      var code = ch.charCodeAt(0);
+      if (!typing || i !== chars.length - 1 || code < HANGUL_FIRST || code > HANGUL_LAST) return escapeRegExp(ch);
+      // 치는 중인 마지막 글자
+      var n = code - HANGUL_FIRST;
+      var first = Math.floor(n / 588);
+      var vowel = Math.floor((n % 588) / 28);
+      var final = n % 28;
+      if (final === 0) {
+        // 받침 없음 → 같은 첫소리 + (같은 모음 · 이어질 겹모음) + 아무 받침
+        return (
+          "[" +
+          [vowel]
+            .concat(VOWEL_NEXT[vowel] || [])
+            .map(function (v) {
+              return syllable(first, v, 0) + "-" + syllable(first, v, 27);
+            })
+            .join("") +
+          "]"
+        );
+      }
+      // 받침 있음 → 그 글자 · 이어질 겹받침 글자(달 → 닭), 또는 받침이 다음 글자로 넘어간 모양(숭 → 수 + ㅇ으로 시작하는 글자)
+      var same = [final].concat(FINAL_NEXT[final] || []).map(function (f) {
+        return syllable(first, vowel, f);
+      });
+      var split = FINAL_SPLIT[final];
+      return "(?:[" + same.join("") + "]|" + syllable(first, vowel, split[0]) + initialClass(split[1]) + ")";
+    })
+    .join("");
+  var pattern = new RegExp(source);
+  searchPatternCache[key] = pattern;
+  return pattern;
+}
+
+// 검색어가 비면 모두 맞음 (지도 탭 필터에서 씀). typing = 치는 중 규칙 (검색 화면 입력 중, searchTyping 참고)
+function matchesSearch(event, keyword, typing) {
+  var pattern = searchPattern(keyword, typing);
+  if (!pattern) return true;
+  return pattern.test(searchNormalize(event.title)) || pattern.test(searchNormalize(event.place));
+}
+
+// 입력 중 화면에서 치는 중 규칙을 쓸지: 그대로 찾아 하나도 없고, 넓히면 달라질 때만 ("미"는 그대로 → 민 · 밀까지 넓히지 않음)
+function searchTyping(events, keyword) {
+  var strict = searchPattern(keyword, false);
+  if (!strict || strict.source === searchPattern(keyword, true).source) return false;
+  return !events.some(function (event) {
+    return matchesSearch(event, keyword, false);
+  });
 }
 
 // 묶음: 운영중 · 오픈예정 0 → 날짜 없음 1 → 종료 2
@@ -173,14 +254,14 @@ function searchGroup(event, now) {
 }
 
 // 맞는 행사: 운영중 · 오픈예정(종료 임박순) → 날짜 없음(제목 순) → 종료(최근에 끝난 순). 검색어가 비면 []
-function searchEvents(events, keyword, now) {
+function searchEvents(events, keyword, now, typing) {
   if (!searchNormalize(keyword)) return [];
   var endOf = function (event) {
     return event.endDate || event.startDate || "";
   };
   return events
     .filter(function (event) {
-      return matchesSearch(event, keyword);
+      return matchesSearch(event, keyword, typing);
     })
     .sort(function (a, b) {
       var ga = searchGroup(a, now);
@@ -192,9 +273,9 @@ function searchEvents(events, keyword, now) {
 }
 
 // 제목에서 검색어 자리 (띄어쓰기 무시) → { start, end } (원래 제목 기준, end 는 제외). 없으면 null
-function searchHighlight(title, keyword) {
-  var kw = searchNormalize(keyword);
-  if (!kw || !title) return null;
+function searchHighlight(title, keyword, typing) {
+  var pattern = searchPattern(keyword, typing);
+  if (!pattern || !title) return null;
   var chars = [];
   var index = [];
   for (var i = 0; i < title.length; i++) {
@@ -205,9 +286,9 @@ function searchHighlight(title, keyword) {
       index.push(i);
     }
   }
-  var pos = chars.join("").indexOf(kw);
-  if (pos === -1) return null;
-  return { start: index[pos], end: index[pos + kw.length - 1] + 1 };
+  var found = pattern.exec(chars.join(""));
+  if (!found) return null;
+  return { start: index[found.index], end: index[found.index + found[0].length - 1] + 1 };
 }
 
 // 검색어가 구 이름 앞부분과 맞으면 그 구 ("팔달" · "팔달구" → 팔달구). 한 글자는 너무 넓어서 뺌
@@ -224,6 +305,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     SEARCH_SUGGEST_MAX: SEARCH_SUGGEST_MAX,
     matchesSearch: matchesSearch,
+    searchTyping: searchTyping,
     searchEvents: searchEvents,
     searchHighlight: searchHighlight,
     searchDistrict: searchDistrict,

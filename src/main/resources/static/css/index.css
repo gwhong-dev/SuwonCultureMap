@@ -1688,7 +1688,7 @@ body {
     display: none; /* 지우기는 옆 ✕ 버튼 */
   }
   #searchClearBtn[hidden] {
-    display: none;
+    visibility: hidden; /* 자리는 남겨 둠 → 첫 글자를 칠 때 입력칸 너비가 출렁이지 않음 */
   }
   .search-suggest {
     flex: 1;
