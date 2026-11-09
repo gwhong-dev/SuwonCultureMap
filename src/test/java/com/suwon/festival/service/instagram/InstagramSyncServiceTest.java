@@ -120,7 +120,10 @@ class InstagramSyncServiceTest {
   }
 
   private InstagramSyncService service(String accounts, String tokenExpiresAt) {
-    Clock clock = Clock.fixed(Instant.parse("2026-10-31T03:00:00Z"), InstagramPostProcessor.KST);
+    return service(accounts, tokenExpiresAt, Clock.fixed(Instant.parse("2026-10-31T03:00:00Z"), InstagramPostProcessor.KST));
+  }
+
+  private InstagramSyncService service(String accounts, String tokenExpiresAt, Clock clock) {
     InstagramPostProcessor processor = new InstagramPostProcessor(mediaRepository, blockRepository, eventRepository,
         new PlaceGeocoder(search), new CaptionParser(null), clock, retirer, scheduleWriter);
     return new InstagramSyncService(client, processor, new InstagramTokenExpiry(tokenExpiresAt, clock), new InstagramSwitch(true), accounts, 10);
@@ -272,11 +275,78 @@ class InstagramSyncServiceTest {
     assertThat(second.newPosts()).isZero();
     assertThat(second.eventsSaved()).isZero();
     assertThat(second.eventsUpdated()).isEqualTo(1);
-    // 두 번째에는 못 찾았던 곳만 다시 검색 (READY 는 키가 같으면 장소도 같음)
-    assertThat(search.queries).containsExactly("가상 아트홀", "가상 광장", "가상 광장");
+    // 두 번째에는 다시 검색 없음: READY 는 키가 같으면 장소도 같음, 못 찾은 곳은 재검색 대기(3일)
+    assertThat(search.queries).containsExactly("가상 아트홀", "가상 광장");
+    assertThat(second.blocks().get("NO_COORD")).isEqualTo(1);
     assertThat(instagramEvents()).hasSize(1);
     assertThat(blockRepository.findByMedia(mediaRepository.findByMediaId("1790000000000001").orElseThrow()))
         .hasSize(3);
+  }
+
+  @Test
+  void 못_찾은_장소는_3일_지나야_다시_검색하고_대기_중엔_마지막_검색_시각을_그대로_둠() {
+    client.answers.put("suwon_city", List.of(post("1790000000000001", ROUNDUP)));
+    Instant t0 = Instant.parse("2026-10-31T03:00:00Z");
+    service("suwon_city", "", Clock.fixed(t0, InstagramPostProcessor.KST)).sync();
+    InstagramBlock noCoord = noCoordBlock();
+    LocalDateTime searchedAt = noCoord.getUpdatedAt();
+    String reason = noCoord.getReason();
+
+    // 2일 23시간 뒤: 검색 안 함, 상태 · 이유 · 시각 그대로
+    service("suwon_city", "", Clock.fixed(t0.plusSeconds(3 * 86400 - 3600), InstagramPostProcessor.KST)).sync();
+    assertThat(search.queries).containsExactly("가상 아트홀", "가상 광장");
+    assertThat(noCoordBlock().getUpdatedAt()).isEqualTo(searchedAt);
+    assertThat(noCoordBlock().getReason()).isEqualTo(reason);
+
+    // 3일 뒤: 다시 검색
+    service("suwon_city", "", Clock.fixed(t0.plusSeconds(3 * 86400), InstagramPostProcessor.KST)).sync();
+    assertThat(search.queries).containsExactly("가상 아트홀", "가상 광장", "가상 광장");
+    assertThat(noCoordBlock().getUpdatedAt()).isAfter(searchedAt);
+  }
+
+  @Test
+  void 검색_실패는_영구_4xx만_대기하고_401_403_429_5xx_네트워크는_다음_실행에서_다시() {
+    LocalDateTime now = LocalDateTime.of(2026, 10, 31, 12, 0);
+    assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.NO_COORD, "수원 안 검색 결과 없음", now.minusDays(1)), now)).isTrue();
+    assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.NO_COORD, "수원 안 검색 결과 없음", now.minusDays(3)), now)).isFalse();
+    assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.ERROR, "장소 검색 실패: HttpClientErrorException (HTTP 400)", now.minusHours(1)), now)).isTrue();
+    assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.ERROR, "장소 검색 실패: HttpClientErrorException (HTTP 401)", now.minusHours(1)), now)).isFalse();
+    assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.ERROR, "장소 검색 실패: HttpClientErrorException (HTTP 403)", now.minusHours(1)), now)).isFalse();
+    assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.NO_COORD, "x", null), now)).isFalse();
+    assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.ERROR, "장소 검색 실패: HttpClientErrorException (HTTP 429)", now.minusHours(1)), now)).isFalse();
+    assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.ERROR, "장소 검색 실패: HttpServerErrorException (HTTP 503)", now.minusHours(1)), now)).isFalse();
+    assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.ERROR, "장소 검색 실패: ResourceAccessException", now.minusHours(1)), now)).isFalse();
+    assertThat(InstagramPostProcessor.waitBeforeRetry(block(InstagramBlock.Status.PENDING, null, now.minusHours(1)), now)).isFalse();
+  }
+
+  @Test
+  void 영구_4xx_실패_블록은_대기_중_다시_검색하지_않음() {
+    search = new FakeSearch() {
+      @Override
+      public Page search(String query) {
+        queries.add(query);
+        throw org.springframework.web.client.HttpClientErrorException.create(
+            org.springframework.http.HttpStatus.BAD_REQUEST, "x", null, null, null);
+      }
+    };
+    client.answers.put("suwon_city", List.of(post("1790000000000001", ROUNDUP)));
+    InstagramSyncService s = service("suwon_city");
+    InstagramSyncResult first = s.sync();
+    assertThat(first.blocks().get("ERROR")).isEqualTo(2);
+    int calls = search.queries.size();
+
+    InstagramSyncResult second = s.sync();
+    assertThat(second.blocks().get("ERROR")).isEqualTo(2);
+    assertThat(search.queries).hasSize(calls);
+  }
+
+  private static InstagramBlock block(InstagramBlock.Status status, String reason, LocalDateTime at) {
+    return InstagramBlock.builder().blockKey("k").status(status).reason(reason).updatedAt(at).build();
+  }
+
+  private InstagramBlock noCoordBlock() {
+    return blockRepository.findByMedia(mediaRepository.findByMediaId("1790000000000001").orElseThrow()).stream()
+        .filter(b -> b.getStatus() == InstagramBlock.Status.NO_COORD).findFirst().orElseThrow();
   }
 
   @Test
