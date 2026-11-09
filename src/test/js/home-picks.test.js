@@ -321,6 +321,24 @@ test("치는 중 규칙: 그대로 찾아 없을 때만 마지막 글자를 넓�
   assert.ok(!searchTyping(events, "zz"));
   // 엔터 결과(typing 없음)는 그대로 찾음
   assert.deepStrictEqual(searchEvents(events, "숭", WED), []);
+  // 겹받침이 나뉘어 받침이 남는 경우: 닭 → 달 + ㄱ, 앉 → 안 + ㅈ (검증 ⚠️)
+  assert.ok(matchesSearch({ title: "달기 축제", place: "" }, "닭", true));
+  assert.ok(matchesSearch({ title: "안자 마당", place: "" }, "앉", true));
+  assert.ok(!matchesSearch({ title: "달기 축제", place: "" }, "닭"));
+  // 띄어쓰기가 낀 제목에서도 원래 제목 기준 강조
+  assert.deepStrictEqual(searchHighlight("수 원 축제", "숭", true), { start: 0, end: 3 });
+});
+
+test("검색어의 \\ · 이모지 · 정규식 기호도 글자 그대로 (예외 없음, 검증 ⚠️)", () => {
+  const event = { title: "C:\\전시 🎨 (특별) 1+1", place: "" };
+  for (const typing of [false, true]) {
+    assert.ok(matchesSearch(event, "\\전", typing));
+    assert.ok(matchesSearch(event, "🎨", typing));
+    assert.ok(matchesSearch(event, "(특별)", typing));
+    assert.ok(matchesSearch(event, "1+1", typing));
+    assert.ok(!matchesSearch(event, "11", typing));
+  }
+  assert.deepStrictEqual(searchHighlight(event.title, "🎨"), { start: 6, end: 8 });
 });
 
 test("검색어가 구 이름이면 그 구 (두 글자부터)", () => {
