@@ -2,6 +2,7 @@ package com.suwon.festival.service.instagram;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +71,7 @@ public class InstagramSyncService {
     for (String rejected : rejectedAccounts) accountErrors.add(rejected + ": 공식 계정 목록에 없어 건너뜀");
     Map<String, Integer> blocks = new LinkedHashMap<>();
     for (InstagramBlock.Status s : InstagramBlock.Status.values()) blocks.put(s.name(), 0);
+    Map<String, Map<String, Integer>> blocksByAccount = new LinkedHashMap<>();
     int okAccounts = 0, posts = 0, newPosts = 0, postErrors = 0, saved = 0, updated = 0, duplicates = 0;
 
     for (String account : accounts) {
@@ -86,12 +88,16 @@ public class InstagramSyncService {
         continue;
       }
       okAccounts++;
+      Map<InstagramBlock.Status, Integer> accountBlocks = new EnumMap<>(InstagramBlock.Status.class);
       for (InstagramPost post : fetched) {
         posts++;
         try {
           InstagramPostProcessor.Outcome o = processor.process(account, post);
           if (o.newMedia()) newPosts++;
-          o.blocks().forEach((s, n) -> blocks.merge(s.name(), n, Integer::sum));
+          o.blocks().forEach((s, n) -> {
+            blocks.merge(s.name(), n, Integer::sum);
+            accountBlocks.merge(s, n, Integer::sum);
+          });
           saved += o.eventsSaved();
           updated += o.eventsUpdated();
           duplicates += o.duplicateBlocks();
@@ -103,10 +109,14 @@ public class InstagramSyncService {
               cause == null ? "" : " ← " + cause.getClass().getSimpleName());
         }
       }
+      Map<String, Integer> named = new LinkedHashMap<>(); // 상태 순서(EnumMap) 그대로, 0 은 빠짐
+      accountBlocks.forEach((s, n) -> { if (n > 0) named.put(s.name(), n); });
+      blocksByAccount.put(account, named);
+      log.info("인스타 계정 결과 account={} 게시물 {} · 블록 {}", account, fetched.size(), named);
     }
 
     InstagramSyncResult result = new InstagramSyncResult(true, null, accounts.size(), okAccounts, accountErrors,
-        posts, newPosts, postErrors, blocks, saved, updated, duplicates, tokenWarning, null);
+        posts, newPosts, postErrors, blocks, blocksByAccount, saved, updated, duplicates, tokenWarning, null);
     log.info("인스타 동기화 끝: 계정 {}/{} · 게시물 {} (새 {} · 실패 {}) · 행사 저장 {} · 갱신 {} · 블록 {}",
         okAccounts, accounts.size(), posts, newPosts, postErrors, saved, updated, blocks);
     return result;

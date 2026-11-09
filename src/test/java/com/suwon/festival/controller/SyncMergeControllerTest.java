@@ -123,7 +123,7 @@ class SyncMergeControllerTest {
   }
 
   private static InstagramSyncResult syncResult() {
-    return new InstagramSyncResult(true, null, 1, 1, List.of(), 1, 1, 0, Map.of("READY", 3), 3, 0, 0, null, null);
+    return new InstagramSyncResult(true, null, 1, 1, List.of(), 1, 1, 0, Map.of("READY", 3), Map.of(), 3, 0, 0, null, null);
   }
 
   private static Event.EventBuilder event() {
