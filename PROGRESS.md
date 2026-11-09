@@ -137,7 +137,8 @@
 - [x] 비회원 찜 (브라우저 저장) + 로그인 때 계정으로 합치기 → 11/9 완료. 남은 것: 찜 알림
   - [x] (#163 검증 ⚠️ 3건) 11/9 이 PR 에서 정리: 본문 8KB 넘으면 413(`MergeBodyLimitFilter`) · 번호 100개 넘으면 400 · 숫자 아닌 값 400 시험 / 탭 2개 동시 합치기 고유 제약 위반 → 409(`GlobalExceptionHandler`, 기기 목록은 남아 다음에 다시 합침) / 행사 목록을 받으면 기기 찜에서 없는 번호 정리(`guestFavorites.prune`). 숨김 → 다른 행사에 합쳐진 번호도 정리됨(대표로 옮기지 않음)
   - [x] (#168 검증 ⚠️) 기기 찜 정리가 "다른 행사에 합쳐진 번호" · 인스타 스위치가 꺼진 사이 행사 찜도 지움 → 11/9 `fix/guest-favorites-merged`: 지우지 않고 남겨 둠(로그인 때 서버 합치기가 대표로 옮김), 100개가 차면 화면에 없는 번호 중 가장 오래된 것만 밀어냄. `/api/events` 변경 없음
-- [ ] `scripts/repair-flyway-v2.ps1` 도 임시 설정 파일을 씀 → 한글 사용자 이름 PC 에서 실패 (`reset-instagram-dev` 와 같은 문제, 11/1 발견)
+- [ ] (PC 확인 남음) `scripts/repair-flyway-v2.ps1` 도 임시 설정 파일을 씀 → 한글 사용자 이름 PC 에서 실패 (`reset-instagram-dev` 와 같은 문제, 11/1 발견)
+  - 11/9 `fix/repair-flyway-korean-user`: 임시 설정 파일 → `MYSQL_PWD` 환경 변수 + `-u` 로 변경(reset-instagram-dev 와 같은 방식). 클라우드에 PowerShell 이 없어 실행 · 문법 검사 못 함 → PC 에서 `scripts\repair-flyway-v2.cmd` 가 [설정] · [도구] 뒤 검사까지 가는지 확인
 - [ ] D: PC 개발 DB 의 기존 행사 125건: `place` · `time_text` 가 비어 있음. 재단 동기화로 채워지는지 확인
 - [ ] Claude in Chrome 이 연결된 PC 의 8080 서버 확인: 그 PC 에서 `netstat -ano | findstr :8080` → 필요 없는 앱이면 종료 (`/` · `/api/events` 모두 404 인 Spring 앱, 정체 미확인)
 - [ ] Flyway `baseline-on-migrate`: V1 보다 옛 구조의 DB 도 "버전 1"로 표시하고 V2~ 를 적용함 → 칸이 빠졌으면 적용 뒤에야 검증 오류로 발견. 새 PC 점검 스크립트에 구조 확인 포함 검토
