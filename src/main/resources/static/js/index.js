@@ -534,9 +534,105 @@ function filterMarkers() {
     }
   });
 
+  // 찜 탭(모바일) "최근 본": 위 조건 대신 최근 본 순서 그대로 (기록이라 검색어 · 날짜 · 지난 행사와 상관없이)
+  if (selectedCategory !== "찜") favView = "fav"; // 찜 탭을 나가면 다음엔 '찜'부터
+  var recentItems = recentMarkerItems();
+  updateFavTabs(selectedCategory === "찜" && mobileQuery.matches, visibleItems.length, recentItems.length);
+  if (showingRecent()) {
+    recentItems.forEach(function (item) {
+      item.runMatch = null; // 날짜 필터 "기간 중 · 일정 확인" 표시도 빼고
+    });
+    visibleItems = recentItems;
+  }
+
   renderLocationMarkers(visibleItems); // 장소별로 묶어서 마커 다시 그리기
   renderSidebar(visibleItems);
   updateSearchFavs();
+}
+
+// ===== 찜 탭 "최근 본" (디자인 05): 상세를 연 행사 번호만 이 기기 브라우저 저장소에 (recent-views.js) =====
+var RECENT_STORAGE_KEY = "suwonbible.recentEvents";
+var recentMemory = []; // 저장소를 못 쓰는 브라우저(사생활 보호 모드 등)에선 이 페이지에서만 기억
+var favView = "fav"; // 찜 탭 안: "fav" 찜 | "recent" 최근 본
+
+function readRecentIds() {
+  try {
+    var raw = window.localStorage.getItem(RECENT_STORAGE_KEY);
+    if (raw !== null) return parseRecentIds(raw); // 다른 창에서 본 것도 같이
+  } catch (e) {
+    // 저장소 막힘 → 아래 메모리
+  }
+  return recentMemory;
+}
+
+function writeRecentIds(ids) {
+  recentMemory = ids;
+  try {
+    if (ids.length) {
+      window.localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(ids));
+    } else {
+      window.localStorage.removeItem(RECENT_STORAGE_KEY);
+    }
+  } catch (e) {
+    // 가득 찼거나 막힘 → 이 페이지에서만 기억
+  }
+}
+
+function rememberRecentView(eventId) {
+  writeRecentIds(addRecentId(readRecentIds(), eventId));
+}
+
+// 최근 본 순서대로 지금 받아 온 행사 (지워진 행사는 건너뜀)
+function recentMarkerItems() {
+  return pickRecent(readRecentIds(), markerList, function (item) {
+    return item.event.id;
+  });
+}
+
+function showingRecent() {
+  return favView === "recent" && mobileQuery.matches && document.getElementById("categorySelect").value === "찜";
+}
+
+// 찜 | 최근 본 탭: 찜 탭(모바일)에서만 보임, 개수 · 선택 표시
+function updateFavTabs(visible, favCount, recentCount) {
+  document.getElementById("favTabs").hidden = !visible;
+  document.getElementById("favTabFavCount").textContent = favCount;
+  document.getElementById("favTabRecentCount").textContent = recentCount;
+  document.querySelectorAll("#favTabs .fav-tab").forEach(function (tab) {
+    var active = tab.dataset.view === favView;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", active ? "true" : "false");
+    tab.tabIndex = active ? 0 : -1;
+  });
+}
+
+function selectFavView(view, focus) {
+  if (favView === view) return;
+  favView = view;
+  hidePreview();
+  filterMarkers();
+  window.scrollTo(0, 0); // 목록 전체는 페이지 스크롤 → 새 목록 맨 위부터
+  document.getElementById("list").scrollTop = 0; // 절반으로 내린 시트는 목록 상자 스크롤
+  if (focus) document.querySelector('#favTabs .fav-tab[data-view="' + view + '"]').focus();
+}
+
+document.querySelectorAll("#favTabs .fav-tab").forEach(function (tab) {
+  tab.addEventListener("click", function () {
+    selectFavView(tab.dataset.view, false);
+  });
+  tab.addEventListener("keydown", function (e) {
+    // 좌우 화살표로도 바꿈 (홈 곧 종료 · 곧 시작 탭과 같게)
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    selectFavView(favView === "fav" ? "recent" : "fav", true);
+  });
+});
+
+// "모두 지우기" → 기록을 비우고 빈 안내
+function clearRecentViews() {
+  writeRecentIds([]);
+  filterMarkers();
+  showToast("최근 본 기록을 지웠어요");
 }
 
 // ===== Side-bar용 info 요약 (이용료/장소/시간만 추출) =====
@@ -570,17 +666,23 @@ function extractSummaryInfo(infoText) {
 }
 
 // ===== 찜 탭이 비었을 때 안내 (비로그인 · 아직 없음 · 조건에 걸러짐) =====
+var EMPTY_HEART_SVG =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>';
+var EMPTY_CLOCK_SVG =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></svg>';
+
 function renderFavoriteEmpty(list) {
   var favoriteCount = markerList.filter(function (item) {
     return favoriteEventIds.has(item.event.id);
   }).length;
-  var state = favoriteEmptyState(isLoggedIn, favoriteCount);
+  renderEmptyBox(list, favoriteEmptyState(isLoggedIn, favoriteCount), EMPTY_HEART_SVG);
+}
 
+// 하트(찜) · 시계(최근 본) + 제목 · 안내 · 버튼
+function renderEmptyBox(list, state, iconSvg) {
   var box = document.createElement("div");
   box.className = "fav-empty";
-  box.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>' +
-    '<strong class="fav-empty-title"></strong><span class="fav-empty-body"></span>';
+  box.innerHTML = iconSvg + '<strong class="fav-empty-title"></strong><span class="fav-empty-body"></span>';
   box.querySelector(".fav-empty-title").textContent = state.title;
   box.querySelector(".fav-empty-body").textContent = state.body;
   if (state.action) {
@@ -595,25 +697,40 @@ function renderFavoriteEmpty(list) {
 
 // ===== Side-bar 카드 렌더링 (이미지 + 제목 + info 요약) =====
 function renderSidebar(items) {
+  var recent = showingRecent(); // 최근 본: 본 순서 그대로, 구분 제목 없음
   // 찜한 행사는 맨 위에 이름순, 나머지는 시작일 순
-  var favorites = items
-    .filter(function (item) {
-      return favoriteEventIds.has(item.event.id);
-    })
-    .sort(function (a, b) {
-      return a.event.title.localeCompare(b.event.title, "ko");
-    });
-  var others = items
-    .filter(function (item) {
-      return !favoriteEventIds.has(item.event.id);
-    })
-    .sort(compareStartDate);
+  var favorites = recent
+    ? []
+    : items
+        .filter(function (item) {
+          return favoriteEventIds.has(item.event.id);
+        })
+        .sort(function (a, b) {
+          return a.event.title.localeCompare(b.event.title, "ko");
+        });
+  var others = recent
+    ? items
+    : items
+        .filter(function (item) {
+          return !favoriteEventIds.has(item.event.id);
+        })
+        .sort(compareStartDate);
   var sorted = favorites.concat(others);
 
   var list = document.getElementById("list");
   list.innerHTML = "";
   list.removeAttribute("aria-busy"); // 스켈레톤 끝
-  if (sorted.length === 0 && document.getElementById("categorySelect").value === "찜") {
+  if (recent) {
+    if (sorted.length === 0) {
+      renderEmptyBox(list, recentEmptyState(), EMPTY_CLOCK_SVG);
+    } else {
+      var note = document.createElement("div");
+      note.className = "recent-note";
+      note.innerHTML = '<span>이 기기에만 저장돼요</span><button type="button">모두 지우기</button>';
+      note.querySelector("button").addEventListener("click", clearRecentViews);
+      list.appendChild(note);
+    }
+  } else if (sorted.length === 0 && document.getElementById("categorySelect").value === "찜") {
     renderFavoriteEmpty(list);
   }
 
@@ -698,7 +815,7 @@ function renderSidebar(items) {
 
   // ===== (모바일) 결과 개수 + 미리보기 카드도 같은 목록으로 갱신 =====
   document.getElementById("resultCount").innerHTML =
-    "검색 결과 <strong>" + sorted.length + "개</strong>";
+    (recent ? "최근 본 " : "검색 결과 ") + "<strong>" + sorted.length + "개</strong>";
   updateSheetHeaderLabel();
   lastSortedItems = sorted;
   renderPreviewStrip(sorted);
@@ -909,6 +1026,7 @@ function openDetailModal(event) {
   measureIntro();
   nav.open("detail");
   syncUrlState();
+  rememberRecentView(event.id); // 찜 탭 "최근 본" (목록 순서는 다음에 그릴 때 바뀜 — 보던 자리가 밀리지 않게)
 }
 
 // ===== 상세 (모바일 디자인 04): 분류 · 구 → 정보 표 → 소개 → 위치 =====
@@ -1267,6 +1385,7 @@ function showFavoriteList() {
   if (detailEvent) closeDetailModal();
   closeSearch(); // 검색 결과에서 찜 → 토스트 "보기" 면 찜 탭이 보이게
   if (mobileQuery.matches) {
+    favView = "fav"; // "보기" 는 찜 목록 (최근 본을 보던 중이어도)
     selectTab("fav");
     return;
   }
@@ -2052,6 +2171,12 @@ mobileQuery.addEventListener("change", function (e) {
   }
   if (districtFilter) setDistrictFilter(null);
   closeSearch(); // 검색 화면도 모바일 전용
+});
+
+// 찜 | 최근 본 탭 줄도 모바일 전용 → 폭이 바뀌면 다시 그림 (PC 로 가면 찜 목록으로)
+mobileQuery.addEventListener("change", function (e) {
+  if (!e.matches) favView = "fav";
+  if (document.getElementById("categorySelect").value === "찜") filterMarkers();
 });
 
 // ----- 검색 화면 (디자인 06 입력 중): 홈 검색 버튼 · 지도 탭 검색창 → 화면 전체 -----
