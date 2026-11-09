@@ -2291,7 +2291,11 @@ mobileQuery.addEventListener("change", function (e) {
     }
     return;
   }
-  if (districtFilter) setDistrictFilter(null);
+  // PC 엔 칩 줄이 없어 구 · 무료 필터를 끌 수 없음 → 넘어갈 때 풂
+  if (districtFilter || freeOnly) {
+    freeOnly = false;
+    setDistrictFilter(null);
+  }
   closeSearch(); // 검색 화면도 모바일 전용
 });
 
