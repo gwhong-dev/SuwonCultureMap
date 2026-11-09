@@ -414,6 +414,15 @@ function showEvents(events) {
     markerList.push({ event: event });
   });
   eventsLoaded = true;
+  // 이 기기 찜에서 지금 없는 행사(삭제 · 숨김) 번호를 정리 — 비로그인이면 ♥ 표시 기준도 다시
+  var removedGuest = guestFavorites.prune(
+    new Set(
+      events.map(function (event) {
+        return event.id;
+      }),
+    ),
+  );
+  if (removedGuest && !isLoggedIn) favoriteEventIds = new Set(guestFavorites.list());
 
   filterMarkers();
   renderHome();

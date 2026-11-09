@@ -38,10 +38,16 @@ public class FavoriteController {
   }
 
   // 비회원 찜 합치기 (로그인 직후 화면이 이 기기 찜 번호를 보냄) → 더한 개수
+  // 본문 크기는 MergeBodyLimitFilter(413), 숫자 아닌 값은 JSON 읽기 실패(400), 개수 초과는 여기서 400
+  // 탭 2개가 동시에 합치면 늦은 쪽은 고유 제약 위반 → GlobalExceptionHandler 가 409 (화면은 기기 목록을 남겨 다음에 다시 합침)
   @PostMapping(value = "/merge", produces = "application/json")
   public MergeResult mergeFavorites(@RequestBody MergeRequest request, HttpSession session) {
     Long memberId = getMemberId(session);
-    return new MergeResult(favoriteService.mergeFavorites(memberId, request == null ? null : request.eventIds()));
+    List<Long> eventIds = request == null ? null : request.eventIds();
+    if (eventIds != null && eventIds.size() > FavoriteService.MERGE_MAX) {
+      throw new IllegalArgumentException("합칠 찜이 너무 많습니다.");
+    }
+    return new MergeResult(favoriteService.mergeFavorites(memberId, eventIds));
   }
 
   public record MergeRequest(List<Long> eventIds) {

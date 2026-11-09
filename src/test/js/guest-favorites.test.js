@@ -5,6 +5,7 @@ const {
   GUEST_FAVORITE_MAX,
   parseGuestFavorites,
   toggleGuestFavoriteId,
+  pruneGuestFavoriteIds,
   createGuestFavoriteStore,
   guestFavoriteToast,
   guestMergeToastText,
@@ -86,4 +87,33 @@ test("토스트: 담음 → 보기 + 합치기 안내, 뺌 → 글만, 가득 �
   assert.strictEqual(guestFavoriteToast(null).actionLabel, "로그인");
   assert.strictEqual(guestMergeToastText(2), "이 기기에서 찜한 행사 2개를 계정에 합쳤어요");
   assert.strictEqual(guestMergeToastText(0), null);
+});
+
+test("pruneGuestFavoriteIds: 불러온 행사에 없는 번호만 빼고 순서 유지, 행사 목록이 비면 그대로", () => {
+  assert.deepStrictEqual(pruneGuestFavoriteIds([5, 2, 9], new Set([9, 5, 7])), [5, 9]);
+  assert.deepStrictEqual(pruneGuestFavoriteIds([5, 2], new Set()), [5, 2]);
+  assert.deepStrictEqual(pruneGuestFavoriteIds([5, 2], null), [5, 2]);
+});
+
+test("store.prune: 뺀 개수를 돌려주고 저장소도 갱신, 다 빠지면 키 삭제, 뺄 게 없으면 안 씀", () => {
+  const storage = fakeStorage();
+  const store = createGuestFavoriteStore(storage, "k");
+  store.toggle(1);
+  store.toggle(2);
+  store.toggle(3);
+  assert.strictEqual(store.prune(new Set([2, 3, 4])), 1);
+  assert.deepStrictEqual(store.list(), [2, 3]);
+  assert.strictEqual(storage.data.k, "[2,3]");
+
+  let writes = 0;
+  const origSet = storage.setItem;
+  storage.setItem = (k, v) => {
+    writes++;
+    origSet(k, v);
+  };
+  assert.strictEqual(store.prune(new Set([2, 3])), 0);
+  assert.strictEqual(writes, 0);
+
+  assert.strictEqual(store.prune(new Set([99])), 2);
+  assert.ok(!("k" in storage.data));
 });
