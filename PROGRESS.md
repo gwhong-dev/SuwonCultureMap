@@ -110,7 +110,7 @@
 - [x] 카카오톡 공유 버튼이 항상 "불러오지 못했어요" 토스트 (11/3 발견 · 수정): SDK v2 는 `Kakao.init()` 뒤에야 `Kakao.Share` 가 생기는데 init 전에 검사했음 → init 먼저 하고 Share 확인. 로컬에서 카카오 공유 API 200 확인, 회귀 테스트 `KakaoShareScriptTest`
 - [ ] 처리방침 로그 보관 기간: 앱 로그 파일은 14일(#107)이지만 화면 출력 `docker logs`(10MB×3)는 기간 제한이 없어 지금은 "자동 삭제될 때까지"로 둠 → 14일로 적으려면 Docker 로그에도 기간 제한(예: 배포마다 새 컨테이너 + 크기 축소) 후 처리방침 수정 (#107 검증 지적)
 - [ ] 운영 서버 로그를 Claude 가 직접 보려면 ssh 읽기 허용 필요 (11/3 자동 권한 검사가 운영 읽기로 막음) → 필요할 때 사용자가 `/permissions` 로 허용하거나 사용자가 명령 결과를 붙여 줌
-- [ ] `deploy/deploy.sh` 는 Caddyfile 만 바뀌면 Caddy 를 다시 띄우지 않음(설정 그대로 유지) → Caddyfile 수정 시 `docker compose up -d --force-recreate caddy` 단계 추가
+- [x] `deploy/deploy.sh` Caddyfile 반영 (11/9): 앱 응답 확인 뒤 실행 중 Caddy 의 `/etc/caddy/Caddyfile` 과 저장소 파일이 다르면 `up -d --force-recreate --no-deps caddy`, 같으면 건드리지 않음
 - [ ] GitHub 예약 실행은 공개 저장소에 60일 동안 커밋이 없으면 자동 정지 → 정지되면 Actions 화면에서 Uptime 다시 켜기 (메일 안내 옴)
 - [x] 카카오 JS SDK 2.7.9 `integrity` (#114, 11/3) — 카카오 문서 SRI 해시 = 직접 계산값. 버전을 올릴 땐 문서 "JavaScript > 다운로드" 의 해시도 같이 (최신 2.8.4 는 공유 화면 동작이 바뀌어 따로)
 - [x] CSP 테스트 빈틈 (#113 검증 ⚠️) — 11/9 시험 추가: `CspStyleSourceTest`(static HTML 외부 `<link rel=stylesheet>` · preload as=style · CSS `@import` 주소가 `style-src` 에 있는지), `SecurityHeadersServerTest` 404 · 500(화면 · API 요청) 응답도 보안 헤더 5종 · CSP 값이 같은지. 실제 문제는 없었음
