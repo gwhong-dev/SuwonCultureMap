@@ -5,7 +5,7 @@ const {
   GUEST_FAVORITE_MAX,
   parseGuestFavorites,
   toggleGuestFavoriteId,
-  pruneGuestFavoriteIds,
+  evictableGuestFavoriteId,
   createGuestFavoriteStore,
   guestFavoriteToast,
   guestMergeToastText,
@@ -89,31 +89,36 @@ test("토스트: 담음 → 보기 + 합치기 안내, 뺌 → 글만, 가득 �
   assert.strictEqual(guestMergeToastText(0), null);
 });
 
-test("pruneGuestFavoriteIds: 불러온 행사에 없는 번호만 빼고 순서 유지, 행사 목록이 비면 그대로", () => {
-  assert.deepStrictEqual(pruneGuestFavoriteIds([5, 2, 9], new Set([9, 5, 7])), [5, 9]);
-  assert.deepStrictEqual(pruneGuestFavoriteIds([5, 2], new Set()), [5, 2]);
-  assert.deepStrictEqual(pruneGuestFavoriteIds([5, 2], null), [5, 2]);
+test("evictableGuestFavoriteId: 화면에 없는 번호 중 가장 오래된 것, 없거나 행사 목록을 모르면 null", () => {
+  assert.strictEqual(evictableGuestFavoriteId([5, 2, 9, 4], new Set([5, 9])), 2);
+  assert.strictEqual(evictableGuestFavoriteId([5, 9], new Set([5, 9])), null);
+  assert.strictEqual(evictableGuestFavoriteId([5, 2], new Set()), null);
+  assert.strictEqual(evictableGuestFavoriteId([5, 2], null), null);
 });
 
-test("store.prune: 뺀 개수를 돌려주고 저장소도 갱신, 다 빠지면 키 삭제, 뺄 게 없으면 안 씀", () => {
+test("가득 찼을 때: 화면에 없는 번호(합쳐 숨김 등)를 하나 밀어내고 담음, 밀어낼 게 없으면 못 담음", () => {
+  const full = Array.from({ length: GUEST_FAVORITE_MAX }, (_, i) => i + 1);
+  const known = new Set(full.filter((id) => id !== 3 && id !== 7));
+  const r = toggleGuestFavoriteId(full, 500, known);
+  assert.strictEqual(r.added, true);
+  assert.strictEqual(r.ids.length, GUEST_FAVORITE_MAX);
+  assert.ok(!r.ids.includes(3) && r.ids.includes(7) && r.ids[r.ids.length - 1] === 500);
+  assert.strictEqual(toggleGuestFavoriteId(full, 500, new Set(full)).added, null);
+  assert.strictEqual(toggleGuestFavoriteId(full, 500).added, null);
+});
+
+test("store.setKnownIds: 화면에 없는 번호를 지우지 않음(로그인 때 서버가 대표로 옮기게), 가득 찼을 때만 밀어냄", () => {
   const storage = fakeStorage();
   const store = createGuestFavoriteStore(storage, "k");
   store.toggle(1);
   store.toggle(2);
-  store.toggle(3);
-  assert.strictEqual(store.prune(new Set([2, 3, 4])), 1);
-  assert.deepStrictEqual(store.list(), [2, 3]);
-  assert.strictEqual(storage.data.k, "[2,3]");
+  store.setKnownIds(new Set([2]));
+  assert.deepStrictEqual(store.list(), [1, 2]);
+  assert.strictEqual(storage.data.k, "[1,2]");
 
-  let writes = 0;
-  const origSet = storage.setItem;
-  storage.setItem = (k, v) => {
-    writes++;
-    origSet(k, v);
-  };
-  assert.strictEqual(store.prune(new Set([2, 3])), 0);
-  assert.strictEqual(writes, 0);
-
-  assert.strictEqual(store.prune(new Set([99])), 2);
-  assert.ok(!("k" in storage.data));
+  for (let id = 3; id <= GUEST_FAVORITE_MAX; id++) store.toggle(id);
+  assert.strictEqual(store.list().length, GUEST_FAVORITE_MAX);
+  assert.strictEqual(store.toggle(1000), true); // 화면에 없는 1 을 밀어냄
+  assert.deepStrictEqual(store.list().slice(0, 2), [2, 3]);
+  assert.strictEqual(store.list()[GUEST_FAVORITE_MAX - 1], 1000);
 });

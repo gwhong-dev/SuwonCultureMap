@@ -27,8 +27,9 @@ function parseGuestFavorites(raw) {
     .slice(0, GUEST_FAVORITE_MAX);
 }
 
-// 있으면 빼고 없으면 맨 뒤에 더함. 가득 찼으면 더하지 않음 (added = null)
-function toggleGuestFavoriteId(ids, id) {
+// 있으면 빼고 없으면 맨 뒤에 더함. 가득 찼으면 화면에 없는 번호(knownIds 밖) 중 가장 오래된 것 하나를 밀어내고 더함
+// 밀어낼 게 없으면(전부 화면에 있음 · knownIds 모름) 더하지 않음 (added = null)
+function toggleGuestFavoriteId(ids, id, knownIds) {
   if (!isGuestEventId(id)) return { ids: ids, added: null };
   if (ids.indexOf(id) !== -1) {
     return {
@@ -38,23 +39,32 @@ function toggleGuestFavoriteId(ids, id) {
       added: false,
     };
   }
-  if (ids.length >= GUEST_FAVORITE_MAX) return { ids: ids, added: null };
+  if (ids.length >= GUEST_FAVORITE_MAX) {
+    var evict = evictableGuestFavoriteId(ids, knownIds);
+    if (evict === null) return { ids: ids, added: null };
+    ids = ids.filter(function (x) {
+      return x !== evict;
+    });
+  }
   return { ids: ids.concat([id]), added: true };
 }
 
-// 불러온 행사(/api/events)에 없는 번호(삭제 · 숨김 · 다른 행사에 합쳐짐)를 뺌 → 화면에서 뺄 수 없는 찜이 100개 한도를 차지하지 않게
-// 행사 목록이 비었으면(받기 이상) 아무것도 빼지 않음
-function pruneGuestFavoriteIds(ids, knownIds) {
-  if (!knownIds || !knownIds.size) return ids;
-  return ids.filter(function (id) {
-    return knownIds.has(id);
-  });
+// 불러온 행사(/api/events)에 없는 번호 중 가장 오래된 것. 없거나 행사 목록을 아직 모르면 null
+// 화면에 없는 번호는 지우지 않고 남겨 둠: 다른 행사에 합쳐 숨겨졌거나 인스타 스위치가 잠깐 꺼진 행사일 수 있음
+// → 로그인 때 서버 합치기(FavoriteService.mergeFavorites)가 대표 행사로 옮기고, 정말 없는 번호는 서버가 건너뜀
+function evictableGuestFavoriteId(ids, knownIds) {
+  if (!knownIds || !knownIds.size) return null;
+  for (var i = 0; i < ids.length; i++) {
+    if (!knownIds.has(ids[i])) return ids[i];
+  }
+  return null;
 }
 
 // 저장소가 막힌 브라우저(사생활 보호 · 가득 참)에선 이 페이지에서만 기억 (최근 본 createRecentStore 와 같은 방식)
 function createGuestFavoriteStore(storage, key) {
   var memory = [];
   var usable = !!storage;
+  var knownIds = null; // 불러온 행사 번호 (가득 찼을 때 밀어낼 번호를 고르는 데만 씀)
 
   function list() {
     if (usable) {
@@ -86,19 +96,16 @@ function createGuestFavoriteStore(storage, key) {
     list: list,
     // 결과: true 담음 · false 뺌 · null 못 담음(가득 참)
     toggle: function (id) {
-      var result = toggleGuestFavoriteId(list(), id);
+      var result = toggleGuestFavoriteId(list(), id, knownIds);
       if (result.added !== null) write(result.ids);
       return result.added;
     },
     clear: function () {
       write([]);
     },
-    // 결과: 뺀 개수 (0 이면 저장소를 건드리지 않음)
-    prune: function (knownIds) {
-      var ids = list();
-      var kept = pruneGuestFavoriteIds(ids, knownIds);
-      if (kept.length !== ids.length) write(kept);
-      return ids.length - kept.length;
+    // 행사를 불러올 때마다 알려 줌. 저장소는 건드리지 않음 (화면에 없는 번호도 로그인 때 서버가 대표로 옮기게 남김)
+    setKnownIds: function (ids) {
+      knownIds = ids;
     },
   };
 }
@@ -123,7 +130,7 @@ if (typeof module !== "undefined") {
     GUEST_FAVORITE_MAX: GUEST_FAVORITE_MAX,
     parseGuestFavorites: parseGuestFavorites,
     toggleGuestFavoriteId: toggleGuestFavoriteId,
-    pruneGuestFavoriteIds: pruneGuestFavoriteIds,
+    evictableGuestFavoriteId: evictableGuestFavoriteId,
     createGuestFavoriteStore: createGuestFavoriteStore,
     guestFavoriteToast: guestFavoriteToast,
     guestMergeToastText: guestMergeToastText,
