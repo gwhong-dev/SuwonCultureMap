@@ -22,6 +22,10 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
   Optional<Event> findBySourceAndSourceKey(String source, String sourceKey); // 인스타 행사 중복 확인
 
+  // 출처별 사진 주소 (인스타 사진 파일 정리 — 아직 쓰는 파일인지)
+  @Query("select e.imageUrl from Event e where e.source = :source and e.imageUrl is not null")
+  List<String> findImageUrlsBySource(@Param("source") String source);
+
   List<Event> findByMergedIntoIdIsNull(); // 화면에 보이는 행사 (합쳐져 숨겨진 행 제외)
 
   List<Event> findByMergedIntoId(Long mergedIntoId); // 이 행사를 대표로 삼아 숨겨진 행 (대표를 지우기 전에 비움)

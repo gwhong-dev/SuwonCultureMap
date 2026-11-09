@@ -6,13 +6,19 @@ import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.suwon.festival.entity.Event;
 import com.suwon.festival.entity.InstagramBlock;
+import com.suwon.festival.repository.EventRepository;
 import com.suwon.festival.service.instagram.InstagramFetchException.Kind;
 
 // 인스타 5단계: 대상 계정마다 최근 게시물 수집 → 게시물별 정리 · 좌표 · 저장 (설계 문서 2번 파이프라인)
@@ -32,11 +38,17 @@ public class InstagramSyncService {
   private final List<String> accounts;
   private final List<String> rejectedAccounts;
   private final int fetchLimit;
+  private final InstagramImageStore imageStore;
+  private final EventRepository eventRepository;
 
+  @Autowired
   public InstagramSyncService(InstagramClient client, InstagramPostProcessor processor,
       InstagramTokenExpiry tokenExpiry, InstagramSwitch instagramSwitch,
       @Value("${instagram.accounts:}") String accounts,
-      @Value("${instagram.fetch-limit:10}") int fetchLimit) {
+      @Value("${instagram.fetch-limit:10}") int fetchLimit,
+      InstagramImageStore imageStore, EventRepository eventRepository) {
+    this.imageStore = imageStore;
+    this.eventRepository = eventRepository;
     this.client = client;
     this.processor = processor;
     this.tokenExpiry = tokenExpiry;
@@ -52,7 +64,36 @@ public class InstagramSyncService {
     this.fetchLimit = fetchLimit;
   }
 
+  // 시험용: 사진 저장 없이
+  InstagramSyncService(InstagramClient client, InstagramPostProcessor processor, InstagramTokenExpiry tokenExpiry,
+      InstagramSwitch instagramSwitch, String accounts, int fetchLimit) {
+    this(client, processor, tokenExpiry, instagramSwitch, accounts, fetchLimit, InstagramImageStore.disabled(), null);
+  }
+
+  // 수집이 끝나면(꺼져 있어도) DB 행사가 더 쓰지 않는 사진 파일을 지움 → 행사가 지워지면 사진도 같이 (docs/instagram-images.md)
   public InstagramSyncResult sync() {
+    try {
+      return collect();
+    } finally {
+      cleanupImages();
+    }
+  }
+
+  void cleanupImages() {
+    if (!imageStore.isEnabled() || eventRepository == null) return;
+    Set<String> keep;
+    try {
+      keep = eventRepository.findImageUrlsBySource(Event.SOURCE_INSTAGRAM).stream()
+          .map(InstagramImageStore::mediaIdOf).filter(Objects::nonNull).collect(Collectors.toSet());
+    } catch (RuntimeException e) {
+      // 쓰는 목록을 모르면 지우지 않음 (틀리게 지우면 사진을 다시 못 받을 수 있음)
+      log.warn("인스타 사진 정리 건너뜀: 사용 중 목록 조회 실패 {}", e.getClass().getSimpleName());
+      return;
+    }
+    imageStore.cleanup(keep);
+  }
+
+  private InstagramSyncResult collect() {
     if (!instagramSwitch.isEnabled()) {
       return InstagramSyncResult.notConfigured("인스타 수집 중단 상태 (instagram.sync.enabled=false)", null);
     }

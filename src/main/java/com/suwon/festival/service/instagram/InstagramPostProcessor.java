@@ -73,19 +73,28 @@ public class InstagramPostProcessor {
   private final Clock clock;
   private final StaleBlockRetirer retirer;
   private final EventScheduleWriter scheduleWriter;
+  private final InstagramImageStore imageStore;
 
   @Autowired
   public InstagramPostProcessor(InstagramMediaRepository mediaRepository, InstagramBlockRepository blockRepository,
       EventRepository eventRepository, PlaceGeocoder geocoder, ObjectProvider<CaptionAiClient> ai,
-      StaleBlockRetirer retirer, EventScheduleWriter scheduleWriter) {
+      StaleBlockRetirer retirer, EventScheduleWriter scheduleWriter, InstagramImageStore imageStore) {
     // AI 구현이 아직 없음 → null → 규칙으로 못 읽은 블록은 PENDING (AI 를 붙이면 다음 실행에서 다시 처리)
     this(mediaRepository, blockRepository, eventRepository, geocoder, new CaptionParser(ai.getIfAvailable()),
-        Clock.system(KST), retirer, scheduleWriter);
+        Clock.system(KST), retirer, scheduleWriter, imageStore);
+  }
+
+  // 시험용: 사진 저장 없이
+  InstagramPostProcessor(InstagramMediaRepository mediaRepository, InstagramBlockRepository blockRepository,
+      EventRepository eventRepository, PlaceGeocoder geocoder, CaptionParser parser, Clock clock,
+      StaleBlockRetirer retirer, EventScheduleWriter scheduleWriter) {
+    this(mediaRepository, blockRepository, eventRepository, geocoder, parser, clock, retirer, scheduleWriter,
+        InstagramImageStore.disabled());
   }
 
   InstagramPostProcessor(InstagramMediaRepository mediaRepository, InstagramBlockRepository blockRepository,
       EventRepository eventRepository, PlaceGeocoder geocoder, CaptionParser parser, Clock clock,
-      StaleBlockRetirer retirer, EventScheduleWriter scheduleWriter) {
+      StaleBlockRetirer retirer, EventScheduleWriter scheduleWriter, InstagramImageStore imageStore) {
     this.mediaRepository = mediaRepository;
     this.blockRepository = blockRepository;
     this.eventRepository = eventRepository;
@@ -94,6 +103,7 @@ public class InstagramPostProcessor {
     this.clock = clock;
     this.retirer = retirer;
     this.scheduleWriter = scheduleWriter;
+    this.imageStore = imageStore;
   }
 
   @Transactional
@@ -219,6 +229,12 @@ public class InstagramPostProcessor {
           new StaleBlockRetirer.Current(ready, fresh, counts.keySet(), post.caption()), now);
       if (!retired.isEmpty()) counts.put(InstagramBlock.Status.RETIRED, retired.size());
       logLines.addAll(retired);
+    }
+
+    // 사진: 행사가 나온 글만 받음 (행사 없는 글의 사진은 받지 않음). 같은 글의 행사들이 같은 파일을 씀
+    if (!ready.isEmpty()) {
+      String image = imageStore.resolve(post.id(), post.imageUrl());
+      for (Event e : ready) e.useImage(image);
     }
 
     media.markProcessed(now);
