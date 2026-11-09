@@ -4,7 +4,7 @@ const assert = require("node:assert");
 const { createNavHistory } = require("../../main/resources/static/nav-history.js");
 
 // 브라우저 history 흉내: pushState 는 앞 칸을 지움, go(n) 은 나중에(deliver) popstate 를 보냄
-function setup({ state = null, url = "/", entries = null } = {}) {
+function setup({ state = null, url = "/", entries = null, isOpen = () => true } = {}) {
   const tasks = [];
   const timers = [];
   const closed = [];
@@ -27,6 +27,10 @@ function setup({ state = null, url = "/", entries = null } = {}) {
     go(n) {
       this.pendingGo.push(n);
     },
+    back() {
+      this.pendingGo.push(-1);
+    },
+    left: false, // 첫 칸보다 더 뒤로 → 사이트를 나감
     scrollRestoration: "auto",
   };
   const nav = createNavHistory({
@@ -36,6 +40,7 @@ function setup({ state = null, url = "/", entries = null } = {}) {
     onBack: (layer) => {
       closed.push(layer);
       nav.close(layer); // 화면 닫기 함수는 nav.close 도 부름 (이미 빠진 칸이라 그대로여야 함)
+      return isOpen(layer); // 실제로 열려 있던 화면이었나
     },
     schedule: (fn) => tasks.push(fn),
     setTimer: (fn) => {
@@ -51,7 +56,12 @@ function setup({ state = null, url = "/", entries = null } = {}) {
     while (tasks.length || h.pendingGo.length) {
       while (tasks.length) tasks.shift()();
       if (h.pendingGo.length) {
-        h.index += h.pendingGo.shift();
+        const n = h.pendingGo.shift();
+        if (h.index + n < 0) {
+          h.left = true;
+          continue;
+        }
+        h.index += n;
         nav.onPopState({ state: h.state });
       }
     }
@@ -61,6 +71,10 @@ function setup({ state = null, url = "/", entries = null } = {}) {
   }
   // 사용자가 브라우저 뒤로 가기 / 앞으로 가기
   function userGo(n) {
+    if (h.index + n < 0) {
+      h.left = true;
+      return;
+    }
     h.index += n;
     nav.onPopState({ state: h.state });
     flush();
@@ -75,7 +89,7 @@ test("홈 → 지도: 칸 하나 쌓고, 뒤로 가기면 홈으로 (tab 닫힘)
   nav.open("tab");
   flush();
   assert.strictEqual(h.entries.length, 2);
-  assert.deepStrictEqual(top().state, { nav: ["tab"] });
+  assert.deepStrictEqual(top().state.nav, ["tab"]);
 
   userGo(-1);
   assert.deepStrictEqual(closed, ["tab"]);
@@ -106,7 +120,7 @@ test("하단 탭 '홈'(화면에서 닫음) → go(-1) 로 되돌리고 onBack �
   flush();
   assert.strictEqual(h.index, 0);
   assert.deepStrictEqual(closed, []);
-  assert.deepStrictEqual(h.state, { nav: [] });
+  assert.deepStrictEqual(h.state.nav, []);
 });
 
 test("상세 → 길찾기: 뒤로 가기 한 번에 한 칸씩 닫힘, 주소도 그 칸 것", () => {
@@ -140,7 +154,7 @@ test("검색 화면에서 찜 '보기'(검색 닫고 찜 탭) → 되돌리지 �
   flush();
   assert.deepStrictEqual(h.pendingGo, []);
   assert.strictEqual(h.entries.length, 2);
-  assert.deepStrictEqual(h.state, { nav: ["tab"] });
+  assert.deepStrictEqual(h.state.nav, ["tab"]);
 });
 
 test("검색 → 상세 위에서 찜 '보기' → 한 칸 되돌린 뒤 덮어씀 (뒤로 한 번이면 홈)", () => {
@@ -155,7 +169,7 @@ test("검색 → 상세 위에서 찜 '보기' → 한 칸 되돌린 뒤 덮어�
   nav.open("tab");
   flush();
   assert.strictEqual(h.index, 1);
-  assert.deepStrictEqual(h.state, { nav: ["tab"] });
+  assert.deepStrictEqual(h.state.nav, ["tab"]);
   assert.deepStrictEqual(closed, []);
   userGo(-1);
   assert.deepStrictEqual(closed, ["tab"]);
@@ -179,10 +193,10 @@ test("지도 앱에 갔다 와서 새로 열림(?event=&route=1): 기록 칸을 
   // 브라우저엔 앞 문서가 쌓은 칸이 그대로 남아 있음 (맨 위 칸에서 새로 열림)
   const { h, nav, page, closed, flush, userGo } = setup({
     entries: [
-      { state: { nav: [] }, url: "/" },
-      { state: { nav: ["tab"] }, url: "/" },
-      { state: { nav: ["tab", "detail"] }, url: "/?event=5" },
-      { state: { nav: ["tab", "detail", "route"] }, url: "/?event=5&route=1" },
+      { state: { nav: [], n: 0 }, url: "/" },
+      { state: { nav: ["tab"], n: 1 }, url: "/" },
+      { state: { nav: ["tab", "detail"], n: 2 }, url: "/?event=5" },
+      { state: { nav: ["tab", "detail", "route"], n: 3 }, url: "/?event=5&route=1" },
     ],
   });
   nav.start(true);
@@ -202,12 +216,12 @@ test("지도 앱에 갔다 와서 새로 열림(?event=&route=1): 기록 칸을 
 test("새로 고침 등 처음 시작(keep=false): 남은 칸을 비우고 스크롤은 화면 코드가 맞춤", () => {
   const { h, nav } = setup({ state: { nav: ["tab", "search"] }, url: "/" });
   nav.start(false);
-  assert.deepStrictEqual(h.state, { nav: [] });
+  assert.deepStrictEqual(h.state.nav, []);
   assert.deepStrictEqual(nav.layers(), []);
   assert.strictEqual(h.scrollRestoration, "manual");
 });
 
-test("앞으로 가기로 닫힌 칸에 오면 다시 열지 않고 지금 화면에 맞춤 (더 뒤로 가지 않음)", () => {
+test("앞으로 가기로 닫힌 칸에 오면 다시 열지 않고 지금 화면에 맞춤 → 다음 뒤로는 헛누름 없이 나감", () => {
   const { h, nav, closed, flush, userGo } = setup();
   nav.start(false);
   nav.open("detail");
@@ -217,7 +231,72 @@ test("앞으로 가기로 닫힌 칸에 오면 다시 열지 않고 지금 화�
   assert.deepStrictEqual(closed, ["detail"]);
   assert.deepStrictEqual(h.pendingGo, []);
   assert.strictEqual(h.index, 1);
-  assert.deepStrictEqual(h.state, { nav: [] });
+  assert.deepStrictEqual(h.state.nav, []);
+  userGo(-1); // 화면이 그대로인 칸 → 한 칸 더 뒤로 = 사이트 나감
+  assert.ok(h.left);
+});
+
+test("갈라진 칸으로 앞으로 가도 화면을 닫지 않음 (검색 → 상세 → 찜 '보기' 뒤, 검증 ⚠️)", () => {
+  const { h, nav, closed, flush, userGo } = setup();
+  nav.start(false);
+  nav.open("search");
+  nav.open("detail");
+  flush();
+  nav.close("detail");
+  nav.close("search");
+  nav.open("tab");
+  flush();
+  assert.strictEqual(h.entries.length, 3); // 앞쪽에 ["search", "detail"] 칸이 남아 있음
+  closed.length = 0;
+  userGo(1);
+  assert.deepStrictEqual(closed, []); // 홈으로 가지 않음
+  assert.deepStrictEqual(nav.layers(), ["tab"]);
+  userGo(-1); // 같은 화면 칸 → 건너뛰고 첫 칸 → tab 닫힘(홈)
+  assert.deepStrictEqual(closed, ["tab"]);
+  assert.strictEqual(h.index, 0);
+});
+
+test("새로 고침 뒤 첫 뒤로 가기는 헛누름 없이 나감 (지도 탭에서 새로 고침 → 홈, 검증 ⚠️)", () => {
+  const { h, nav, closed, userGo } = setup({
+    entries: [
+      { state: { nav: [], n: 0 }, url: "/" },
+      { state: { nav: ["tab"], n: 1 }, url: "/" },
+    ],
+  });
+  nav.start(false); // 새로 고침: 홈부터
+  userGo(-1);
+  assert.deepStrictEqual(closed, []);
+  assert.ok(h.left);
+});
+
+test("이어받은 칸 중 다시 열지 못한 화면은 건너뜀 (검색 위 상세에서 지도 앱 → 돌아옴, 검증 ⚠️)", () => {
+  const { h, nav, closed, userGo } = setup({
+    entries: [
+      { state: { nav: [], n: 0 }, url: "/" },
+      { state: { nav: ["tab"], n: 1 }, url: "/" },
+      { state: { nav: ["tab", "search"], n: 2 }, url: "/" },
+      { state: { nav: ["tab", "search", "detail"], n: 3 }, url: "/?event=5" },
+    ],
+    isOpen: (layer) => layer !== "search", // 복원은 상세만 다시 엶
+  });
+  nav.start(true);
+  userGo(-1);
+  assert.deepStrictEqual(closed, ["detail"]);
+  userGo(-1); // 검색은 안 열려 있음 → 건너뛰고 tab 까지
+  assert.deepStrictEqual(closed, ["detail", "search", "tab"]);
+  assert.strictEqual(h.index, 0);
+});
+
+test("아래 칸을 닫으면 위 화면부터 닫음 (길찾기 위에서 찜 '보기' → 상세 닫기, 검증 ⚠️)", () => {
+  const { nav, closed, flush } = setup();
+  nav.start(false);
+  nav.open("tab");
+  nav.open("detail");
+  nav.open("route");
+  flush();
+  nav.close("detail");
+  assert.deepStrictEqual(closed, ["route"]);
+  assert.deepStrictEqual(nav.layers(), ["tab"]);
 });
 
 test("카카오톡 공유: forget 은 기록을 바로 건드리지 않고, 다음 맞추기 때 되돌림", () => {
@@ -232,7 +311,19 @@ test("카카오톡 공유: forget 은 기록을 바로 건드리지 않고, 다�
   nav.update(); // 페이지로 돌아옴 (visibilitychange)
   flush();
   assert.strictEqual(h.index, 1);
-  assert.deepStrictEqual(h.state, { nav: ["detail"] });
+  assert.deepStrictEqual(h.state.nav, ["detail"]);
+});
+
+test("카카오톡 공유 뒤 맞추기 전에 뒤로 가기 → 헛누름 없이 상세가 닫힘 (인앱 브라우저 등, 검증 ⚠️)", () => {
+  const { h, nav, closed, flush, userGo } = setup();
+  nav.start(false);
+  nav.open("detail");
+  nav.open("share");
+  flush();
+  nav.forget("share");
+  userGo(-1); // ["detail"] 칸: 바뀐 화면 없음 → 한 칸 더 → 상세 닫힘
+  assert.deepStrictEqual(closed, ["detail"]);
+  assert.strictEqual(h.index, 0);
 });
 
 test("go(-n) 뒤 popstate 가 안 오면 1초 뒤 지금 칸을 덮어써서 맞춤", () => {
@@ -246,6 +337,6 @@ test("go(-n) 뒤 popstate 가 안 오면 1초 뒤 지금 칸을 덮어써서 맞
   assert.deepStrictEqual(h.pendingGo, [-2]);
   h.pendingGo = []; // popstate 가 오지 않음
   timers.filter(Boolean).forEach((fn) => fn());
-  assert.deepStrictEqual(h.state, { nav: [] });
+  assert.deepStrictEqual(h.state.nav, []);
   assert.deepStrictEqual(nav.layers(), []);
 });

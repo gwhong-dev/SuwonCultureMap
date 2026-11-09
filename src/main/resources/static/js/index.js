@@ -74,18 +74,26 @@ var nav = createNavHistory({
   currentUrl: function () {
     return location.pathname + location.search + location.hash;
   },
+  // 칸의 화면을 닫음. 실제로 열려 있어서 닫았으면 true (false 면 nav 가 헛누름으로 보고 한 칸 더 뒤로)
   onBack: function (layer) {
+    var open = false;
     if (layer === "tab") {
-      if (mobileQuery.matches) showHome(); // 지도 · 목록 · 찜 → 홈
+      open = !homeOpen && mobileQuery.matches;
+      if (open) showHome(); // 지도 · 목록 · 찜 → 홈
     } else if (layer === "search") {
+      open = searchOpen;
       closeSearch();
     } else if (layer === "detail") {
+      open = !!detailEvent;
       closeDetailModal();
     } else if (layer === "route") {
+      open = !!routeEvent;
       closeRouteSheet();
     } else if (layer === "share") {
+      open = !document.getElementById("shareSheet").hidden;
       closeShareSheet();
     }
+    return open;
   },
 });
 window.addEventListener("popstate", nav.onPopState);
@@ -397,7 +405,10 @@ function loadEvents() {
         });
         if (found) {
           map.setCenter(new kakao.maps.LatLng(found.event.latitude, found.event.longitude));
-          openDetailModal(found.event);
+          // 하단 카드에서 상세 없이 길찾기만 열었던 경우(이어받은 칸에 route 만 있음)는 길찾기만 다시 엶 → 칸 순서 = 화면 순서
+          var inherited = nav.layers();
+          var routeOnly = inherited.indexOf("route") !== -1 && inherited.indexOf("detail") === -1;
+          if (!routeOnly) openDetailModal(found.event);
           if (initialParams.get("route") && mobileQuery.matches) openRouteSheet(found.event); // 길찾기 창은 모바일 전용
         }
       }
