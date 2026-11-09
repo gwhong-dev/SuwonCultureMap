@@ -61,7 +61,9 @@ class InstagramImageStoreTest {
     server.answers.put("/html", new Answer(200, "text/html", "<html>".getBytes(), false));
     server.answers.put("/fake", new Answer(200, "image/jpeg", "not an image at all".getBytes(), false));
 
-    for (String path : List.of("/500", "/html", "/fake", "/없음")) {
+    server.answers.put("/moved", new Answer(302, "text/plain", "x".getBytes(), false)); // redirect 는 안 따라감
+
+    for (String path : List.of("/500", "/html", "/fake", "/없음", "/moved")) {
       assertThat(store.resolve(ID, server.url(path))).isEqualTo(server.url(path));
     }
     assertThat(files()).isEmpty();
@@ -80,6 +82,37 @@ class InstagramImageStoreTest {
     byte[] limit = Arrays.copyOf(FakeImageServer.JPEG, (int) InstagramImageStore.MAX_BYTES);
     server.answers.put("/limit", new Answer(200, "image/jpeg", limit, true));
     assertThat(store.resolve(ID, server.url("/limit"))).isEqualTo("/media/insta/" + ID + ".jpg");
+  }
+
+  @Test
+  void 본문이_오래_걸리면_끊고_원래_주소() throws Exception {
+    java.time.Duration before = InstagramImageStore.BODY_TIMEOUT;
+    InstagramImageStore.BODY_TIMEOUT = java.time.Duration.ofMillis(300);
+    var slow = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+    try {
+      slow.createContext("/", ex -> {
+        ex.getResponseHeaders().set("Content-Type", "image/jpeg");
+        ex.sendResponseHeaders(200, 0);
+        try {
+          ex.getResponseBody().write(FakeImageServer.JPEG);
+          ex.getResponseBody().flush();
+          Thread.sleep(3000); // 머리는 바로, 본문은 멈춤
+        } catch (InterruptedException ignore) {
+          Thread.currentThread().interrupt();
+        } finally {
+          ex.close();
+        }
+      });
+      slow.start();
+      String url = "http://127.0.0.1:" + slow.getAddress().getPort() + "/slow.jpg";
+      long t0 = System.nanoTime();
+      assertThat(store.resolve(ID, url)).isEqualTo(url);
+      assertThat(java.time.Duration.ofNanos(System.nanoTime() - t0)).isLessThan(java.time.Duration.ofSeconds(2));
+      assertThat(files()).isEmpty();
+    } finally {
+      slow.stop(0);
+      InstagramImageStore.BODY_TIMEOUT = before;
+    }
   }
 
   @Test

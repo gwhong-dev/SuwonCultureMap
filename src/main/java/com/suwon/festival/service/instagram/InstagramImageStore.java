@@ -40,6 +40,7 @@ public class InstagramImageStore {
 
   public static final String PUBLIC_PREFIX = "/media/insta/";
   static final long MAX_BYTES = 5L * 1024 * 1024;
+  static Duration BODY_TIMEOUT = Duration.ofSeconds(20); // 본문 받기 전체 시간 (시험에서 줄임)
   static final List<String> CDN_SUFFIXES = List.of(".cdninstagram.com", ".fbcdn.net");
 
   private static final Pattern MEDIA_ID = Pattern.compile("^[0-9]{1,64}$");
@@ -151,7 +152,17 @@ public class InstagramImageStore {
   private String download(String mediaId, URI uri) throws IOException, InterruptedException {
     HttpRequest request = HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(15)).GET().build();
     HttpResponse<InputStream> response = http.send(request, HttpResponse.BodyHandlers.ofInputStream());
-    try (InputStream body = response.body()) {
+    // 요청 timeout 은 응답 머리까지만 → 본문은 전체 시간(BODY_TIMEOUT)이 지나면 스트림을 닫아 읽기를 끊음 (DB 연결을 오래 안 붙잡게)
+    InputStream stream = response.body();
+    java.util.concurrent.CompletableFuture.delayedExecutor(BODY_TIMEOUT.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
+        .execute(() -> {
+          try {
+            stream.close();
+          } catch (IOException ignore) {
+            // 이미 닫힘
+          }
+        });
+    try (InputStream body = stream) {
       if (response.statusCode() != 200) throw new IOException("HTTP " + response.statusCode());
       String type = response.headers().firstValue("Content-Type").orElse("").toLowerCase(Locale.ROOT);
       if (!type.startsWith("image/")) throw new IOException("이미지가 아님 (" + cut(type) + ")");

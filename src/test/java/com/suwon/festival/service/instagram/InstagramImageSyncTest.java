@@ -114,6 +114,8 @@ class InstagramImageSyncTest {
         .andExpect(content().bytes(FakeImageServer.JPEG))
         .andExpect(header().string("Cache-Control", "max-age=604800, public"));
     mvc.perform(get("/media/insta/999.jpg")).andExpect(status().isNotFound());
+    Files.write(DIR.resolve(ID + ".part"), new byte[1]);
+    mvc.perform(get("/media/insta/" + ID + ".part")).andExpect(status().isNotFound()); // 사진 확장자만
   }
 
   @Test
