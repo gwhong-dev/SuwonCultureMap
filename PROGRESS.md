@@ -113,7 +113,7 @@
 - [x] `deploy/deploy.sh` Caddyfile 반영 (11/9): 앱 응답 확인 뒤 실행 중 Caddy 의 `/etc/caddy/Caddyfile` 과 저장소 파일이 다르면 `up -d --force-recreate --no-deps caddy`, 같으면 건드리지 않음
 - [ ] GitHub 예약 실행은 공개 저장소에 60일 동안 커밋이 없으면 자동 정지 → 정지되면 Actions 화면에서 Uptime 다시 켜기 (메일 안내 옴)
 - [x] 카카오 JS SDK 2.7.9 `integrity` (#114, 11/3) — 카카오 문서 SRI 해시 = 직접 계산값. 버전을 올릴 땐 문서 "JavaScript > 다운로드" 의 해시도 같이 (최신 2.8.4 는 공유 화면 동작이 바뀌어 따로)
-- [ ] CSP 테스트 빈틈 (#113 검증 ⚠️, 머지 차단 아님): 새 외부 `<link rel=stylesheet>` 주소 · CSS `@import` 가 `style-src` 에 있는지 검사 없음, `SecurityHeadersServerTest` 가 오류 응답의 CSP 값은 안 봄 → 외부 CSS 를 추가할 일이 생기면 같이
+- [x] CSP 테스트 빈틈 (#113 검증 ⚠️) — 11/9 시험 추가: `CspStyleSourceTest`(static HTML 외부 `<link rel=stylesheet>` · preload as=style · CSS `@import` 주소가 `style-src` 에 있는지), `SecurityHeadersServerTest` 404 · 500(화면 · API 요청) 응답도 보안 헤더 5종 · CSP 값이 같은지. 실제 문제는 없었음
 - [ ] 카카오 JavaScript 키는 화면에 공개되는 키 → 카카오 콘솔 "플랫폼 > Web 사이트 도메인"이 suwonbible.com · localhost 만인지 확인 (사용자 콘솔)
 - [x] 인스타 대상 계정 허용 목록을 코드 · 시험으로 고정 (`OfficialInstagramAccounts`, 11/2)
 - [ ] 지난 인스타 행사 정리 규칙 확인 (Meta 약관 3.d.i.2.a "필요 없어지면 삭제")
