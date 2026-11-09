@@ -67,9 +67,13 @@ docker compose up --build   # 앱 + MySQL (.env 는 scripts/setup-docker.cmd)
 2. 기능 브랜치 생성 (main 직접 수정 금지, 시작 전 `git pull`)
    - 브랜치 이름: `feat/*` · `fix/*` · `chore/*` · `docs/*`, 한 PR = 한 가지 목적
 3. 커밋 접두어: feat: / fix: / refactor: / test: / chore: / docs:
-4. 로컬에서 mvn test 통과 확인
+4. 로컬 시험은 바꾼 범위만 (전체는 CI 가 다시 돌림)
+   - Java · 설정(properties) · DB 스크립트(migration)를 바꿨으면 `mvn test` 전체
+   - 화면 파일(static 의 HTML · JS · CSS)만 바꿨으면 `node --test` + 화면 시험 + `mvn test -Dtest=ScheduleDisplayPageTest` 만
 5. push → PR 생성
 6. CI 통과 확인 (빌드 + 테스트, Docker 이미지 빌드 — main 브랜치 보호로 필수)
+   - CI 끝 알림이 오면 결과를 다시 조회하지 않고 바로 머지 (CI 가 실패했으면 브랜치 보호가 머지를 막음)
+   - 50분 뒤 안전 점검 예약(send_later)은 하지 않음 (CI 는 2~3분, 결과는 알림으로 옴)
 7. 머지는 Claude 가 직접 (`gh pr merge --merge`, 머지 커밋 방식 — 11/3 사용자 결정)
    - `gh pr merge` 가 권한 등으로 막히면 멈추고 사용자에게 허용 방법을 단계별로 안내
    - 조건: CI 전부 통과 + 충돌 없음. M · L 등급은 검증 댓글(판정)까지 끝난 뒤
@@ -77,7 +81,9 @@ docker compose up --build   # 앱 + MySQL (.env 는 scripts/setup-docker.cmd)
    - CI 실패 → 머지하지 않음. Claude가 고쳐서 다시 push 한 뒤 CI 재확인
    - 라벨 자동 머지 워크플로 · auto-merge 버튼은 쓰지 않음
    - 머지 뒤: Deploy 성공 · 운영 헬스체크 확인까지 Claude 가 함
-8. PROGRESS.md 체크박스 갱신, 작업 로그는 PROGRESS-LOG.md에 기록
+8. PROGRESS.md 체크박스 갱신, 작업 로그는 PROGRESS-LOG.md에 기록 — **기능 PR 안에서 같이** (머지 전에 작성)
+   - 기록만 하는 문서 PR 은 만들지 않음. 배포 · 헬스체크 결과는 다음 PR 에 한 줄로 덧붙임
+   - CLAUDE.md 처럼 그 자체가 목적인 문서 변경만 따로 PR
 
 등급별 추가 절차
 
@@ -138,6 +144,8 @@ docker compose up --build   # 앱 + MySQL (.env 는 scripts/setup-docker.cmd)
 - 노션 · Claude Design · 포트폴리오 작업은 코딩 세션과 분리
 - PROGRESS.md 상단 "현재 상태 · 다음 할 일"은 20줄 안팎 유지, 그 아래는 막힌 것 · 나중에 할 일만. 완료 로그는 PROGRESS-LOG.md로
 - 위험 작업(L 등급) 검증은 줄이지 않음 — 절약 대상은 S · M
+- 계속 하는 검증: M · L 검증 에이전트, 화면 시험, 머지 뒤 배포 · 헬스체크 (실제로 버그를 찾음, 11/4 #142 · #145 · #147)
+- 사용자 보고는 단계가 끝났을 때만: PR 생성 · 머지 + 배포 결과 · 막혔을 때. CI 진행 중 · 구독 시작 같은 알림마다 답하지 않음
 - 새 세션 전환 = **Claude 가 새 세션 카드를 만든다** (사용자가 프롬프트를 복사해 다른 세션에 붙여 넣지 않음):
   - 전환 시점: ① 한 PR/작업 목적이 끝났을 때 ② 대화가 길어졌을 때 ③ 주제가 바뀔 때
   - 먼저 정리: 커밋 · push 완료, PROGRESS.md 갱신, 미완료는 "나중에 할 일"에 기록
