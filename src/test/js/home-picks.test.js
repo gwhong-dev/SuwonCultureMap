@@ -20,6 +20,7 @@ const {
   searchEvents,
   searchHighlight,
   searchDistrict,
+  searchTyping,
   SEARCH_SUGGEST_MAX,
 } = require("../../main/resources/static/home-picks.js");
 
@@ -277,6 +278,67 @@ test("검색 강조: 원래 제목 기준 자리 (띄어쓰기 · 대소문자 �
   assert.strictEqual(searchHighlight("발레", "SK"), null); // 장소로만 맞으면 강조 없음
   assert.strictEqual(searchHighlight("발레", ""), null);
   assert.deepStrictEqual(searchHighlight("İstanbul 재즈", "재즈"), { start: 9, end: 11 }); // 소문자가 길어지는 글자 (검증 ⚠️)
+});
+
+test("자음 검색: 'ㅁ' = ㅁ으로 시작하는 글자, 'ㅅㅇ' · '수ㅇ' = 수원 (아이폰 ⑧ 확인, 11/9)", () => {
+  const event = { title: "치킨과 함께하는 수원 K-헤리티지 미식여행", place: "행궁광장" };
+  assert.ok(matchesSearch(event, "ㅁ")); // 미
+  assert.ok(matchesSearch(event, "ㅅㅇ")); // 수원
+  assert.ok(matchesSearch(event, "수ㅇ"));
+  assert.ok(matchesSearch(event, "ㅎㄱ")); // 장소 행궁
+  assert.ok(!matchesSearch(event, "ㅃ"));
+  assert.deepStrictEqual(searchHighlight(event.title, "ㅁ"), { start: 19, end: 20 }); // 미
+  assert.deepStrictEqual(searchHighlight(event.title, "ㅅㅇ"), { start: 9, end: 11 }); // 수원
+  assert.ok(matchesSearch({ title: "ㅁㅁ 모임", place: "" }, "ㅁㅁ")); // 자음 그 자체도 맞음
+  // 정규식 기호는 글자 그대로
+  assert.ok(matchesSearch({ title: "a.b [특별] K-팝", place: "" }, "a.b"));
+  assert.ok(!matchesSearch({ title: "axb", place: "" }, "a.b"));
+  assert.ok(matchesSearch({ title: "a.b [특별] K-팝", place: "" }, "[특별]"));
+  assert.ok(matchesSearch({ title: "a.b [특별] K-팝", place: "" }, "k-"));
+});
+
+test("치는 중 규칙: 그대로 찾아 없을 때만 마지막 글자를 넓힘 (숭 · 수워 → 수원, 고 → 과, 달 → 닭)", () => {
+  const events = [
+    { id: 1, title: "수원 화성 문화제", place: "" },
+    { id: 2, title: "과자 만들기", place: "" },
+    { id: 3, title: "닭강정 축제", place: "" },
+    { id: 4, title: "시민 음악회", place: "" },
+    { id: 5, title: "미술 체험", place: "" },
+  ];
+  const ids = (keyword) => searchEvents(events, keyword, WED, searchTyping(events, keyword)).map((e) => e.id);
+  assert.ok(searchTyping(events, "숭"));
+  assert.deepStrictEqual(ids("숭"), [1]); // 수 + ㅇ 받침 → 다음 글자 ㅇ
+  assert.deepStrictEqual(ids("수워"), [1]); // 워 → 원
+  assert.deepStrictEqual(ids("고"), [2]); // ㅗ → ㅘ
+  assert.deepStrictEqual(ids("달"), [3]); // ㄹ → ㄺ
+  assert.deepStrictEqual(searchHighlight("수원 화성 문화제", "숭", true), { start: 0, end: 2 });
+  // 그대로 맞는 게 있으면 넓히지 않음: "미" → 미술(5)만, 시민(민)은 안 나옴
+  assert.ok(!searchTyping(events, "미"));
+  assert.deepStrictEqual(ids("미"), [5]);
+  // 자음만 · 빈 검색어 · 한글이 아닌 끝 글자는 넓힐 것이 없음
+  assert.ok(!searchTyping(events, "ㅁ"));
+  assert.ok(!searchTyping(events, " "));
+  assert.ok(!searchTyping(events, "zz"));
+  // 엔터 결과(typing 없음)는 그대로 찾음
+  assert.deepStrictEqual(searchEvents(events, "숭", WED), []);
+  // 겹받침이 나뉘어 받침이 남는 경우: 닭 → 달 + ㄱ, 앉 → 안 + ㅈ (검증 ⚠️)
+  assert.ok(matchesSearch({ title: "달기 축제", place: "" }, "닭", true));
+  assert.ok(matchesSearch({ title: "안자 마당", place: "" }, "앉", true));
+  assert.ok(!matchesSearch({ title: "달기 축제", place: "" }, "닭"));
+  // 띄어쓰기가 낀 제목에서도 원래 제목 기준 강조
+  assert.deepStrictEqual(searchHighlight("수 원 축제", "숭", true), { start: 0, end: 3 });
+});
+
+test("검색어의 \\ · 이모지 · 정규식 기호도 글자 그대로 (예외 없음, 검증 ⚠️)", () => {
+  const event = { title: "C:\\전시 🎨 (특별) 1+1", place: "" };
+  for (const typing of [false, true]) {
+    assert.ok(matchesSearch(event, "\\전", typing));
+    assert.ok(matchesSearch(event, "🎨", typing));
+    assert.ok(matchesSearch(event, "(특별)", typing));
+    assert.ok(matchesSearch(event, "1+1", typing));
+    assert.ok(!matchesSearch(event, "11", typing));
+  }
+  assert.deepStrictEqual(searchHighlight(event.title, "🎨"), { start: 6, end: 8 });
 });
 
 test("검색어가 구 이름이면 그 구 (두 글자부터)", () => {
