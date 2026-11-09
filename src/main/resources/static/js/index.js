@@ -500,6 +500,8 @@ function cardDateText(item) {
 
 // 구 필터 (null = 전체). 홈 "내 주변"의 "지도에서 보기"가 켜고, 지도 칩 줄 맨 앞 "📍 ○○구 ✕" 칩으로 끔
 var districtFilter = null;
+// 무료만 (지도 칩 줄 "💸 무료", 한 번 더 누르면 해제). 판정은 event-detail.js isFreeEvent
+var freeOnly = false;
 
 function setDistrictFilter(district) {
   districtFilter = district || null;
@@ -549,7 +551,12 @@ function filterMarkers() {
     var matchesDate = item.runMatch !== "no";
 
     var visible =
-      matchesKeyword && matchesCategory && matchesPast && matchesDate && matchesDistrict(item.event, districtFilter);
+      matchesKeyword &&
+      matchesCategory &&
+      matchesPast &&
+      matchesDate &&
+      matchesDistrict(item.event, districtFilter) &&
+      (!freeOnly || isFreeEvent(item.event));
 
     if (visible) {
       visibleItems.push(item);
@@ -1579,6 +1586,18 @@ function renderCategoryChips() {
     chips.insertBefore(chip, chips.children[index] || null); // 맨 앞에 (가로 스크롤 뒤에 숨지 않게)
   });
 
+  // '무료' 칩: 날짜 칩 바로 뒤 (분류 칩과 함께 쓸 수 있음)
+  var freeChip = document.createElement("button");
+  freeChip.type = "button";
+  freeChip.className = "chip";
+  freeChip.dataset.value = "__free";
+  freeChip.textContent = "💸 무료";
+  freeChip.addEventListener("click", function () {
+    freeOnly = !freeOnly;
+    filterMarkers();
+  });
+  chips.insertBefore(freeChip, chips.children[3] || null);
+
   // '지난 행사' 칩은 기존 체크박스를 대신 눌러줌
   var pastChip = document.createElement("button");
   pastChip.type = "button";
@@ -1605,7 +1624,9 @@ function updateChipActive() {
         ? chip.dataset.date === dateFilter
         : chip.dataset.value === "__past"
           ? showPast
-          : chip.dataset.value === selected;
+          : chip.dataset.value === "__free"
+            ? freeOnly
+            : chip.dataset.value === selected;
       chip.classList.toggle("active", active);
     });
   updateDistrictChip();
@@ -2249,6 +2270,7 @@ function showDistrictOnMap(district, events) {
   document.getElementById("categorySelect").value = "all";
   document.getElementById("dateFilter").value = "all";
   document.getElementById("showPastCheckbox").checked = false;
+  freeOnly = false;
   districtFilter = district; // selectTab 이 filterMarkers 로 지도 · 목록 · 칩을 다시 그림
   selectTab("map");
   var top = document.getElementById("topbar").offsetHeight + 16; // 검색창 · 칩 줄 아래

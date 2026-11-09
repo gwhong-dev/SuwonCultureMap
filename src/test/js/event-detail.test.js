@@ -107,3 +107,27 @@ test("detailFields: 서버가 분해한 요금 · 문의 · 주최 칸 (V7), 없
   assert.deepStrictEqual(detailFields({ info: "이용료: 무료" }), { fee: null, contact: null, host: null });
   assert.deepStrictEqual(detailFields({ fee: "", contact: null }), { fee: null, contact: null, host: null });
 });
+
+// "💸 무료" 칩 판정 — 운영 재단 요금 값(11/9 점검) 그대로
+const { isFreeEvent, eventFeeText } = require("../../main/resources/static/event-detail.js");
+
+test("무료 판정: 요금 칸(V7) 값이 무료면 무료, 유료가 섞이면 아님", () => {
+  for (const fee of ["무료", "무 료", "전석 무료", "무료 입장", "무료(예약금 있으나 환불 예정)"]) {
+    assert.strictEqual(isFreeEvent({ fee }), true, fee);
+  }
+  for (const fee of ["무료(일부 공연 및 프로그램 유료)", "무료(시민예술교육은 유료)", "전석 10,000원", "유료", "상세참조", "해당없음"]) {
+    assert.strictEqual(isFreeEvent({ fee }), false, fee);
+  }
+});
+
+test("무료 판정: 요금 칸이 비면(동기화 전) 원문의 이용료 · 관람료 줄, 주차요금은 안 봄", () => {
+  assert.strictEqual(isFreeEvent({ fee: null, info: "문의처: 031\n관람료: 무료\n장소: 수원" }), true);
+  assert.strictEqual(isFreeEvent({ fee: null, info: "주차요금: 무료\n이용료: 전석 2만원" }), false);
+  assert.strictEqual(isFreeEvent({ fee: null, info: "주차요금: 무료" }), false);
+  assert.strictEqual(eventFeeText({ fee: "", info: "이용료: 전석 1만원" }), "전석 1만원");
+});
+
+test("무료 판정: 요금 정보가 없으면(인스타 행사 등) 무료 아님", () => {
+  assert.strictEqual(isFreeEvent({ source: "INSTAGRAM", info: null, fee: null }), false);
+  assert.strictEqual(isFreeEvent({}), false);
+});
