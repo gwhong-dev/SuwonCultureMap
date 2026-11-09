@@ -1429,6 +1429,8 @@ function showFavoriteList() {
 // 빈 찜 탭 "행사 둘러보기" → 전체 행사 지도
 function browseAllEvents() {
   if (mobileQuery.matches) {
+    var select = document.getElementById("categorySelect");
+    if (select.value === "찜") select.value = "all"; // '♥ 찜' 칩이 켜진 채면 둘러볼 행사가 없음
     selectTab("map");
     return;
   }
@@ -1753,7 +1755,10 @@ var homeSoonMode = "ending"; // "ending" 곧 종료 | "starting" 곧 시작
 function showHome() {
   nav.close("tab"); // 홈에서 나가며 쌓은 칸을 되돌림 (뒤로 가기로 왔으면 이미 빠짐)
   favView = "fav"; // 찜 탭을 나감 → 다음엔 '찜'부터
-  favTabOpen = false;
+  if (favTabOpen) {
+    favTabOpen = false;
+    filterMarkers(); // 찜 화면 흔적(탭 줄 · 칩 흐림 · tabpanel · "찜 N개")을 지움 → 홈 뒤 PC 폭으로 바뀌어도 남지 않게
+  }
   hidePreview();
   if (sheetState !== "peek") setSheetState("peek"); // 목록 전체(페이지 스크롤)는 풀어 두고 홈으로
   homeOpen = true;

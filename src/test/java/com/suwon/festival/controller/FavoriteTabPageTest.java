@@ -48,4 +48,14 @@ class FavoriteTabPageTest {
     assertThat(js).contains("document.body.classList.toggle(\"fav-screen\", visible);");
     assertThat(js).contains("onFavScreen() ? \"찜 \" : \"검색 결과 \"");
   }
+
+  @Test
+  void 홈으로_나가면_찜_화면_흔적을_지우고_둘러보기는_찜_칩을_풂() throws Exception {
+    String js = script();
+
+    // 홈(뒤로 가기 · 홈 탭)으로 나가면 다시 그려서 탭 줄 · 칩 흐림 · "찜 N개"가 남지 않게 (PR #160 검증 ❌)
+    assertThat(js).contains("    favTabOpen = false;\n    filterMarkers();");
+    // 빈 안내 "행사 둘러보기": '♥ 찜' 칩이 켜져 있으면 전체로 (PR #160 검증 ❌)
+    assertThat(js).contains("if (select.value === \"찜\") select.value = \"all\";");
+  }
 }
