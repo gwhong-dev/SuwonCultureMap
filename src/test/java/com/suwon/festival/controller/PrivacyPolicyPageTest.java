@@ -107,6 +107,8 @@ class PrivacyPolicyPageTest {
     String compose = Files.readString(Path.of("docker-compose.prod.yml"), StandardCharsets.UTF_8);
 
     assertThat(compose).contains("driver: json-file", "max-size: 10m", "max-file: \"3\"");
+    // db · app · caddy 모두 같은 용량 제한을 씀 (서비스를 늘리면 logging 도 함께)
+    assertThat(compose.split("logging: \\*logging", -1)).hasSize(4);
     assertThat(html).contains("날짜별 로그 파일은 14일이 지나면 자동으로 삭제",
         "기간 기준이 아니라 프로그램별 용량 한도(30MB)를 넘으면");
   }
