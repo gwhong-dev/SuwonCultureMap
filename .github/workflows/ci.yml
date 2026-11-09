@@ -137,6 +137,10 @@ jobs:
           $COMPOSE exec -T app grep -q 'Started FestivalApplication' /app/logs/app.log
           echo "파일 로그 확인"
 
+          # 인스타 사진 볼륨: 앱(spring 사용자)이 쓸 수 있어야 함
+          $COMPOSE exec -T app sh -c 'test -d /app/images && test -w /app/images'
+          echo "사진 폴더 확인"
+
           # 헬스체크: MySQL 연결까지 UP, 상세 정보와 다른 actuator 엔드포인트는 공개하지 않음
           HEALTH="$(curl -fsS http://127.0.0.1:8080/actuator/health)"
           echo "health: $HEALTH"

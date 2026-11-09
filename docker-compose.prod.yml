@@ -4,6 +4,7 @@
 #  - caddy: 80 · 443 을 받아 HTTPS 인증서를 자동 발급 · 갱신하고 앱으로 넘김
 #  - 앱 · DB 는 외부에 열지 않음 (docker-compose.yml 에서 127.0.0.1 에만 연결)
 #  - 앱 로그는 docker logs(배포로 컨테이너를 새로 만들면 사라짐)와 별도로 app-logs 볼륨에 날짜별 파일로 남김
+#  - 인스타 행사 사진은 insta-images 볼륨 (배포해도 남음)
 # =====================================================
 # 화면 출력 로그(docker logs): json-file 은 기간 제한 옵션이 없어 용량으로만 지움 (10MB × 3 = 서비스별 30MB)
 #  → 값을 바꾸면 privacy.html "접속 기록" 문구도 함께 (PrivacyPolicyPageTest 가 확인)
@@ -32,8 +33,11 @@ services:
       JAVA_TOOL_OPTIONS: -Xmx700m
       # 파일 로그 위치 (보관 기간 · 용량은 application-prod.properties)
       LOGGING_FILE_NAME: /app/logs/app.log
+      # 인스타 행사 사진 저장 폴더 (docs/instagram-images.md). 행사가 지워지면 다음 동기화 끝에 파일도 지움
+      INSTAGRAM_IMAGE_DIR: /app/images
     volumes:
       - app-logs:/app/logs     # 배포해도 지난 로그가 남음
+      - insta-images:/app/images   # 인스타 행사 사진 (만료되는 원래 주소 대신 우리 주소로 내보냄)
 
   caddy:
     image: caddy:2
@@ -53,5 +57,6 @@ services:
 
 volumes:
   app-logs:
+  insta-images:
   caddy-data:
   caddy-config:

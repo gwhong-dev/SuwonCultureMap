@@ -32,7 +32,7 @@ import com.suwon.festival.service.instagram.InstagramFetchException.Kind;
 public class InstagramClient {
 
   static final String BASE_URL = "https://graph.facebook.com";
-  static final String MEDIA_FIELDS = "id,caption,permalink,timestamp,media_type";
+  static final String MEDIA_FIELDS = "id,caption,permalink,timestamp,media_type,media_url,thumbnail_url";
   static final int LIMIT_MAX = 25; // 캡션 확인 스크립트와 같은 상한 (실제로 확인한 건 5개)
 
   // 인스타 계정 이름 규칙: 영문 · 숫자 · 마침표 · 밑줄, 30자 이하 (fields 문자열에 그대로 들어가므로 엄격히 검사)
@@ -101,9 +101,16 @@ public class InstagramClient {
     if (body.business_discovery.media == null || body.business_discovery.media.data == null) return posts;
     for (BusinessDiscoveryResponse.Item item : body.business_discovery.media.data) {
       if (item == null || item.id == null || item.id.isBlank()) continue; // id 없는 건 중복 판단을 못 하니 버림
-      posts.add(new InstagramPost(item.id, item.caption, item.permalink, parseTime(item.timestamp), item.media_type));
+      posts.add(new InstagramPost(item.id, item.caption, item.permalink, parseTime(item.timestamp), item.media_type,
+          imageOf(item)));
     }
     return posts;
+  }
+
+  // 동영상은 표지 사진, 그 밖(사진 · 묶음)은 media_url. 묶음의 media_url 은 첫 장
+  static String imageOf(BusinessDiscoveryResponse.Item item) {
+    String url = "VIDEO".equals(item.media_type) ? item.thumbnail_url : item.media_url;
+    return url == null || url.isBlank() ? null : url;
   }
 
   static Kind kindOf(Integer code) {

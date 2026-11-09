@@ -54,14 +54,16 @@ class InstagramClientTest {
           var params = UriComponentsBuilder.fromUri(request.getURI()).build().getQueryParams();
           String fields = URLDecoder.decode(params.getFirst("fields"), StandardCharsets.UTF_8);
           assertThat(fields).isEqualTo(
-              "business_discovery.username(gasang_city){media.limit(5){id,caption,permalink,timestamp,media_type}}");
+              "business_discovery.username(gasang_city){media.limit(5){id,caption,permalink,timestamp,media_type,media_url,thumbnail_url}}");
           assertThat(request.getURI().toString()).doesNotContain(TOKEN); // 토큰은 주소에 넣지 않음
         })
         .andRespond(withSuccess("""
             {"business_discovery":{"media":{"data":[
               {"id":"1","caption":"가상 행사 안내","permalink":"https://www.instagram.com/p/AAA/",
-               "timestamp":"2026-10-30T09:00:00+0000","media_type":"IMAGE"},
-              {"id":"2","permalink":"https://www.instagram.com/p/BBB/","timestamp":"이상한값","media_type":"VIDEO"},
+               "timestamp":"2026-10-30T09:00:00+0000","media_type":"IMAGE",
+               "media_url":"https://scontent.cdninstagram.com/a.jpg","thumbnail_url":"https://scontent.cdninstagram.com/x.jpg"},
+              {"id":"2","permalink":"https://www.instagram.com/p/BBB/","timestamp":"이상한값","media_type":"VIDEO",
+               "media_url":"https://scontent.cdninstagram.com/v.mp4","thumbnail_url":"https://scontent.cdninstagram.com/t.jpg"},
               {"caption":"id 없음"}
             ]},"id":"999"}}
             """, MediaType.APPLICATION_JSON));
@@ -74,6 +76,9 @@ class InstagramClientTest {
     assertThat(posts.get(0).timestamp()).isEqualTo(OffsetDateTime.of(2026, 10, 30, 9, 0, 0, 0, ZoneOffset.UTC));
     assertThat(posts.get(1).caption()).isNull(); // 캡션 없는 게시물
     assertThat(posts.get(1).timestamp()).isNull(); // 시간 모양이 이상하면 비움
+    assertThat(posts.get(0).imageUrl()).isEqualTo("https://scontent.cdninstagram.com/a.jpg"); // 사진 = media_url
+    assertThat(posts.get(1).imageUrl()).isEqualTo("https://scontent.cdninstagram.com/t.jpg"); // 동영상 = 표지 사진
+    assertThat(posts.get(0).toString()).doesNotContain("cdninstagram"); // 서명 들어간 주소는 로그에 안 남김
   }
 
   @Test

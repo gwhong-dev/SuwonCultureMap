@@ -58,6 +58,9 @@ class PrivacyPolicyPageTest {
 
     assertThat(html).contains("수원문화재단 공개 API", "인스타그램", "공식 계정만", "개인 계정의 게시물은 수집하지 않습니다");
     assertThat(html).contains("뽑은 행사 제목, 분류, 일시", "처리 상태, 좌표와 함께 저장하고 지도에 표시합니다"); // 인스타 저장 항목을 빠짐없이
+    // 인스타 사진은 서버에 저장 (docs/instagram-images.md) → 예전 "받지 않습니다" 문구가 남으면 안 됨
+    assertThat(html).contains("대표 사진 1장은 받아 서버에 저장", "그 행사 정보를 삭제하면 다음 동기화 때 함께 삭제")
+        .doesNotContain("사진은 받지 않습니다");
     assertThat(html).contains("삭제 요청:", "판매하거나 광고에 쓰지 않습니다"); // Meta 약관 3.d · 3.a.iv
     assertThat(html).doesNotContain("현재 수집 중단");
   }

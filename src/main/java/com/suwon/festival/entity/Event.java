@@ -182,6 +182,11 @@ public class Event {
     this.host = latest.host;
   }
 
+  // 인스타 행사 사진: 게시물 처리 끝에 저장한 주소(또는 원래 주소)로 (InstagramImageStore)
+  public void useImage(String url) {
+    this.imageUrl = url == null || url.length() <= 1000 ? url : null;
+  }
+
   public void updateSchedule(String status, String text, boolean holidayNote) {
     this.scheduleStatus = status;
     this.scheduleText = text;
