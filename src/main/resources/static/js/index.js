@@ -1614,6 +1614,7 @@ function selectTab(tab) {
   hidePreview();
   if (tab === "fav") {
     select.value = "찜";
+    favModeShown = false; // 하단 찜 탭을 누르면 늘 최근 본 순서를 새로 (홈 · 뒤로 가기는 분류를 '찜' 으로 둔 채라)
   } else if (select.value === "찜") {
     select.value = "all"; // 찜 탭에서 나오면 전체로
   }
@@ -1643,16 +1644,21 @@ function recentStorage() {
 
 var recentViewIds = loadRecentViews(recentStorage()) || []; // 최근 본 행사 번호, 최근 순
 var recentShownIds = recentViewIds.slice(); // 최근 본 탭에 보이는 순서 (찜 탭 · 최근 본 탭에 들어올 때만 새로)
+var recentSaveFailed = false; // 쓰기가 한 번 실패하면(용량 초과 등) 저장소의 옛 값 대신 이번 접속 목록만 씀
 
-// 상세를 열 때마다: 맨 앞으로. 다른 창(탭)에서 본 것도 합치려고 저장소 것을 먼저 읽음 (못 읽으면 이번 접속 것만)
+// 다른 창(탭)에서 본 것도 합치려고 저장소 것을 먼저 읽음 (못 읽거나 못 쓰는 저장소면 이번 접속 것만)
+function latestRecentViews() {
+  return (recentSaveFailed ? null : loadRecentViews(recentStorage())) || recentViewIds;
+}
+
+// 상세를 열 때마다: 맨 앞으로
 function recordRecentView(eventId) {
-  var storage = recentStorage();
-  recentViewIds = addRecentView(loadRecentViews(storage) || recentViewIds, eventId);
-  saveRecentViews(storage, recentViewIds);
+  recentViewIds = addRecentView(latestRecentViews(), eventId);
+  if (!saveRecentViews(recentStorage(), recentViewIds)) recentSaveFailed = true;
 }
 
 function refreshRecentShown() {
-  recentViewIds = loadRecentViews(recentStorage()) || recentViewIds;
+  recentViewIds = latestRecentViews();
   recentShownIds = recentViewIds.slice();
 }
 
@@ -1685,7 +1691,9 @@ function selectFavView(view, focus) {
   favView = view;
   if (view === "recent") refreshRecentShown(); // 누를 때마다 지금까지 본 순서로
   filterMarkers();
-  if (sheetState === "full") window.scrollTo(0, 0); // 목록 전체는 페이지 스크롤 → 바뀐 목록을 맨 위부터
+  // 바뀐 목록을 맨 위부터: 목록 전체는 페이지 스크롤, 절반 · 살짝은 목록 칸 스크롤
+  if (sheetState === "full") window.scrollTo(0, 0);
+  else document.getElementById("list").scrollTop = 0;
   if (focus) document.querySelector('#favTabs .fav-tab[data-fav-view="' + view + '"]').focus();
 }
 
