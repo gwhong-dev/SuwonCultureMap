@@ -145,6 +145,26 @@ class EventCalendarServiceTest {
   }
 
   @Test
+  void 구글_메모는_info_빈줄_원문_접두어_링크_순서() {
+    String url = service.toGoogleUrl(event("공연", "시간: 19:30", LocalDate.of(2026, 11, 7), null,
+        "https://example.com/1"));
+    assertThat(googleDetails(url)).isEqualTo("시간: 19:30\n\n원문: https://example.com/1");
+  }
+
+  @Test
+  void 구글_메모에_info가_없으면_원문_줄만() {
+    String url = service.toGoogleUrl(event("공연", null, LocalDate.of(2026, 11, 7), null,
+        "https://example.com/1"));
+    assertThat(googleDetails(url)).isEqualTo("원문: https://example.com/1");
+  }
+
+  // 구글 주소에서 details 값만 꺼내 디코딩
+  private static String googleDetails(String url) {
+    String raw = url.replaceAll(".*&details=([^&]*).*", "$1");
+    return java.net.URLDecoder.decode(raw, StandardCharsets.UTF_8);
+  }
+
+  @Test
   void 구글_메모가_너무_길면_info만_자르고_원문_링크는_남김() {
     String url = service.toGoogleUrl(event("공연", "가".repeat(3000), LocalDate.of(2026, 11, 7), null,
         "https://example.com/1"));
