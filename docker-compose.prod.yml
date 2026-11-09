@@ -5,6 +5,9 @@
 #  - 앱 · DB 는 외부에 열지 않음 (docker-compose.yml 에서 127.0.0.1 에만 연결)
 #  - 앱 로그는 docker logs(배포로 컨테이너를 새로 만들면 사라짐)와 별도로 app-logs 볼륨에 날짜별 파일로 남김
 # =====================================================
+# 화면 출력 로그(docker logs): json-file 은 기간 제한 옵션이 없어 용량으로만 지움 (10MB × 3 = 서비스별 30MB)
+#  → 값을 바꾸면 privacy.html "접속 기록" 문구도 함께 (PrivacyPolicyPageTest 가 확인)
+#  → 배포(up -d --build)는 바뀐 서비스(보통 app)만 새로 만들므로 db · caddy 로그는 배포로 지워지지 않음
 x-logging: &logging
   driver: json-file
   options:
