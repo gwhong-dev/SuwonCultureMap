@@ -245,8 +245,8 @@
 
     <!-- ===== 상세정보 큰 팝업창 ===== -->
     <div id="detailModal" class="modal-overlay">
-      <div class="modal-card">
-        <button id="modalCloseBtn" class="modal-close">×</button>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <button id="modalCloseBtn" class="modal-close" aria-label="닫기">×</button>
         <!-- 모바일 전용 상단: 뒤로 · 공유(하단 창) · ♡ -->
         <header id="detailHead">
           <button id="detailBackBtn" type="button" class="icon-btn" aria-label="뒤로">
@@ -328,6 +328,7 @@
     <script src="/favorite-alerts.js"></script>
     <script src="/home-picks.js"></script>
     <script src="/nav-history.js"></script>
+    <script src="/dialog-focus.js"></script>
     <script src="/js/index.js"></script>
   </body>
 </html>
