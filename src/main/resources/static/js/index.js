@@ -355,11 +355,17 @@ function renderSkeleton() {
   list.innerHTML = card + card + card + card;
 }
 
-function renderLoadError() {
+// 실패 안내 (PC · 모바일 공통). kind: "network" = 서버에서 못 받음, "render" = 받았지만 화면에 그리다 오류
+var LOAD_ERROR_TEXT = {
+  network: "행사를 불러오지 못했어요.<br>네트워크를 확인한 뒤 다시 시도해 주세요.",
+  render: "행사를 화면에 표시하지 못했어요.<br>잠시 뒤 다시 시도해 주세요.",
+};
+
+function renderLoadError(kind) {
   var list = document.getElementById("list");
   list.removeAttribute("aria-busy");
   list.innerHTML =
-    '<div class="load-error" role="alert"><span>행사를 불러오지 못했어요.<br>네트워크를 확인한 뒤 다시 시도해 주세요.</span>' +
+    '<div class="load-error" role="alert" data-kind="' + kind + '"><span>' + LOAD_ERROR_TEXT[kind] + "</span>" +
     '<button type="button" id="retryLoadBtn">다시 시도</button></div>';
   document.getElementById("retryLoadBtn").addEventListener("click", loadEvents);
   document.getElementById("resultCount").textContent = "불러오지 못했어요";
@@ -380,46 +386,55 @@ function loadEvents() {
       if (!response.ok) throw new Error("HTTP " + response.status);
       return response.json();
     })
-    .then((events) => {
-      markerList = [];
-      setupCategoryOptions(events);
-
-      // 이 시점엔 마커를 만들지 않음. 실제 마커는 filterMarkers() -> renderLocationMarkers()에서
-      // "장소별로 묶어서" 그림 (같은 좌표에 행사가 여러 개면 개수 뱃지 마커로)
-      events.forEach(cleanEventText); // &#39; 복원, <br /> → 줄바꿈
-      events.forEach(function (event) {
-        markerList.push({ event: event });
-      });
-      eventsLoaded = true;
-
-      filterMarkers();
-      renderHome();
-      if (searchOpen) renderSearch(); // 받는 중에 검색 화면을 열었으면 행을 채움
-
-      // 공유 링크(?event=번호)로 들어오거나, 지도 앱에 갔다 와서 페이지가 다시 열리면 그 행사 상세를 복원
-      // (길찾기 창까지 열려 있었으면 &route=1 → 길찾기 창도 다시 엶)
-      var shared = Number(initialParams.get("event"));
-      if (shared) {
-        var found = markerList.find(function (item) {
-          return item.event.id === shared;
-        });
-        if (found) {
-          map.setCenter(new kakao.maps.LatLng(found.event.latitude, found.event.longitude));
-          // 하단 카드에서 상세 없이 길찾기만 열었던 경우(이어받은 칸에 route 만 있음)는 길찾기만 다시 엶 → 칸 순서 = 화면 순서
-          var inherited = nav.layers();
-          var routeOnly = inherited.indexOf("route") !== -1 && inherited.indexOf("detail") === -1;
-          if (!routeOnly) openDetailModal(found.event);
-          if (initialParams.get("route") && mobileQuery.matches) openRouteSheet(found.event); // 길찾기 창은 모바일 전용
-        }
-      }
+    // 받기(fetch · JSON) 실패와 그리기 실패를 나눔 — 그리기 오류를 "네트워크" 안내로 보이지 않게
+    .then(showEvents, function (err) {
+      failLoad("network", err);
     })
     .catch(function (err) {
-      console.error("행사 불러오기 실패", err);
-      renderLoadError();
-      renderHomeError();
-      eventsLoadFailed = true;
-      if (searchOpen) renderSearch();
+      failLoad("render", err);
     });
+}
+
+function failLoad(kind, err) {
+  console.error(kind === "network" ? "행사 불러오기 실패" : "행사 표시 실패", err);
+  renderLoadError(kind);
+  renderHomeError();
+  eventsLoadFailed = true;
+  if (searchOpen) renderSearch();
+}
+
+function showEvents(events) {
+  markerList = [];
+  setupCategoryOptions(events);
+
+  // 이 시점엔 마커를 만들지 않음. 실제 마커는 filterMarkers() -> renderLocationMarkers()에서
+  // "장소별로 묶어서" 그림 (같은 좌표에 행사가 여러 개면 개수 뱃지 마커로)
+  events.forEach(cleanEventText); // &#39; 복원, <br /> → 줄바꿈
+  events.forEach(function (event) {
+    markerList.push({ event: event });
+  });
+  eventsLoaded = true;
+
+  filterMarkers();
+  renderHome();
+  if (searchOpen) renderSearch(); // 받는 중에 검색 화면을 열었으면 행을 채움
+
+  // 공유 링크(?event=번호)로 들어오거나, 지도 앱에 갔다 와서 페이지가 다시 열리면 그 행사 상세를 복원
+  // (길찾기 창까지 열려 있었으면 &route=1 → 길찾기 창도 다시 엶)
+  var shared = Number(initialParams.get("event"));
+  if (shared) {
+    var found = markerList.find(function (item) {
+      return item.event.id === shared;
+    });
+    if (found) {
+      map.setCenter(new kakao.maps.LatLng(found.event.latitude, found.event.longitude));
+      // 하단 카드에서 상세 없이 길찾기만 열었던 경우(이어받은 칸에 route 만 있음)는 길찾기만 다시 엶 → 칸 순서 = 화면 순서
+      var inherited = nav.layers();
+      var routeOnly = inherited.indexOf("route") !== -1 && inherited.indexOf("detail") === -1;
+      if (!routeOnly) openDetailModal(found.event);
+      if (initialParams.get("route") && mobileQuery.matches) openRouteSheet(found.event); // 길찾기 창은 모바일 전용
+    }
+  }
 }
 
 function toggleInfowindow(infowindow, marker) {

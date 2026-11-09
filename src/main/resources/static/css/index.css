@@ -473,14 +473,34 @@ body {
 #detailIntro,
 #detailLocation,
 #detailBar,
-.skeleton-card,
-.load-error {
+.skeleton-card {
   display: none;
 }
 #routeSheet[hidden],
 #shareSheet[hidden],
 #toast[hidden] {
   display: none;
+}
+
+/* 행사 불러오기 실패 안내 (PC 모양, 모바일은 아래 미디어 쿼리에서 토큰 색으로) */
+.load-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: #666;
+  font-size: 0.875rem;
+}
+.load-error button {
+  padding: 0.5rem 1.25rem;
+  border: 1px solid #ddd;
+  border-radius: 2px;
+  background: #fff;
+  color: #222;
+  font: inherit;
+  cursor: pointer;
 }
 
 /* 찜 탭이 비었을 때 안내 (PC 모양, 모바일은 아래 미디어 쿼리에서 토큰 색으로) */
