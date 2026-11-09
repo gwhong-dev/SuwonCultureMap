@@ -61,6 +61,15 @@ class PrivacyPolicyPageTest {
   }
 
   @Test
+  void 최근_본_행사는_기기에만_저장된다고_적음() throws Exception {
+    // 찜 탭 "최근 본": 상세를 연 행사 번호를 브라우저 저장소(localStorage)에만 둠 (recent-views.js)
+    String html = mockMvc.perform(get("/privacy.html")).andReturn().getResponse()
+        .getContentAsString(StandardCharsets.UTF_8);
+
+    assertThat(html).contains("최근 본 행사", "브라우저 저장소", "서버로 보내지 않습니다");
+  }
+
+  @Test
   void 메인_로그인_마이페이지에_링크가_있음() throws Exception {
     for (String page : new String[] { "/index.html", "/login.html", "/mypage.html" }) {
       String html = mockMvc.perform(get(page)).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);

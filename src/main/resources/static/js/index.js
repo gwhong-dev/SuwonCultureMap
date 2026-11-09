@@ -509,6 +509,15 @@ function filterMarkers() {
 
   var visibleItems = [];
 
+  // 찜 탭에 들어올 때 최근 본 순서를 새로 (보는 중에는 상세를 열어도 줄이 바뀌지 않게)
+  var favMode = selectedCategory === "찜";
+  if (favMode && !favModeShown) refreshRecentShown();
+  favModeShown = favMode;
+  var recentMode = recentListShown();
+  var recentSet = new Set(recentShownIds);
+  var favCount = 0; // 찜 탭 안 탭 숫자 = 다른 조건(검색어 · 날짜 · 지난 행사 · 구)까지 맞는 줄 수
+  var recentCount = 0;
+
   markerList.forEach(function (item) {
     var matchesKeyword = matchesSearch(item.event, keyword); // 띄어쓰기 · 대소문자 무시, 제목 + 장소 (home-picks.js)
     var matchesCategory;
@@ -516,7 +525,8 @@ function filterMarkers() {
     if (selectedCategory === "all") {
       matchesCategory = true;
     } else if (selectedCategory === "찜") {
-      matchesCategory = favoriteEventIds.has(item.event.id);
+      // 찜 탭: "찜" = 서버 찜 목록, "최근 본" = 이 기기에 저장한 최근 본 목록
+      matchesCategory = recentMode ? recentSet.has(item.event.id) : favoriteEventIds.has(item.event.id);
     } else {
       matchesCategory = item.event.category === selectedCategory;
     }
@@ -526,14 +536,18 @@ function filterMarkers() {
     item.runMatch = runDays ? matchRunDays(item.event, runDays) : null;
     var matchesDate = item.runMatch !== "no";
 
-    var visible =
-      matchesKeyword && matchesCategory && matchesPast && matchesDate && matchesDistrict(item.event, districtFilter);
+    var matchesOthers = matchesKeyword && matchesPast && matchesDate && matchesDistrict(item.event, districtFilter);
+    if (favMode && matchesOthers) {
+      if (favoriteEventIds.has(item.event.id)) favCount++;
+      if (recentSet.has(item.event.id)) recentCount++;
+    }
 
-    if (visible) {
+    if (matchesOthers && matchesCategory) {
       visibleItems.push(item);
     }
   });
 
+  updateFavTabs(favMode && mobileQuery.matches, favCount, recentCount);
   renderLocationMarkers(visibleItems); // 장소별로 묶어서 마커 다시 그리기
   renderSidebar(visibleItems);
   updateSearchFavs();
@@ -569,17 +583,21 @@ function extractSummaryInfo(infoText) {
   return result.join("\n");
 }
 
-// ===== 찜 탭이 비었을 때 안내 (비로그인 · 아직 없음 · 조건에 걸러짐) =====
-function renderFavoriteEmpty(list) {
-  var favoriteCount = markerList.filter(function (item) {
-    return favoriteEventIds.has(item.event.id);
+// ===== 찜 탭이 비었을 때 안내 (찜: 비로그인 · 아직 없음 · 조건에 걸러짐 / 최근 본: 아직 없음 · 조건에 걸러짐) =====
+function renderFavoriteEmpty(list, recentMode) {
+  var savedCount = markerList.filter(function (item) {
+    return recentMode ? recentShownIds.indexOf(item.event.id) !== -1 : favoriteEventIds.has(item.event.id);
   }).length;
-  var state = favoriteEmptyState(isLoggedIn, favoriteCount);
+  var state = recentMode ? recentEmptyState(savedCount) : favoriteEmptyState(isLoggedIn, savedCount);
 
   var box = document.createElement("div");
   box.className = "fav-empty";
   box.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">' +
+    (recentMode
+      ? '<circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" />' // 최근 본 = 시계
+      : '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />') + // 찜 = 하트
+    "</svg>" +
     '<strong class="fav-empty-title"></strong><span class="fav-empty-body"></span>';
   box.querySelector(".fav-empty-title").textContent = state.title;
   box.querySelector(".fav-empty-body").textContent = state.body;
@@ -595,26 +613,33 @@ function renderFavoriteEmpty(list) {
 
 // ===== Side-bar 카드 렌더링 (이미지 + 제목 + info 요약) =====
 function renderSidebar(items) {
-  // 찜한 행사는 맨 위에 이름순, 나머지는 시작일 순
-  var favorites = items
-    .filter(function (item) {
-      return favoriteEventIds.has(item.event.id);
-    })
-    .sort(function (a, b) {
-      return a.event.title.localeCompare(b.event.title, "ko");
-    });
-  var others = items
-    .filter(function (item) {
-      return !favoriteEventIds.has(item.event.id);
-    })
-    .sort(compareStartDate);
+  // 찜한 행사는 맨 위에 이름순, 나머지는 시작일 순. 최근 본 탭은 최근 본 순서 그대로 (찜 구분 없이)
+  var recentMode = recentListShown();
+  var favorites = recentMode
+    ? []
+    : items
+        .filter(function (item) {
+          return favoriteEventIds.has(item.event.id);
+        })
+        .sort(function (a, b) {
+          return a.event.title.localeCompare(b.event.title, "ko");
+        });
+  var others = recentMode
+    ? items.slice().sort(function (a, b) {
+        return recentShownIds.indexOf(a.event.id) - recentShownIds.indexOf(b.event.id);
+      })
+    : items
+        .filter(function (item) {
+          return !favoriteEventIds.has(item.event.id);
+        })
+        .sort(compareStartDate);
   var sorted = favorites.concat(others);
 
   var list = document.getElementById("list");
   list.innerHTML = "";
   list.removeAttribute("aria-busy"); // 스켈레톤 끝
   if (sorted.length === 0 && document.getElementById("categorySelect").value === "찜") {
-    renderFavoriteEmpty(list);
+    renderFavoriteEmpty(list, recentMode);
   }
 
   // 찜한 행사가 있을 때만 구분 제목 표시
@@ -889,6 +914,7 @@ function openDetailModal(event) {
   }
   icsAltLink.hidden = !event.startDate || isAppleMobile;
 
+  recordRecentView(event.id); // 찜 탭 "최근 본" (이 기기 브라우저에만)
   updateFavoriteButton(event.id);
 
   document.getElementById("modalFavoriteBtn").onclick = function () {
@@ -1266,6 +1292,7 @@ function goToLogin() {
 function showFavoriteList() {
   if (detailEvent) closeDetailModal();
   closeSearch(); // 검색 결과에서 찜 → 토스트 "보기" 면 찜 탭이 보이게
+  favView = "fav"; // 최근 본 탭을 보던 중이어도 방금 찜한 목록으로
   if (mobileQuery.matches) {
     selectTab("fav");
     return;
@@ -1598,6 +1625,85 @@ document.querySelectorAll("#tabBar button[data-tab]").forEach(function (tab) {
   tab.addEventListener("click", function () {
     selectTab(tab.dataset.tab);
   });
+});
+
+// ----- 찜 탭 안의 "찜 N | 최근 본 N" (디자인 05, 모바일 전용) -----
+// 찜 = 서버 찜(FavoriteService, 로그인 회원), 최근 본 = 상세를 연 행사를 이 기기 브라우저에만 저장 (recent-views.js)
+// 숫자 = 지금 조건(검색어 · 날짜 · 지난 행사 · 구)에서 그 탭에 보일 줄 수
+var favView = "fav"; // "fav" 찜 | "recent" 최근 본 (하단 찜 탭을 다시 열면 마지막에 본 쪽)
+var favModeShown = false; // 직전 filterMarkers 가 찜 탭이었는지 (들어올 때만 최근 본 순서를 새로)
+
+function recentStorage() {
+  try {
+    return window.localStorage; // 저장 차단이면 접근부터 오류
+  } catch (e) {
+    return null;
+  }
+}
+
+var recentViewIds = loadRecentViews(recentStorage()) || []; // 최근 본 행사 번호, 최근 순
+var recentShownIds = recentViewIds.slice(); // 최근 본 탭에 보이는 순서 (찜 탭 · 최근 본 탭에 들어올 때만 새로)
+
+// 상세를 열 때마다: 맨 앞으로. 다른 창(탭)에서 본 것도 합치려고 저장소 것을 먼저 읽음 (못 읽으면 이번 접속 것만)
+function recordRecentView(eventId) {
+  var storage = recentStorage();
+  recentViewIds = addRecentView(loadRecentViews(storage) || recentViewIds, eventId);
+  saveRecentViews(storage, recentViewIds);
+}
+
+function refreshRecentShown() {
+  recentViewIds = loadRecentViews(recentStorage()) || recentViewIds;
+  recentShownIds = recentViewIds.slice();
+}
+
+// 최근 본 목록은 모바일 찜 탭에서만 (PC 는 지금처럼 '찜' 필터 그대로)
+function recentListShown() {
+  return favView === "recent" && mobileQuery.matches && document.getElementById("categorySelect").value === "찜";
+}
+
+function updateFavTabs(show, favCount, recentCount) {
+  var list = document.getElementById("list");
+  document.getElementById("favTabs").hidden = !show;
+  if (!show) {
+    list.removeAttribute("role");
+    list.removeAttribute("aria-labelledby");
+    return;
+  }
+  document.getElementById("favTabFavCount").textContent = favCount;
+  document.getElementById("favTabRecentCount").textContent = recentCount;
+  document.querySelectorAll("#favTabs .fav-tab").forEach(function (tab) {
+    var active = tab.dataset.favView === favView;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", active ? "true" : "false");
+    tab.tabIndex = active ? 0 : -1;
+    if (active) list.setAttribute("aria-labelledby", tab.id);
+  });
+  list.setAttribute("role", "tabpanel");
+}
+
+function selectFavView(view, focus) {
+  favView = view;
+  if (view === "recent") refreshRecentShown(); // 누를 때마다 지금까지 본 순서로
+  filterMarkers();
+  if (sheetState === "full") window.scrollTo(0, 0); // 목록 전체는 페이지 스크롤 → 바뀐 목록을 맨 위부터
+  if (focus) document.querySelector('#favTabs .fav-tab[data-fav-view="' + view + '"]').focus();
+}
+
+document.querySelectorAll("#favTabs .fav-tab").forEach(function (tab) {
+  tab.addEventListener("click", function () {
+    selectFavView(tab.dataset.favView, false);
+  });
+  // 좌우 화살표 키로도 바꿈 (홈 곧 종료 / 곧 시작 탭과 같음)
+  tab.addEventListener("keydown", function (e) {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    selectFavView(favView === "fav" ? "recent" : "fav", true);
+  });
+});
+
+// 최근 본 목록은 모바일 전용 → 너비가 바뀌면 찜 목록을 다시 그림 (PC 로 가면 찜만, 탭 줄도 숨김)
+mobileQuery.addEventListener("change", function () {
+  if (document.getElementById("categorySelect").value === "찜") filterMarkers();
 });
 
 // ----- 홈 화면 (디자인 01): 이번 주 행사 수 + 캐러셀 + 이달의 행사 + 곧 종료 / 곧 시작 (고르는 규칙은 home-picks.js) -----
