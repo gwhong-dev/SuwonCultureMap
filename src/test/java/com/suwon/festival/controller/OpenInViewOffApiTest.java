@@ -103,6 +103,7 @@ class OpenInViewOffApiTest {
     favoriteRepository.save(Favorite.builder().member(member).event(hidden).createdAt(LocalDateTime.now()).build());
   }
 
+  // 표를 통째로 비움 → 다른 시험이 남긴 행도 지움 (같은 H2 testdb 공유, 병렬 실행 없음 · 클래스를 넘어 데이터를 기대는 시험 없음)
   @AfterEach
   void cleanUp() {
     jdbc.update("DELETE FROM favorite");
