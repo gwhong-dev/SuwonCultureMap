@@ -42,6 +42,15 @@ function toggleGuestFavoriteId(ids, id) {
   return { ids: ids.concat([id]), added: true };
 }
 
+// 불러온 행사(/api/events)에 없는 번호(삭제 · 숨김 · 다른 행사에 합쳐짐)를 뺌 → 화면에서 뺄 수 없는 찜이 100개 한도를 차지하지 않게
+// 행사 목록이 비었으면(받기 이상) 아무것도 빼지 않음
+function pruneGuestFavoriteIds(ids, knownIds) {
+  if (!knownIds || !knownIds.size) return ids;
+  return ids.filter(function (id) {
+    return knownIds.has(id);
+  });
+}
+
 // 저장소가 막힌 브라우저(사생활 보호 · 가득 참)에선 이 페이지에서만 기억 (최근 본 createRecentStore 와 같은 방식)
 function createGuestFavoriteStore(storage, key) {
   var memory = [];
@@ -84,6 +93,13 @@ function createGuestFavoriteStore(storage, key) {
     clear: function () {
       write([]);
     },
+    // 결과: 뺀 개수 (0 이면 저장소를 건드리지 않음)
+    prune: function (knownIds) {
+      var ids = list();
+      var kept = pruneGuestFavoriteIds(ids, knownIds);
+      if (kept.length !== ids.length) write(kept);
+      return ids.length - kept.length;
+    },
   };
 }
 
@@ -107,6 +123,7 @@ if (typeof module !== "undefined") {
     GUEST_FAVORITE_MAX: GUEST_FAVORITE_MAX,
     parseGuestFavorites: parseGuestFavorites,
     toggleGuestFavoriteId: toggleGuestFavoriteId,
+    pruneGuestFavoriteIds: pruneGuestFavoriteIds,
     createGuestFavoriteStore: createGuestFavoriteStore,
     guestFavoriteToast: guestFavoriteToast,
     guestMergeToastText: guestMergeToastText,
