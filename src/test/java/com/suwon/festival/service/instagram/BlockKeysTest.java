@@ -48,4 +48,18 @@ class BlockKeysTest {
     String k = BlockKeys.sourceKey("9".repeat(64), BlockKeys.of(unread("x")));
     assertThat(k).hasSizeLessThanOrEqualTo(100);
   }
+
+  @Test
+  void 저장_키_검사_비었거나_한쪽이_없거나_칸보다_길면_저장_안_함() {
+    String key = BlockKeys.of(parsed("가을 음악회", LocalDate.of(2026, 11, 5), "가상 아트홀", "원문"));
+    assertThat(BlockKeys.isValidSourceKey(BlockKeys.sourceKey("1789", key))).isTrue();
+    assertThat(BlockKeys.isValidSourceKey(BlockKeys.sourceKey("9".repeat(64), key))).isTrue(); // 최대 97자
+    assertThat(BlockKeys.isValidSourceKey(null)).isFalse();
+    assertThat(BlockKeys.isValidSourceKey("")).isFalse();
+    assertThat(BlockKeys.isValidSourceKey("   ")).isFalse();
+    assertThat(BlockKeys.isValidSourceKey("1789#")).isFalse();
+    assertThat(BlockKeys.isValidSourceKey("#" + key)).isFalse();
+    assertThat(BlockKeys.isValidSourceKey("1789" + key)).isFalse(); // 구분자 없음
+    assertThat(BlockKeys.isValidSourceKey("9".repeat(68) + "#" + key)).isFalse(); // 101자 > 칸 100
+  }
 }

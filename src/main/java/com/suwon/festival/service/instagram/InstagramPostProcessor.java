@@ -48,6 +48,8 @@ import com.suwon.festival.service.schedule.ScheduleResult;
 public class InstagramPostProcessor {
 
   private static final Logger BLOCK_LOG = LoggerFactory.getLogger(BlockLog.LOGGER_NAME);
+  private static final Logger log = LoggerFactory.getLogger(InstagramPostProcessor.class);
+  static final String NO_SOURCE_KEY = "저장 키(sourceKey) 없음 — 저장 안 함";
 
   static final ZoneId KST = ZoneId.of("Asia/Seoul");
   private static final Pattern MEDIA_ID = Pattern.compile("^[0-9]{1,64}$");
@@ -141,7 +143,12 @@ public class InstagramPostProcessor {
           ParsedEvent e = r.event();
           String sourceKey = BlockKeys.sourceKey(post.id(), key);
           Event linked = block != null && block.getStatus() == InstagramBlock.Status.READY ? block.getEvent() : null;
-          if (linked != null) {
+          if (!BlockKeys.isValidSourceKey(sourceKey)) {
+            // 키가 비면 unique 로 중복을 못 막음 → 행사 저장 · 장소 검색 없이 FAILED 로 집계 (재단 행사는 이 경로를 안 탐)
+            log.warn("인스타 블록 저장 건너뜀: {} (게시물 {})", NO_SOURCE_KEY, post.id());
+            status = InstagramBlock.Status.FAILED;
+            reason = NO_SOURCE_KEY;
+          } else if (linked != null) {
             // 키가 같으면 장소도 같음 → 좌표는 그대로 두고 나머지만 갱신
             linked.updateFrom(toEvent(e, linked.getLatitude(), linked.getLongitude(), post, postedAt, now, sourceKey));
             event = linked;
