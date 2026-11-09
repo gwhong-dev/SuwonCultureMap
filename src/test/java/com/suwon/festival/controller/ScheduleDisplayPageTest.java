@@ -187,4 +187,21 @@ class ScheduleDisplayPageTest {
     // 엔터 → 결과(07): 홈과 같은 행사 행 + ♡, 찜이 바뀌면 filterMarkers 끝에서 ♡ 표시를 맞춤
     assertThat(js).contains("searchMode = \"results\"", "eventRowHtml(event) +", "updateSearchFavs();\n}");
   }
+
+  @Test
+  void 뒤로_가기_기록_파일을_화면_스크립트보다_먼저_불러오고_화면마다_칸을_쌓음() throws Exception {
+    // 홈 → 지도 · 목록 · 찜, 검색 화면, 상세, 길찾기 · 공유 창 → 브라우저 뒤로 가기로 닫힘 (nav-history.js)
+    String html = page();
+    int rules = html.indexOf("<script src=\"/nav-history.js\"></script>");
+    assertThat(rules).isPositive().isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
+
+    String js = script();
+    assertThat(js).contains("window.addEventListener(\"popstate\", nav.onPopState)");
+    assertThat(js).contains("nav.open(\"tab\")", "nav.open(\"search\")", "nav.open(\"detail\")", "nav.open(\"route\")", "nav.open(\"share\")");
+    assertThat(js).contains("nav.forget(\"share\")"); // 카카오톡으로 넘어가는 중엔 go(-1) 을 미룸
+    assertThat(js).doesNotContain("history.replaceState("); // 주소 기록은 nav 가 칸과 함께 맞춤
+
+    MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+    assertThat(mockMvc.perform(get("/nav-history.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
+  }
 }
