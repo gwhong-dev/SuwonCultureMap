@@ -82,6 +82,12 @@ function unseenAlertCount(alerts, seenKeys) {
   }).length;
 }
 
+// 알림 칸이 실제로 화면에 보일 때만 본 것으로 기록 (하단 '찜' 탭 점을 끔)
+// PC = 사이드바에 늘 보임, 모바일 = 찜 탭 화면만 (지도 탭 '♥ 찜' 칩은 시트가 내려가 있을 수 있어 기록 안 함)
+function shouldMarkAlertsSeen(isMobile, onFavScreen) {
+  return !isMobile || onFavScreen;
+}
+
 // 본 알림 저장소. storage = window.localStorage (시험에선 가짜), 못 쓰면 null → 이 페이지에서만 메모리로
 // markSeen 은 지금 알림 열쇠로 통째로 바꿈 → 지난 알림이 쌓이지 않음
 function createAlertSeenStore(storage, key) {
@@ -129,6 +135,7 @@ if (typeof module !== "undefined") {
     favoriteAlertKey: favoriteAlertKey,
     parseSeenAlertKeys: parseSeenAlertKeys,
     unseenAlertCount: unseenAlertCount,
+    shouldMarkAlertsSeen: shouldMarkAlertsSeen,
     createAlertSeenStore: createAlertSeenStore,
   };
 }

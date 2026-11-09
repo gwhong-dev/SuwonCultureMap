@@ -586,9 +586,9 @@ var alertSeenStore = createAlertSeenStore(
   "suwonbible.favAlertsSeen",
 );
 
-function currentFavAlerts() {
+function currentFavAlerts(items) {
   return favoriteAlerts(
-    markerList.map(function (item) {
+    (items || markerList).map(function (item) {
       return item.event;
     }),
     favoriteEventIds,
@@ -606,13 +606,11 @@ function updateFavAlertDot() {
   }
 }
 
-// 찜 목록 맨 위 알림 칸. 알림이 없으면 아무것도 안 그림. 그리면 본 것으로 기록
-function renderFavAlerts(list) {
-  var alerts = currentFavAlerts();
-  if (!alerts.length) {
-    alertSeenStore.markSeen([]);
-    return;
-  }
+// 찜 목록 맨 위 알림 칸 = 지금 목록에 보이는 찜(PC 검색어 · 날짜 조건과 같게). 알림이 없으면 안 그림
+// 화면에 보일 때만 본 것으로 기록 (shouldMarkAlertsSeen)
+function renderFavAlerts(list, favoriteItems) {
+  var alerts = currentFavAlerts(favoriteItems);
+  if (!alerts.length) return;
   var box = document.createElement("section");
   box.className = "fav-alerts";
   box.setAttribute("aria-label", "찜 알림");
@@ -640,7 +638,7 @@ function renderFavAlerts(list) {
   });
   box.appendChild(ul);
   list.appendChild(box);
-  alertSeenStore.markSeen(alerts);
+  if (shouldMarkAlertsSeen(mobileQuery.matches, onFavScreen())) alertSeenStore.markSeen(alerts);
 }
 
 // ===== 찜 탭 "최근 본" (디자인 05): 상세를 연 행사 번호만 이 기기 브라우저 저장소에 (recent-views.js) =====
@@ -850,7 +848,7 @@ function renderSidebar(items) {
 
   // 찜 목록(모바일 찜 탭 '찜' · 분류 '찜')이면 맨 위에 곧 시작 · 곧 종료 알림
   if (!recent && favorites.length > 0 && (onFavScreen() || document.getElementById("categorySelect").value === "찜")) {
-    renderFavAlerts(list);
+    renderFavAlerts(list, favorites);
   }
 
   // 찜한 행사가 있을 때만 구분 제목 표시

@@ -10,6 +10,7 @@ const {
   favoriteAlertKey,
   parseSeenAlertKeys,
   unseenAlertCount,
+  shouldMarkAlertsSeen,
   createAlertSeenStore,
 } = require("../../main/resources/static/favorite-alerts.js");
 
@@ -126,4 +127,10 @@ test("저장소를 못 쓰면 이 페이지 메모리로", () => {
     store.markSeen(alerts);
     assert.deepStrictEqual(store.list(), ["1:ending:2026-11-10"]);
   }
+});
+
+test("본 것으로 기록: PC 는 늘, 모바일은 찜 탭 화면에서만 (지도 탭 '♥ 찜' 칩 = 시트가 내려가 있을 수 있음)", () => {
+  assert.strictEqual(shouldMarkAlertsSeen(false, false), true);
+  assert.strictEqual(shouldMarkAlertsSeen(true, true), true);
+  assert.strictEqual(shouldMarkAlertsSeen(true, false), false);
 });
