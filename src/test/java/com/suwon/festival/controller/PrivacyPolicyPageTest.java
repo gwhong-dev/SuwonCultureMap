@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -94,5 +96,18 @@ class PrivacyPolicyPageTest {
       String html = mockMvc.perform(get(page)).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
       assertThat(html).as(page).contains("href=\"privacy.html\"");
     }
+  }
+
+  @Test
+  void 접속_기록_보관_문구가_로그_설정과_맞음() throws Exception {
+    // 파일 로그: application-prod.properties max-history=14 (ProdSyncProtectionTest)
+    // 화면 출력 로그: json-file 은 기간 옵션이 없어 용량만 → 10MB × 3 = 30MB. 14일이라고 적으면 거짓
+    String html = mockMvc.perform(get("/privacy.html")).andReturn().getResponse()
+        .getContentAsString(StandardCharsets.UTF_8);
+    String compose = Files.readString(Path.of("docker-compose.prod.yml"), StandardCharsets.UTF_8);
+
+    assertThat(compose).contains("driver: json-file", "max-size: 10m", "max-file: \"3\"");
+    assertThat(html).contains("날짜별 로그 파일은 14일이 지나면 자동으로 삭제",
+        "기간 기준이 아니라 프로그램별 용량 한도(30MB)를 넘으면");
   }
 }
