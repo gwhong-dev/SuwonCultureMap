@@ -83,7 +83,7 @@ COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml
 ```
 
 - `APP_BASE_URL` 을 localhost 그대로 두면 소셜 로그인이 실패한다
-- `KAKAO_ADMIN_KEY` 는 운영에서 필수 (탈퇴 때 카카오 연결 해제)
+- `KAKAO_ADMIN_KEY` 는 운영에서 필수 (탈퇴 때 카카오 연결 해제 · 카카오 연결 끊기 알림 확인)
 - `COMPOSE_FILE` · `COMPOSE_PROJECT_NAME` 덕분에 이후 `docker compose` 만 입력하면 된다. 폴더 이름이 바뀌어도 같은 DB 를 쓴다
 - 비밀번호에는 특수문자를 쓰지 않는다 (`$` 등을 compose 가 다르게 해석)
 - DB 비밀번호는 첫 실행 때 DB 에 저장된다. 나중에 `.env` 만 고치면 접속이 실패한다. `docker compose down -v` 는 **DB 를 통째로 삭제**하므로 운영에서 쓰지 않는다
@@ -95,6 +95,7 @@ COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml
 |---|---|
 | 공통 | 콜백 등록: `https://suwonbible.com/api/auth/{kakao\|google\|naver}/callback` |
 | 카카오 | 지도 JS 키의 웹 도메인에 `https://suwonbible.com` 등록 |
+| 카카오 | [카카오 로그인] > [연결 끊기 알림]: 콜백 URL `https://suwonbible.com/api/auth/kakao/unlink-callback` (GET · POST 아무거나). 카카오가 `Authorization: KakaoAK {어드민 키}` 로 보내고, 앱이 `KAKAO_ADMIN_KEY` 와 같을 때만 처리 |
 | 구글 | 게시 상태를 프로덕션으로, 승인된 도메인 · 홈페이지 · 처리방침 URL 입력 |
 | 네이버 | 서비스 URL 변경, 앱이 개발 중 상태면 공개 절차 확인 |
 
