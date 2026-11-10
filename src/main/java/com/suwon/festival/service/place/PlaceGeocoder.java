@@ -24,6 +24,11 @@ import org.springframework.web.client.RestClientResponseException;
 //    - 줄인 검색어는 결과 이름과 "정확히 같을 때만" 인정
 //    - 3글자 미만 · 지역 이름뿐 · 생활권 이름(서수원 · 영통 …) · 범위가 넓은 말이면 멈춤
 //    → 방 · 층 대신 건물 좌표에 찍힘
+// 9) "·" "/" 는 기본 "여러 곳"(실측 "영흥수목원·영흥숲공원"). 단, 뒤 조각이 모두 방 · 층 이름뿐이면
+//    한 장소의 다른 표기("가상아트센터 · 대극장" "가상미술관 1층/2층") → 앞 조각(건물)만 검색
+//    - 앞 조각이 방 · 층 이름이면("1층 · 2층") 여전히 여러 곳
+//    - 뒤 조각이 장소가 될 수 있는 말(광장 · 마당 · 주차장 · 공원 · 미술관 …)이면 여러 곳 (틀린 좌표보다 안전)
+//    - 쉼표 · "및" 은 그대로 여러 곳
 @Service
 public class PlaceGeocoder {
 
@@ -49,6 +54,21 @@ public class PlaceGeocoder {
   static final int CONTAINED_NAME_MIN = 3;
   // 장소 여러 곳: "A, B" / "A · B" / "A / B" / "A 및 B"
   private static final Pattern MULTI = Pattern.compile("[,，·/]|\\s및\\s");
+  // 한 장소의 다른 표기로 볼 수 있는 구분 기호 ("·" "/")
+  private static final Pattern VENUE_SEP = Pattern.compile("\\s*[·/]\\s*");
+  // 구분 기호 뒤 조각이 "방 · 층 이름뿐" (공백 없앤 뒤). 독립 장소가 될 수 있는 말은 넣지 않음
+  //  - 숫자 층 · 호 · 관: 1층 · 지하1층 · 101호 · 2관 · B1 · 3F ("제1주차장" "제2광장" 처럼 숫자 + 장소 이름은 아님)
+  //  - 영문 1~2자 + 홀 · 관: A홀 · B관
+  //  - (제N · 대 · 소 · 중 · 야외 …) + 공연장 · 극장 · 강당 · 무대 · 로비 · 라운지 · 본관 · 별관 · 신관 · 상영관
+  //  - (제N)(앞말 4자 이하) + 전시실 · 회의실 · 강의실 · 세미나실 · 교육실 · 연습실 / 홀(앞말 3자 이하)
+  //  - "전시관" 은 넣지 않음 (한옥기술전시관처럼 따로 있는 건물)
+  private static final Pattern SUB_PART = Pattern.compile(
+      "(지하)?[A-Za-z]?\\d{1,4}[A-Za-z]?(층|호|관)?"
+          + "|[A-Za-z]{1,2}(홀|관)"
+          + "|(제\\d{1,2})?(대|소|중|야외|다목적)?(공연장|극장|강당|무대|로비|라운지|본관|별관|신관|상영관)"
+          + "|(제\\d{1,2})?[가-힣A-Za-z]{0,4}(전시실|회의실|강의실|세미나실|교육실|연습실)"
+          + "|[가-힣A-Za-z]{0,3}홀");
+
   // 괄호 부연 (안쪽에 괄호가 없는 것만, 여러 개면 모두)
   private static final Pattern PAREN = Pattern.compile("[(（][^()（）]*[)）]");
   // 앞 라벨: "집결지:" "장소 :" (한글 2~5자 + 콜론)
@@ -72,6 +92,7 @@ public class PlaceGeocoder {
     String q = tidy(placeName);
     if (q.length() < 2) return noCoord("장소 없음");
     if (VAGUE.matcher(q).find()) return noCoord("범위가 넓은 장소");
+    q = sameVenueBase(q);
     if (MULTI.matcher(q).find()) return noCoord("장소가 여러 곳");
     if (q.length() > QUERY_MAX) return noCoord("장소 이름이 너무 김");
     if (REGION_ONLY.matcher(squash(q)).matches()) return noCoord("지역 이름뿐");
@@ -143,6 +164,24 @@ public class PlaceGeocoder {
       q = PAREN.matcher(q).replaceAll(" ");
     } while (!q.equals(before));
     return q.replaceAll("\\s+", " ").strip();
+  }
+
+  // 9번 규칙: "A · 대극장" "A 1층/2층" → "A" / "A 1층" (뒤 조각이 모두 방 · 층 이름일 때만). 아니면 그대로
+  static String sameVenueBase(String q) {
+    if (q.matches(".*([,，]|\\s및\\s).*")) return q; // 쉼표 · "및" 이 있으면 그대로 여러 곳
+    String[] parts = VENUE_SEP.split(q, -1);
+    if (parts.length < 2) return q;
+    String base = parts[0].strip();
+    if (base.isEmpty() || isSubPart(base)) return q;
+    for (int i = 1; i < parts.length; i++) {
+      if (!isSubPart(parts[i])) return q;
+    }
+    return base;
+  }
+
+  private static boolean isSubPart(String part) {
+    String p = squash(part.strip());
+    return !p.isEmpty() && SUB_PART.matcher(p).matches();
   }
 
   // "수원시청 본관 로비" → "로비", 한 단어면 null
