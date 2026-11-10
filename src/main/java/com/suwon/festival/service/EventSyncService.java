@@ -6,6 +6,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -41,6 +42,10 @@ public class EventSyncService {
   @Value("${swcf.api.key.event}")
   private String apiKey;
 
+  // 예약 동기화와 로컬 POST /api/events/sync 가 겹치면 뒤의 것을 건너뜀 (InstagramSyncService 와 같은 방식, 서버 1대 기준)
+  //  겹치면 같은 재단 행사를 양쪽이 새로 넣으려다 한쪽이 고유 제약으로 실패할 수 있음
+  private final AtomicBoolean running = new AtomicBoolean();
+
   private static final DateTimeFormatter PUB_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
   public String fetchRawXml() {
@@ -65,8 +70,16 @@ public class EventSyncService {
   }
 
   public SyncResult syncEvents() throws Exception {
-    String xml = fetchRawXml();
-    return syncItems(parseItems(xml), ScheduleBodyText.byIdx(xml));
+    if (!running.compareAndSet(false, true)) {
+      log.info("재단 동기화가 이미 실행 중 → 이번 실행은 건너뜀");
+      return SyncResult.skippedAlreadyRunning();
+    }
+    try {
+      String xml = fetchRawXml();
+      return syncItems(parseItems(xml), ScheduleBodyText.byIdx(xml));
+    } finally {
+      running.set(false);
+    }
   }
 
   SyncResult syncItems(List<EventItem> items) {
