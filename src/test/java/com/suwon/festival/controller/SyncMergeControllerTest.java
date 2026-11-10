@@ -84,6 +84,17 @@ class SyncMergeControllerTest {
   }
 
   @Test
+  void 재단_동기화가_이미_실행_중이면_409_이고_합치기도_하지_않음() throws Exception {
+    when(eventSyncService.syncEvents()).thenReturn(SyncResult.skippedAlreadyRunning());
+
+    MockHttpServletResponse res = post("/api/events/sync");
+
+    assertThat(res.getStatus()).isEqualTo(409);
+    assertThat(res.getContentAsString(StandardCharsets.UTF_8)).contains("이미 실행 중");
+    verify(eventMergeService, never()).recompute();
+  }
+
+  @Test
   void 재단_동기화가_중간에_실패해도_합치기는_실행하고_원래_실패를_돌려줌() throws Exception {
     Event foundation = eventRepository.save(event().idx(72003L).build());
     Event insta = eventRepository.save(event().source(Event.SOURCE_INSTAGRAM).sourceKey("자동합치기#3").build());

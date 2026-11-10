@@ -91,6 +91,17 @@ class ScheduledSyncJobTest {
   }
 
   @Test
+  void 재단_수동_동기화가_도는_중이면_재단만_건너뛰고_나머지는_실행() throws Exception {
+    when(eventSyncService.syncEvents()).thenReturn(SyncResult.skippedAlreadyRunning());
+
+    job.runScheduled();
+
+    verify(instagramSyncService).sync();
+    verify(eventDistrictFiller).fillMissing();
+    verify(eventMergeRunner).runAfterSync();
+  }
+
+  @Test
   void 실행_중이면_겹쳐_실행하지_않음() throws Exception {
     doAnswer(invocation -> {
       job.runScheduled(); // 실행 도중 예약 시각이 된 상황
