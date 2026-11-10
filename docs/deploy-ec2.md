@@ -160,7 +160,7 @@ main 에 머지 → CI 통과 → GitHub Actions `Deploy` → AWS SSM(원격 명
 - 권한은 "이 저장소의 main 브랜치"에서 "이 서버 1대에 `AWS-RunShellScript` 실행"만 가능
 - 배포 중 앱이 다시 뜨는 30초~1분 동안 사이트가 응답하지 않는다 (서버 1대 구성)
 - `deploy/Caddyfile` 이 바뀐 배포에서만 앱 응답 확인 뒤 Caddy 를 새로 띄운다 (실행 중 Caddy 의 설정과 저장소 파일을 비교, 같으면 Caddy 는 그대로)
-- 실패하면 Actions 가 빨간불 + 서버 출력이 Actions 로그에 남는다. **자동으로 되돌리지 않는다** (DB 구조가 이미 바뀌었을 수 있음)
+- 실패하면 Actions 가 빨간불 + 서버 출력이 Actions 로그에 남는다 (공개 저장소라 진단 로그는 IP · 메일 · 토큰 · 비밀번호 값을 가린 마지막 40줄만, 원본은 서버의 `docker compose logs`). **자동으로 되돌리지 않는다** (DB 구조가 이미 바뀌었을 수 있음)
 - SSM Run Command · OIDC 는 추가 요금 없음
 
 ### 처음 1회 설정 (AWS 콘솔, 서울 리전)
