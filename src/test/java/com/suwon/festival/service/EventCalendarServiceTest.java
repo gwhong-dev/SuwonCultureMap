@@ -224,4 +224,23 @@ class EventCalendarServiceTest {
     Event e = event("정조 K 스테이지", "", LocalDate.of(2026, 5, 16), LocalDate.of(2026, 9, 19), null);
     assertThat(service.toIcs(e, null, NOW)).isEqualTo(service.toIcs(e, NOW)).contains("UID:event-7@suwonculturemap");
   }
+
+  // 실데이터(11/10 운영 155건)에서 날짜 · 요일마다 시간이 다른 진행 날짜 행사의 시간 원문
+  // → 고른 날에 엉뚱한 시간을 넣지 않고 종일로 둠 (PR #72 리뷰 확인)
+  @Test
+  void 날마다_시간이_다른_원문이면_고른_날짜도_종일() {
+    String[] texts = {
+        "화 ~ 토요일 09:30~21:30(입장 마감 21:00)\n일요일 09:30~17:30(입장 마감 17:00)\n월요일휴관",
+        "(토) 17:00~18:00 (일) 14:00~15:00 (60분)",
+        "5.8.(금) 19:30\n5.9.(토) 14:00, 17:00",
+        "12.24.(수) 19:30 ㅣ 12.25.(목) 14:00, 17:00",
+        "(낮코스)13:30~14:30 (밤코스)18:30~19:30",
+        "화요일 ~ 일요일 10:00 ~ 17:00  (월요일 및 공휴일 미운영)",
+    };
+    for (String t : texts) {
+      Event e = eventB(LocalDate.of(2026, 5, 8), LocalDate.of(2026, 5, 9), "정조테마공연장", t);
+      assertThat(service.toIcs(e, LocalDate.of(2026, 5, 9), NOW)).as(t)
+          .contains("DTSTART;VALUE=DATE:20260509\r\n").contains("DTEND;VALUE=DATE:20260510\r\n");
+    }
+  }
 }
