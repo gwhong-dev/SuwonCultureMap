@@ -61,13 +61,13 @@ main() {
   # 빌드 진행 출력은 길어서 파일로 (SSM 이 돌려주는 출력은 앞부분만이라 정작 오류가 잘림)
   if ! docker compose up -d --build --remove-orphans >"$build_log" 2>&1; then
     echo "[실패] 빌드 · 실행 오류. 마지막 40줄 (전체: $build_log):" >&2
-    tail -n 40 "$build_log" >&2
+    tail -n 40 "$build_log" | mask_log >&2
     return 1
   fi
 
   if ! wait_app; then
-    echo "[실패] 새 앱이 5분 안에 응답하지 않음. 최근 로그:" >&2
-    docker compose logs --no-color --tail 80 app >&2 || true
+    echo "[실패] 새 앱이 5분 안에 응답하지 않음. 최근 로그 40줄 (IP · 메일 · 토큰 가림, 전체: 서버에서 docker compose logs app):" >&2
+    docker compose logs --no-color --tail 40 app 2>&1 | mask_log >&2 || true
     echo "되돌리기(DB 구조 변경이 없을 때만): git reset --hard ${before:0:7} && docker compose up -d --build" >&2
     echo "  → 서버는 main 에 남고, 고친 코드가 main 에 머지되면 다음 배포가 이어서 진행됨" >&2
     return 1
@@ -79,7 +79,7 @@ main() {
     echo "[Caddy] Caddyfile 바뀜 → Caddy 다시 띄움"
     if ! docker compose up -d --force-recreate --no-deps caddy >>"$build_log" 2>&1 || ! caddy_config_same; then
       echo "[실패] Caddy 다시 띄우기 오류. 최근 로그:" >&2
-      docker compose logs --no-color --tail 40 caddy >&2 || true
+      docker compose logs --no-color --tail 40 caddy 2>&1 | mask_log >&2 || true
       return 1
     fi
   fi
@@ -100,6 +100,20 @@ wait_app() {
     sleep 5
   done
   return 1
+}
+
+# 실패 진단 출력은 SSM → 공개 저장소 Actions 로그(90일)에 남음 → 방문자 IP · 메일 · 토큰 · 비밀번호 값을 가림
+# 원본 로그는 서버에만 (docker compose logs · app-logs 볼륨). 시각(12:34:56)은 IP 로 보지 않음
+mask_log() {
+  sed -E \
+    -e 's/\b[0-9]{1,3}(\.[0-9]{1,3}){3}\b/x.x.x.x/g' \
+    -e 's/\b([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b/[ipv6]/g' \
+    -e 's/\b[0-9a-fA-F]{1,4}(:[0-9a-fA-F]{1,4})*::([0-9a-fA-F]{1,4}(:[0-9a-fA-F]{1,4})*\b)?|::[0-9a-fA-F]{1,4}(:[0-9a-fA-F]{1,4})*\b/[ipv6]/g' \
+    -e 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/***@***/g' \
+    -e 's/\b(Bearer|Basic) [A-Za-z0-9._~+\/=-]+/\1 ***/Ig' \
+    -e 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9._-]+/***/g' \
+    -e 's/([?&](code|state|access_token|id_token)=)[^&" ]+/\1***/g' \
+    -e "s/(^|[^A-Za-z0-9_])(password|passwd|secret|token|api[_-]?key|authorization|cookie|jsessionid)([\"']?[[:space:]]*[:=][[:space:]]*\[?[\"']?)[^\"' ,&;]+/\1\2\3***/Ig"
 }
 
 # 실행 중인 Caddy 가 보는 설정 = 저장소의 deploy/Caddyfile 인지 (Caddy 가 안 떠 있으면 다름으로 봄)
