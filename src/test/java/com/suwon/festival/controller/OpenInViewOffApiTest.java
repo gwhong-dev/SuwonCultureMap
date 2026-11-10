@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -32,12 +33,14 @@ import org.springframework.orm.jpa.support.OpenEntityManagerInViewInterceptor;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.suwon.festival.dto.google.GoogleUserResponse;
 import com.suwon.festival.dto.kakao.KakaoUserResponse;
+import com.suwon.festival.dto.naver.NaverAccount;
 import com.suwon.festival.entity.Event;
 import com.suwon.festival.entity.Favorite;
 import com.suwon.festival.entity.LoginMethod;
@@ -50,6 +53,7 @@ import com.suwon.festival.repository.MemberRepository;
 import com.suwon.festival.service.EventSyncService;
 import com.suwon.festival.service.GoogleAuthService;
 import com.suwon.festival.service.KakaoAuthService;
+import com.suwon.festival.service.NaverAuthService;
 import com.suwon.festival.service.instagram.InstagramClient;
 import com.suwon.festival.service.instagram.InstagramPost;
 import com.suwon.festival.service.place.PlaceCandidate;
@@ -79,7 +83,9 @@ class OpenInViewOffApiTest {
   @MockitoBean private InstagramClient instagramClient;
   @MockitoBean private PlaceSearchClient placeSearchClient;
   @MockitoBean private RegionLookupClient regionLookupClient;
-  @MockitoBean private EventSyncService eventSyncService; // 진행 날짜 미리보기의 재단 XML (외부 호출 막음)
+  @MockitoBean private NaverAuthService naverAuthService;
+  // 실제 동기화 경로를 타도록 진짜 객체를 쓰고, 재단 XML 받기(fetchRawXml)만 가짜 XML 로 바꿈 (외부 호출 막음)
+  @MockitoSpyBean private EventSyncService eventSyncService;
 
   private MockMvc mvc;
   private Event representative;
@@ -137,7 +143,7 @@ class OpenInViewOffApiTest {
     mvc.perform(get("/api/events/" + representative.getId() + "/calendar/google"))
         .andExpect(status().isFound());
     mvc.perform(get("/api/events/merge/preview")).andExpect(status().isOk());
-    when(eventSyncService.fetchRawXml()).thenReturn("<rss><channel></channel></rss>");
+    doReturn("<rss><channel></channel></rss>").when(eventSyncService).fetchRawXml(); // 스파이 → when() 은 진짜를 부름
     mvc.perform(get("/api/events/schedule/preview")).andExpect(status().isOk());
   }
 
@@ -199,6 +205,45 @@ class OpenInViewOffApiTest {
   }
 
   @Test
+  void 소셜_로그인_콜백_네이버_로그인한_회원에_계정_연결() throws Exception {
+    NaverAccount naverUser = new NaverAccount();
+    naverUser.id = "n-990003";
+    when(naverAuthService.getAccessToken("code", "s")).thenReturn("token");
+    when(naverAuthService.getUserInfo("token")).thenReturn(naverUser);
+    MockHttpSession session = withState("naver");
+    session.setAttribute("memberId", member.getId()); // 마이페이지에서 "연동하기" (세션 회원 → LoginMethod 추가)
+
+    mvc.perform(get("/api/auth/naver/callback").session(session).param("code", "code").param("state", "s"))
+        .andExpect(status().isFound());
+
+    assertThat(session.getAttribute("memberId")).isEqualTo(member.getId());
+    mvc.perform(get("/api/auth/me").session(session)).andExpect(status().isOk())
+        .andExpect(jsonPath("$.linkedProviders.length()").value(2));
+  }
+
+  @Test
+  void 재단_동기화_새_행사_저장_뒤_갱신_진행_날짜_합치기() throws Exception {
+    LocalDate day = LocalDate.now().plusDays(20);
+    doReturn(rss(swcfItem(990911L, "동기화 음악회", day, "2026-11-01 10:00:00")))
+        .when(eventSyncService).fetchRawXml();
+    mvc.perform(post("/api/events/sync")).andExpect(status().isOk());
+    Event saved = eventRepository.findByIdx(990911L).orElseThrow();
+    assertThat(saved.getTitle()).isEqualTo("동기화 음악회");
+
+    // 같은 행사 · 새 pubDate → 기존 행을 갱신 (id 로 UPDATE, 진행 날짜 다시 씀) + 이름이 비슷한 행사와 합치기 실행
+    doReturn(rss(swcfItem(990911L, "동기화 음악회 앙상블", day, "2026-11-02 10:00:00"),
+            swcfItem(990912L, "동기화 음악회 앙상블", day, "2026-11-02 11:00:00")))
+        .when(eventSyncService).fetchRawXml();
+    mvc.perform(post("/api/events/sync")).andExpect(status().isOk());
+
+    assertThat(eventRepository.findByIdx(990911L).orElseThrow())
+        .satisfies(e -> assertThat(e.getId()).isEqualTo(saved.getId()))
+        .satisfies(e -> assertThat(e.getTitle()).isEqualTo("동기화 음악회 앙상블"));
+    assertThat(eventRepository.findByIdx(990912L)).isPresent();
+    mvc.perform(get("/api/events")).andExpect(status().isOk());
+  }
+
+  @Test
   void 카카오_연결_끊기_콜백() throws Exception {
     mvc.perform(post("/api/auth/kakao/unlink-callback").header("Authorization", "KakaoAK test-admin-key")
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
@@ -249,6 +294,21 @@ class OpenInViewOffApiTest {
         .idx(idx).title(title).category("공연").latitude(37.28).longitude(127.01)
         .info("장소: 가상 아트홀").place("가상 아트홀").pubDate(LocalDateTime.now().minusDays(1))
         .startDate(day).endDate(day).build();
+  }
+
+  // 재단 응답과 같은 모양의 가상 XML (lat/lng 뒤바뀐 원문 그대로)
+  private static String rss(String... items) {
+    return "<?xml version=\"1.0\" encoding=\"UTF-8\" ?><rss version=\"2.0\"><channel><title>행사정보</title>"
+        + String.join("", items) + "</channel></rss>";
+  }
+
+  private static String swcfItem(long idx, String title, LocalDate day, String pubDate) {
+    return "<item><idx>" + idx + "</idx><title>" + title + "</title><category>공연</category>"
+        + "<coordinate><lat>127.01</lat><lng>37.28</lng></coordinate>"
+        + "<eventDate><sdate>" + day + "</sdate><edate>" + day.plusDays(1) + "</edate></eventDate>"
+        + "<contentInfo><contentInfoDetail><infoItem>장소</infoItem><infoContent>가상 아트홀</infoContent></contentInfoDetail></contentInfo>"
+        + "<description>운영일 : " + day + ", " + day.plusDays(1) + "</description>"
+        + "<link>http://example.test/" + idx + "</link><pubDate>" + pubDate + "</pubDate></item>";
   }
 
   private static String caption(String title, LocalDate day) {
