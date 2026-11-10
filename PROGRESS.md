@@ -119,7 +119,8 @@
 - [ ] 카카오 JavaScript 키는 화면에 공개되는 키 → 카카오 콘솔 "플랫폼 > Web 사이트 도메인"이 suwonbible.com · localhost 만인지 확인 (사용자 콘솔)
 - [x] 인스타 대상 계정 허용 목록을 코드 · 시험으로 고정 (`OfficialInstagramAccounts`, 11/2)
 - [ ] 지난 인스타 행사 정리 규칙 확인 (Meta 약관 3.d.i.2.a "필요 없어지면 삭제") — 11/9 사진 저장(#188) 뒤엔 종료된 인스타 행사의 사진도 행사 행이 지워질 때까지 남음 → 이 규칙이 행사를 지우면 사진도 다음 동기화 끝에 같이 지워짐
-- [ ] 인스타 동기화 동시 실행 잠금 없음(#188 검증 ⚠️): 예약 동기화와 `POST /api/instagram/sync`(로컬 전용)가 겹치면 한쪽 사진 정리가 다른 쪽의 저장 전 파일을 지울 수 있음 → 다음 동기화에 다시 받아 복구. 운영은 수동 API 가 없어 해당 없음, 필요하면 잠금 추가
+- [x] 인스타 동기화 동시 실행 잠금(#188 검증 ⚠️) — 11/10 `InstagramSyncService.sync()` 에 잠금(AtomicBoolean, ScheduledSyncJob 과 같은 방식): 이미 도는 중이면 수집 · 사진 정리 없이 건너뜀 + 로그, `POST /api/instagram/sync` 는 409 + "이미 실행 중" 안내(구 정보 · 합치기도 안 함). 시험 `InstagramSyncLockTest`
+- [ ] 재단 동기화(`EventSyncService`)는 잠금 없음: 로컬 `POST /api/events/sync` 와 예약 동기화가 겹치면 같은 행사를 두 번 넣으려다 한쪽이 실패할 수 있음(운영은 수동 API 없음). 필요하면 같은 방식으로
 - [ ] 클라우드에서 `./mvnw` 는 래퍼 내려받기 실패 → `LANG=C.UTF-8 mvn test` 로 실행 (한글 시험 이름 때문에 UTF-8 필요)
 - [x] 재단 이용 동의 완료 (11/2 사용자 확인)
 - [x] 저장된 인스타 행사 DB 삭제 (11/3 사용자 승인 · 실행) — 행사 60 · media 52 · block 119 → 0, 찜 영향 0. 백업 서버 `~/backups/db-20261103-213811.sql.gz` (14일 보관) · PC `D:\dev\개인프로젝트\수원문화지도\backups\`
