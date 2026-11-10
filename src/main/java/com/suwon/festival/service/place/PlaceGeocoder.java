@@ -24,7 +24,7 @@ import org.springframework.web.client.RestClientResponseException;
 //    - 줄인 검색어는 결과 이름과 "정확히 같을 때만" 인정
 //    - 3글자 미만 · 지역 이름뿐 · 생활권 이름(서수원 · 영통 …) · 범위가 넓은 말이면 멈춤
 //    → 방 · 층 대신 건물 좌표에 찍힘
-// 9) "·" "/" 는 기본 "여러 곳"(실측 "영흥수목원·영흥숲공원"). 단, 뒤 조각이 모두 방 · 층 이름뿐이면
+// 9) "·" "/" (와 ㆍ ・ • ／ 같은 비슷한 모양, DOT_SLASH_SEPS) 는 기본 "여러 곳"(실측 "영흥수목원·영흥숲공원"). 단, 뒤 조각이 모두 방 · 층 이름뿐이면
 //    한 장소의 다른 표기("가상아트센터 · 대극장" "가상미술관 1층/2층") → 앞 조각(건물)만 검색
 //    - 앞 조각이 방 · 층 이름이면("1층 · 2층") 여전히 여러 곳
 //    - 뒤 조각이 장소가 될 수 있는 말(광장 · 마당 · 주차장 · 공원 · 미술관 …)이면 여러 곳 (틀린 좌표보다 안전)
@@ -52,10 +52,14 @@ public class PlaceGeocoder {
   private static final Pattern REGION_ONLY = Pattern.compile("^[가-힣0-9]{1,5}(동|구|시|읍|면|리|가)$");
   // 결과 이름이 이보다 짧으면 "검색어가 결과 이름을 품음"으로 인정하지 않음 ("공원" 같은 흔한 말 방지)
   static final int CONTAINED_NAME_MIN = 3;
+  // 가운뎃점 · 빗금 모양 구분 기호 (한 곳에 모아 MULTI · VENUE_SEP 가 같이 씀)
+  //  · U+00B7 가운뎃점 / ㆍ U+318D 한글 아래아 / ・ U+30FB · ･ U+FF65 일본어 가운뎃점
+  //  • U+2022 글머리 기호 / ∙ U+2219 · ⋅ U+22C5 수학 점 / "/" · ／ U+FF0F 빗금
+  static final String DOT_SLASH_SEPS = "\u00B7\u318D\u30FB\uFF65\u2022\u2219\u22C5/\uFF0F";
   // 장소 여러 곳: "A, B" / "A · B" / "A / B" / "A 및 B"
-  private static final Pattern MULTI = Pattern.compile("[,，·/]|\\s및\\s");
-  // 한 장소의 다른 표기로 볼 수 있는 구분 기호 ("·" "/")
-  private static final Pattern VENUE_SEP = Pattern.compile("\\s*[·/]\\s*");
+  private static final Pattern MULTI = Pattern.compile("[,，" + DOT_SLASH_SEPS + "]|\\s및\\s");
+  // 한 장소의 다른 표기로 볼 수 있는 구분 기호 (위 가운뎃점 · 빗금 모양)
+  private static final Pattern VENUE_SEP = Pattern.compile("\\s*[" + DOT_SLASH_SEPS + "]\\s*");
   // 구분 기호 뒤 조각이 "방 · 층 이름뿐" (공백 없앤 뒤). 독립 장소가 될 수 있는 말은 넣지 않음
   //  - 숫자 층 · 호 · 관: 1층 · 지하1층 · 101호 · 2관 · B1 · 3F ("제1주차장" "제2광장" 처럼 숫자 + 장소 이름은 아님)
   //  - 영문 1~2자 + 홀 · 관: A홀 · B관
