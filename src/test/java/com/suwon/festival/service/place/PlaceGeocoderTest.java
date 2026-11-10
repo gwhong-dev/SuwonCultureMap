@@ -278,6 +278,13 @@ class PlaceGeocoderTest {
     assertThat(g.geocode("가상수목원 · 야외마당").status()).isEqualTo(Status.NO_COORD);
     assertThat(g.geocode("가상수목원/주차장").status()).isEqualTo(Status.NO_COORD);
     assertThat(g.geocode("가상수목원 · 가상미술관").status()).isEqualTo(Status.NO_COORD);
+    // 숫자가 들어도 장소 이름이면 여러 곳 (검증 지적: 제1주차장 · 제2광장 · 1공영주차장 · 가상1동)
+    assertThat(g.geocode("가상수목원 · 제1주차장").status()).isEqualTo(Status.NO_COORD);
+    assertThat(g.geocode("가상수목원 · 제2광장").status()).isEqualTo(Status.NO_COORD);
+    assertThat(g.geocode("가상수목원/1공영주차장").status()).isEqualTo(Status.NO_COORD);
+    assertThat(g.geocode("가상수목원 · 가상1동").status()).isEqualTo(Status.NO_COORD);
+    // 전시관은 따로 있는 건물일 수 있음 (한옥기술전시관)
+    assertThat(g.geocode("가상행궁 · 가상기술전시관").status()).isEqualTo(Status.NO_COORD);
     // 앞 조각부터 방 · 층 이름이면 어느 건물인지 모름
     assertThat(g.geocode("1층 · 2층").status()).isEqualTo(Status.NO_COORD);
     // 방 이름 조각이 섞여 있어도 독립 장소가 하나라도 있으면 여러 곳
@@ -293,7 +300,8 @@ class PlaceGeocoderTest {
     MapSearch s = new MapSearch().on("가상아트센터", suwon("가상아트센터"));
     PlaceGeocoder g = new PlaceGeocoder(s);
     for (String place : List.of("가상아트센터 · 대극장", "가상아트센터·소공연장", "가상아트센터/1층", "가상아트센터 · B홀",
-        "가상아트센터 · 기획전시실", "가상아트센터 · 컨벤션홀 · 로비", "가상아트센터 / 101호", "가상아트센터·제1전시실")) {
+        "가상아트센터 · 기획전시실", "가상아트센터 · 컨벤션홀 · 로비", "가상아트센터 / 101호", "가상아트센터·제1전시실",
+        "가상아트센터 · 지하1층", "가상아트센터 · 3F", "가상아트센터 · 제2공연장")) {
       var r = g.geocode(place);
       assertThat(r.status()).as(place).isEqualTo(Status.FOUND);
       assertThat(r.place().name()).as(place).isEqualTo("가상아트센터");
