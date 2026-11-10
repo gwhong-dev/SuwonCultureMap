@@ -264,4 +264,70 @@ class PlaceGeocoderTest {
     assertThat(r.status()).isEqualTo(Status.NO_COORD);
     assertThat(r.reason()).contains("수원 안 검색 결과 없음").endsWith("(줄여도 없음)");
   }
+
+  // 9번 규칙: "·" "/" — 진짜 여러 곳이면 NO_COORD, 한 장소의 다른 표기면 건물 이름으로 검색
+  @Test
+  void 가운뎃점_빗금으로_다른_장소가_이어지면_검색하지_않음() {
+    MapSearch s = new MapSearch().on("가상수목원", suwon("가상수목원"));
+    PlaceGeocoder g = new PlaceGeocoder(s);
+    // 실측 "영흥수목원·영흥숲공원" 모양: 뒤 조각이 독립 장소
+    assertThat(g.geocode("가상수목원·가상숲공원").reason()).isEqualTo("장소가 여러 곳");
+    assertThat(g.geocode("가상수목원 / 가상역").status()).isEqualTo(Status.NO_COORD);
+    // 광장 · 마당 · 주차장 · 미술관 은 따로 있는 곳일 수 있음
+    assertThat(g.geocode("가상수목원 · 가상광장").status()).isEqualTo(Status.NO_COORD);
+    assertThat(g.geocode("가상수목원 · 야외마당").status()).isEqualTo(Status.NO_COORD);
+    assertThat(g.geocode("가상수목원/주차장").status()).isEqualTo(Status.NO_COORD);
+    assertThat(g.geocode("가상수목원 · 가상미술관").status()).isEqualTo(Status.NO_COORD);
+    // 앞 조각부터 방 · 층 이름이면 어느 건물인지 모름
+    assertThat(g.geocode("1층 · 2층").status()).isEqualTo(Status.NO_COORD);
+    // 방 이름 조각이 섞여 있어도 독립 장소가 하나라도 있으면 여러 곳
+    assertThat(g.geocode("가상수목원 · 대극장 · 가상숲공원").status()).isEqualTo(Status.NO_COORD);
+    // 쉼표 · "및" 은 그대로 여러 곳
+    assertThat(g.geocode("가상수목원 · 대극장, 소극장").status()).isEqualTo(Status.NO_COORD);
+    assertThat(g.geocode("가상수목원 및 가상숲공원 · 1층").status()).isEqualTo(Status.NO_COORD);
+    assertThat(s.queries).isEmpty(); // 호출 수(한도) 아끼기
+  }
+
+  @Test
+  void 뒤_조각이_방_층_이름뿐이면_건물_이름으로_검색() {
+    MapSearch s = new MapSearch().on("가상아트센터", suwon("가상아트센터"));
+    PlaceGeocoder g = new PlaceGeocoder(s);
+    for (String place : List.of("가상아트센터 · 대극장", "가상아트센터·소공연장", "가상아트센터/1층", "가상아트센터 · B홀",
+        "가상아트센터 · 기획전시실", "가상아트센터 · 컨벤션홀 · 로비", "가상아트센터 / 101호", "가상아트센터·제1전시실")) {
+      var r = g.geocode(place);
+      assertThat(r.status()).as(place).isEqualTo(Status.FOUND);
+      assertThat(r.place().name()).as(place).isEqualTo("가상아트센터");
+    }
+    assertThat(s.queries).containsOnly("가상아트센터"); // 방 이름은 빼고 건물만
+  }
+
+  @Test
+  void 앞_조각에_층이_붙어_있으면_기존_규칙대로_줄여서_찾음() {
+    // "가상미술관 1층/2층" → "가상미술관 1층" 검색 → 못 찾으면 "1층" 떼고 "가상미술관"
+    MapSearch s = new MapSearch().on("가상미술관", suwon("가상미술관"));
+    var r = new PlaceGeocoder(s).geocode("가상미술관 1층/2층");
+    assertThat(r.status()).isEqualTo(Status.FOUND);
+    assertThat(s.queries).containsExactly("가상미술관 1층", "가상미술관");
+  }
+
+  @Test
+  void 건물_이름이_지역_이름뿐이면_검색하지_않음() {
+    MapSearch s = new MapSearch();
+    var r = new PlaceGeocoder(s).geocode("가상동 · 1층");
+    assertThat(r.reason()).isEqualTo("지역 이름뿐");
+    assertThat(s.queries).isEmpty();
+  }
+
+  @Test
+  void 구분_기호_뒤_조각_판정() {
+    assertThat(PlaceGeocoder.sameVenueBase("가상센터 · 대극장")).isEqualTo("가상센터");
+    assertThat(PlaceGeocoder.sameVenueBase("가상센터 · 야외무대")).isEqualTo("가상센터");
+    assertThat(PlaceGeocoder.sameVenueBase("가상센터/A홀/B홀")).isEqualTo("가상센터");
+    assertThat(PlaceGeocoder.sameVenueBase("가상센터 · 대회의실")).isEqualTo("가상센터");
+    // 그대로 (여러 곳 판정으로 넘어감)
+    assertThat(PlaceGeocoder.sameVenueBase("가상센터 · 가상도서관")).isEqualTo("가상센터 · 가상도서관");
+    assertThat(PlaceGeocoder.sameVenueBase("가상센터 · 가상제2야외음악당")).isEqualTo("가상센터 · 가상제2야외음악당");
+    assertThat(PlaceGeocoder.sameVenueBase("가상센터 · ")).isEqualTo("가상센터 · ");
+    assertThat(PlaceGeocoder.sameVenueBase("가상센터")).isEqualTo("가상센터");
+  }
 }
