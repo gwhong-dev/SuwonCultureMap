@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -114,6 +116,17 @@ class SyncMergeControllerTest {
     assertThat(res.getContentAsString(StandardCharsets.UTF_8))
         .contains("\"eventsSaved\":3", "\"ok\":false")
         .doesNotContain("가상 실패"); // 오류 메시지는 응답에 넣지 않음
+  }
+
+  @Test
+  void 인스타_동기화가_이미_실행_중이면_409_와_안내_문구_합치기는_하지_않음() throws Exception {
+    when(instagramSyncService.sync()).thenReturn(InstagramSyncResult.alreadyRunning());
+
+    MockHttpServletResponse res = post("/api/instagram/sync");
+
+    assertThat(res.getStatus()).isEqualTo(409);
+    assertThat(res.getContentAsString(StandardCharsets.UTF_8)).contains("이미 실행 중", "\"merge\":null");
+    verify(eventMergeService, never()).recompute();
   }
 
   private MockHttpServletResponse post(String url) throws Exception {

@@ -41,6 +41,17 @@ public record InstagramSyncResult(
     return new InstagramSyncResult(false, message, 0, 0, List.of(), 0, 0, 0, Map.of(), Map.of(), 0, 0, 0, tokenWarning, null);
   }
 
+  static final String ALREADY_RUNNING = "인스타 동기화가 이미 실행 중 → 이번 요청은 건너뜀 (끝난 뒤 다시 실행)";
+
+  // 다른 동기화가 돌고 있어 이번 것은 아무것도 하지 않음
+  public static InstagramSyncResult alreadyRunning() {
+    return notConfigured(ALREADY_RUNNING, null);
+  }
+
+  public boolean skippedAlreadyRunning() {
+    return !configured && ALREADY_RUNNING.equals(message);
+  }
+
   public InstagramSyncResult withMerge(MergeSummary summary) {
     return new InstagramSyncResult(configured, message, accounts, accountsOk, accountErrors, posts, newPosts,
         postErrors, blocks, blocksByAccount, eventsSaved, eventsUpdated, duplicateBlocks, tokenWarning, summary);

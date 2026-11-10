@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -41,6 +42,10 @@ public class InstagramSyncService {
   private final InstagramImageStore imageStore;
   private final EventRepository eventRepository;
 
+  // 예약 동기화와 POST /api/instagram/sync 가 겹치면 뒤의 것을 건너뜀 (ScheduledSyncJob 과 같은 방식, 서버 1대 기준)
+  //  겹치면 한쪽 사진 정리가 다른 쪽이 아직 저장 안 한 사진 파일을 지울 수 있음
+  private final AtomicBoolean running = new AtomicBoolean();
+
   @Autowired
   public InstagramSyncService(InstagramClient client, InstagramPostProcessor processor,
       InstagramTokenExpiry tokenExpiry, InstagramSwitch instagramSwitch,
@@ -72,10 +77,18 @@ public class InstagramSyncService {
 
   // 수집이 끝나면(꺼져 있어도) DB 행사가 더 쓰지 않는 사진 파일을 지움 → 행사가 지워지면 사진도 같이 (docs/instagram-images.md)
   public InstagramSyncResult sync() {
+    if (!running.compareAndSet(false, true)) {
+      log.info("인스타 동기화가 이미 실행 중 → 이번 실행은 건너뜀");
+      return InstagramSyncResult.alreadyRunning();
+    }
     try {
       return collect();
     } finally {
-      cleanupImages();
+      try {
+        cleanupImages();
+      } finally {
+        running.set(false);
+      }
     }
   }
 
