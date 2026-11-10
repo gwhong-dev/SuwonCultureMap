@@ -1123,7 +1123,7 @@ function openDetailModal(event) {
   var scheduleEl = document.getElementById("modalSchedule");
   var scheduleText = formatScheduleDetail(event);
   scheduleEl.textContent = scheduleText;
-  scheduleEl.style.display = scheduleText ? "block" : "none";
+  scheduleEl.hidden = !scheduleText; // 인라인 display 는 모바일 CSS(.modal-schedule 숨김)를 덮어써서 hidden 속성으로
   document.getElementById("modalInfo").textContent = detailInfoText(event); // info 가 없으면 장소 · 시간 · 출처
 
   // ===== 원문 링크 버튼: link 없으면 숨김 =====
@@ -1247,9 +1247,9 @@ function renderDetailMobile(event) {
   var fields = detailFields(event);
   var rows = [];
   if (event.startDate) rows.push(["기간", document.getElementById("modalDate").textContent]);
-  var schedule = formatScheduleDetail(event);
-  if (schedule) rows.push(["진행", schedule]); // 값 안에 "일정 원문:" 이 있어 라벨은 "진행"
   var time = findInfo(lines, ["시간", "요일"]) || fallbackTime(event); // info 가 없으면 timeText
+  var schedule = scheduleRowText(event, time); // 일정 원문이 시간 줄과 같으면 빈 값
+  if (schedule) rows.push(["진행", schedule]); // 값 안에 "일정 원문:" 이 있어 라벨은 "진행"
   if (time) rows.push(["시간", time]);
   var place = eventPlace(event);
   if (place) rows.push(["장소", place]);
