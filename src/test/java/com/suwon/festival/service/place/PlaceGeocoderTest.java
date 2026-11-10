@@ -338,4 +338,40 @@ class PlaceGeocoderTest {
     assertThat(PlaceGeocoder.sameVenueBase("가상센터 · ")).isEqualTo("가상센터 · ");
     assertThat(PlaceGeocoder.sameVenueBase("가상센터")).isEqualTo("가상센터");
   }
+
+  // 9번 규칙을 비슷한 모양의 구분 기호에도 똑같이 (#196 검증 ⚠️: ㆍ ・ ／ • 를 몰라 한 검색어로 나갔음)
+  static final List<String> SEP_VARIANTS = List.of(
+      "\u00B7", "\u318D", "\u30FB", "\uFF65", "\u2022", "\u2219", "\u22C5", "/", "\uFF0F");
+
+  @Test
+  void 비슷한_구분_기호_목록이_한_곳과_같음() {
+    assertThat(String.join("", SEP_VARIANTS)).isEqualTo(PlaceGeocoder.DOT_SLASH_SEPS);
+  }
+
+  @Test
+  void 비슷한_구분_기호로_다른_장소가_이어지면_검색하지_않음() {
+    MapSearch s = new MapSearch().on("가상수목원", suwon("가상수목원"));
+    PlaceGeocoder g = new PlaceGeocoder(s);
+    for (String sep : SEP_VARIANTS) {
+      assertThat(g.geocode("가상수목원" + sep + "가상숲공원").reason()).as(sep).isEqualTo("장소가 여러 곳");
+      assertThat(g.geocode("가상수목원 " + sep + " 가상광장").reason()).as(sep).isEqualTo("장소가 여러 곳");
+      assertThat(g.geocode("1층" + sep + "2층").reason()).as(sep).isEqualTo("장소가 여러 곳");
+    }
+    assertThat(s.queries).isEmpty();
+  }
+
+  @Test
+  void 비슷한_구분_기호_뒤가_방_층_이름뿐이면_건물_이름으로_검색() {
+    MapSearch s = new MapSearch().on("가상아트센터", suwon("가상아트센터"));
+    PlaceGeocoder g = new PlaceGeocoder(s);
+    for (String sep : SEP_VARIANTS) {
+      for (String place : List.of("가상아트센터" + sep + "대극장", "가상아트센터 " + sep + " 1층",
+          "가상아트센터" + sep + "B홀" + sep + "로비")) {
+        var r = g.geocode(place);
+        assertThat(r.status()).as(place).isEqualTo(Status.FOUND);
+        assertThat(r.place().name()).as(place).isEqualTo("가상아트센터");
+      }
+    }
+    assertThat(s.queries).containsOnly("가상아트센터");
+  }
 }
