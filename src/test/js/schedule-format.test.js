@@ -4,6 +4,7 @@ const assert = require("node:assert");
 const {
   formatEventDates,
   formatScheduleDetail,
+  scheduleRowText,
   eventStatus,
   statusLabel,
   ddayText,
@@ -292,4 +293,24 @@ test("배지 글자", () => {
   assert.strictEqual(statusLabel("upcoming"), "오픈예정");
   assert.strictEqual(statusLabel("ended"), "종료");
   assert.strictEqual(statusLabel(null), "");
+});
+
+// 모바일 상세 "진행" 줄: 일정 원문 한 줄이 시간 줄과 같으면 빼서 두 번 안 보이게 (11/10 제보 ?event=6)
+test("scheduleRowText: 일정 원문 = 시간 줄이면 빈 값", () => {
+  const e = { startDate: "2026-11-01", endDate: "2026-11-30", scheduleText: "13:00~18:00" };
+  assert.strictEqual(scheduleRowText(e, "13:00 ~ 18:00"), "");
+});
+
+test("scheduleRowText: 일정 원문이 시간 줄과 다르거나 시간 줄이 없으면 유지", () => {
+  const e = { startDate: "2026-11-01", endDate: "2026-11-30", scheduleText: "매주 토 14:00" };
+  assert.strictEqual(scheduleRowText(e, "13:00~18:00"), "일정 원문: 매주 토 14:00");
+  assert.strictEqual(scheduleRowText(e, ""), "일정 원문: 매주 토 14:00");
+});
+
+test("scheduleRowText: 진행일 · 확인된 회차가 있으면 시간과 같아도 유지", () => {
+  const dates = range("2026-11-01", "2026-11-20");
+  const e = { startDate: "2026-11-01", endDate: "2026-11-20", scheduleStatus: "DATES", dates, scheduleText: "13:00~18:00" };
+  assert.match(scheduleRowText(e, "13:00~18:00"), /진행일 20회/);
+  const c = { startDate: "2026-11-01", endDate: "2026-11-20", confirmedDates: ["2026-11-03"], scheduleText: "13:00~18:00" };
+  assert.match(scheduleRowText(c, "13:00~18:00"), /확인된 회차/);
 });

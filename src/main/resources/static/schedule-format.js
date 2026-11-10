@@ -115,6 +115,17 @@ function formatScheduleDetail(event) {
   return lines.join("\n");
 }
 
+// 모바일 상세 표 "진행" 줄. 일정 원문 한 줄뿐이고 그 값이 "시간" 줄과 같으면 같은 글이 두 번 보여 뺌
+function scheduleRowText(event, timeText) {
+  var text = formatScheduleDetail(event);
+  var onlyRaw = event.scheduleText && text === "일정 원문: " + event.scheduleText;
+  var squash = function (value) {
+    return String(value || "").replace(/\s+/g, "");
+  };
+  if (onlyRaw && timeText && squash(event.scheduleText) === squash(timeText)) return "";
+  return text;
+}
+
 // ===== "오늘 진행" · "이번 주말" · "7일 안" 필터 (설계 7번) =====
 // 오늘은 한국 시간 기준 (toISOString 은 UTC 라 오전 9시 전엔 전날이 됨)
 function koreaToday(now) {
@@ -233,6 +244,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     formatEventDates: formatEventDates,
     formatScheduleDetail: formatScheduleDetail,
+    scheduleRowText: scheduleRowText,
     koreaToday: koreaToday,
     upcomingWeekend: upcomingWeekend,
     filterDays: filterDays,

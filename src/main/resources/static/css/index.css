@@ -308,6 +308,7 @@ body {
   font-size: 0.75rem;
   font-weight: 600;
 }
+.modal-schedule[hidden],
 .modal-fav-badge[hidden] {
   display: none;
 }
