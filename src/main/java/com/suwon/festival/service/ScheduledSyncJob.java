@@ -77,6 +77,10 @@ public class ScheduledSyncJob {
   private boolean syncFoundation() {
     try {
       SyncResult result = eventSyncService.syncEvents();
+      if (result.alreadyRunning()) {
+        log.info("재단 동기화 건너뜀 · 수동 동기화가 이미 실행 중");
+        return true;
+      }
       log.info("재단 동기화 · 새 행사 {}개, 갱신 {}개", result.saved(), result.updated());
       if (result.skipped() > 0) {
         log.warn("재단 동기화 · 형식 오류로 건너뛴 행사 {}개 (위 '재단 행사 건너뜀' 로그에 idx)", result.skipped());

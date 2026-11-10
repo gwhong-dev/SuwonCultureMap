@@ -3,6 +3,8 @@ package com.suwon.festival.controller;
 import java.util.List;
 
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -56,7 +58,7 @@ public class ManualSyncController {
   }
 
   @PostMapping("/sync")
-  public String sync() throws Exception {
+  public ResponseEntity<String> sync() throws Exception {
     SyncResult result;
     try {
       result = eventSyncService.syncEvents();
@@ -66,10 +68,14 @@ public class ManualSyncController {
       eventMergeRunner.runAfterSync();
       throw e;
     }
+    // 예약 동기화가 돌고 있으면 409 + 안내 (그쪽이 구 정보 · 합치기까지 함)
+    if (result.alreadyRunning()) {
+      return ResponseEntity.status(HttpStatus.CONFLICT).body("재단 동기화가 이미 실행 중입니다. 끝난 뒤 다시 시도해 주세요.");
+    }
     String district = eventDistrictFiller.fillMissing().text();
-    return "새 행사 " + result.saved() + "개 저장 · 기존 행사 " + result.updated() + "개 갱신 완료"
+    return ResponseEntity.ok("새 행사 " + result.saved() + "개 저장 · 기존 행사 " + result.updated() + "개 갱신 완료"
         + (result.skipped() > 0 ? " · 형식 오류로 " + result.skipped() + "개 건너뜀" : "") + "\n"
         + district + "\n"
-        + eventMergeRunner.runAfterSync().text();
+        + eventMergeRunner.runAfterSync().text());
   }
 }
