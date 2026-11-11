@@ -57,10 +57,11 @@ class SecurityHeadersFilterTest {
   }
 
   @Test
-  void CSP_style_src는_우리서버와_구글폰트_CSS만_허용() {
+  void CSP_style_src는_우리서버_CSS만_허용() {
     // 인라인 스타일(<style> · style 속성)을 풀어 주면 style-src 를 둔 의미가 없음. 해시 예외('unsafe-hashes')도 두지 않음
     assertThat(SecurityHeadersFilter.CSP)
-        .contains("style-src 'self' fonts.googleapis.com;")
+        .contains("style-src 'self';")
+        .doesNotContain("fonts.googleapis.com")
         .doesNotContain("'unsafe-hashes'");
   }
 

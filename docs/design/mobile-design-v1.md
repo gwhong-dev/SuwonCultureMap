@@ -26,7 +26,7 @@
 | blueSoft / blue | `#E6EEF6` / `#2D5B88` | `#1C2733` / `#8DB4DC` | 오픈예정 배지 |
 | graySoft / gray | `#ECEAE6` / `#6B6660` | `#2A2825` / `#A9A39B` | 종료 배지 |
 
-- 글꼴: `Noto Sans KR` (400 · 500 · 700), 대체 `Apple SD Gothic Neo`, `system-ui`
+- 글꼴: `Pretendard` (400 · 500 · 700, 우리 서버 `static/brand/fonts`, 11/11 브랜드 적용 — 전엔 Noto Sans KR), 대체 `Apple SD Gothic Neo`, `system-ui`
 - 모서리: 0 ~ 2px (둥근 모서리 최소). 원형은 지도 숫자 클러스터만
 - 그림자: 지도 위 떠 있는 카드에만 (`0 6px 18px rgba(0,0,0,.12)`)
 - 누르는 영역: 최소 44 × 44px

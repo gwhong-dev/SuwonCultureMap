@@ -1,0 +1,33 @@
+/* 서비스 글꼴: Pretendard (SIL OFL 1.1, 라이선스 /brand/fonts/OFL-LICENSE.txt)
+   외부 CDN 없이 우리 서버에서 내보냄 → CSP 변경 없음. 용량을 줄이려고 KS X 1001 한글 2,350자 + 라틴 부분 글꼴(subset) 3굵기만
+   부분 글꼴에 없는 드문 글자는 아래 대체 글꼴(Apple SD Gothic Neo · 시스템)로 그려짐 */
+@font-face {
+  font-family: "Pretendard";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url("/brand/fonts/Pretendard-Regular.subset.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Pretendard";
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url("/brand/fonts/Pretendard-Medium.subset.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Pretendard";
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url("/brand/fonts/Pretendard-Bold.subset.woff2") format("woff2");
+}
+:root {
+  --font-brand: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+}
+/* 로고 마크(성벽 여장 + 지도 핀). 색은 currentColor → 바탕에 맞춰 글자색을 따라감 */
+.brand-mark {
+  flex: none;
+  width: 1.25em;
+  height: 1.25em;
+}
