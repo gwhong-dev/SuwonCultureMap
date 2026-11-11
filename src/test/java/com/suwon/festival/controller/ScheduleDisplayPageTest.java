@@ -260,4 +260,21 @@ class ScheduleDisplayPageTest {
     MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     assertThat(mockMvc.perform(get("/dialog-focus.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
   }
+
+  @Test
+  void 지도_하단_카드_줄에_마우스용_좌우_화살표와_휠_이동이_있음() throws Exception {
+    // 마우스 PC 는 카드를 잡고 밀 수 없어서 좌우 화살표 · 휠로 한 장씩 (strip-nav.js) → index.js 보다 앞
+    String html = page();
+    int rules = html.indexOf("<script src=\"/strip-nav.js\"></script>");
+    assertThat(rules).isPositive().isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
+    assertThat(html).contains("id=\"previewPrev\"", "id=\"previewNext\"", "aria-label=\"이전 카드\"", "aria-label=\"다음 카드\"");
+
+    String js = script();
+    assertThat(js).contains("stripArrowState(", "stripStepTarget(", "wheelStep(", "stripKeyStep(");
+    // PC 도 모바일과 같은 하단 카드 (예전 PC 말풍선 InfoWindow 는 없앰)
+    assertThat(js).doesNotContain("kakao.maps.InfoWindow");
+
+    MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+    assertThat(mockMvc.perform(get("/strip-nav.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
+  }
 }

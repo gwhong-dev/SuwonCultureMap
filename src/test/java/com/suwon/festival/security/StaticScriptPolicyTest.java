@@ -52,7 +52,7 @@ class StaticScriptPolicyTest {
       collect(found, file, js, EVAL);
       collect(found, file, js, OTHER_INLINE);
     }
-    assertThat(found).as("만든 요소에 addEventListener 로 연결 (index.js 의 bindOpenDetail · hideOnError 참고)").isEmpty();
+    assertThat(found).as("만든 요소에 addEventListener 로 연결 (index.js 의 hideOnError · 하단 카드 버튼 참고)").isEmpty();
   }
 
   @Test

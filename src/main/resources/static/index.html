@@ -90,7 +90,16 @@
       <!-- 모바일 전용: 마커 탭 시 하단 카드 ("가까운 순 · 1 / N" + 좌우로 넘기는 카드) -->
       <div id="previewArea">
         <span id="previewLabel"></span>
-        <div id="previewStrip"></div>
+        <div id="previewStripWrap">
+          <div id="previewStrip"></div>
+          <!-- 마우스 PC 전용 좌우 화살표 (strip-nav.js), 터치 화면에서는 숨김 -->
+          <button type="button" class="strip-arrow prev" id="previewPrev" aria-label="이전 카드" aria-controls="previewStrip" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+          </button>
+          <button type="button" class="strip-arrow next" id="previewNext" aria-label="다음 카드" aria-controls="previewStrip" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
+        </div>
       </div>
     </div>
     <!-- 모바일 전용: 홈 화면 (docs/design/mobile-design-v1.md 01). 지도 위를 덮고 페이지 전체가 스크롤 -->
@@ -347,6 +356,7 @@
     <script src="/home-picks.js"></script>
     <script src="/nav-history.js"></script>
     <script src="/dialog-focus.js"></script>
+    <script src="/strip-nav.js"></script>
     <script src="/js/index.js"></script>
   </body>
 </html>
