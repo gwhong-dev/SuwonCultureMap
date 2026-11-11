@@ -82,6 +82,13 @@ body {
   width: 32px;
   height: 32px;
 }
+/* 어두운 상단 바: 도장을 종이색 칸에 얹어 바탕과 떼어 놓음 (벽돌 · #222 대비가 약해서) */
+.topbar-brand .brand-seal {
+  box-sizing: content-box;
+  padding: 2px;
+  border-radius: 3px;
+  background: #f6f1e7;
+}
 .brand-words {
   display: flex;
   flex-direction: column;
@@ -141,9 +148,10 @@ body {
   background: #555;
   color: #fff;
 }
+/* 로그인 · 마이페이지 · 서비스 안내 · 처리방침: 브랜드 벽돌색 한 가지 (전엔 파랑 #4a90d9) */
 .login-btn.login {
-  background: #4a90d9;
-  color: #fff;
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 #app {
@@ -422,9 +430,9 @@ body {
 .modal-link-btn {
   padding: 0.5rem 1rem;
   border-radius: 8px;
-  border: 1px solid #4a90d9;
+  border: 1px solid #b4472a; /* PC 상세 창은 다크 모드에도 흰 바탕 → 밝은 --accent 대신 벽돌색 고정 (5.4:1) */
   background: #fff;
-  color: #4a90d9;
+  color: #b4472a;
   cursor: pointer;
   font-size: 0.9rem;
   text-decoration: none;
@@ -1651,8 +1659,8 @@ body {
     color: var(--text);
   }
   .home-logo .brand-seal {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
   }
   .home-logo .brand-name {
     width: 101px;

@@ -56,7 +56,7 @@ class BrandAssetsTest {
         .contains("property=\"og:image\" content=\"https://suwonbible.com/brand/og-image.png\"")
         .contains("class=\"topbar-brand\"", "class=\"home-logo\"")
         // 로고 = 도장 + 워드마크 + 아래 줄 부제 (글자 윤곽 SVG, 11/11 낙관 + 핀)
-        .contains("href=\"/brand/logo.svg#seal\"", "href=\"/brand/logo.svg#wordmark\"", "href=\"/brand/logo.svg#tagline\"")
+        .contains("href=\"/brand/logo.svg#seal-sm\"", "href=\"/brand/logo.svg#wordmark\"", "href=\"/brand/logo.svg#tagline\"")
         .contains("aria-label=\"수원바이블 · 수원 문화지도\"");
   }
 
@@ -90,7 +90,7 @@ class BrandAssetsTest {
   void 로고_SVG는_글꼴_없이_윤곽으로_그리고_글꼴_라이선스를_적음() throws Exception {
     String sprite = body("/brand/logo.svg");
     assertThat(sprite)
-        .contains("<symbol id=\"seal\"", "<symbol id=\"wordmark\"", "<symbol id=\"tagline\"")
+        .contains("<symbol id=\"seal\"", "<symbol id=\"seal-sm\"", "<symbol id=\"wordmark\"", "<symbol id=\"tagline\"")
         .contains("#b4472a") // 도장 벽돌색
         .contains("SIL Open Font License")
         .doesNotContain("<text", "font-family", "@font-face"); // 글자는 path 로만
