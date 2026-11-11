@@ -64,7 +64,9 @@ class StaleBlockRetirer {
   // stale: 이번 캡션에서 나오지 않은 블록들. 내린 블록의 로그 줄을 돌려줌
   List<String> retire(String mediaId, Collection<InstagramBlock> stale, Current current, LocalDateTime now) {
     List<String> logLines = new ArrayList<>();
-    List<InstagramBlock> live = stale.stream().filter(b -> b.getStatus() != InstagramBlock.Status.RETIRED).toList();
+    // RETIRED · EXPIRED(지난 행사로 지움)는 이미 행사가 없음 → 그대로
+    List<InstagramBlock> live = stale.stream().filter(b -> b.getStatus() != InstagramBlock.Status.RETIRED
+        && b.getStatus() != InstagramBlock.Status.EXPIRED).toList();
     long liveEvents = live.stream().filter(b -> b.getEvent() != null).count();
 
     for (InstagramBlock block : live) {

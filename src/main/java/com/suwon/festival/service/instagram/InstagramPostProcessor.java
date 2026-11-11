@@ -43,6 +43,7 @@ import com.suwon.festival.service.schedule.ScheduleResult;
 //  - 이미 READY 인 블록은 키(제목 + 시작일 + 장소)가 같으므로 좌표를 다시 찾지 않고 나머지 값만 갱신 → 카카오 호출 절약
 //  - NO_COORD · 영구 실패(HTTP 4xx, 401 · 403 · 429 제외) ERROR 블록은 마지막 검색(updatedAt) 뒤 RETRY_AFTER 동안 다시 검색하지 않음
 //    (키에 장소명이 들어 있어 키가 같으면 같은 장소명) → 동기화마다 같은 실패 검색을 반복하지 않음. updatedAt 은 그대로 둠
+//  - 종료 7일 지난 블록(InstagramExpiry)은 행사를 새로 만들지 않고 EXPIRED 로 둠 (지운 행사가 다시 수집돼도 살아나지 않음)
 //  - READY 행사는 진행 날짜도 매번 다시 계산해 저장 (규칙을 고치면 창 안의 글은 다음 동기화에 반영)
 @Component
 public class InstagramPostProcessor {
@@ -74,14 +75,16 @@ public class InstagramPostProcessor {
   private final StaleBlockRetirer retirer;
   private final EventScheduleWriter scheduleWriter;
   private final InstagramImageStore imageStore;
+  private final InstagramExpiry expiry;
 
   @Autowired
   public InstagramPostProcessor(InstagramMediaRepository mediaRepository, InstagramBlockRepository blockRepository,
       EventRepository eventRepository, PlaceGeocoder geocoder, ObjectProvider<CaptionAiClient> ai,
-      StaleBlockRetirer retirer, EventScheduleWriter scheduleWriter, InstagramImageStore imageStore) {
+      StaleBlockRetirer retirer, EventScheduleWriter scheduleWriter, InstagramImageStore imageStore,
+      InstagramExpiry expiry) {
     // AI 구현이 아직 없음 → null → 규칙으로 못 읽은 블록은 PENDING (AI 를 붙이면 다음 실행에서 다시 처리)
     this(mediaRepository, blockRepository, eventRepository, geocoder, new CaptionParser(ai.getIfAvailable()),
-        Clock.system(KST), retirer, scheduleWriter, imageStore);
+        Clock.system(KST), retirer, scheduleWriter, imageStore, expiry);
   }
 
   // 시험용: 사진 저장 없이
@@ -92,9 +95,19 @@ public class InstagramPostProcessor {
         InstagramImageStore.disabled());
   }
 
+  // 시험용: 지난 행사 판단 없이
   InstagramPostProcessor(InstagramMediaRepository mediaRepository, InstagramBlockRepository blockRepository,
       EventRepository eventRepository, PlaceGeocoder geocoder, CaptionParser parser, Clock clock,
       StaleBlockRetirer retirer, EventScheduleWriter scheduleWriter, InstagramImageStore imageStore) {
+    this(mediaRepository, blockRepository, eventRepository, geocoder, parser, clock, retirer, scheduleWriter, imageStore,
+        InstagramExpiry.disabled());
+  }
+
+  InstagramPostProcessor(InstagramMediaRepository mediaRepository, InstagramBlockRepository blockRepository,
+      EventRepository eventRepository, PlaceGeocoder geocoder, CaptionParser parser, Clock clock,
+      StaleBlockRetirer retirer, EventScheduleWriter scheduleWriter, InstagramImageStore imageStore,
+      InstagramExpiry expiry) {
+    this.expiry = expiry;
     this.mediaRepository = mediaRepository;
     this.blockRepository = blockRepository;
     this.eventRepository = eventRepository;
@@ -158,6 +171,11 @@ public class InstagramPostProcessor {
             log.warn("인스타 블록 저장 건너뜀: {} (게시물 {})", NO_SOURCE_KEY, post.id());
             status = InstagramBlock.Status.FAILED;
             reason = NO_SOURCE_KEY;
+          } else if (linked == null && expiry.isExpired(e.startDate(), e.endDate())) {
+            // 종료 7일 지난 행사 → 새로 만들지 않음 (지운 행사가 다시 수집돼 살아나지 않게, 장소 검색 · 사진도 안 함)
+            //  이미 연결된 행사(linked)는 아래처럼 갱신하고, 동기화 끝 ExpiredInstagramEventCleaner 가 지움
+            status = InstagramBlock.Status.EXPIRED;
+            reason = ExpiredInstagramEventCleaner.REASON;
           } else if (linked != null) {
             // 키가 같으면 장소도 같음 → 좌표는 그대로 두고 나머지만 갱신
             linked.updateFrom(toEvent(e, linked.getLatitude(), linked.getLongitude(), post, postedAt, now, sourceKey));

@@ -41,6 +41,7 @@ public class InstagramSyncService {
   private final int fetchLimit;
   private final InstagramImageStore imageStore;
   private final EventRepository eventRepository;
+  private final ExpiredInstagramEventCleaner expiredCleaner; // null = 지난 행사 정리 안 함 (시험용 생성자)
 
   // 예약 동기화와 POST /api/instagram/sync 가 겹치면 뒤의 것을 건너뜀 (ScheduledSyncJob 과 같은 방식, 서버 1대 기준)
   //  겹치면 한쪽 사진 정리가 다른 쪽이 아직 저장 안 한 사진 파일을 지울 수 있음
@@ -51,8 +52,9 @@ public class InstagramSyncService {
       InstagramTokenExpiry tokenExpiry, InstagramSwitch instagramSwitch,
       @Value("${instagram.accounts:}") String accounts,
       @Value("${instagram.fetch-limit:10}") int fetchLimit,
-      InstagramImageStore imageStore, EventRepository eventRepository) {
+      InstagramImageStore imageStore, EventRepository eventRepository, ExpiredInstagramEventCleaner expiredCleaner) {
     this.imageStore = imageStore;
+    this.expiredCleaner = expiredCleaner;
     this.eventRepository = eventRepository;
     this.client = client;
     this.processor = processor;
@@ -72,10 +74,11 @@ public class InstagramSyncService {
   // 시험용: 사진 저장 없이
   InstagramSyncService(InstagramClient client, InstagramPostProcessor processor, InstagramTokenExpiry tokenExpiry,
       InstagramSwitch instagramSwitch, String accounts, int fetchLimit) {
-    this(client, processor, tokenExpiry, instagramSwitch, accounts, fetchLimit, InstagramImageStore.disabled(), null);
+    this(client, processor, tokenExpiry, instagramSwitch, accounts, fetchLimit, InstagramImageStore.disabled(), null, null);
   }
 
-  // 수집이 끝나면(꺼져 있어도) DB 행사가 더 쓰지 않는 사진 파일을 지움 → 행사가 지워지면 사진도 같이 (docs/instagram-images.md)
+  // 수집이 끝나면(꺼져 있어도) 종료 7일 지난 인스타 행사를 지우고(ExpiredInstagramEventCleaner),
+  // DB 행사가 더 쓰지 않는 사진 파일을 지움 → 행사가 지워지면 사진도 같은 실행에서 (docs/instagram-images.md)
   public InstagramSyncResult sync() {
     if (!running.compareAndSet(false, true)) {
       log.info("인스타 동기화가 이미 실행 중 → 이번 실행은 건너뜀");
@@ -85,10 +88,21 @@ public class InstagramSyncService {
       return collect();
     } finally {
       try {
+        cleanupExpired();
         cleanupImages();
       } finally {
         running.set(false);
       }
+    }
+  }
+
+  void cleanupExpired() {
+    if (expiredCleaner == null) return;
+    try {
+      expiredCleaner.clean();
+    } catch (RuntimeException e) {
+      // 한 트랜잭션이라 모두 되돌려짐 → 다음 동기화에서 다시. 메시지는 남기지 않음 (DB 오류에 값이 섞일 수 있음)
+      log.warn("지난 인스타 행사 삭제 실패 {}", e.getClass().getSimpleName());
     }
   }
 

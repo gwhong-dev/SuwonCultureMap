@@ -61,6 +61,7 @@ class PrivacyPolicyPageTest {
     // 인스타 사진은 서버에 저장 (docs/instagram-images.md) → 예전 "받지 않습니다" 문구가 남으면 안 됨
     assertThat(html).contains("대표 사진 1장은 받아 서버에 저장", "그 행사 정보를 삭제하면 다음 동기화 때 함께 삭제")
         .doesNotContain("사진은 받지 않습니다");
+    assertThat(html).contains("행사가 끝나고 7일이 지나면 다음 동기화 때 삭제"); // 지난 인스타 행사 삭제 (ExpiredInstagramEventCleaner)
     assertThat(html).contains("삭제 요청:", "판매하거나 광고에 쓰지 않습니다"); // Meta 약관 3.d · 3.a.iv
     assertThat(html).doesNotContain("현재 수집 중단");
   }
