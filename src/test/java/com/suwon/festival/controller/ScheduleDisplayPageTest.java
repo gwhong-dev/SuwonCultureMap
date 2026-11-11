@@ -309,4 +309,21 @@ class ScheduleDisplayPageTest {
     MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     assertThat(mockMvc.perform(get("/strip-nav.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
   }
+
+  @Test
+  void 데이터_갱신_시각_줄이_모바일_결과_줄_옆과_PC_사이드바에_있음() throws Exception {
+    // "11/11 06:00 갱신" (sync-status.js): 값이 오기 전 · 실패면 hidden 으로 숨김 → 처음부터 hidden
+    String html = page();
+    int resultCount = html.indexOf("<span id=\"resultCount\">");
+    int mobile = html.indexOf("<span class=\"sync-status\" data-sync-status hidden></span>");
+    assertThat(resultCount).isPositive();
+    assertThat(mobile).isGreaterThan(resultCount).isLessThan(html.indexOf("id=\"sheetToggle\""));
+    int pc = html.indexOf("<div class=\"sync-status sync-status-pc\" data-sync-status hidden></div>");
+    assertThat(pc).isPositive().isLessThan(html.indexOf("<div id=\"list\"></div>"));
+    assertThat(html.indexOf("<script src=\"/sync-status.js\"></script>")).isPositive();
+
+    MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+    assertThat(mockMvc.perform(get("/sync-status.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
+    assertThat(fetch("/sync-status.js")).contains("/api/sync-status", "[data-sync-status]", "syncStatusText(");
+  }
 }
