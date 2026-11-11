@@ -192,6 +192,12 @@ class ScheduleDisplayPageTest {
     assertThat(topbar).isPositive();
     assertThat(css.substring(topbar, css.indexOf("}", topbar))).doesNotContain("pointer-events: none");
     assertThat(css).doesNotContain("#topbar > * {\n    pointer-events: auto;");
+
+    // CSS 만으로는 아이폰에서 안 고쳐짐 → 상단 바 · 칩 줄에서 시작한 터치 동안 지도 끌기 끔, 손 떼면 켬
+    String js = script();
+    assertThat(js).contains("guardMapDragFromTopbar();\n  loadEvents();");
+    assertThat(js).contains("map.setDraggable(false);", "map.setDraggable(true);", "\"touchcancel\", release");
+    assertThat(js).contains("{ capture: true, passive: true }"); // 카카오보다 먼저 · 스크롤은 막지 않음
   }
 
   @Test

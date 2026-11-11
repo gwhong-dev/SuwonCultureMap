@@ -260,8 +260,38 @@ kakao.maps.load(function () {
     hidePreview();
   });
 
+  guardMapDragFromTopbar();
   loadEvents();
 });
+
+// 상단 바(검색창 · 칩 줄)에서 시작한 터치 동안은 지도 끌기를 끔 (손을 떼면 다시 켬)
+// 아이폰 사파리에서 칩 줄을 누른 채 지도 쪽으로 끌면 지도가 같이 끌렸음 (11/11, #208 의 CSS 수정으로는 안 고쳐짐).
+// 터치가 어떤 요소로 가든 상관없게 위치로 판단하고, 카카오보다 먼저 보려고 document 캡처 단계에서 들음
+function guardMapDragFromTopbar() {
+  var guarded = false;
+  function inside(el, x, y) {
+    if (!el) return false;
+    var r = el.getBoundingClientRect();
+    return r.width > 0 && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  }
+  document.addEventListener("touchstart", function (e) {
+    if (e.touches.length !== 1) return;
+    var t = e.touches[0];
+    if (inside(document.getElementById("topbar"), t.clientX, t.clientY) ||
+        inside(document.getElementById("categoryChips"), t.clientX, t.clientY)) {
+      guarded = true;
+      map.setDraggable(false);
+    }
+  }, { capture: true, passive: true });
+  function release(e) {
+    if (guarded && e.touches.length === 0) {
+      guarded = false;
+      map.setDraggable(true);
+    }
+  }
+  document.addEventListener("touchend", release, { capture: true, passive: true });
+  document.addEventListener("touchcancel", release, { capture: true, passive: true });
+}
 
 // (모바일) 행사를 받는 동안 목록 자리에 회색 블록 4장 — 목록이 그려지면 renderSidebar 가 지움
 function renderSkeleton() {
