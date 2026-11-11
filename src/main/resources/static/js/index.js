@@ -2696,13 +2696,33 @@ function updatePreviewLabel() {
   });
   document.getElementById("previewLabel").textContent =
     cards.length === 0 ? "" : "가까운 순 · " + (index + 1) + " / " + cards.length;
+  var arrows = stripArrowState(index, cards.length); // strip-nav.js
+  document.getElementById("previewPrev").hidden = !arrows.prev;
+  document.getElementById("previewNext").hidden = !arrows.next;
 }
 
-// 카드가 화면 가운데 오도록 가로 스크롤
-function scrollStripTo(card) {
+// 카드가 화면 가운데 오도록 가로 스크롤 (smooth = 화살표 · 휠로 넘길 때 부드럽게)
+function scrollStripTo(card, smooth) {
   var strip = document.getElementById("previewStrip");
-  strip.scrollLeft =
-    card.offsetLeft - (strip.clientWidth - card.offsetWidth) / 2;
+  var left = card.offsetLeft - (strip.clientWidth - card.offsetWidth) / 2;
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (smooth && !reduce) strip.scrollTo({ left: left, behavior: "smooth" });
+  else strip.scrollLeft = left;
+}
+
+// 화살표 · 휠로 한 장 넘김 → 지도도 바로 그 마커로 (스크롤이 멈추길 기다리지 않아 연달아 눌러도 한 장씩)
+function stepPreview(delta) {
+  if (previewEventId === null) return;
+  var cards = Array.from(document.getElementById("previewStrip").children);
+  var index = cards.findIndex(function (card) {
+    return Number(card.dataset.eventId) === previewEventId;
+  });
+  var target = stripStepTarget(index, delta, cards.length); // strip-nav.js
+  if (target < 0 || target === index) return;
+  previewEventId = Number(cards[target].dataset.eventId);
+  selectMarker(previewEventId, true);
+  updatePreviewLabel();
+  scrollStripTo(cards[target], true);
 }
 
 function showPreview(eventId) {
@@ -2779,6 +2799,28 @@ document
       }
     }, 120);
   });
+
+// 마우스 PC: 좌우 화살표 · 세로 휠로 한 장씩 (터치 · 키보드 · 트랙패드 좌우는 기본 가로 스크롤)
+document.getElementById("previewPrev").addEventListener("click", function () {
+  stepPreview(-1);
+});
+document.getElementById("previewNext").addEventListener("click", function () {
+  stepPreview(1);
+});
+var stripWheelAt = 0;
+document.getElementById("previewStrip").addEventListener(
+  "wheel",
+  function (e) {
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return; // 가로 휠(트랙패드 좌우) → 기본 스크롤
+    e.preventDefault(); // 세로 휠이 카드 줄에서는 페이지 · 지도를 움직이지 않게
+    var now = Date.now();
+    var step = wheelStep(e.deltaX, e.deltaY, stripWheelAt, now); // strip-nav.js
+    if (step === 0) return;
+    stripWheelAt = now;
+    stepPreview(step);
+  },
+  { passive: false },
+);
 
 // ----- 토스트 (찜 · 주소 복사 · 링크 복사 안내, 2.5초 뒤 자동으로 사라짐) -----
 var toastTimer = null;
