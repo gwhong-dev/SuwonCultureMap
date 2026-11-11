@@ -2699,6 +2699,25 @@ document.getElementById("previewPrev").addEventListener("click", function () {
 document.getElementById("previewNext").addEventListener("click", function () {
   stepPreview(1);
 });
+// 키보드 ← → : 하단 카드가 떠 있으면 포커스가 어디 있든 한 장씩 (상세 · 길찾기 · 공유 창 · 검색 화면이 열렸으면 그대로)
+document.addEventListener("keydown", function (e) {
+  if (previewEventId === null || !document.getElementById("previewArea").classList.contains("show")) return;
+  if (document.body.classList.contains("detail-open") || searchOpen) return;
+  if (!document.getElementById("routeSheet").hidden || !document.getElementById("shareSheet").hidden) return;
+  var el = document.activeElement || document.body;
+  var step = stripKeyStep({
+    key: e.key,
+    tag: el.tagName,
+    editable: el.isContentEditable,
+    role: el.getAttribute("role"),
+    alt: e.altKey || e.ctrlKey || e.metaKey || e.shiftKey,
+    handled: e.defaultPrevented,
+  }); // strip-nav.js
+  if (step === 0) return;
+  e.preventDefault(); // 카드 줄 기본 가로 스크롤과 겹쳐 두 장 넘어가지 않게
+  stepPreview(step);
+});
+
 var stripWheelAt = 0;
 document.getElementById("previewStrip").addEventListener(
   "wheel",

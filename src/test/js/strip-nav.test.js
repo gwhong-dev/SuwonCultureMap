@@ -7,7 +7,28 @@ const {
   stripArrowState,
   wheelStep,
   stripSettleIndex,
+  stripKeyStep,
 } = require("../../main/resources/static/strip-nav.js");
+
+test("키보드: → 다음 · ← 이전, 다른 키는 0", () => {
+  assert.strictEqual(stripKeyStep({ key: "ArrowRight" }), 1);
+  assert.strictEqual(stripKeyStep({ key: "ArrowLeft" }), -1);
+  assert.strictEqual(stripKeyStep({ key: "ArrowDown" }), 0);
+  assert.strictEqual(stripKeyStep({ key: "Enter" }), 0);
+});
+
+test("키보드: 입력칸 · 선택 상자에서 치는 중이면 넘기지 않음 (글자 사이 이동)", () => {
+  assert.strictEqual(stripKeyStep({ key: "ArrowRight", tag: "INPUT" }), 0);
+  assert.strictEqual(stripKeyStep({ key: "ArrowRight", tag: "TEXTAREA" }), 0);
+  assert.strictEqual(stripKeyStep({ key: "ArrowRight", tag: "SELECT" }), 0);
+  assert.strictEqual(stripKeyStep({ key: "ArrowRight", editable: true }), 0);
+});
+
+test("키보드: 탭 줄(role=tab) 처럼 자기 화살표 키를 쓰는 곳 · Alt 등 조합키 · 이미 처리된 키는 그대로 둠", () => {
+  assert.strictEqual(stripKeyStep({ key: "ArrowRight", role: "tab" }), 0);
+  assert.strictEqual(stripKeyStep({ key: "ArrowLeft", alt: true }), 0); // 브라우저 뒤로 가기
+  assert.strictEqual(stripKeyStep({ key: "ArrowRight", handled: true }), 0);
+});
 
 // 카드 420px · 사이 8px · 앞 여백 12px (PC 하단 카드)
 const CARDS = [0, 1, 2, 3, 4].map((i) => ({ left: 12 + i * 428, width: 420 }));

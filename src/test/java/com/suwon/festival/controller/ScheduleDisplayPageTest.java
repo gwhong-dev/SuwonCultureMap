@@ -270,7 +270,7 @@ class ScheduleDisplayPageTest {
     assertThat(html).contains("id=\"previewPrev\"", "id=\"previewNext\"", "aria-label=\"이전 카드\"", "aria-label=\"다음 카드\"");
 
     String js = script();
-    assertThat(js).contains("stripArrowState(", "stripStepTarget(", "wheelStep(");
+    assertThat(js).contains("stripArrowState(", "stripStepTarget(", "wheelStep(", "stripKeyStep(");
     // PC 도 모바일과 같은 하단 카드 (예전 PC 말풍선 InfoWindow 는 없앰)
     assertThat(js).doesNotContain("kakao.maps.InfoWindow");
 

@@ -1,5 +1,5 @@
-// 지도 하단 카드 줄 마우스 이동 (11/11) — 마우스 PC 에서 좌우 화살표 · 휠로 한 장씩 넘김
-//  - 터치 · 키보드 · 트랙패드 좌우는 브라우저 기본 가로 스크롤 그대로
+// 지도 하단 카드 줄 넘기기 (11/11) — 좌우 화살표 버튼 · 휠 · 키보드 ← → 로 한 장씩
+//  - 터치 · 트랙패드 좌우는 브라우저 기본 가로 스크롤 그대로
 //  - 화살표는 처음 카드에서 이전, 끝 카드에서 다음을 숨김
 //  - 휠은 세로가 더 클 때만 한 장 (가로가 크면 트랙패드 좌우라 기본 스크롤), 한 번 굴림에 여러 장 넘어가지 않게 잠깐 쉼
 // 시험: node --test src/test/js/ (CI 에서 실행)
@@ -47,6 +47,16 @@ function stripSettleIndex(current, cards, viewLeft, viewWidth) {
   return best;
 }
 
+// 키보드 ← → → 옮길 장 수. k = { key, tag(포커스 요소 태그), editable, role, alt(조합키), handled(이미 처리됨) }
+// 입력칸에서 치는 중 · 탭 줄처럼 자기 화살표 키를 쓰는 곳 · 조합키(Alt+← 뒤로 가기 등)는 그대로 둠
+function stripKeyStep(k) {
+  if (k.handled || k.alt || k.editable || k.role === "tab") return 0;
+  if (k.tag === "INPUT" || k.tag === "TEXTAREA" || k.tag === "SELECT") return 0;
+  if (k.key === "ArrowRight") return 1;
+  if (k.key === "ArrowLeft") return -1;
+  return 0;
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     WHEEL_GAP_MS: WHEEL_GAP_MS,
@@ -54,5 +64,6 @@ if (typeof module !== "undefined") {
     stripArrowState: stripArrowState,
     wheelStep: wheelStep,
     stripSettleIndex: stripSettleIndex,
+    stripKeyStep: stripKeyStep,
   };
 }
