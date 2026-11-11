@@ -195,6 +195,21 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
+  void PC_도_지도_위에_칩_줄이_있고_상단_바_분류_날짜_칸은_숨김() throws Exception {
+    // 사용자: "웹버전 지도 상단에 카테고리/날짜 토글 배치, 모바일처럼" → 칩 줄을 PC 에서도 지도 왼쪽 위에, 값은 숨긴 칸에 그대로
+    String css = fetch("/css/index.css");
+    int pcChips = css.indexOf("/* PC: 칩 줄을 지도 왼쪽 위에 띄움");
+    assertThat(pcChips).isPositive();
+    String pc = css.substring(pcChips, css.indexOf("/* ====", pcChips));
+    assertThat(pc).contains("@media (min-width: 1025px)", "#categorySelect,", "#dateFilter,", ".past-toggle {", "#categoryChips {");
+    // PC 숨김 목록(모바일 전용 요소)에서 칩 줄이 빠짐
+    String hidden = css.substring(css.indexOf("/* ===== 모바일 전용 요소: PC에서는 숨김"), css.indexOf("display: none;", css.indexOf("/* ===== 모바일 전용 요소")));
+    assertThat(hidden).doesNotContain("#categoryChips");
+    // PC 로 넘어갈 때 구 · 무료 필터를 풀던 코드 없음 (PC 칩 줄에서 끌 수 있음)
+    assertThat(script()).doesNotContain("PC 엔 칩 줄이 없어");
+  }
+
+  @Test
   void 홈_이달의_행사가_날짜_칩과_곧_종료_사이에_있고_처음엔_숨김() throws Exception {
     // monthEvents 로 고른 행사가 있을 때만 index.js 가 보이게 함 (제목 "11월의 수원 행사"도 index.js 가 채움)
     String html = page();

@@ -455,7 +455,6 @@ body {
 
 /* ===== 모바일 전용 요소: PC에서는 숨김 ===== */
 #mobileMenuBtn,
-#categoryChips,
 #sheetHeader,
 #tabBar,
 #homeView,
@@ -894,6 +893,83 @@ body {
   margin: 0 0 10px;
 }
 
+/* ----- 지도 위 칩 줄 (분류 드롭다운 칩 · 날짜 · 무료 · 지난 행사) — PC · 모바일 공통 모양 ----- */
+.chip {
+  flex: none;
+  box-sizing: border-box; /* 분류 칩(label)도 버튼 칩과 같은 34px */
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.chip.active {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+  font-weight: 700;
+}
+/* 분류 칩 = 드롭다운: 칩 글자 위에 투명한 <select> 를 덮음 → 누르면 기본 선택 창 (휴대폰 · PC) */
+.chip-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.chip-arrow {
+  font-size: 11px;
+}
+.chip-select select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  font-size: 16px; /* 16px 미만이면 아이폰이 고를 때 화면을 확대함 (안 보이는 글자라 칩 모양은 그대로) */
+  cursor: pointer;
+}
+.chip-select:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* PC: 칩 줄을 지도 왼쪽 위에 띄움 (상단 바의 분류 · 날짜 드롭다운 · 지난 행사 체크박스 대신, 값은 그 숨긴 칸에 그대로 저장) */
+@media (min-width: 1025px) {
+  #topbar {
+    position: relative;
+    z-index: 30; /* 아래 지도 위로 칩 줄이 겹치게 */
+  }
+  #categorySelect,
+  #dateFilter,
+  .past-toggle {
+    display: none;
+  }
+  #categoryChips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 12px;
+    max-width: calc(100vw - var(--sidebar-width) - 48px); /* 오른쪽 목록 · 접기 버튼과 안 겹치게 */
+    pointer-events: none; /* 칩 사이 빈 곳은 지도 끌기 */
+  }
+  #categoryChips > * {
+    pointer-events: auto;
+    box-shadow: var(--shadow-float);
+  }
+  #topbar .chip-select select {
+    padding: 0; /* 상단 바 입력칸 모양(#topbar select)이 투명 선택 상자에 묻지 않게 */
+    border: 0;
+    border-radius: 0;
+  }
+}
+
 /* =====================================================
    모바일 · 태블릿 세로 (화면 폭 1024px 이하)
    에어비앤비 스타일: 지도 전체 화면 + 떠 있는 검색창
@@ -1030,49 +1106,6 @@ body {
   #categoryChips::-webkit-scrollbar {
     display: none;
   }
-  .chip {
-    flex: none;
-    height: 34px;
-    padding: 0 14px;
-    border: 1px solid var(--line);
-    border-radius: 2px;
-    background: var(--bg);
-    color: var(--text);
-    font: inherit;
-    font-size: 13px;
-    white-space: nowrap;
-    cursor: pointer;
-  }
-  .chip.active {
-    background: var(--text);
-    border-color: var(--text);
-    color: var(--bg);
-    font-weight: 700;
-  }
-  /* 분류 칩 = 드롭다운: 칩 글자 위에 투명한 <select> 를 덮음 → 누르면 휴대폰 기본 선택 창 */
-  .chip-select {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .chip-arrow {
-    font-size: 11px;
-  }
-  .chip-select select {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    font-size: 16px; /* 16px 미만이면 아이폰이 고를 때 화면을 확대함 (안 보이는 글자라 칩 모양은 그대로) */
-    cursor: pointer;
-  }
-  .chip-select:focus-within {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-
   /* ----- 사이드바 → 바텀시트 ----- */
   #sidebarToggleBtn {
     display: none;
