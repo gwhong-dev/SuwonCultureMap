@@ -440,52 +440,6 @@ body {
   align-items: center;
 }
 
-/* ===== PC 마커 InfoWindow (index.js 가 만드는 말풍선 내용) ===== */
-.iw-single {
-  width: 260px;
-}
-.iw-group {
-  width: 230px;
-  max-height: 220px;
-  overflow-y: auto;
-}
-/* 말풍선 맨 위 장소 이름 */
-.iw-place {
-  padding: 0.5rem 0.625rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #1f4e79;
-  background: #e8f0fa;
-  border-bottom: 1px solid #cddcee;
-  text-align: center;
-}
-/* 행사 하나: 밑줄 제목 (클릭 → 상세) */
-.iw-title {
-  padding: 0.25rem 0.5rem 0.5rem;
-  cursor: pointer;
-  color: #2f6f6b;
-  text-decoration: underline;
-  font-size: 0.85rem;
-  white-space: normal;
-  word-break: break-word;
-  text-align: center;
-}
-/* 같은 장소 여러 행사: 줄마다 클릭 → 상세, 흰색/회색 번갈아 */
-.iw-row {
-  padding: 0.5rem 0.375rem;
-  border-top: 1px solid #eee;
-  cursor: pointer;
-  font-size: 0.85rem;
-  color: #2f6f6b;
-}
-.iw-row.stripe {
-  background: #f2f2f2;
-}
-/* 찜한 행사 앞 ★ */
-.iw-fav {
-  color: #f5a623;
-}
-
 /* 공유 창 '링크 복사' 아이콘 (PC 폭에서도 18px) */
 #shareCopyBtn .route-icon svg {
   width: 18px;
@@ -503,7 +457,6 @@ body {
 #mobileMenuBtn,
 #categoryChips,
 #sheetHeader,
-#previewArea,
 #tabBar,
 #homeView,
 #searchView,
@@ -682,6 +635,263 @@ body {
   #toastAction[hidden] {
     display: none;
   }
+}
+
+/* ----- 마커 누르면 → 하단 카드 (PC · 모바일 공통, 가까운 순 · 좌우로 넘기기) ----- */
+#previewArea {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: absolute;
+  left: 0;
+  right: var(--sidebar-width); /* PC: 지도 폭만 (오른쪽 목록 제외), 모바일은 아래에서 0 */
+  bottom: 24px;
+  z-index: 25;
+  transform: translateY(160%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s;
+}
+#previewArea.show {
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
+}
+#previewLabel {
+  align-self: flex-start;
+  margin-left: 12px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+/* 카드 줄 + 좌우 화살표 (화살표는 마우스 PC 에서만, 처음 · 끝 카드에서는 그쪽을 숨김 — strip-nav.js) */
+#previewStripWrap {
+  position: relative;
+}
+.strip-arrow {
+  display: none;
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: background-color 0.2s, box-shadow 0.2s, color 0.2s,
+    transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.strip-arrow.prev {
+  left: 6px;
+}
+.strip-arrow.next {
+  right: 6px;
+}
+.strip-arrow svg {
+  width: 18px;
+  height: 18px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .strip-arrow:not([hidden]) {
+    display: flex;
+  }
+  .strip-arrow:hover {
+    background: var(--bg);
+    color: var(--accent);
+    box-shadow: var(--shadow-float);
+    transform: translateY(-50%) scale(1.12);
+  }
+  .strip-arrow:active {
+    transform: translateY(-50%) scale(0.96);
+  }
+}
+.strip-arrow:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+#previewStrip {
+  display: flex;
+  gap: 8px;
+  padding: 2px 12px 6px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+#previewStrip::-webkit-scrollbar {
+  display: none;
+}
+.preview-card {
+  position: relative;
+  flex: 0 0 min(86%, 420px);
+  display: flex;
+  gap: 12px;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  box-shadow: var(--shadow-float);
+  scroll-snap-align: center;
+  cursor: pointer;
+}
+.preview-poster {
+  flex: none;
+  width: 76px;
+  height: 96px;
+  object-fit: cover;
+  background: var(--surface);
+}
+.preview-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 32px; /* ♡ 자리 */
+}
+.preview-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* 기간 · 장소 · 구. 일정이 길면 2줄까지 (상세 · 목록에는 전체가 나옴) */
+.preview-sub {
+  font-size: 12px;
+  color: var(--sub);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.preview-stack {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 0 5px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 11px;
+  font-weight: 700;
+}
+.preview-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+.preview-detail,
+.preview-route {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 2px;
+  font: inherit;
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.preview-detail {
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+}
+.preview-route {
+  border: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+.preview-route svg {
+  width: 14px;
+  height: 14px;
+}
+/* 찜 하트: PC 는 목록 카드 하트를 숨기므로(.card-fav) 하단 카드 것만 여기서 보이게 */
+.preview-card .card-fav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--sub);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.preview-card .card-fav.active {
+  color: var(--accent);
+}
+
+@media (min-width: 1025px) {
+  #sidebar.collapsed ~ #previewArea {
+    right: 0; /* 목록을 접으면 지도 전체 폭 */
+  }
+}
+
+/* ----- 상태 배지 + D-day (docs/design/mobile-design-v1.md 2번) — PC 는 하단 카드에서만 보임 ----- */
+.badge-row {
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.status-badge,
+.dday-badge {
+  box-sizing: border-box;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  white-space: nowrap;
+}
+.status-badge.open {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.status-badge.upcoming {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+.status-badge.ended {
+  background: var(--gray-soft);
+  color: var(--gray);
+}
+.dday-badge {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+/* 목록에서는 폭을 고정해 제목 시작선을 맞춤 */
+#list .status-badge {
+  width: 60px;
+  text-align: center;
+}
+.event-body .badge-row {
+  order: -2; /* 제목(-1)보다 위 */
+  margin-bottom: 4px;
+}
+.preview-body .badge-row {
+  display: flex;
+  margin-bottom: 1px;
+}
+.modal-body .badge-row {
+  margin: 0 0 10px;
 }
 
 /* =====================================================
@@ -1028,191 +1238,10 @@ body {
     padding: 10px 56px 0 0;
   }
 
-  /* ----- 마커 탭 → 하단 카드 (가까운 순 · 좌우로 넘기기, 결과 바 위에 뜸) ----- */
+  /* 하단 카드: 모바일은 지도 전체 폭 · 결과 바 위 (공통 모양은 위 "하단 카드") */
   #previewArea {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    position: absolute;
-    left: 0;
     right: 0;
     bottom: calc(var(--sheet-bar-height) + 12px);
-    z-index: 25;
-    transform: translateY(160%);
-    opacity: 0;
-    pointer-events: none;
-    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s;
-  }
-  #previewArea.show {
-    transform: none;
-    opacity: 1;
-    pointer-events: auto;
-  }
-  #previewLabel {
-    align-self: flex-start;
-    margin-left: 12px;
-    padding: 4px 8px;
-    font-size: 12px;
-    font-weight: 500;
-    background: var(--bg);
-    color: var(--text);
-    border: 1px solid var(--line);
-  }
-  /* 카드 줄 + 좌우 화살표 (화살표는 마우스 PC 에서만, 처음 · 끝 카드에서는 그쪽을 숨김 — strip-nav.js) */
-  #previewStripWrap {
-    position: relative;
-  }
-  .strip-arrow {
-    display: none;
-    position: absolute;
-    top: 50%;
-    z-index: 1;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    border: 1px solid var(--line);
-    border-radius: 50%;
-    background: transparent;
-    color: var(--text);
-    cursor: pointer;
-    transform: translateY(-50%);
-    transition: background-color 0.2s, box-shadow 0.2s, color 0.2s,
-      transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-  }
-  .strip-arrow.prev {
-    left: 6px;
-  }
-  .strip-arrow.next {
-    right: 6px;
-  }
-  .strip-arrow svg {
-    width: 18px;
-    height: 18px;
-  }
-  @media (hover: hover) and (pointer: fine) {
-    .strip-arrow:not([hidden]) {
-      display: flex;
-    }
-    .strip-arrow:hover {
-      background: var(--bg);
-      color: var(--accent);
-      box-shadow: var(--shadow-float);
-      transform: translateY(-50%) scale(1.12);
-    }
-    .strip-arrow:active {
-      transform: translateY(-50%) scale(0.96);
-    }
-  }
-  .strip-arrow:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-  #previewStrip {
-    display: flex;
-    gap: 8px;
-    padding: 2px 12px 6px;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-  }
-  #previewStrip::-webkit-scrollbar {
-    display: none;
-  }
-  .preview-card {
-    position: relative;
-    flex: 0 0 min(86%, 420px);
-    display: flex;
-    gap: 12px;
-    box-sizing: border-box;
-    padding: 12px;
-    border: 1px solid var(--line);
-    background: var(--bg);
-    box-shadow: var(--shadow-float);
-    scroll-snap-align: center;
-    cursor: pointer;
-  }
-  .preview-poster {
-    flex: none;
-    width: 76px;
-    height: 96px;
-    object-fit: cover;
-    background: var(--surface);
-  }
-  .preview-body {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding-right: 32px; /* ♡ 자리 */
-  }
-  .preview-title {
-    font-size: 15px;
-    font-weight: 700;
-    line-height: 1.35;
-    color: var(--text);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  /* 기간 · 장소 · 구. 일정이 길면 2줄까지 (상세 · 목록에는 전체가 나옴) */
-  .preview-sub {
-    font-size: 12px;
-    color: var(--sub);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .preview-stack {
-    display: inline-block;
-    margin-right: 4px;
-    padding: 0 5px;
-    background: var(--text);
-    color: var(--bg);
-    font-size: 11px;
-    font-weight: 700;
-  }
-  .preview-actions {
-    display: flex;
-    gap: 6px;
-    margin-top: 4px;
-  }
-  .preview-detail,
-  .preview-route {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    height: 34px;
-    padding: 0 12px;
-    border-radius: 2px;
-    font: inherit;
-    font-size: 13px;
-    text-decoration: none;
-    cursor: pointer;
-  }
-  .preview-detail {
-    border: 1px solid var(--line);
-    background: var(--bg);
-    color: var(--text);
-  }
-  .preview-route {
-    border: 0;
-    background: var(--accent);
-    color: var(--on-accent);
-    font-weight: 700;
-  }
-  .preview-route svg {
-    width: 14px;
-    height: 14px;
-  }
-  .preview-card .card-fav {
-    top: 4px;
-    right: 4px;
-    background: transparent;
   }
 
   /* ----- 스켈레톤 로딩 (행사 목록을 받는 동안 회색 블록) + 실패 안내 ----- */
@@ -1403,52 +1432,8 @@ body {
     display: none;
   }
 
-  /* ----- 상태 배지 + D-day (docs/design/mobile-design-v1.md 2번) ----- */
   .badge-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
-  }
-  .status-badge,
-  .dday-badge {
-    box-sizing: border-box;
-    padding: 2px 6px;
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 16px;
-    white-space: nowrap;
-  }
-  .status-badge.open {
-    background: var(--accent);
-    color: var(--on-accent);
-  }
-  .status-badge.upcoming {
-    background: var(--blue-soft);
-    color: var(--blue);
-  }
-  .status-badge.ended {
-    background: var(--gray-soft);
-    color: var(--gray);
-  }
-  .dday-badge {
-    background: var(--accent-soft);
-    color: var(--accent-ink);
-  }
-  /* 목록에서는 폭을 고정해 제목 시작선을 맞춤 */
-  #list .status-badge {
-    width: 60px;
-    text-align: center;
-  }
-  .event-body .badge-row {
-    order: -2; /* 제목(-1)보다 위 */
-    margin-bottom: 4px;
-  }
-  .preview-body .badge-row {
-    margin-bottom: 1px;
-  }
-  .modal-body .badge-row {
-    margin: 0 0 10px;
+    display: flex; /* 공통 모양은 위 "상태 배지" */
   }
 
   /* ----- 길찾기 · 공유 창 (하단 시트, docs/design/mobile-design-v1.md 3번) ----- */

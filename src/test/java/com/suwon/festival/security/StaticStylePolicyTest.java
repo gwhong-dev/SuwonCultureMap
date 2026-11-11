@@ -48,7 +48,7 @@ class StaticStylePolicyTest {
       collect(found, file, js, STYLE_ATTR);
       collect(found, file, js, SET_STYLE_ATTR);
     }
-    assertThat(found).as("class 를 붙이고 css/index.css 에 규칙 추가 (iw-* 참고)").isEmpty();
+    assertThat(found).as("class 를 붙이고 css/index.css 에 규칙 추가 (preview-* 참고)").isEmpty();
   }
 
   @Test

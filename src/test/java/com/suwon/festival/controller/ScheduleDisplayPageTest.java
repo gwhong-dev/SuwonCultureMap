@@ -271,6 +271,8 @@ class ScheduleDisplayPageTest {
 
     String js = script();
     assertThat(js).contains("stripArrowState(", "stripStepTarget(", "wheelStep(");
+    // PC 도 모바일과 같은 하단 카드 (예전 PC 말풍선 InfoWindow 는 없앰)
+    assertThat(js).doesNotContain("kakao.maps.InfoWindow");
 
     MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     assertThat(mockMvc.perform(get("/strip-nav.js")).andReturn().getResponse().getStatus()).isEqualTo(200);

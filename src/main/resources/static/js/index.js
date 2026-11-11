@@ -10,16 +10,7 @@ function escapeHtml(text) {
     .replace(/'/g, "&#39;");
 }
 
-// CSP(script-src)는 HTML 안의 onclick · onerror 를 막음 → innerHTML 로 만든 요소는 아래 두 함수로 직접 연결
-// 지도 말풍선의 행사 줄(data-open-detail="행사 id") 클릭 → 상세
-function bindOpenDetail(root) {
-  root.querySelectorAll("[data-open-detail]").forEach(function (el) {
-    el.addEventListener("click", function () {
-      openDetailFromMarker(Number(el.dataset.openDetail));
-    });
-  });
-}
-
+// CSP(script-src)는 HTML 안의 onclick · onerror 를 막음 → innerHTML 로 만든 요소는 addEventListener 로 직접 연결
 // 사진을 못 불러오면 깨진 그림 대신 빈칸
 function hideOnError(img) {
   img.addEventListener("error", function () {
@@ -42,17 +33,9 @@ function cleanEventText(event) {
   }
 }
 
-// PC 팝업에서 찜한 행사 앞에 붙는 ★
-function favoriteMark(eventId) {
-  return favoriteEventIds.has(eventId)
-    ? '<span class="iw-fav">★ </span>'
-    : "";
-}
-
 var map;
 var markerList = [];
 var eventsLoaded = false; // 행사 목록을 받기 전엔 목록(스켈레톤 · 실패 안내)을 다시 그리지 않음
-var currentInfowindow = null;
 
 // ===== 모바일 레이아웃 상태값 (아래 '모바일 레이아웃' 영역에서 사용) =====
 var mobileQuery = window.matchMedia("(max-width: 1024px)");
@@ -225,7 +208,7 @@ function renderLocationMarkers(visibleItems) {
     });
     marker.setMap(map);
 
-    // (모바일 미리보기 카드용) 같은 장소 행사들을 시작일 순으로 번호 매기기 → '같은 장소 1/3'
+    // (하단 카드용) 같은 장소 행사들을 시작일 순으로 번호 매기기 → '같은 장소 1/3'
     var groupByDate = group.slice().sort(compareStartDate);
     groupByDate.forEach(function (item, i) {
       item.group = groupByDate;
@@ -233,77 +216,12 @@ function renderLocationMarkers(visibleItems) {
       item.groupSize = groupByDate.length;
     });
 
-    var infowindowContent;
-    if (group.length === 1) {
-      var singlePlaceName = eventPlace(first);
-      infowindowContent =
-        '<div class="iw-single">' +
-        (singlePlaceName
-          ? '<div class="iw-place">' +
-            escapeHtml(singlePlaceName) +
-            "</div>"
-          : "") +
-        '<div class="iw-title" data-open-detail="' +
-        first.id +
-        '">' +
-        favoriteMark(first.id) +
-        escapeHtml(first.title) +
-        "</div>" +
-        "</div>";
-    } else {
-      // 공연일(startDate) 빠른 순으로 정렬하되, 제일 빠른 게 목록 맨 아래(스택 아래쪽)에 오도록 뒤집음
-      var sorted = group.slice().sort(function (a, b) {
-        var da = a.event.startDate;
-        var db = b.event.startDate;
-        if (!da && !db) return 0;
-        if (!da) return 1;
-        if (!db) return -1;
-        return da.localeCompare(db);
-      });
-      sorted.reverse();
-
-      var rows = sorted
-        .map(function (item, i) {
-          // 위에서부터 순서대로 흰색/회색 번갈아 표시 (첫 줄은 항상 흰색이라 헤더랑 안 붙음)
-          return (
-            '<div class="iw-row' +
-            (i % 2 === 1 ? " stripe" : "") +
-            '" data-open-detail="' +
-            item.event.id +
-            '">' +
-            favoriteMark(item.event.id) +
-            escapeHtml(item.event.title) +
-            "</div>"
-          );
-        })
-        .join("");
-      var placeName = eventPlace(first) || first.title;
-      infowindowContent =
-        '<div class="iw-group">' +
-        '<div class="iw-place">' +
-        escapeHtml(placeName) +
-        "</div>" +
-        rows +
-        "</div>";
-    }
-
-    // 문자열 대신 요소로 넘겨야 클릭을 연결할 수 있음 (말풍선 모양은 같음)
-    var infowindowBox = document.createElement("div");
-    infowindowBox.innerHTML = infowindowContent;
-    bindOpenDetail(infowindowBox);
-    var infowindow = new kakao.maps.InfoWindow({ content: infowindowBox.firstChild });
     kakao.maps.event.addListener(marker, "click", function () {
-      if (mobileQuery.matches) {
-        showPreview(groupByDate[0].event.id); // 모바일: 하단 미리보기 카드 (같은 장소면 첫 번째부터)
-      } else {
-        toggleInfowindow(infowindow, marker); // PC: 기존 말풍선/목록 팝업
-      }
+      showPreview(groupByDate[0].event.id); // PC · 모바일 모두 하단 카드 (같은 장소면 첫 번째부터)
     });
 
     var locMarker = {
       marker: marker,
-      infowindow: infowindow,
-      key: first.latitude + "," + first.longitude,
       normalImage: markerImage,
       selectedImage: selectedImage,
     };
@@ -337,7 +255,7 @@ kakao.maps.load(function () {
   };
   map = new kakao.maps.Map(mapContainer, mapOption);
 
-  // (모바일) 지도 빈 곳을 탭하면 미리보기 카드 닫기
+  // 지도 빈 곳을 누르면 하단 카드 닫기
   kakao.maps.event.addListener(map, "click", function () {
     hidePreview();
   });
@@ -450,19 +368,6 @@ function showEvents(events) {
   }
 }
 
-function toggleInfowindow(infowindow, marker) {
-  if (currentInfowindow === infowindow) {
-    infowindow.close();
-    currentInfowindow = null;
-    return;
-  }
-  if (currentInfowindow) {
-    currentInfowindow.close();
-  }
-  infowindow.open(map, marker);
-  currentInfowindow = infowindow;
-}
-
 // ===== 카테고리 드롭다운 순서 고정 + "찜"(가상 카테고리) 추가 =====
 var CATEGORY_ORDER = ["행사", "공연", "전시", "축제", "찜", "기타"];
 
@@ -531,11 +436,6 @@ function filterMarkers() {
 
   updateChipActive(); // 모바일 칩 선택 표시 동기화
   updateTabBar(); // 모바일 하단 탭 선택 표시 동기화
-
-  if (currentInfowindow) {
-    currentInfowindow.close();
-    currentInfowindow = null;
-  }
 
   var visibleItems = [];
   var favScreen = onFavScreen();
@@ -928,15 +828,8 @@ function renderSidebar(items) {
       );
       map.setLevel(5);
 
-      // 사이드바에서 클릭해도 지도의 해당 마커를 실제로 클릭한 것처럼 InfoWindow를 띄움
-      var key = item.event.latitude + "," + item.event.longitude;
-      var locMarker = locationMarkers.find(function (lm) {
-        return lm.key === key;
-      });
-      // (모바일은 상세가 전체 화면이라 지도 팝업은 띄우지 않음)
-      if (locMarker && !mobileQuery.matches) {
-        toggleInfowindow(locMarker.infowindow, locMarker.marker);
-      }
+      // PC: 지도 하단 카드도 그 행사로 (상세를 닫으면 카드로 이어서 둘러봄). 모바일은 상세가 전체 화면이라 띄우지 않음
+      if (!mobileQuery.matches) showPreview(item.event.id);
 
       openDetailModal(item.event);
     });
@@ -1461,7 +1354,7 @@ function closeDetailModal() {
   syncUrlState();
 }
 
-// ===== ESC 키로 상세 모달 + 마커 팝업(InfoWindow) 닫기 =====
+// ===== ESC 키로 길찾기 · 공유 창 · 상세 모달 닫기 =====
 document.addEventListener("keydown", function (e) {
   if (e.key === "Escape") {
     // 길찾기 · 공유 창이 상세 위에 열려 있으면 그것만 닫음
@@ -1474,10 +1367,6 @@ document.addEventListener("keydown", function (e) {
       return;
     }
     closeDetailModal();
-    if (currentInfowindow) {
-      currentInfowindow.close();
-      currentInfowindow = null;
-    }
   }
 });
 
@@ -2735,7 +2624,7 @@ function showPreview(eventId) {
   renderPreviewStrip(lastSortedItems); // 탭한 마커에서 가까운 순으로 다시 배치
   var card = findPreviewCard(eventId);
   if (!card) return;
-  if (sheetState !== "peek") setSheetState("peek"); // 목록이 올라와 있으면 내려서 카드가 보이게
+  if (mobileQuery.matches && sheetState !== "peek") setSheetState("peek"); // 목록이 올라와 있으면 내려서 카드가 보이게 (모바일)
   document.getElementById("previewArea").classList.add("show");
   scrollStripTo(card);
   selectMarker(eventId, true);
@@ -2984,10 +2873,6 @@ document.addEventListener("click", function (e) {
 // ----- 화면 크기 변경 (회전, PC 창 크기 조절) 대응 -----
 function applyLayout() {
   if (mobileQuery.matches) {
-    if (currentInfowindow) {
-      currentInfowindow.close();
-      currentInfowindow = null;
-    }
     setSheetState(sheetState);
   } else {
     // PC로 돌아가면 모바일용 위치·상태를 모두 원래대로
