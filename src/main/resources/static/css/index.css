@@ -666,7 +666,8 @@ body {
   color: var(--text);
   border: 1px solid var(--line);
 }
-/* 카드 줄 + 좌우 화살표 (화살표는 마우스 PC 에서만, 처음 · 끝 카드에서는 그쪽을 숨김 — strip-nav.js) */
+/* 카드 줄 + 좌우 화살표 (화살표는 마우스 PC 에서만, 처음 · 끝 카드에서는 그쪽을 숨김 — strip-nav.js)
+   화살표 = 44px 사각 · 늘 보이게 (흰 바탕 · 진한 테두리 · 그림자, '다음'은 진한 바탕 — 11/11 시안 PcCard) */
 #previewStripWrap {
   position: relative;
 }
@@ -677,40 +678,41 @@ body {
   z-index: 1;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: transparent;
+  border: 1px solid var(--text);
+  border-radius: 0;
+  background: var(--bg);
   color: var(--text);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   transform: translateY(-50%);
-  transition: background-color 0.2s, box-shadow 0.2s, color 0.2s,
-    transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 .strip-arrow.prev {
-  left: 6px;
+  left: 16px;
 }
 .strip-arrow.next {
-  right: 6px;
+  right: 16px;
+  background: var(--text);
+  color: var(--bg);
 }
 .strip-arrow svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 @media (hover: hover) and (pointer: fine) {
   .strip-arrow:not([hidden]) {
     display: flex;
   }
-  .strip-arrow:hover {
-    background: var(--bg);
-    color: var(--accent);
-    box-shadow: var(--shadow-float);
-    transform: translateY(-50%) scale(1.12);
+  .strip-arrow.prev:hover {
+    background: var(--surface);
   }
-  .strip-arrow:active {
-    transform: translateY(-50%) scale(0.96);
+  .strip-arrow.next:hover {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
   }
 }
 .strip-arrow:focus-visible {
@@ -842,6 +844,30 @@ body {
 @media (min-width: 1025px) {
   #sidebar.collapsed ~ #previewArea {
     right: 0; /* 목록을 접으면 지도 전체 폭 */
+  }
+  /* PC 카드 줄 (11/11 시안 PcCard): 지금 카드는 늘 가운데 · 진한 테두리, 양옆 카드는 흐리게
+     양쪽 여백 = 줄 폭 절반 - 카드 절반 → 첫 · 끝 카드도 가운데로 올 수 있음 */
+  #previewLabel {
+    align-self: center;
+    margin-left: 0;
+  }
+  #previewStrip {
+    gap: 12px;
+    padding-left: calc(50% - 180px);
+    padding-right: calc(50% - 180px);
+  }
+  .preview-card {
+    flex: 0 0 360px;
+    opacity: 0.6;
+    transition: opacity 0.2s, border-color 0.2s;
+  }
+  .preview-card:hover {
+    opacity: 0.85;
+  }
+  .preview-card.current {
+    opacity: 1;
+    border-color: var(--text);
+    box-shadow: inset 0 0 0 1px var(--text), var(--shadow-float); /* 2px 테두리 (자리 크기는 그대로) */
   }
 }
 

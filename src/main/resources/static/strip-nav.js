@@ -1,4 +1,4 @@
-// 지도 하단 카드 줄 넘기기 (11/11) — 좌우 화살표 버튼 · 휠 · 키보드 ← → 로 한 장씩
+// 지도 하단 카드 줄 넘기기 (11/11) — 좌우 화살표 버튼 · 휠 · 키보드 ← → 로 한 장씩 + 위치 표시 글
 //  - 터치 · 트랙패드 좌우는 브라우저 기본 가로 스크롤 그대로
 //  - 화살표는 처음 카드에서 이전, 끝 카드에서 다음을 숨김
 //  - 휠은 세로가 더 클 때만 한 장 (가로가 크면 트랙패드 좌우라 기본 스크롤), 한 번 굴림에 여러 장 넘어가지 않게 잠깐 쉼
@@ -47,6 +47,14 @@ function stripSettleIndex(current, cards, viewLeft, viewWidth) {
   return best;
 }
 
+// 카드 줄 위 위치 표시. nearOrder = 마커 · 목록을 눌러 그 행사에서 가까운 순으로 다시 놓았나
+//  - PC 는 지도를 열면 카드 줄을 기본으로 띄움(11/11) → 그때는 오른쪽 목록 순서 그대로라 "목록 순"
+//  - 고른 카드가 없으면(index < 0) 0 이 아니라 1 부터 셈 → "· 0 / N" 이 보이지 않게
+function stripLabelText(nearOrder, index, count) {
+  if (count <= 0) return "";
+  return (nearOrder ? "가까운 순" : "목록 순") + " · " + (Math.max(index, 0) + 1) + " / " + count;
+}
+
 // 키보드 ← → → 옮길 장 수. k = { key, tag(포커스 요소 태그), editable, role, alt(조합키), handled(이미 처리됨) }
 // 입력칸에서 치는 중 · 탭 줄처럼 자기 화살표 키를 쓰는 곳 · 조합키(Alt+← 뒤로 가기 등)는 그대로 둠
 function stripKeyStep(k) {
@@ -65,5 +73,6 @@ if (typeof module !== "undefined") {
     wheelStep: wheelStep,
     stripSettleIndex: stripSettleIndex,
     stripKeyStep: stripKeyStep,
+    stripLabelText: stripLabelText,
   };
 }

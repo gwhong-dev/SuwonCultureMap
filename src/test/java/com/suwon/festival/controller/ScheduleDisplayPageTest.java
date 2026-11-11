@@ -302,7 +302,9 @@ class ScheduleDisplayPageTest {
     assertThat(html).contains("id=\"previewPrev\"", "id=\"previewNext\"", "aria-label=\"이전 카드\"", "aria-label=\"다음 카드\"");
 
     String js = script();
-    assertThat(js).contains("stripArrowState(", "stripStepTarget(", "wheelStep(", "stripKeyStep(");
+    assertThat(js).contains("stripArrowState(", "stripStepTarget(", "wheelStep(", "stripKeyStep(", "stripLabelText(");
+    // PC 는 지도를 열면 카드 줄을 기본으로 띄움 (11/11) — 마커를 누르지 않아도
+    assertThat(js).contains("function showDefaultPreview(", "showDefaultPreview();");
     // PC 도 모바일과 같은 하단 카드 (예전 PC 말풍선 InfoWindow 는 없앰)
     assertThat(js).doesNotContain("kakao.maps.InfoWindow");
 

@@ -8,6 +8,7 @@ const {
   wheelStep,
   stripSettleIndex,
   stripKeyStep,
+  stripLabelText,
 } = require("../../main/resources/static/strip-nav.js");
 
 test("키보드: → 다음 · ← 이전, 다른 키는 0", () => {
@@ -101,4 +102,14 @@ test("휠: 가로가 더 크면(트랙패드 좌우) 브라우저 기본 스크�
 test("휠: 직전 이동 뒤 잠깐은 무시 (한 번 굴림에 여러 장 넘어가지 않게)", () => {
   assert.strictEqual(wheelStep(0, 100, 1000, 1000 + WHEEL_GAP_MS - 1), 0);
   assert.strictEqual(wheelStep(0, 100, 1000, 1000 + WHEEL_GAP_MS), 1);
+});
+
+test("위치 표시: 마커 · 목록을 눌렀으면 가까운 순, PC 기본 카드 줄이면 목록 순", () => {
+  assert.strictEqual(stripLabelText(true, 1, 31), "가까운 순 · 2 / 31");
+  assert.strictEqual(stripLabelText(false, 0, 31), "목록 순 · 1 / 31");
+});
+
+test("위치 표시: 카드가 없으면 빈 글, 고른 카드가 없으면 1 부터 (0 / N 이 안 보이게)", () => {
+  assert.strictEqual(stripLabelText(false, 0, 0), "");
+  assert.strictEqual(stripLabelText(true, -1, 5), "가까운 순 · 1 / 5");
 });
