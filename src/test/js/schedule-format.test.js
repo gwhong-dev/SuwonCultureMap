@@ -269,6 +269,8 @@ test("긴 행사 기본값: 진행 중이면 오늘, 남은 날부터 목록", (
   assert.strictEqual(c.labels[0], "11/2 (월)");
   // 마지막 날 = 오늘이면 하루만
   assert.deepStrictEqual(calendarDateChoices(longEvent("2026-10-01", "2026-11-02"), KST_1102).dates, ["2026-11-02"]);
+  // 한국은 이미 11/3 00:30 인데 UTC 로는 11/2 → 기본값은 11/3
+  assert.strictEqual(calendarDateChoices(longEvent("2026-11-01", "2026-12-01"), Date.UTC(2026, 10, 2, 15, 30)).selected, "2026-11-03");
 });
 
 test("긴 행사 기본값: 시작 전 · 끝난 행사는 시작일", () => {
