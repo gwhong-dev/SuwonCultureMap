@@ -1331,7 +1331,7 @@ document.getElementById("shareKakaoBtn").addEventListener("click", function () {
   }
 });
 
-// ===== 마커 InfoWindow 제목 클릭 → 상세 팝업 열기 =====
+// ===== 행사 번호로 상세 열기 (홈 카드 · 검색 결과 등) =====
 function openDetailFromMarker(eventId) {
   var found = markerList.find(function (item) {
     return item.event.id === eventId;
@@ -2608,10 +2608,16 @@ function stepPreview(delta) {
   });
   var target = stripStepTarget(index, delta, cards.length); // strip-nav.js
   if (target < 0 || target === index) return;
+  var focused = document.activeElement; // 화살표가 숨기 전에 기억
   previewEventId = Number(cards[target].dataset.eventId);
   selectMarker(previewEventId, true);
   updatePreviewLabel();
   scrollStripTo(cards[target], true);
+  // 끝에 닿아 누른 화살표가 숨으면 포커스가 사라지지 않게 반대쪽 화살표로 (키보드 사용자)
+  var prev = document.getElementById("previewPrev");
+  var next = document.getElementById("previewNext");
+  if (focused === prev && prev.hidden && !next.hidden) next.focus();
+  if (focused === next && next.hidden && !prev.hidden) prev.focus();
 }
 
 function showPreview(eventId) {
@@ -2659,6 +2665,7 @@ function selectMarker(eventId, pan) {
 }
 
 // 카드를 좌우로 넘기고 멈추면 → 가운데 카드의 마커로 지도 이동 (순서는 처음 탭한 마커 기준 그대로)
+// 고른 카드가 줄 안에 다 보이면 그대로 둠 (넓은 PC 줄에서 첫 · 끝 카드가 옆 카드로 바뀌지 않게 — strip-nav.js)
 var stripScrollTimer = null;
 document
   .getElementById("previewStrip")
@@ -2667,20 +2674,16 @@ document
     stripScrollTimer = setTimeout(function () {
       if (previewEventId === null) return;
       var strip = document.getElementById("previewStrip");
-      var center = strip.scrollLeft + strip.clientWidth / 2;
-      var closest = null;
-      var closestDist = Infinity;
-      Array.from(strip.children).forEach(function (card) {
-        var dist = Math.abs(
-          card.offsetLeft + card.offsetWidth / 2 - center,
-        );
-        if (dist < closestDist) {
-          closestDist = dist;
-          closest = card;
-        }
+      var cards = Array.from(strip.children);
+      var current = cards.findIndex(function (card) {
+        return Number(card.dataset.eventId) === previewEventId;
       });
-      if (!closest) return;
-      var id = Number(closest.dataset.eventId);
+      var boxes = cards.map(function (card) {
+        return { left: card.offsetLeft, width: card.offsetWidth };
+      });
+      var index = stripSettleIndex(current, boxes, strip.scrollLeft, strip.clientWidth);
+      if (index < 0) return;
+      var id = Number(cards[index].dataset.eventId);
       if (id !== previewEventId) {
         previewEventId = id;
         selectMarker(id, true);

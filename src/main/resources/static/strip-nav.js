@@ -25,11 +25,34 @@ function wheelStep(deltaX, deltaY, lastStepAt, now) {
   return deltaY > 0 ? 1 : -1;
 }
 
+// 스크롤이 멈췄을 때 고를 카드 번호. cards = [{ left, width }] (줄 안 위치), viewLeft = scrollLeft, viewWidth = 줄 폭
+//  - 지금 고른 카드(current)가 줄 안에 다 보이면 그대로: 넓은 PC 줄에서 첫 · 끝 카드는 가운데로 못 오므로
+//    "가운데에 가장 가까운 카드"로만 고르면 옆 카드로 바뀌고 지도까지 옮겨감 (#206 검증 지적)
+//  - 아니면(손으로 밀어 화면 밖으로 나감) 가운데에 가장 가까운 카드 — 휴대폰은 한 장만 다 보여서 예전과 같음
+function stripSettleIndex(current, cards, viewLeft, viewWidth) {
+  if (cards.length === 0) return -1;
+  var viewRight = viewLeft + viewWidth;
+  var now = cards[current];
+  if (now && now.left >= viewLeft - 1 && now.left + now.width <= viewRight + 1) return current;
+  var center = viewLeft + viewWidth / 2;
+  var best = 0;
+  var bestDist = Infinity;
+  cards.forEach(function (card, i) {
+    var dist = Math.abs(card.left + card.width / 2 - center);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = i;
+    }
+  });
+  return best;
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     WHEEL_GAP_MS: WHEEL_GAP_MS,
     stripStepTarget: stripStepTarget,
     stripArrowState: stripArrowState,
     wheelStep: wheelStep,
+    stripSettleIndex: stripSettleIndex,
   };
 }
