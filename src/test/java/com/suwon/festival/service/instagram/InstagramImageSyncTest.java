@@ -91,7 +91,7 @@ class InstagramImageSyncTest {
         new PlaceGeocoder(new InstagramSyncServiceTest.FakeSearch()), new CaptionParser(null), clock, retirer,
         scheduleWriter, store);
     service = new InstagramSyncService(client, processor, new InstagramTokenExpiry("", clock), new InstagramSwitch(true),
-        "suwon_city", 10, store, eventRepository);
+        "suwon_city", 10, store, eventRepository, null);
   }
 
   @AfterEach

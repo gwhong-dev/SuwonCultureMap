@@ -26,6 +26,11 @@ public interface EventRepository extends JpaRepository<Event, Long> {
   @Query("select e.imageUrl from Event e where e.source = :source and e.imageUrl is not null")
   List<String> findImageUrlsBySource(@Param("source") String source);
 
+  // 지난 행사: 종료일(없으면 시작일)이 cutoff 이하. 날짜가 둘 다 없으면 빠짐 (ExpiredInstagramEventCleaner)
+  @Query("select e from Event e where e.source = :source and ("
+      + "(e.endDate is not null and e.endDate <= :cutoff) or (e.endDate is null and e.startDate <= :cutoff))")
+  List<Event> findExpired(@Param("source") String source, @Param("cutoff") java.time.LocalDate cutoff);
+
   List<Event> findByMergedIntoIdIsNull(); // 화면에 보이는 행사 (합쳐져 숨겨진 행 제외)
 
   List<Event> findByMergedIntoId(Long mergedIntoId); // 이 행사를 대표로 삼아 숨겨진 행 (대표를 지우기 전에 비움)
