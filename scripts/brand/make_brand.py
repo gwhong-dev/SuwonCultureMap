@@ -163,11 +163,11 @@ def main():
         f'<symbol id="tagline" viewBox="4 {fmt(sub_top2)} {fmt(sub_w)} {fmt(sub_bot2 - sub_top2)}"><path fill="currentColor" d="{sub_d}"/></symbol>'
         "</svg>\n"
     )
-    (BRAND / "logo.svg").write_text(sprite)
-    (BRAND / "logo-mark.svg").write_text(svg("0 0 100 100", seal_inner(song), 32, 32))
-    (BRAND / "favicon.svg").write_text(svg("0 0 100 100", seal_inner(song, frame=3.2, weight=2.6), 32, 32))
-    (WORK / "favicon-16.svg").write_text(svg("0 0 100 100", seal_small(song), 16, 16))
-    (WORK / "icon.svg").write_text(svg("0 0 100 100", seal_icon(song), 512, 512))
+    (BRAND / "logo.svg").write_text(sprite, encoding="utf-8")
+    (BRAND / "logo-mark.svg").write_text(svg("0 0 100 100", seal_inner(song), 32, 32), encoding="utf-8")
+    (BRAND / "favicon.svg").write_text(svg("0 0 100 100", seal_inner(song, frame=3.2, weight=2.6), 32, 32), encoding="utf-8")
+    (WORK / "favicon-16.svg").write_text(svg("0 0 100 100", seal_small(song), 16, 16), encoding="utf-8")
+    (WORK / "icon.svg").write_text(svg("0 0 100 100", seal_icon(song), 512, 512), encoding="utf-8")
     (WORK / "wordmark.svg").write_text(
         svg(word_vb, f'<path fill="{INK}" d="{name_d}"/><path fill="{BRICK}" d="{sub_d}"/>')
     )
@@ -178,7 +178,7 @@ def main():
         f'<g transform="scale({fmt(vb_h / 100)})">{seal_inner(song)}</g>'
         f'<g transform="translate({fmt(vb_h + gap)} {fmt(-top)})"><path fill="{INK}" d="{name_d}"/><path fill="{BRICK}" d="{sub_d}"/></g>'
     )
-    (BRAND / "logo-lockup.svg").write_text(svg(f"0 0 {fmt(lock_w)} {fmt(vb_h)}", lock))
+    (BRAND / "logo-lockup.svg").write_text(svg(f"0 0 {fmt(lock_w)} {fmt(vb_h)}", lock), encoding="utf-8")
 
     # 공유 이미지 1200x630 (render.js 가 찍음). 종이 바탕 · 왼쪽 정렬 · 비대칭:
     #   왼쪽 = 워드마크 · 부제 · 설명 (글 덩어리), 오른쪽 위 = 크게 찍은 도장 (살짝 기울임). 가운데 정렬 · 아래 색 띠 없음
@@ -196,7 +196,7 @@ def main():
 <g transform="translate(846 92) rotate(-4 120 120) scale(2.4)">{seal_inner(song)}</g>
 </svg></body>
 """
-    (WORK / "og.html").write_text(og)
+    (WORK / "og.html").write_text(og, encoding="utf-8")
     print("wordmark ratio", vb_w / vb_h, "sprite bytes", len(sprite))
 
 

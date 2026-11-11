@@ -25,6 +25,7 @@
 
 ```bash
 pip install fonttools pillow
+npm i playwright && npx playwright install chromium   # render.js 용
 # 글꼴 받기 (임시 폴더에)
 curl -LO https://raw.githubusercontent.com/google/fonts/main/ofl/songmyung/SongMyung-Regular.ttf
 curl -L -o Hahmlet.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/hahmlet/Hahmlet%5Bwght%5D.ttf"
