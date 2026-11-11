@@ -149,7 +149,7 @@ test("확인된 회차는 필터에서 모름과 같음", () => {
   assert.ok(!c.dates.includes("2026-11-01"));
 });
 
-// ===== "오늘 진행" · "이번 주말" 필터 =====
+// ===== "진행 중"(오늘 진행) · "이번 주말" 필터 =====
 const { koreaToday, upcomingWeekend, filterDays, matchRunDays } = require("../../main/resources/static/schedule-format.js");
 
 test("오늘은 한국 시간 기준", () => {
