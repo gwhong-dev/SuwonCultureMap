@@ -1398,7 +1398,7 @@ document.getElementById("shareCopyBtn").addEventListener("click", function () {
     },
   );
 });
-// 카카오톡 공유: 사진이 있으면 피드(사진 + 제목 + 설명), 없으면 글 형식. SDK 를 못 불러왔거나(차단 · 오프라인)
+// 카카오톡 공유: 피드(사진 + 제목 + 설명), 사진이 없으면 서비스 공유 이미지. SDK 를 못 불러왔거나(차단 · 오프라인)
 // 콘솔에 이 도메인이 등록되지 않았으면 안내 토스트만 (링크 복사는 그대로 됨)
 document.getElementById("shareKakaoBtn").addEventListener("click", function () {
   if (!detailEvent) return;
@@ -1418,24 +1418,17 @@ document.getElementById("shareKakaoBtn").addEventListener("click", function () {
   var place = eventPlace(event);
   var description = [document.getElementById("modalDate").textContent, place].filter(Boolean).join(" · ");
   try {
-    if (event.imageUrl) {
-      Kakao.Share.sendDefault({
-        objectType: "feed",
-        content: {
-          title: event.title,
-          description: description,
-          imageUrl: new URL(event.imageUrl, location.href).href, // 상대 주소여도 절대 주소로
-          link: link,
-        },
-        buttons: [{ title: "지도에서 보기", link: link }],
-      });
-    } else {
-      Kakao.Share.sendDefault({
-        objectType: "text",
-        text: (event.title + "\n" + description).substring(0, 200),
+    // 행사 사진이 없으면 서비스 공유 이미지(로고 + 수원바이블 · 수원 문화지도)로 → 늘 같은 피드 모양
+    Kakao.Share.sendDefault({
+      objectType: "feed",
+      content: {
+        title: event.title,
+        description: description,
+        imageUrl: new URL(event.imageUrl || "/brand/og-image.png", location.href).href, // 상대 주소여도 절대 주소로
         link: link,
-      });
-    }
+      },
+      buttons: [{ title: "지도에서 보기", link: link }],
+    });
     // 카카오톡으로 넘어가는 중 → 기록 칸은 바로 되돌리지 않음 (go(-1) 이 그 이동을 끊을 수 있음). 돌아오면 맞춤
     nav.forget("share");
     closeShareSheet();

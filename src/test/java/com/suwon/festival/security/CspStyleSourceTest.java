@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 // 화면이 불러오는 외부 CSS(<link rel=stylesheet> · CSS @import) 주소가 CSP style-src 에 들어 있는지 (#113 검증 ⚠️)
 // 외부 CSS 를 새로 넣고 style-src 를 안 고치면 운영에서만 조용히 막힘 → 시험에서 먼저 잡음
+// 글꼴 · 화면 CSS 가 모두 우리 서버 파일인지도 같이 확인 (브랜드 적용 11/11: Pretendard = static/brand/fonts)
 class CspStyleSourceTest {
 
   private static final Path STATIC_DIR = Path.of("src/main/resources/static");
@@ -32,20 +33,15 @@ class CspStyleSourceTest {
   @Test
   void HTML의_외부_stylesheet_주소는_style_src에_있음() throws IOException {
     List<String> blocked = new ArrayList<>();
-    int external = 0;
     for (Path file : files(".html")) {
       String html = Files.readString(file, StandardCharsets.UTF_8);
       for (String href : stylesheetHrefs(html)) {
-        if (isExternal(href)) {
-          external++;
-          if (!allowedByStyleSrc(href)) {
-            blocked.add(STATIC_DIR.relativize(file) + " " + href);
-          }
+        if (isExternal(href) && !allowedByStyleSrc(href)) {
+          blocked.add(STATIC_DIR.relativize(file) + " " + href);
         }
       }
     }
-    // 지금은 Google Fonts 1개. 0이면 검사식이 아무것도 못 찾는 것
-    assertThat(external).as("외부 stylesheet 를 하나도 못 찾음 (검사식 확인)").isPositive();
+    // 11/11 글꼴을 우리 서버로 옮겨 외부 stylesheet 는 0개. 검사식이 제대로 잡는지는 아래 검사식_실제로_잡아냄 이 확인
     assertThat(blocked).as("SecurityHeadersFilter.CSP 의 style-src 에 도메인 추가 필요").isEmpty();
   }
 
@@ -83,7 +79,8 @@ class CspStyleSourceTest {
     assertThat(m.group(1)).isEqualTo("https://f.example/b.css");
 
     assertThat(isExternal("/css/index.css")).isFalse();
-    assertThat(allowedByStyleSrc("https://fonts.googleapis.com/css2?family=Noto+Sans+KR")).isTrue();
+    // style-src 'self' 만 → 외부 도메인은 모두 막힘 (Google Fonts 포함, 11/11)
+    assertThat(allowedByStyleSrc("https://fonts.googleapis.com/css2?family=Noto+Sans+KR")).isFalse();
     assertThat(allowedByStyleSrc("https://cdn.example.com/x.css")).isFalse();
   }
 

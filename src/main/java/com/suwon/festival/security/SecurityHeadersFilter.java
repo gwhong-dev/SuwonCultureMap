@@ -21,7 +21,7 @@ import jakarta.servlet.http.HttpServletResponse;
  * - CSP object-src · base-uri · form-action: 플러그인 실행 · base 태그 바꿔치기 · 외부로 폼 전송 차단 (카카오톡 공유 sharer.kakao.com 만 예외)
  * - CSP script-src: 우리 서버 파일(static/js 등)과 카카오 SDK 도메인만 실행. 인라인 스크립트 · onclick 같은 속성 · eval 은 차단
  *   (화면 스크립트는 모두 static/js 로 분리. StaticScriptPolicyTest 가 인라인을 다시 넣지 못하게 막음)
- * - CSP style-src: 우리 서버 CSS(static/css)와 Google Fonts CSS 만 적용. <style> 태그 · style 속성 · setAttribute("style") 은 차단
+ * - CSP style-src: 우리 서버 CSS(static/css)만 적용 (글꼴 Pretendard 도 static/brand/fonts 에서 내보냄, 11/11). <style> 태그 · style 속성 · setAttribute("style") 은 차단
  *   (JS 의 el.style.x = ... 는 허용. StaticStylePolicyTest 가 인라인 스타일을 다시 넣지 못하게 막음)
  * - Referrer-Policy: 외부 링크로 나갈 때 주소 전체 대신 도메인만 전달
  * - Permissions-Policy: 쓰지 않는 카메라 · 마이크 · 위치 권한을 막음 (위치 기능을 만들면 geolocation=(self) 로)
@@ -33,11 +33,11 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
 
   // script-src: dapi.kakao.com = 지도 SDK 로더, t1.kakaocdn.net = 카카오톡 공유 SDK + 로더가 이어서 부르는 지도 본체(mapjsapi)
   //   도메인만 적음(scheme 생략) → https 화면에서는 https 만 허용, 로컬 http 에서는 로더가 http 로 부르는 본체도 허용
-  // style-src: fonts.googleapis.com = 모바일 글꼴(Noto Sans KR) CSS. 글꼴 파일(fonts.gstatic.com)은 font-src 를 두지 않아 막지 않음
+  // style-src: 'self' 만. 글꼴(Pretendard)은 static/brand/fonts 에서 내보냄 → Google Fonts(fonts.googleapis.com) 허용은 11/11 제거
   //   카카오 지도 본체가 도형(선 · 다각형)용 빈 SVG 에 style 속성을 넣다 막혀 콘솔 오류 1건이 남음 → 도형을 안 써서 화면 영향 없음 (11/3 확인)
   // form-action: 카카오톡 공유(JS SDK)가 폰 밖(아이패드 데스크톱 모드 · 좁은 PC 창)에서는 sharer.kakao.com 으로 폼 전송
   static final String CSP =
-      "script-src 'self' dapi.kakao.com t1.kakaocdn.net; style-src 'self' fonts.googleapis.com; "
+      "script-src 'self' dapi.kakao.com t1.kakaocdn.net; style-src 'self'; "
           + "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self' https://sharer.kakao.com";
   static final String HSTS = "max-age=31536000";
 

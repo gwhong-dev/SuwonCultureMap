@@ -1,6 +1,6 @@
 body {
   margin: 0;
-  font-family: sans-serif;
+  font-family: var(--font-brand);
   height: 100vh;
   display: flex;
   align-items: center;
