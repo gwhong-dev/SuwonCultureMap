@@ -1106,6 +1106,10 @@ body {
   #categoryChips::-webkit-scrollbar {
     display: none;
   }
+  /* '7일 안' 칩은 PC 에만. 홈 "+7일"로 켜진 동안만 보여서 눌러 해제할 수 있게 */
+  #categoryChips .chip-pc-only:not(.active) {
+    display: none;
+  }
   /* ----- 사이드바 → 바텀시트 ----- */
   #sidebarToggleBtn {
     display: none;
