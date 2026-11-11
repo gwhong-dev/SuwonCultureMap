@@ -36,6 +36,25 @@ class InstagramImageStoreTest {
   }
 
   @Test
+  void 처리_이유를_나눠_돌려줌() {
+    server.answers.put("/a.jpg", new Answer(200, "image/jpeg", FakeImageServer.JPEG, false));
+    InstagramImageStore real = new InstagramImageStore(dir, InstagramImageStore.CDN_SUFFIXES, false);
+    String other = "1790000000000002";
+
+    assertThat(store.resolveWithReason(other, null).reason()).isEqualTo(InstagramImageStore.Reason.NO_URL);
+    assertThat(store.resolveWithReason(other, " ").reason()).isEqualTo(InstagramImageStore.Reason.NO_URL);
+    assertThat(real.resolveWithReason(other, "https://example.com/a.jpg"))
+        .isEqualTo(new InstagramImageStore.Resolution(null, InstagramImageStore.Reason.DOMAIN_REJECTED));
+    assertThat(store.resolveWithReason(other, server.url("/없음.jpg")).reason())
+        .isEqualTo(InstagramImageStore.Reason.DOWNLOAD_FAILED);
+    assertThat(store.resolveWithReason(ID, server.url("/a.jpg")).reason()).isEqualTo(InstagramImageStore.Reason.STORED_NEW);
+    assertThat(store.resolveWithReason(ID, null))
+        .isEqualTo(new InstagramImageStore.Resolution("/media/insta/" + ID + ".jpg", InstagramImageStore.Reason.ALREADY_STORED));
+    assertThat(InstagramImageStore.disabled().resolveWithReason(ID, server.url("/a.jpg")).reason())
+        .isEqualTo(InstagramImageStore.Reason.DISABLED);
+  }
+
+  @Test
   void 받아서_저장하고_우리_주소를_돌려주며_다음엔_다시_받지_않음() throws Exception {
     server.answers.put("/a.jpg", new Answer(200, "image/jpeg", FakeImageServer.JPEG, false));
 

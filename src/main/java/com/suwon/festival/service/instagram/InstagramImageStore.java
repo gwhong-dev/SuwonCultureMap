@@ -82,24 +82,43 @@ public class InstagramImageStore {
     return Optional.ofNullable(dir);
   }
 
+  // 사진 처리 결과의 이유 (운영 진단용 집계, 사진 주소는 담지 않음)
+  public enum Reason {
+    DISABLED,          // 기능 꺼짐 · 게시물 id 형식이 다름
+    NO_URL,            // 게시물에 사진 주소가 없음 (동영상인데 thumbnail_url 이 안 옴 등)
+    DOMAIN_REJECTED,   // 허용 도메인 · https 가 아님 → 저장도 내보내기도 안 함
+    STORED_NEW,        // 이번에 받아 저장
+    ALREADY_STORED,    // 전에 받아 둔 파일 사용
+    DOWNLOAD_FAILED    // 받기 실패 → 원래 주소 유지
+  }
+
+  // url: 행사에 넣을 주소 (null 가능), reason: 그렇게 된 이유
+  public record Resolution(String url, Reason reason) {
+  }
+
   // 행사에 넣을 사진 주소. 저장 성공(또는 이미 있음) = 우리 주소, 실패 = 원래 주소, 기능 꺼짐 · 주소 없음 = null
   public String resolve(String mediaId, String sourceUrl) {
-    if (!isEnabled() || mediaId == null || !MEDIA_ID.matcher(mediaId).matches()) return null;
+    return resolveWithReason(mediaId, sourceUrl).url();
+  }
+
+  public Resolution resolveWithReason(String mediaId, String sourceUrl) {
+    if (!isEnabled() || mediaId == null || !MEDIA_ID.matcher(mediaId).matches()) return new Resolution(null, Reason.DISABLED);
     Optional<String> stored = existing(mediaId);
-    if (stored.isPresent()) return PUBLIC_PREFIX + stored.get();
+    if (stored.isPresent()) return new Resolution(PUBLIC_PREFIX + stored.get(), Reason.ALREADY_STORED);
+    if (sourceUrl == null || sourceUrl.isBlank()) return new Resolution(null, Reason.NO_URL);
     URI uri = allowedUri(sourceUrl);
     if (uri == null) {
-      if (sourceUrl != null && !sourceUrl.isBlank()) log.warn("인스타 사진 주소가 허용 도메인이 아님 → 저장 안 함 mediaId={}", mediaId);
-      return null; // 허용 안 되는 주소는 화면에도 내보내지 않음
+      log.warn("인스타 사진 주소가 허용 도메인이 아님 → 저장 안 함 mediaId={}", mediaId);
+      return new Resolution(null, Reason.DOMAIN_REJECTED); // 허용 안 되는 주소는 화면에도 내보내지 않음
     }
     try {
-      return PUBLIC_PREFIX + download(mediaId, uri);
+      return new Resolution(PUBLIC_PREFIX + download(mediaId, uri), Reason.STORED_NEW);
     } catch (IOException | RuntimeException e) {
       log.warn("인스타 사진 저장 실패 → 원래 주소 유지 mediaId={} {}", mediaId, e.getMessage());
-      return sourceUrl;
+      return new Resolution(sourceUrl, Reason.DOWNLOAD_FAILED);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      return sourceUrl;
+      return new Resolution(sourceUrl, Reason.DOWNLOAD_FAILED);
     }
   }
 

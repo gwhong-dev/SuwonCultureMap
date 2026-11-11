@@ -143,6 +143,7 @@ public class InstagramSyncService {
       }
       okAccounts++;
       Map<InstagramBlock.Status, Integer> accountBlocks = new EnumMap<>(InstagramBlock.Status.class);
+      Map<InstagramImageStore.Reason, Integer> accountImages = new EnumMap<>(InstagramImageStore.Reason.class);
       for (InstagramPost post : fetched) {
         posts++;
         try {
@@ -155,6 +156,7 @@ public class InstagramSyncService {
           saved += o.eventsSaved();
           updated += o.eventsUpdated();
           duplicates += o.duplicateBlocks();
+          if (o.imageReason() != null) accountImages.merge(o.imageReason(), 1, Integer::sum);
         } catch (RuntimeException e) {
           postErrors++;
           // 메시지는 남기지 않음 (DB 오류 메시지에 값이 섞일 수 있음) → 예외 종류와 원인 종류만
@@ -167,6 +169,9 @@ public class InstagramSyncService {
       accountBlocks.forEach((s, n) -> { if (n > 0) named.put(s.name(), n); });
       blocksByAccount.put(account, named);
       log.info("인스타 계정 결과 account={} 게시물 {} · 블록 {}", account, fetched.size(), named);
+      // 사진 진단: 행사가 나온 글의 사진 처리 이유 · 이번에 받아 온 게시물 id (최근 N개 밖이면 여기 없음)
+      log.info("인스타 사진 결과 account={} 사진 {} · 받아 온 게시물 {}개 {}", account, accountImages, fetched.size(),
+          fetched.stream().map(InstagramPost::id).toList());
     }
 
     InstagramSyncResult result = new InstagramSyncResult(true, null, accounts.size(), okAccounts, accountErrors,
