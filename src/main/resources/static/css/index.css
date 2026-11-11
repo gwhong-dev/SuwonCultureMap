@@ -67,26 +67,39 @@ body {
   border-radius: 6px;
   border: 1px solid #ccc;
 }
-/* PC 상단 바 왼쪽 로고: 마크(벽돌색) + 수원바이블 + 부제 */
+/* PC 상단 바 왼쪽 로고: 낙관(도장) + 워드마크 / 아래 줄 부제 (static/brand/logo.svg 의 symbol)
+   글자 비율: 워드마크 가로 = 높이 × 5.05, 부제 가로 = 높이 × 8.44 */
 .topbar-brand {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.5rem;
   margin-right: 0.75rem;
   color: inherit;
   text-decoration: none;
-  white-space: nowrap;
 }
-.topbar-brand .brand-mark {
-  color: var(--accent);
+.brand-seal {
+  flex: none;
+  width: 32px;
+  height: 32px;
+}
+.brand-words {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+.brand-words svg {
+  display: block;
 }
 .topbar-brand .brand-name {
-  font-size: 1rem;
-  font-weight: 700;
+  width: 91px;
+  height: 18px;
+  color: #fff;
 }
 .topbar-brand .brand-sub {
-  color: #bbb;
-  font-size: 0.8rem;
+  width: 80px;
+  height: 9.5px;
+  color: #e9906f; /* 어두운 상단 바 위 벽돌색 (밝게 → 대비 5:1 이상) */
 }
 /* 로그인 상태 + 버튼 묶음 (PC: 상단바 오른쪽 / 모바일: ☰ 메뉴 안) */
 #topbarActions {
@@ -1634,19 +1647,21 @@ body {
   .home-logo {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 18px;
-    font-weight: 700;
+    gap: 10px;
+    color: var(--text);
   }
-  .home-logo .brand-mark {
-    width: 22px;
-    height: 22px;
-    color: var(--accent);
+  .home-logo .brand-seal {
+    width: 36px;
+    height: 36px;
+  }
+  .home-logo .brand-name {
+    width: 101px;
+    height: 20px;
   }
   .home-logo .brand-sub {
-    color: var(--sub);
-    font-size: 13px;
-    font-weight: 500;
+    width: 84px;
+    height: 10px;
+    color: var(--accent);
   }
   .home-week {
     padding: 8px 20px 20px;

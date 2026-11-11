@@ -54,7 +54,10 @@ class BrandAssetsTest {
     assertThat(html)
         .contains("property=\"og:title\" content=\"수원바이블 · 수원 문화지도\"")
         .contains("property=\"og:image\" content=\"https://suwonbible.com/brand/og-image.png\"")
-        .contains("class=\"topbar-brand\"", "class=\"home-logo\"", "class=\"brand-sub\">수원 문화지도<");
+        .contains("class=\"topbar-brand\"", "class=\"home-logo\"")
+        // 로고 = 도장 + 워드마크 + 아래 줄 부제 (글자 윤곽 SVG, 11/11 낙관 + 핀)
+        .contains("href=\"/brand/logo.svg#seal\"", "href=\"/brand/logo.svg#wordmark\"", "href=\"/brand/logo.svg#tagline\"")
+        .contains("aria-label=\"수원바이블 · 수원 문화지도\"");
   }
 
   @Test
@@ -68,6 +71,8 @@ class BrandAssetsTest {
         { "/brand/icon-512.png", "image/png" },
         { "/brand/og-image.png", "image/png" },
         { "/brand/logo-mark.svg", "image/svg+xml" },
+        { "/brand/logo.svg", "image/svg+xml" },
+        { "/brand/logo-lockup.svg", "image/svg+xml" },
         { "/brand/fonts/Pretendard-Regular.subset.woff2", "font/woff2" },
         { "/brand/fonts/Pretendard-Medium.subset.woff2", "font/woff2" },
         { "/brand/fonts/Pretendard-Bold.subset.woff2", "font/woff2" },
@@ -78,6 +83,19 @@ class BrandAssetsTest {
       assertThat(res.getStatus()).as(f[0]).isEqualTo(200);
       assertThat(res.getContentType()).as(f[0]).startsWith(f[1]);
       assertThat(res.getContentAsByteArray().length).as(f[0]).isPositive();
+    }
+  }
+
+  @Test
+  void 로고_SVG는_글꼴_없이_윤곽으로_그리고_글꼴_라이선스를_적음() throws Exception {
+    String sprite = body("/brand/logo.svg");
+    assertThat(sprite)
+        .contains("<symbol id=\"seal\"", "<symbol id=\"wordmark\"", "<symbol id=\"tagline\"")
+        .contains("#b4472a") // 도장 벽돌색
+        .contains("SIL Open Font License")
+        .doesNotContain("<text", "font-family", "@font-face"); // 글자는 path 로만
+    for (String f : new String[] { "/brand/logo-mark.svg", "/brand/logo-lockup.svg", "/brand/favicon.svg" }) {
+      assertThat(body(f)).as(f).contains("<path", "SIL Open Font License").doesNotContain("<text", "font-family");
     }
   }
 
