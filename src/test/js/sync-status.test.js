@@ -1,4 +1,4 @@
-// 데이터 갱신 시각 줄 시험 — "M/D HH:mm 갱신", 실패 · 값 없음이면 줄을 숨김
+// 데이터 갱신 시각 줄 시험 — "행사 정보 마지막 갱신 · M/D HH:mm", 실패 · 값 없음이면 줄을 숨김
 const test = require("node:test");
 const assert = require("node:assert");
 const { syncStatusText, showSyncStatus, loadSyncStatus } = require("../../main/resources/static/sync-status.js");
@@ -22,14 +22,14 @@ function ok(body) {
   return { ok: true, status: 200, json: () => Promise.resolve(body) };
 }
 
-test("한국 시간 값 → M/D HH:mm 갱신 (월 · 일 앞 0 없음, 시 · 분은 두 자리)", () => {
-  assert.strictEqual(syncStatusText("2026-11-11T06:00:12"), "11/11 06:00 갱신");
-  assert.strictEqual(syncStatusText("2026-01-05T18:07:00"), "1/5 18:07 갱신");
-  assert.strictEqual(syncStatusText("2026-12-31T00:00"), "12/31 00:00 갱신");
+test("한국 시간 값 → 행사 정보 마지막 갱신 · M/D HH:mm (월 · 일 앞 0 없음, 시 · 분은 두 자리)", () => {
+  assert.strictEqual(syncStatusText("2026-11-11T06:00:12"), "행사 정보 마지막 갱신 · 11/11 06:00");
+  assert.strictEqual(syncStatusText("2026-01-05T18:07:00"), "행사 정보 마지막 갱신 · 1/5 18:07");
+  assert.strictEqual(syncStatusText("2026-12-31T00:00"), "행사 정보 마지막 갱신 · 12/31 00:00");
 });
 
 test("기기 시간대와 상관없이 서버 값의 숫자 그대로 (UTC 로 바꾸지 않음)", () => {
-  assert.strictEqual(syncStatusText("2026-11-11T06:00:00+09:00"), "11/11 06:00 갱신");
+  assert.strictEqual(syncStatusText("2026-11-11T06:00:00+09:00"), "행사 정보 마지막 갱신 · 11/11 06:00");
 });
 
 test("없음 · 틀린 형식이면 null (줄을 숨김)", () => {
@@ -46,19 +46,19 @@ test("없음 · 틀린 형식이면 null (줄을 숨김)", () => {
 test("칸 표시: 글이 있으면 보이고, 없으면 비우고 숨김", () => {
   const a = fakeEl();
   const b = fakeEl();
-  showSyncStatus([a, b], "11/11 06:00 갱신");
-  assert.deepStrictEqual([a, b].map((e) => [e.textContent, e.hidden]), [["11/11 06:00 갱신", false], ["11/11 06:00 갱신", false]]);
+  showSyncStatus([a, b], "행사 정보 마지막 갱신 · 11/11 06:00");
+  assert.deepStrictEqual([a, b].map((e) => [e.textContent, e.hidden]), [["행사 정보 마지막 갱신 · 11/11 06:00", false], ["행사 정보 마지막 갱신 · 11/11 06:00", false]]);
   showSyncStatus([a, b], null);
   assert.deepStrictEqual([a, b].map((e) => [e.textContent, e.hidden]), [["", true], ["", true]]);
 });
 
-test("API 성공 → 모바일 · PC 칸 모두 같은 글", async () => {
+test("API 성공 → data-sync-status 칸 모두 같은 글", async () => {
   const els = [fakeEl(), fakeEl()];
   const f = fakeFetch(ok({ lastSuccessAt: "2026-11-11T06:00:12", createdCount: 3, updatedCount: 7 }));
   const text = await loadSyncStatus(f, els);
-  assert.strictEqual(text, "11/11 06:00 갱신");
+  assert.strictEqual(text, "행사 정보 마지막 갱신 · 11/11 06:00");
   assert.deepStrictEqual(f.calls, ["/api/sync-status"]);
-  assert.ok(els.every((e) => !e.hidden && e.textContent === "11/11 06:00 갱신"));
+  assert.ok(els.every((e) => !e.hidden && e.textContent === "행사 정보 마지막 갱신 · 11/11 06:00"));
 });
 
 test("성공 기록이 없으면(lastSuccessAt null) 숨김", async () => {

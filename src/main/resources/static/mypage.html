@@ -27,8 +27,16 @@
       <a class="back-link" href="about.html">서비스 안내</a>
       <a class="back-link" href="privacy.html">개인정보 처리방침</a>
       <a class="back-link" href="index.html">← 지도로 돌아가기</a>
+
+      <!-- 데이터 정보 (11/11 사용자 결정: 목록 줄이 아니라 마이 페이지 맨 아래에만)
+           1줄 = 행사 정보 마지막 갱신 시각(sync-status.js) — 값 없음 · API 실패면 이 줄만 숨김 / 2줄 = 출처(고정) -->
+      <div class="data-info">
+        <p class="data-info-line" data-sync-status hidden></p>
+        <p class="data-info-line">출처 · 수원문화재단 공공데이터, 공식 인스타그램 계정</p>
+      </div>
     </div>
 
+    <script src="/sync-status.js"></script>
     <script src="/js/mypage.js"></script>
 </body>
 </html>

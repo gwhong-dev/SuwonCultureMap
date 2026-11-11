@@ -311,19 +311,24 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
-  void 데이터_갱신_시각_줄이_모바일_결과_줄_옆과_PC_사이드바에_있음() throws Exception {
-    // "11/11 06:00 갱신" (sync-status.js): 값이 오기 전 · 실패면 hidden 으로 숨김 → 처음부터 hidden
-    String html = page();
-    int resultCount = html.indexOf("<span id=\"resultCount\">");
-    int mobile = html.indexOf("<span class=\"sync-status\" data-sync-status hidden></span>");
-    assertThat(resultCount).isPositive();
-    assertThat(mobile).isGreaterThan(resultCount).isLessThan(html.indexOf("id=\"sheetToggle\""));
-    int pc = html.indexOf("<div class=\"sync-status sync-status-pc\" data-sync-status hidden></div>");
-    assertThat(pc).isPositive().isLessThan(html.indexOf("<div id=\"list\"></div>"));
-    assertThat(html.indexOf("<script src=\"/sync-status.js\"></script>")).isPositive();
+  void 데이터_갱신_시각은_마이_페이지_맨_아래에만_있음() throws Exception {
+    // 11/11 사용자 결정: 목록 결과 줄(모바일 · PC)에는 안 넣고, 마이 페이지를 열었을 때만
+    String index = page();
+    assertThat(index).doesNotContain("data-sync-status", "sync-status.js");
+    assertThat(fetch("/css/index.css")).doesNotContain(".sync-status");
+
+    // 마이 페이지 맨 아래 정보 칸: 1줄 갱신 시각(값 오기 전 · 실패면 hidden) · 2줄 출처(고정)
+    String mypage = fetch("/mypage.html");
+    int info = mypage.indexOf("<div class=\"data-info\">");
+    int sync = mypage.indexOf("<p class=\"data-info-line\" data-sync-status hidden></p>");
+    int source = mypage.indexOf("<p class=\"data-info-line\">출처 · 수원문화재단 공공데이터, 공식 인스타그램 계정</p>");
+    assertThat(info).isGreaterThan(mypage.indexOf("← 지도로 돌아가기"));
+    assertThat(sync).isGreaterThan(info).isLessThan(source);
+    assertThat(mypage.indexOf("<script src=\"/sync-status.js\"></script>")).isPositive();
+    assertThat(fetch("/css/mypage.css")).contains(".data-info-line", "font-size: 12px;");
 
     MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     assertThat(mockMvc.perform(get("/sync-status.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
-    assertThat(fetch("/sync-status.js")).contains("/api/sync-status", "[data-sync-status]", "syncStatusText(");
+    assertThat(fetch("/sync-status.js")).contains("/api/sync-status", "[data-sync-status]", "syncStatusText(", "행사 정보 마지막 갱신 · ");
   }
 }

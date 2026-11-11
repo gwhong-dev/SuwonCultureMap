@@ -73,11 +73,7 @@
         <div id="sheetHeader" role="button" tabindex="0" aria-expanded="false" aria-label="행사 불러오는 중">
           <div class="sheet-handle"></div>
           <div class="sheet-bar">
-            <span class="sheet-count">
-              <span id="resultCount">행사 불러오는 중…</span>
-              <!-- 데이터 갱신 시각 "11/11 06:00 갱신" (sync-status.js). 값이 없거나 실패면 숨김 -->
-              <span class="sync-status" data-sync-status hidden></span>
-            </span>
+            <span id="resultCount">행사 불러오는 중…</span>
             <span id="sheetToggle">
               <span id="sheetToggleText">목록 보기</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 15l6-6 6 6" /></svg>
@@ -89,8 +85,6 @@
           <button type="button" class="fav-tab active" data-view="fav" id="favTabFav" role="tab" aria-selected="true" aria-controls="list">찜 <span id="favTabFavCount">0</span></button>
           <button type="button" class="fav-tab" data-view="recent" id="favTabRecent" role="tab" aria-selected="false" aria-controls="list" tabindex="-1">최근 본 <span id="favTabRecentCount">0</span></button>
         </div>
-        <!-- PC 전용: 데이터 갱신 시각 (모바일은 위 결과 줄 옆) -->
-        <div class="sync-status sync-status-pc" data-sync-status hidden></div>
         <div id="list"></div>
       </aside>
       <!-- 모바일 전용: 마커 탭 시 하단 카드 ("가까운 순 · 1 / N" + 좌우로 넘기는 카드) -->
@@ -363,7 +357,6 @@
     <script src="/nav-history.js"></script>
     <script src="/dialog-focus.js"></script>
     <script src="/strip-nav.js"></script>
-    <script src="/sync-status.js"></script>
     <script src="/js/index.js"></script>
   </body>
 </html>
