@@ -68,7 +68,9 @@ body {
   border: 1px solid #ccc;
 }
 /* PC 상단 바 왼쪽 로고: 낙관(도장) + 워드마크 / 아래 줄 부제 (static/brand/logo.svg 의 symbol)
-   글자 비율: 워드마크 가로 = 높이 × 5.05, 부제 가로 = 높이 × 8.44 */
+   글자 비율: 워드마크 가로 = 높이 × 5.05, 부제 가로 = 높이 × 8.44
+   부제 왼쪽 끝 = 워드마크 첫 글자 '수'의 가로 중심 → 부제 margin-left = 워드마크 높이 × 0.5
+   ('수' 윤곽 x 1.5~91.7 / 높이 90.5 → 중심 0.515, 부제 첫 글자 안쪽 여백 약 0.25px 를 뺌) */
 .topbar-brand {
   display: flex;
   align-items: center;
@@ -106,6 +108,7 @@ body {
 .topbar-brand .brand-sub {
   width: 80px;
   height: 9.5px;
+  margin-left: 9px; /* 워드마크 높이 18px × 0.5 */
   color: #e9906f; /* 어두운 상단 바 위 벽돌색 (밝게 → 대비 5:1 이상) */
 }
 /* 로그인 상태 + 버튼 묶음 (PC: 상단바 오른쪽 / 모바일: ☰ 메뉴 안) */
@@ -1760,6 +1763,7 @@ body {
   .home-logo .brand-sub {
     width: 84px;
     height: 10px;
+    margin-left: 10px; /* 워드마크 높이 20px × 0.5 */
     color: var(--accent);
   }
   .home-week {
