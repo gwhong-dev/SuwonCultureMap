@@ -19,7 +19,8 @@ public class RestTemplateConfig {
     return create(CONNECT_TIMEOUT, READ_TIMEOUT);
   }
 
-  static RestTemplate create(Duration connectTimeout, Duration readTimeout) {
+  // 짧은 제한이 필요한 클라이언트(화면 열람 때 부르는 경기도 정류소 API 등)도 같은 방식으로 만듦
+  public static RestTemplate create(Duration connectTimeout, Duration readTimeout) {
     SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
     factory.setConnectTimeout(connectTimeout);
     factory.setReadTimeout(readTimeout);
