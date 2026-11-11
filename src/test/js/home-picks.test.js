@@ -115,10 +115,10 @@ test("지금 진행 중: 운영중이고 오늘 진행 (진행 날짜를 알면 
     ev(4, "2026-11-05", "2026-11-06"), // 오픈예정 → 뺌
     ev(5, "2026-10-01", "2026-11-03"), // 지난 행사 → 뺌
     ev(6, null, null), // 날짜 없음 → 뺌
-    ev(7, null, "2026-11-30"), // 시작일 없음 → 이미 시작으로 봄
+    ev(7, null, "2026-11-30"), // 시작일 없음 → 뺌 ("오늘 진행" 목록 필터 matchRunDays 와 같게, 수 N = 목록 수)
     ev(8, "2026-11-04", null), // 오늘 하루
   ];
-  assert.deepStrictEqual(ids(nowOpenEvents(events, WED)), [8, 3, 7, 1]);
+  assert.deepStrictEqual(ids(nowOpenEvents(events, WED)), [8, 3, 1]);
 });
 
 test("진행 중 카드: 곧 종료에 나온 행사는 빼서 ① · ② 가 겹치지 않음 (수 N 은 진행 중 전체)", () => {

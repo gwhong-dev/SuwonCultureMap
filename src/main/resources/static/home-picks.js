@@ -1,4 +1,4 @@
-// 모바일 홈(디자인 01) 칸별 행사 고르기 규칙 (계획 docs/design/mobile-home-search-plan.md 2번)
+// 모바일 홈 칸별 행사 고르기 규칙 — 11/11 시안 3칸 · 내 주변 · 검색 (계획 docs/design/mobile-home-search-plan.md 2번)
 // 오늘 · 상태는 schedule-format.js 와 같은 기준(한국 시간). 시험: node --test src/test/js/ (CI 에서 실행)
 var homeSchedule =
   typeof module !== "undefined"
@@ -59,13 +59,13 @@ function startingSoon(events, now) {
 }
 
 // ① 지금 진행 중: 운영중이고 오늘 진행 (진행 날짜를 알면 오늘이 그중 하나, 모르면 기간 안 = 지도 칩 "오늘 진행"과 같음)
-// 시작일 없이 종료일만 있는 행사는 이미 시작한 것으로 봄 (eventStatus 와 같음). 끝나는 날 가까운 순
+// 수 N = "전체 →"(목록 + 오늘 진행) 수와 같게 matchRunDays 그대로 씀 → 시작일 없는 행사는 빠짐. 끝나는 날 가까운 순
 function nowOpenEvents(events, now) {
   var today = homeSchedule.koreaToday(now);
   return events
     .filter(function (event) {
       if (homeSchedule.eventStatus(event, now) !== "open") return false;
-      return !event.startDate || homeSchedule.matchRunDays(event, [today]) !== "no";
+      return homeSchedule.matchRunDays(event, [today]) !== "no";
     })
     .sort(byDateThenTitle(endDateOf));
 }

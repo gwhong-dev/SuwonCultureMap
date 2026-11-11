@@ -2042,23 +2042,23 @@ function monthCardHtml(event) {
   );
 }
 
+var homeMonthList = []; // monthGroups 결과 (달 칩을 누를 때 다시 고르지 않게)
+
+// 행사를 받을 때마다: 달 칩 다시 만들기 (고른 달이 없어졌으면 첫 달)
 function renderHomeMonths() {
-  var groups = monthGroups(homeEvents());
+  homeMonthList = monthGroups(homeEvents());
   var section = document.getElementById("homeMonths");
-  section.hidden = groups.length === 0;
-  if (!groups.length) return;
-  var selected =
-    groups.filter(function (group) {
-      return group.key === homeMonthKey;
-    })[0] || groups[0];
-  homeMonthKey = selected.key;
+  section.hidden = homeMonthList.length === 0;
+  if (!homeMonthList.length) return;
+  var keep = homeMonthList.some(function (group) {
+    return group.key === homeMonthKey;
+  });
+  if (!keep) homeMonthKey = homeMonthList[0].key;
   var chips = document.getElementById("homeMonthChips");
-  chips.innerHTML = groups
+  chips.innerHTML = homeMonthList
     .map(function (group) {
-      var active = group.key === selected.key;
       return (
-        '<button type="button" class="month-chip' + (active ? " active" : "") + '" data-month="' + group.key + '"' +
-        ' aria-pressed="' + active + '" aria-label="' + group.label + " 행사 " + group.events.length + '개">' +
+        '<button type="button" class="month-chip" data-month="' + group.key + '" aria-pressed="false">' +
         group.label + " · " + group.events.length +
         "</button>"
       );
@@ -2066,12 +2066,25 @@ function renderHomeMonths() {
     .join("");
   chips.querySelectorAll(".month-chip").forEach(function (chip) {
     chip.addEventListener("click", function () {
-      homeMonthKey = chip.dataset.month;
-      renderHomeMonths();
+      selectHomeMonth(chip.dataset.month);
     });
   });
+  selectHomeMonth(homeMonthKey);
+}
+
+// 달 칩 누름: 칩은 다시 그리지 않고 선택 표시만 바꿈 (키보드 포커스가 칩에 남게) + 그 달 카드
+function selectHomeMonth(key) {
+  homeMonthKey = key;
+  document.querySelectorAll("#homeMonthChips .month-chip").forEach(function (chip) {
+    var active = chip.dataset.month === key;
+    chip.classList.toggle("active", active);
+    chip.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+  var group = homeMonthList.filter(function (g) {
+    return g.key === key;
+  })[0];
   var track = document.getElementById("homeMonthTrack");
-  track.innerHTML = selected.events.map(monthCardHtml).join("");
+  track.innerHTML = group ? group.events.map(monthCardHtml).join("") : "";
   track.scrollLeft = 0; // 달을 바꾸면 처음 카드부터
   bindHomeCards(track);
 }
