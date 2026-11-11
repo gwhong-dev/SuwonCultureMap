@@ -88,12 +88,12 @@ Write-Host ''
 
 if (Test-Path -LiteralPath $envFile) {
     # 이미 있는 .env 는 덮어쓰지 않음 (DB 비밀번호가 바뀌면 기존 MySQL 볼륨에 접속 못 함)
-    # 단, 나중에 생긴 선택 항목(인스타)이 dev 파일에 있고 .env 에 없으면 그 줄만 끝에 보충
+    # 단, 나중에 생긴 선택 항목(카카오 어드민 · 인스타 · 경기도 정류소)이 dev 파일에 있고 .env 에 없으면 그 줄만 끝에 보충
     $added = @()
     if (Test-Path -LiteralPath $dev) {
         $devProps = Read-JavaProperties $dev
         $existing = Get-Content -LiteralPath $envFile -Encoding UTF8
-        $supplement = [ordered]@{ KAKAO_ADMIN_KEY = 'kakao.admin-key'; INSTAGRAM_ACCESS_TOKEN = 'instagram.access-token'; INSTAGRAM_USER_ID = 'instagram.user-id'; INSTAGRAM_ACCOUNTS = 'instagram.accounts' }
+        $supplement = [ordered]@{ KAKAO_ADMIN_KEY = 'kakao.admin-key'; INSTAGRAM_ACCESS_TOKEN = 'instagram.access-token'; INSTAGRAM_USER_ID = 'instagram.user-id'; INSTAGRAM_ACCOUNTS = 'instagram.accounts'; GG_BUS_SERVICE_KEY = 'gg.bus.service-key' }
         foreach ($e in $supplement.GetEnumerator()) {
             $inEnv = @($existing | Where-Object { $_ -match ('^\s*' + $e.Key + '\s*=') }).Count -gt 0
             $v = $devProps[$e.Value]
@@ -161,12 +161,13 @@ $lines = @(
     ('MYSQL_ROOT_PASSWORD=' + (New-Password))
 )
 foreach ($e in $map.GetEnumerator()) { $lines += ($e.Key + '=' + (Escape-Value $props[$e.Value])) }
-# 카카오 어드민 키 · 인스타 수집은 선택 → dev 파일에 값이 있을 때만 넣음 (없으면 compose 기본값)
+# 카카오 어드민 키 · 인스타 수집 · 경기도 정류소 키는 선택 → dev 파일에 값이 있을 때만 넣음 (없으면 compose 기본값)
 $optional = [ordered]@{
     KAKAO_ADMIN_KEY        = 'kakao.admin-key'
     INSTAGRAM_ACCESS_TOKEN = 'instagram.access-token'
     INSTAGRAM_USER_ID      = 'instagram.user-id'
     INSTAGRAM_ACCOUNTS     = 'instagram.accounts'
+    GG_BUS_SERVICE_KEY     = 'gg.bus.service-key'
 }
 foreach ($e in $optional.GetEnumerator()) {
     if ($props.ContainsKey($e.Value) -and -not [string]::IsNullOrWhiteSpace($props[$e.Value])) {
