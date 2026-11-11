@@ -138,7 +138,7 @@
 
 | 구분 | 내용 |
 |---|---|
-| 설정 | `gbis.service-key` (application.properties 엔 이름만, 값은 dev 파일 · 운영 환경변수 `GBIS_SERVICE_KEY`), test 프로필 가짜 키. `deploy` compose · `.env` 안내에 키 이름 추가 |
+| 설정 | `gg.bus.service-key` (application.properties 엔 `${GG_BUS_SERVICE_KEY:}` 만, 값은 dev 파일 · Docker/운영 `.env` 의 `GG_BUS_SERVICE_KEY`), test 프로필 가짜 키 `test-key`. compose · `.env.example` · `setup-docker` 연결 ✅ (11/11 키 자리만, 기능 코드는 아직) |
 | 백엔드 | `GbisStationClient`(주변정류소 · 경유노선 2개 호출, RestTemplate) · `KakaoSubwayClient`(또는 `KakaoPlaceSearchClient` 에 카테고리 메서드) · `NearbyTransitService`(합치기 · 도보 분 · 같은 이름 합치기 · 캐시) · `TransitController` `GET /api/events/{id}/transit` · 응답 DTO |
 | 화면 | `static/transit-nearby.js` (그리기만, `addEventListener` 방식 — CSP), `index.html` `#detailLocation` 에 칸 1개, CSS 몇 줄 |
 | 테스트 | 클라이언트: `MockRestServiceServer` 로 응답 · 오류 코드(4 = 결과 없음) · 키가 로그에 안 찍히는지 / 서비스: 가까운 순 · 같은 이름 합치기 · 도보 분 · 캐시 적중 · 실패 캐시 10분 / 컨트롤러: 없는 행사 404 · 좌표 없는 행사 빈 응답 / node: 칩 "+N" · 빈 응답이면 칸 숨김 |
