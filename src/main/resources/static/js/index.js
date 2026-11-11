@@ -1860,9 +1860,10 @@ document.querySelectorAll("#tabBar button[data-tab]").forEach(function (tab) {
   });
 });
 
-// ----- 홈 화면 (디자인 01): 이번 주 행사 수 + 캐러셀 + 이달의 행사 + 곧 종료 / 곧 시작 (고르는 규칙은 home-picks.js) -----
-// 페이지 전체가 스크롤 (index.css body.home-open, 사파리 주소창이 줄어들게)
+// ----- 홈 화면 (11/11 시안 3칸): ① 지금 진행 중 ② 곧 종료 | 곧 시작 (7일 안) ③ 달별 행사 + 내 주변 -----
+// 고르는 규칙은 home-picks.js. 페이지 전체가 스크롤 (index.css body.home-open, 사파리 주소창이 줄어들게)
 var homeSoonMode = "ending"; // "ending" 곧 종료 | "starting" 곧 시작
+var homeMonthKey = null; // 달별 행사에서 고른 달 ("2026-12"). 없으면 첫 달
 
 function showHome() {
   nav.close("tab"); // 홈에서 나가며 쌓은 칸을 되돌림 (뒤로 가기로 왔으면 이미 빠짐)
@@ -1876,8 +1877,7 @@ function showHome() {
   homeOpen = true;
   document.body.classList.add("home-open");
   window.scrollTo(0, 0);
-  carouselJump(carouselIndex); // 숨어 있을 때는 폭이 0 이라 자리를 못 맞춤 → 보일 때 맞춤
-  drawNearbyMap(); // 작은 지도도 같은 이유로 보일 때 그림
+  drawNearbyMap(); // 숨은 칸에선 크기가 0 이라 작은 지도는 보일 때 그림
   updateTabBar();
 }
 
@@ -1896,127 +1896,82 @@ function homeEvents() {
 }
 
 function renderHome() {
-  document.getElementById("homeWeekCount").textContent = thisWeekEvents(homeEvents()).length + "개";
-  renderHomeCarousel();
-  renderHomeMonth();
+  renderHomeNow();
   renderHomeSoon();
+  renderHomeMonths();
   renderHomeNearby();
 }
 
-// ----- 포스터 캐러셀 (디자인 01): 카드 280px · 스와이프 · 끝에서 처음으로 · 진행 막대 + "1 / 5" -----
-// 무한: [마지막 복제] 1 … N [첫 번째 복제] 로 놓고, 복제 카드에서 멈추면 같은 모양의 진짜 카드로 순간 이동
-var carouselIndex = 0; // 지금 보이는 진짜 카드 (0부터)
-var carouselCount = 0;
-var carouselSettleTimer = null;
+window.addEventListener("resize", function () {
+  if (!homeOpen) return;
+  drawNearbyMap(); // 화면 회전 · 폭 변화 뒤 작은 지도 크기 · 범위 다시 맞춤
+});
 
-function posterSlideHtml(event, index, count, clone) {
-  var status = eventStatus(event);
-  var dday = ddayText(event);
-  var sub = [event.category, eventDistrict(event), formatEventDates(event)].filter(Boolean);
+// 사진 칸 + 분류 글자 (사진이 없거나 못 불러오면 회색 칸에 분류 글자). 진행 중 · 달별 카드가 같이 씀
+function cardPosterHtml(event, badge) {
+  var status = badge ? eventStatus(event) : null;
   return (
-    '<div class="poster-slide"' +
-    (clone
-      ? ' aria-hidden="true" inert'
-      : ' role="group" aria-roledescription="슬라이드" aria-label="' + (index + 1) + " / " + count + '"') +
-    ">" +
-    '<button type="button" class="poster-card" data-event-id="' + event.id + '"' + (clone ? ' tabindex="-1"' : "") + ">" +
     '<span class="poster-img">' +
     '<span class="row-poster-text">' + escapeHtml(event.category || "") + "</span>" +
-    '<img src="' + escapeHtml(event.imageUrl) + '" alt="" loading="' + (index === 0 && !clone ? "eager" : "lazy") + '">' +
-    "</span>" +
-    (status
-      ? '<span class="row-badges"><span class="status-badge ' + status + '">' + statusLabel(status) + "</span>" +
-        (dday ? '<span class="dday-badge">' + dday + "</span>" : "") +
-        "</span>"
-      : "") +
-    '<span class="poster-title">' + escapeHtml(event.title) + "</span>" +
-    '<span class="row-sub">' + escapeHtml(sub.join(" · ")) + "</span>" +
-    "</button>" +
-    "</div>"
+    (event.imageUrl ? '<img src="' + escapeHtml(event.imageUrl) + '" alt="" loading="lazy">' : "") +
+    (status ? '<span class="status-badge ' + status + '">' + statusLabel(status) + "</span>" : "") +
+    "</span>"
   );
 }
 
-function renderHomeCarousel() {
-  var section = document.getElementById("homeCarousel");
-  var track = document.getElementById("homeCarouselTrack");
-  var picks = carouselPicks(homeEvents());
-  carouselCount = picks.length;
-  carouselIndex = 0;
-  section.hidden = picks.length === 0;
-  var slides = picks.map(function (event, i) {
-    return posterSlideHtml(event, i, picks.length, false);
-  });
-  if (picks.length > 1) {
-    var last = picks.length - 1;
-    slides.unshift(posterSlideHtml(picks[last], last, picks.length, true));
-    slides.push(posterSlideHtml(picks[0], 0, picks.length, true));
-  }
-  track.innerHTML = slides.join("");
-  track.querySelectorAll(".poster-card").forEach(function (card) {
+// 카드를 누르면 상세, 사진 실패 → 숨겨서 회색 칸 + 분류 글자
+function bindHomeCards(root) {
+  root.querySelectorAll(".home-card").forEach(function (card) {
     var img = card.querySelector("img");
-    if (img) hideOnError(img); // 못 불러오면 회색 칸 + 분류 글자
+    if (img) hideOnError(img);
     card.addEventListener("click", function () {
       openDetailFromMarker(Number(card.dataset.eventId));
     });
   });
-  carouselJump(0);
-  updateCarouselProgress();
 }
 
-// 진짜 카드 번호 → 줄 안의 칸 번호 (앞에 복제 1장이 있으면 +1)
-function carouselSlot(index) {
-  return carouselCount > 1 ? index + 1 : index;
+// ① 지금 진행 중: 가로 카드 200px (사진 4:3 + 운영중 배지 + 제목 + 종료까지 D-N · 구)
+function nowCardHtml(event) {
+  var sub = [ddayText(event), eventDistrict(event)].filter(Boolean);
+  return (
+    '<button type="button" class="home-card now-card" data-event-id="' + event.id + '">' +
+    cardPosterHtml(event, true) +
+    '<span class="card-title">' + escapeHtml(event.title) + "</span>" +
+    '<span class="row-sub">' + escapeHtml(sub.join(" · ")) + "</span>" +
+    "</button>"
+  );
 }
 
-// 그 칸이 왼쪽 여백 자리에 오도록 순간 이동 (홈이 숨어 있으면 폭이 0 → showHome 때 다시)
-function carouselJump(index) {
-  var track = document.getElementById("homeCarouselTrack");
-  var slide = track.children[carouselSlot(index)];
-  if (!slide || track.clientWidth === 0) return; // 칸이 없음(스켈레톤 · 빈 캐러셀) · 숨어 있음
-  track.scrollLeft = slide.offsetLeft - track.children[0].offsetLeft;
+function renderHomeNow() {
+  var events = homeEvents();
+  var count = nowOpenEvents(events).length;
+  var cards = nowOpenCards(events);
+  var track = document.getElementById("homeNowTrack");
+  track.removeAttribute("aria-busy");
+  document.getElementById("homeNowCount").textContent = count;
+  document.getElementById("homeNowAll").hidden = count === 0;
+  if (cards.length === 0) {
+    // 진행 중이 없거나, 진행 중 행사가 모두 아래 "곧 종료"에 나옴 (겹쳐 보이지 않게)
+    track.innerHTML =
+      '<p class="home-empty">' +
+      (count ? "진행 중인 행사는 모두 아래 '곧 종료'에 있어요" : "오늘 진행 중인 행사가 없어요") +
+      "</p>";
+    return;
+  }
+  track.innerHTML = cards.map(nowCardHtml).join("");
+  track.scrollLeft = 0; // 다시 그릴 때 처음 카드부터
+  bindHomeCards(track);
 }
 
-// 지금 스크롤 위치에서 가장 가까운 칸 번호
-function carouselNearestSlot() {
-  var track = document.getElementById("homeCarouselTrack");
-  var slides = track.children;
-  if (slides.length < 2) return 0;
-  var step = slides[1].offsetLeft - slides[0].offsetLeft;
-  return Math.max(0, Math.min(slides.length - 1, Math.round(track.scrollLeft / step)));
-}
-
-function updateCarouselProgress() {
-  var show = carouselCount > 1;
-  document.querySelector("#homeCarousel .carousel-progress").hidden = !show;
-  if (!show) return;
-  document.getElementById("homeCarouselFill").style.width = ((carouselIndex + 1) / carouselCount) * 100 + "%";
-  document.getElementById("homeCarouselCount").textContent = carouselIndex + 1 + " / " + carouselCount;
-}
-
-// 스와이프 중에도 번호 · 막대를 바로 갱신
-function onCarouselScroll() {
-  if (carouselCount < 2) return;
-  carouselIndex = (carouselNearestSlot() - 1 + carouselCount) % carouselCount;
-  updateCarouselProgress();
-  clearTimeout(carouselSettleTimer);
-  carouselSettleTimer = setTimeout(settleCarousel, 150); // scrollend 를 모르는 브라우저용
-}
-
-// 멈춘 곳이 복제 카드면 진짜 카드로 (같은 그림이라 눈에 안 띔)
-function settleCarousel() {
-  clearTimeout(carouselSettleTimer);
-  if (carouselCount < 2) return;
-  var slot = carouselNearestSlot();
-  if (slot === 0 || slot === carouselCount + 1) carouselJump(carouselIndex);
-}
-
-var homeCarouselTrack = document.getElementById("homeCarouselTrack");
-homeCarouselTrack.addEventListener("scroll", onCarouselScroll, { passive: true });
-homeCarouselTrack.addEventListener("scrollend", settleCarousel);
-window.addEventListener("resize", function () {
-  if (!homeOpen) return;
-  carouselJump(carouselIndex); // 화면 회전 · 폭 변화 뒤 카드 자리 맞춤
-  drawNearbyMap(); // 작은 지도 크기 · 범위 다시 맞춤
+// "전체 →": 목록 탭 + 날짜 칩 "오늘 진행" (다른 필터는 풀어서 목록 수 = N)
+document.getElementById("homeNowAll").addEventListener("click", function () {
+  document.getElementById("searchInput").value = "";
+  document.getElementById("categorySelect").value = "all";
+  document.getElementById("dateFilter").value = "today";
+  document.getElementById("showPastCheckbox").checked = false;
+  freeOnly = false;
+  districtFilter = null;
+  selectTab("list"); // filterMarkers 가 목록 · 칩 표시까지 맞춤
 });
 
 // 행사 행 (디자인 2번 공통 부품): 포스터 56×70 + 배지 + 제목 + 보조 줄(분류 · 구 · 기간)
@@ -2055,73 +2010,85 @@ function bindEventRows(root) {
   });
 }
 
+// ② 곧 종료 | 곧 시작: 탭 이름 옆 수 + 고른 탭의 행 (7일 안 전부)
 function renderHomeSoon() {
   var list = document.getElementById("homeSoonList");
   list.removeAttribute("aria-busy");
-  var ending = homeSoonMode === "ending";
-  var picks = ending ? endingSoon(homeEvents()) : startingSoon(homeEvents());
+  var ending = endingSoon(homeEvents());
+  var starting = startingSoon(homeEvents());
+  document.getElementById("homeEndingCount").textContent = ending.length;
+  document.getElementById("homeStartingCount").textContent = starting.length;
+  var isEnding = homeSoonMode === "ending";
+  var picks = isEnding ? ending : starting;
   if (picks.length === 0) {
     list.innerHTML =
-      '<p class="home-empty">' + (ending ? "곧 종료되는 행사가 없어요" : "곧 시작하는 행사가 없어요") + "</p>";
+      '<p class="home-empty">' +
+      (isEnding ? "7일 안에 끝나는 행사가 없어요" : "7일 안에 시작하는 행사가 없어요") +
+      "</p>";
     return;
   }
   list.innerHTML = picks.map(eventRowHtml).join("");
   bindEventRows(list);
 }
 
-// ----- 이달의 행사 (디자인 01): 가로 카드 148px (포스터 + 배지 + 제목 + 기간), 끝에 "전체 보기 →" → 목록 탭 -----
+// ③ 달별 행사: 달 칩 "12월 · 14" + 그 달 카드 110px (사진 정사각 + 제목 + 기간)
 function monthCardHtml(event) {
-  var status = eventStatus(event);
   return (
-    '<button type="button" class="month-card" data-event-id="' + event.id + '">' +
-    '<span class="poster-img">' +
-    '<span class="row-poster-text">' + escapeHtml(event.category || "") + "</span>" +
-    (event.imageUrl ? '<img src="' + escapeHtml(event.imageUrl) + '" alt="" loading="lazy">' : "") +
-    "</span>" +
-    (status
-      ? '<span class="row-badges"><span class="status-badge ' + status + '">' + statusLabel(status) + "</span></span>"
-      : "") +
-    '<span class="month-title">' + escapeHtml(event.title) + "</span>" +
+    '<button type="button" class="home-card month-card" data-event-id="' + event.id + '">' +
+    cardPosterHtml(event, false) +
+    '<span class="card-title">' + escapeHtml(event.title) + "</span>" +
     '<span class="row-sub">' + escapeHtml(formatEventDates(event) || "") + "</span>" +
     "</button>"
   );
 }
 
-function renderHomeMonth() {
-  var section = document.getElementById("homeMonth");
-  var track = document.getElementById("homeMonthTrack");
-  var picks = monthEvents(homeEvents());
-  section.hidden = picks.length === 0;
-  document.getElementById("homeMonthTitle").textContent = monthTitle();
-  track.innerHTML =
-    picks.map(monthCardHtml).join("") +
-    '<button type="button" class="month-more" id="homeMonthMore">전체 보기 →</button>';
-  track.scrollLeft = 0; // 다시 그릴 때 처음 카드부터
-  track.querySelectorAll(".month-card").forEach(function (card) {
-    var img = card.querySelector("img");
-    if (img) hideOnError(img); // 못 불러오면 회색 칸 + 분류 글자
-    card.addEventListener("click", function () {
-      openDetailFromMarker(Number(card.dataset.eventId));
+function renderHomeMonths() {
+  var groups = monthGroups(homeEvents());
+  var section = document.getElementById("homeMonths");
+  section.hidden = groups.length === 0;
+  if (!groups.length) return;
+  var selected =
+    groups.filter(function (group) {
+      return group.key === homeMonthKey;
+    })[0] || groups[0];
+  homeMonthKey = selected.key;
+  var chips = document.getElementById("homeMonthChips");
+  chips.innerHTML = groups
+    .map(function (group) {
+      var active = group.key === selected.key;
+      return (
+        '<button type="button" class="month-chip' + (active ? " active" : "") + '" data-month="' + group.key + '"' +
+        ' aria-pressed="' + active + '" aria-label="' + group.label + " 행사 " + group.events.length + '개">' +
+        group.label + " · " + group.events.length +
+        "</button>"
+      );
+    })
+    .join("");
+  chips.querySelectorAll(".month-chip").forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      homeMonthKey = chip.dataset.month;
+      renderHomeMonths();
     });
   });
-  document.getElementById("homeMonthMore").addEventListener("click", function () {
-    selectTab("list"); // 하단 탭 "목록"과 같음 (지금 걸린 필터 그대로)
-  });
+  var track = document.getElementById("homeMonthTrack");
+  track.innerHTML = selected.events.map(monthCardHtml).join("");
+  track.scrollLeft = 0; // 달을 바꾸면 처음 카드부터
+  bindHomeCards(track);
 }
 
 function renderHomeLoading() {
-  document.getElementById("homeWeekRange").textContent = weekLabel(weekRange());
-  document.getElementById("homeWeekCount").textContent = "…";
-  var carousel = document.getElementById("homeCarousel");
-  carouselCount = 0; // 다시 시도 때 이전 칸 수가 남아 스켈레톤 위에서 없는 칸을 찾지 않게
-  carouselIndex = 0;
-  carousel.hidden = false;
-  carousel.querySelector(".carousel-progress").hidden = true;
-  document.getElementById("homeMonth").hidden = true; // 불러오는 동안은 칸을 비워 둠 (캐러셀 스켈레톤만)
+  document.getElementById("homeNowCount").textContent = "…";
+  document.getElementById("homeNowAll").hidden = true;
+  document.getElementById("homeEndingCount").textContent = "";
+  document.getElementById("homeStartingCount").textContent = "";
+  document.getElementById("homeMonths").hidden = true; // 불러오는 동안은 칸을 비워 둠
   document.getElementById("homeNearby").hidden = true;
-  document.getElementById("homeCarouselTrack").innerHTML =
-    '<div class="poster-slide" aria-hidden="true"><span class="poster-img sk"></span>' +
-    '<span class="sk sk-line w40"></span><span class="sk sk-line w80"></span></div>';
+  var track = document.getElementById("homeNowTrack");
+  track.setAttribute("aria-busy", "true");
+  var card =
+    '<div class="home-card now-card" aria-hidden="true"><span class="poster-img sk"></span>' +
+    '<span class="sk sk-line w80"></span><span class="sk sk-line w40"></span></div>';
+  track.innerHTML = card + card;
   var list = document.getElementById("homeSoonList");
   list.setAttribute("aria-busy", "true");
   var row =
@@ -2132,9 +2099,12 @@ function renderHomeLoading() {
 }
 
 function renderHomeError() {
-  document.getElementById("homeWeekCount").textContent = "-";
-  document.getElementById("homeCarousel").hidden = true;
-  document.getElementById("homeMonth").hidden = true;
+  document.getElementById("homeNowCount").textContent = "-";
+  document.getElementById("homeNowAll").hidden = true;
+  var track = document.getElementById("homeNowTrack");
+  track.removeAttribute("aria-busy");
+  track.innerHTML = "";
+  document.getElementById("homeMonths").hidden = true;
   document.getElementById("homeNearby").hidden = true;
   var list = document.getElementById("homeSoonList");
   list.removeAttribute("aria-busy");
@@ -2168,15 +2138,6 @@ document.querySelectorAll("#homeView .home-tab").forEach(function (tab) {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
     e.preventDefault();
     selectHomeSoon(homeSoonMode === "ending" ? "starting" : "ending", true);
-  });
-});
-
-// 날짜 칩: 지도 탭으로 넘어가며 그 날짜 필터 (지도 칩과 달리 누를 때마다 켬, 해제는 지도 칩에서)
-document.querySelectorAll("#homeDateChips .chip").forEach(function (chip) {
-  chip.addEventListener("click", function () {
-    document.getElementById("dateFilter").value = chip.dataset.date;
-    districtFilter = null; // "내 주변"에서 켠 구 필터가 남아 날짜만 고른 결과가 줄지 않게
-    selectTab("map"); // filterMarkers 가 지도 칩 표시까지 맞춤
   });
 });
 

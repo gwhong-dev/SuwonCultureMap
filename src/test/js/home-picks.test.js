@@ -1,16 +1,13 @@
-// 모바일 홈 칸별 고르기 규칙 시험 — 이번 주 · 곧 종료 · 곧 시작 (한국 시간 기준)
+// 모바일 홈 칸별 고르기 규칙 시험 — 홈 3칸(지금 진행 중 · 곧 종료 | 곧 시작 · 달별) · 내 주변 · 검색 (한국 시간 기준)
 const test = require("node:test");
 const assert = require("node:assert");
 const {
-  weekRange,
-  weekLabel,
-  thisWeekEvents,
+  HOME_NOW_MAX,
   endingSoon,
   startingSoon,
-  carouselPicks,
-  monthRange,
-  monthTitle,
-  monthEvents,
+  nowOpenEvents,
+  nowOpenCards,
+  monthGroups,
   eventDistrict,
   matchesDistrict,
   HOME_DISTRICTS,
@@ -26,76 +23,81 @@ const {
 
 // 한국 시간 → 밀리초 (UTC 로 9시간 빼서)
 function kst(y, m, d, h) {
-  return Date.UTC(y, m - 1, d, (h || 12) - 9);
+  return Date.UTC(y, m - 1, d, (h === undefined ? 12 : h) - 9);
 }
-const WED = kst(2026, 11, 4); // 2026-11-04 수요일 12시
+const WED = kst(2026, 11, 4); // 2026-11-04 수요일 12시 → 7일 안 = 11/4 ~ 11/10
 
 function ev(id, startDate, endDate, title) {
   return { id, title: title || "행사" + id, startDate, endDate };
 }
+function ids(list) {
+  return list.map((e) => e.id);
+}
 
-test("이번 주: 한국 시간 월 ~ 일", () => {
-  assert.deepStrictEqual(weekRange(WED), { start: "2026-11-02", end: "2026-11-08" });
-  assert.deepStrictEqual(weekRange(kst(2026, 11, 2)), { start: "2026-11-02", end: "2026-11-08" }); // 월
-});
+// ----- ② 곧 종료 | 곧 시작 (7일 안 = 오늘 포함 7일, 지도 칩 "7일 안"과 같음) -----
 
-test("이번 주: 일요일은 지난 월요일부터 그날까지", () => {
-  assert.deepStrictEqual(weekRange(kst(2026, 11, 8)), { start: "2026-11-02", end: "2026-11-08" });
-});
-
-test("이번 주: 한국 시간 월요일 새벽(UTC 로는 일요일)도 새 주", () => {
-  assert.deepStrictEqual(weekRange(kst(2026, 11, 9, 1)), { start: "2026-11-09", end: "2026-11-15" });
-});
-
-test("주 표시: 같은 달은 끝 날짜만, 달이 바뀌면 월까지", () => {
-  assert.strictEqual(weekLabel({ start: "2026-11-02", end: "2026-11-08" }), "11월 2일 – 8일");
-  assert.strictEqual(weekLabel({ start: "2026-10-26", end: "2026-11-01" }), "10월 26일 – 11월 1일");
-  assert.strictEqual(weekLabel({ start: "2026-12-28", end: "2027-01-03" }), "12월 28일 – 1월 3일");
-});
-
-test("이번 주 행사: 기간이 겹치고 종료 안 된 것만, 날짜 없는 행사는 뺌", () => {
+test("곧 종료: 운영중이고 종료가 7일 안(오늘 ~ +6일), 종료 가까운 순 · 같은 날은 제목 순, 개수 제한 없음", () => {
   const events = [
-    ev(1, "2026-10-01", "2026-11-30"), // 운영중
-    ev(2, "2026-11-07", "2026-11-07"), // 이번 주 토요일 하루
-    ev(3, "2026-11-08", "2026-12-01"), // 일요일 시작 → 겹침
-    ev(4, "2026-11-09", "2026-11-10"), // 다음 주 → 뺌
-    ev(5, "2026-11-01", "2026-11-03"), // 어제 끝남 → 뺌 (이번 주와 겹쳐도)
-    ev(6, null, null), // 날짜 없음 → 뺌
-    ev(7, null, "2026-11-20"), // 시작일만 없음 → 운영중으로 봄
-  ];
-  assert.deepStrictEqual(
-    thisWeekEvents(events, WED).map((e) => e.id),
-    [1, 2, 3, 7],
-  );
-});
-
-test("곧 종료: 운영중만, 종료일 가까운 순 3개 (같은 날이면 제목 순)", () => {
-  const events = [
-    ev(1, "2026-10-01", "2026-12-31"),
+    ev(1, "2026-10-01", "2026-12-31"), // 종료 멀음 → 뺌
     ev(2, "2026-11-01", "2026-11-04", "나 오늘 종료"),
     ev(3, "2026-11-01", "2026-11-04", "가 오늘 종료"),
     ev(4, "2026-11-05", "2026-11-06"), // 오픈예정 → 뺌
-    ev(5, "2026-10-01", "2026-11-10"),
-    ev(6, "2026-10-01", "2026-11-03"), // 종료 → 뺌
+    ev(5, "2026-10-01", "2026-11-10"), // +6일 → 넣음
+    ev(6, "2026-10-01", "2026-11-11"), // +7일 → 뺌
+    ev(7, "2026-10-01", "2026-11-03"), // 어제 종료(지난 행사) → 뺌
+    ev(8, "2026-10-20", "2026-11-08"),
   ];
-  assert.deepStrictEqual(
-    endingSoon(events, WED).map((e) => e.id),
-    [3, 2, 5],
-  );
+  assert.deepStrictEqual(ids(endingSoon(events, WED)), [3, 2, 8, 5]);
 });
 
-test("곧 시작: 오픈예정만, 시작일 가까운 순 3개", () => {
+test("곧 시작: 시작 전이고 7일 안에 시작, 시작일 가까운 순", () => {
   const events = [
-    ev(1, "2026-12-01", "2026-12-02"),
+    ev(1, "2026-12-01", "2026-12-02"), // 7일 넘음 → 뺌
     ev(2, "2026-11-04", "2026-11-05"), // 오늘 시작 = 운영중 → 뺌
     ev(3, "2026-11-05", "2026-11-05"),
-    ev(4, "2026-11-20", "2026-11-21"),
+    ev(4, "2026-11-10", "2026-11-21"), // +6일 → 넣음
     ev(5, "2026-11-06", "2026-11-30"),
+    ev(6, "2026-11-11", "2026-11-12"), // +7일 → 뺌
   ];
-  assert.deepStrictEqual(
-    startingSoon(events, WED).map((e) => e.id),
-    [3, 5, 4],
-  );
+  assert.deepStrictEqual(ids(startingSoon(events, WED)), [3, 5, 4]);
+});
+
+test("곧 종료 · 곧 시작: 월말 경계 (11/28 → 12/4 까지)", () => {
+  const now = kst(2026, 11, 28);
+  const events = [
+    ev(1, "2026-11-01", "2026-12-04"), // 곧 종료 (+6일)
+    ev(2, "2026-11-01", "2026-12-05"), // +7일 → 뺌
+    ev(3, "2026-12-04", "2026-12-10"), // 곧 시작 (+6일)
+    ev(4, "2026-12-05", "2026-12-10"), // +7일 → 뺌
+  ];
+  assert.deepStrictEqual(ids(endingSoon(events, now)), [1]);
+  assert.deepStrictEqual(ids(startingSoon(events, now)), [3]);
+});
+
+test("곧 종료 · 곧 시작: 연말 경계 (12/29 → 다음 해 1/4 까지), 한국 시간 자정 기준", () => {
+  const now = kst(2026, 12, 29, 0); // 한국 12/29 0시 = UTC 12/28 15시
+  const events = [
+    ev(1, "2026-12-01", "2027-01-04"), // 곧 종료
+    ev(2, "2026-12-01", "2027-01-05"), // 뺌
+    ev(3, "2027-01-04", "2027-01-31"), // 곧 시작
+    ev(4, "2027-01-05", "2027-01-31"), // 뺌
+    ev(5, "2026-12-01", "2026-12-28"), // 한국 기준 어제 종료 → 뺌
+  ];
+  assert.deepStrictEqual(ids(endingSoon(events, now)), [1]);
+  assert.deepStrictEqual(ids(startingSoon(events, now)), [3]);
+});
+
+test("곧 종료 · 곧 시작: 종료일 없는 행사 = 시작일 하루, 날짜 없는 행사는 뺌", () => {
+  const events = [
+    ev(1, null, null), // 날짜 없음 → 둘 다 뺌
+    ev(2, "2026-11-04", null), // 오늘 하루 → 곧 종료 (오늘 종료)
+    ev(3, null, "2026-11-10"), // 시작일 없이 종료만 → 운영중, 곧 종료
+    ev(4, "2026-11-06", null), // 앞으로 하루 → 곧 시작
+    ev(5, "2026-11-20", null), // 7일 넘음 → 뺌
+    ev(6, "2026-11-03", null), // 어제 하루(지난 행사) → 뺌
+  ];
+  assert.deepStrictEqual(ids(endingSoon(events, WED)), [2, 3]);
+  assert.deepStrictEqual(ids(startingSoon(events, WED)), [4]);
 });
 
 test("곧 종료 · 곧 시작: 해당 행사가 없으면 빈 배열", () => {
@@ -103,102 +105,94 @@ test("곧 종료 · 곧 시작: 해당 행사가 없으면 빈 배열", () => {
   assert.deepStrictEqual(startingSoon([ev(1, "2026-10-01", "2026-11-30")], WED), []);
 });
 
-test("이번 주: 해를 넘기는 주", () => {
-  assert.deepStrictEqual(weekRange(kst(2027, 1, 1)), { start: "2026-12-28", end: "2027-01-03" });
-});
+// ----- ① 지금 진행 중 -----
 
-test("곧 종료 · 곧 시작: 날짜 없는 행사는 빼고, 한쪽 날짜만 있는 행사는 그 날 기준", () => {
+test("지금 진행 중: 운영중이고 오늘 진행 (진행 날짜를 알면 오늘이 그중 하나), 지난 · 예정 · 날짜 없음 빼고", () => {
   const events = [
-    ev(1, null, null), // 날짜 없음 → 둘 다 뺌
-    ev(2, "2026-11-04", null), // 시작일만 = 오늘 하루 → 운영중, 오늘 종료
-    ev(3, null, "2026-11-10"), // 종료일만 → 운영중
-    ev(4, "2026-11-06", null), // 시작일만(앞으로) → 오픈예정
-    ev(5, "2026-10-01", "2026-11-05"),
-  ];
-  assert.deepStrictEqual(endingSoon(events, WED).map((e) => e.id), [2, 5, 3]);
-  assert.deepStrictEqual(startingSoon(events, WED).map((e) => e.id), [4]);
-});
-
-// 캐러셀용: 사진 주소까지 넣은 행사
-function pic(id, startDate, endDate, title) {
-  return { ...ev(id, startDate, endDate, title), imageUrl: "https://example.com/" + id + ".jpg" };
-}
-
-test("캐러셀: 이번 주 행사 중 사진 있는 것만, 운영중 먼저 → 종료일 가까운 순", () => {
-  const events = [
-    pic(1, "2026-11-06", "2026-11-07"), // 오픈예정 (이번 주 금 ~ 토)
-    pic(2, "2026-10-01", "2026-12-31"), // 운영중, 종료 늦음
-    pic(3, "2026-11-01", "2026-11-05"), // 운영중, 종료 빠름
-    ev(4, "2026-11-01", "2026-11-04"), // 사진 없음 → 뺌
-    pic(5, "2026-11-09", "2026-11-10"), // 다음 주 → 뺌
-    pic(6, "2026-11-01", "2026-11-03"), // 종료 → 뺌
-    pic(7, "2026-11-05", "2026-11-05"), // 오픈예정, 1번보다 빠름
-  ];
-  assert.deepStrictEqual(
-    carouselPicks(events, WED).map((e) => e.id),
-    [3, 2, 7, 1],
-  );
-});
-
-test("캐러셀: 최대 5개, 같은 종료일이면 제목 순", () => {
-  const events = [6, 5, 4, 3, 2, 1].map((n) =>
-    pic(n, "2026-10-01", "2026-11-30", "행사" + n),
-  );
-  assert.deepStrictEqual(
-    carouselPicks(events, WED).map((e) => e.id),
-    [1, 2, 3, 4, 5],
-  );
-});
-
-test("캐러셀: 사진 주소가 빈칸 · 공백이면 사진 없음으로 봄", () => {
-  const events = [
-    { ...ev(1, "2026-10-01", "2026-11-30"), imageUrl: "" },
-    { ...ev(2, "2026-10-01", "2026-11-30"), imageUrl: "  " },
-    { ...ev(3, "2026-10-01", "2026-11-30"), imageUrl: null },
-  ];
-  assert.deepStrictEqual(carouselPicks(events, WED), []);
-});
-
-test("캐러셀: 종료일 없는 오픈예정은 시작일로 순서", () => {
-  const events = [
-    pic(1, "2026-11-07", null), // 토요일 하루
-    pic(2, "2026-11-06", "2026-11-20"),
-  ];
-  assert.deepStrictEqual(carouselPicks(events, WED).map((e) => e.id), [1, 2]);
-});
-
-test("이달: 한국 시간 1일 ~ 말일 (말일 새벽도 그달, 1일 새벽은 새 달)", () => {
-  assert.deepStrictEqual(monthRange(WED), { start: "2026-11-01", end: "2026-11-30" });
-  assert.deepStrictEqual(monthRange(kst(2026, 12, 1, 1)), { start: "2026-12-01", end: "2026-12-31" }); // UTC 로는 11/30
-  assert.deepStrictEqual(monthRange(kst(2028, 2, 10)), { start: "2028-02-01", end: "2028-02-29" }); // 윤년
-});
-
-test("이달 제목: \"11월의 수원 행사\"", () => {
-  assert.strictEqual(monthTitle(WED), "11월의 수원 행사");
-  assert.strictEqual(monthTitle(kst(2027, 1, 1, 0)), "1월의 수원 행사");
-});
-
-test("이달 행사: 이번 달과 겹치고 종료 안 된 것만, 시작일 순", () => {
-  const events = [
-    ev(1, "2026-11-20", "2026-11-25"), // 오픈예정, 이달
-    ev(2, "2026-10-01", "2026-11-10"), // 운영중, 지난달 시작
-    ev(3, "2026-11-01", "2026-11-03"), // 종료 → 뺌
-    ev(4, "2026-12-01", "2026-12-05"), // 다음 달 시작 → 뺌
-    ev(5, "2026-11-30", null), // 말일 하루
+    ev(1, "2026-10-01", "2026-12-31"),
+    { ...ev(2, "2026-11-01", "2026-11-20"), scheduleStatus: "DATES", dates: ["2026-11-01", "2026-11-20"] }, // 오늘 쉼 → 뺌
+    { ...ev(3, "2026-11-01", "2026-11-20"), scheduleStatus: "DATES", dates: ["2026-11-04", "2026-11-20"] }, // 오늘 진행
+    ev(4, "2026-11-05", "2026-11-06"), // 오픈예정 → 뺌
+    ev(5, "2026-10-01", "2026-11-03"), // 지난 행사 → 뺌
     ev(6, null, null), // 날짜 없음 → 뺌
-    ev(7, null, "2026-11-15"), // 시작일 없이 끝만 → 운영중, 종료일로 순서
+    ev(7, null, "2026-11-30"), // 시작일 없음 → 이미 시작으로 봄
+    ev(8, "2026-11-04", null), // 오늘 하루
   ];
-  assert.deepStrictEqual(monthEvents(events, WED).map((e) => e.id), [2, 7, 1, 5]);
+  assert.deepStrictEqual(ids(nowOpenEvents(events, WED)), [8, 3, 7, 1]);
 });
 
-test("이달 행사: 최대 10개, 같은 시작일이면 제목 순", () => {
-  const events = Array.from({ length: 12 }, (_, i) =>
-    ev(12 - i, "2026-11-10", "2026-11-20", "행사" + String(12 - i).padStart(2, "0")),
-  );
+test("진행 중 카드: 곧 종료에 나온 행사는 빼서 ① · ② 가 겹치지 않음 (수 N 은 진행 중 전체)", () => {
+  const events = [
+    ev(1, "2026-10-01", "2026-12-31"), // 진행 중 · 종료 멀음 → 카드
+    ev(2, "2026-10-01", "2026-11-06"), // 진행 중 · 곧 종료 → 카드에서 뺌
+    ev(3, "2026-11-04", null), // 오늘 하루 = 곧 종료 → 카드에서 뺌
+    ev(4, "2026-10-01", "2026-11-11"), // 종료 +7일 → 카드
+  ];
+  const cards = ids(nowOpenCards(events, WED));
+  const ending = ids(endingSoon(events, WED));
+  assert.deepStrictEqual(cards, [4, 1]);
+  assert.deepStrictEqual(ending, [3, 2]);
+  assert.ok(cards.every((id) => !ending.includes(id)));
+  assert.strictEqual(nowOpenEvents(events, WED).length, 4);
+});
+
+test("진행 중 카드: 사진 있는 것 먼저 → 종료 가까운 순, 최대 10장", () => {
+  const pic = (e) => ({ ...e, imageUrl: "https://example.com/" + e.id + ".jpg" });
+  const events = [
+    ev(1, "2026-10-01", "2026-11-20"), // 사진 없음, 종료 빠름 → 사진 있는 것 뒤
+    pic(ev(2, "2026-10-01", "2026-12-31")),
+    pic(ev(3, "2026-10-01", "2026-11-30")),
+    { ...ev(4, "2026-10-01", "2026-11-15"), imageUrl: "  " }, // 공백 = 사진 없음
+  ];
+  assert.deepStrictEqual(ids(nowOpenCards(events, WED)), [3, 2, 4, 1]);
+  const many = Array.from({ length: 12 }, (_, i) => ev(i + 1, "2026-10-01", "2026-12-" + String(10 + i)));
+  assert.strictEqual(nowOpenCards(many, WED).length, HOME_NOW_MAX);
+  assert.strictEqual(HOME_NOW_MAX, 10);
+});
+
+// ----- ③ 달별 행사 -----
+
+test("달별: 다음 달부터, 그 달에 시작하는 오픈예정 행사만 · 행사 있는 달만 · 시작일 순", () => {
+  const events = [
+    ev(1, "2026-11-20", "2026-11-25"), // 이번 달 시작 → 뺌 (①·② · 지도에서)
+    ev(2, "2026-12-10", "2026-12-12"),
+    ev(3, "2026-12-01", "2027-02-01"), // 12월 시작 (길어도 시작 달에만)
+    ev(4, "2027-02-14", null), // 종료일 없음 → 시작일 달
+    ev(5, "2026-10-01", "2026-12-31"), // 운영중(12월까지 이어져도) → 뺌
+    ev(6, null, null), // 날짜 없음 → 뺌
+    ev(7, null, "2026-12-20"), // 시작일 없음 → 운영중 → 뺌
+  ];
+  const groups = monthGroups(events, WED);
   assert.deepStrictEqual(
-    monthEvents(events, WED).map((e) => e.id),
-    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    groups.map((g) => [g.key, g.label, ids(g.events)]),
+    [
+      ["2026-12", "12월", [3, 2]],
+      ["2027-02", "2월", [4]],
+    ],
   );
+});
+
+test("달별: 연말 경계 — 12월이면 다음 해 1월부터, 11달 뒤까지 (12달 뒤 같은 달 이름은 뺌)", () => {
+  const now = kst(2026, 12, 15);
+  const events = [
+    ev(1, "2026-12-20", "2026-12-21"), // 이번 달 → 뺌
+    ev(2, "2027-01-03", "2027-01-05"),
+    ev(3, "2027-11-01", "2027-11-02"), // 11달 뒤 → 넣음
+    ev(4, "2027-12-01", "2027-12-02"), // 12달 뒤 → 뺌
+  ];
+  assert.deepStrictEqual(
+    monthGroups(events, now).map((g) => [g.key, g.label]),
+    [
+      ["2027-01", "1월"],
+      ["2027-11", "11월"],
+    ],
+  );
+});
+
+test("달별: 월말 밤 · 새 달 새벽도 한국 시간으로 달을 나눔", () => {
+  const events = [ev(1, "2026-12-01", "2026-12-02")];
+  assert.deepStrictEqual(ids(monthGroups(events, kst(2026, 11, 30, 23))[0].events), [1]); // 11월 말일 밤 → 12월 칩
+  assert.deepStrictEqual(monthGroups(events, kst(2026, 12, 1, 1)), []); // 한국 12/1 새벽(UTC 로는 11/30) → 이번 달
 });
 
 test("구: 서버 값(좌표 기준)이 원문 글보다 먼저", () => {
