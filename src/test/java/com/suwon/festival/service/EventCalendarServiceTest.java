@@ -243,4 +243,21 @@ class EventCalendarServiceTest {
           .contains("DTSTART;VALUE=DATE:20260509\r\n").contains("DTEND;VALUE=DATE:20260510\r\n");
     }
   }
+
+  @Test
+  void 긴_행사는_시작_종료일_포함_30일_초과() {
+    LocalDate start = LocalDate.of(2026, 11, 1);
+    assertThat(EventCalendarService.isLongEvent(event("t", "", start, LocalDate.of(2026, 11, 29), null))).isFalse(); // 29일
+    assertThat(EventCalendarService.isLongEvent(event("t", "", start, LocalDate.of(2026, 11, 30), null))).isFalse(); // 30일
+    assertThat(EventCalendarService.isLongEvent(event("t", "", start, LocalDate.of(2026, 12, 1), null))).isTrue(); // 31일
+    assertThat(EventCalendarService.isLongEvent(event("t", "", start, null, null))).isFalse();
+    assertThat(EventCalendarService.isLongEvent(event("t", "", start, LocalDate.of(2026, 10, 1), null))).isFalse(); // 뒤바뀜
+  }
+
+  @Test
+  void 긴_행사도_고른_날에_시간이_있으면_그날_시간_지정() {
+    LocalDate pick = LocalDate.of(2026, 11, 15);
+    String ics = service.toIcs(eventB(LocalDate.of(2026, 11, 1), LocalDate.of(2027, 2, 28), "수원시립미술관", "10:00~18:00"), pick, NOW);
+    assertThat(ics).contains("DTSTART:20261115T010000Z\r\n").contains("DTEND:20261115T090000Z\r\n");
+  }
 }

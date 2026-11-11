@@ -219,25 +219,60 @@ function ddayText(event, now) {
 }
 
 // ===== 캘린더 저장 날짜 고르기 (설계 7번) =====
-// 진행 날짜가 확정된 여러 날 행사만 날짜를 고름. 아니면 null (지금처럼 기간 전체 종일)
-// 고를 수 있는 날: 오늘(한국 시간) 이후 진행일. 다 지났으면 전체. 기본값은 가장 가까운 날
+// ① 진행 날짜가 확정된 여러 날 행사: 진행일 중 고름
+//    고를 수 있는 날: 오늘(한국 시간) 이후 진행일. 다 지났으면 전체. 기본값은 가장 가까운 날
+// ② 기간이 30일을 넘는 행사(상설 등, 11/11 사용자 결정): 몇 달짜리 종일 막대 대신 기간 안 하루
+//    고를 수 있는 날: 오늘(기간 전이면 시작일, 끝났으면 시작일)부터 최대 90일. 기본값은 그 첫날
+// 둘 다 아니면 null (지금처럼 기간 전체 종일)
+var LONG_EVENT_DAYS = 30; // 서버 EventCalendarService.LONG_EVENT_DAYS 와 같은 값
+var LONG_EVENT_CHOICES = 90;
+
 function calendarDateChoices(event, now) {
-  if (!hasRunDates(event) || event.startDate === event.endDate) return null;
-  var today = koreaToday(now);
-  var upcoming = event.dates.filter(function (date) {
-    return date >= today;
-  });
-  var dates = upcoming.length > 0 ? upcoming : event.dates.slice();
+  var dates;
+  var selected;
+  if (hasRunDates(event) && event.startDate !== event.endDate) {
+    var today = koreaToday(now);
+    var upcoming = event.dates.filter(function (date) {
+      return date >= today;
+    });
+    dates = upcoming.length > 0 ? upcoming : event.dates.slice();
+    selected = upcoming.length > 0 ? upcoming[0] : dates[dates.length - 1];
+  } else if (isLongEvent(event)) {
+    dates = longEventDays(event, now);
+    selected = dates[0];
+  } else {
+    return null;
+  }
   var thisYear = koreaYear(now === undefined ? Date.now() : now);
   return {
     dates: dates,
-    selected: upcoming.length > 0 ? upcoming[0] : dates[dates.length - 1],
+    selected: selected,
     labels: dates.map(function (date) {
       var day = WEEKDAY_NAMES[new Date(utcDay(date)).getUTCDay()];
       var text = date.slice(0, 4) === thisYear ? shortDate(date) : date;
       return text + " (" + day + ")";
     }),
   };
+}
+
+// 시작 · 종료일 포함 일수가 30일을 넘으면 긴 행사 (30일까지는 지금처럼 기간 전체)
+function isLongEvent(event) {
+  if (!event.startDate || !event.endDate || event.endDate < event.startDate) return false;
+  return daysBetween(event.startDate, event.endDate) + 1 > LONG_EVENT_DAYS;
+}
+
+function longEventDays(event, now) {
+  var today = koreaToday(now);
+  var first = today >= event.startDate && today <= event.endDate ? today : event.startDate;
+  var days = [];
+  for (var day = first; day <= event.endDate && days.length < LONG_EVENT_CHOICES; day = addDays(day, 1)) {
+    days.push(day);
+  }
+  return days;
+}
+
+function daysBetween(fromIso, toIso) {
+  return Math.round((utcDay(toIso) - utcDay(fromIso)) / 86400000);
 }
 
 if (typeof module !== "undefined") {
@@ -250,6 +285,7 @@ if (typeof module !== "undefined") {
     filterDays: filterDays,
     matchRunDays: matchRunDays,
     calendarDateChoices: calendarDateChoices,
+    isLongEvent: isLongEvent,
     eventStatus: eventStatus,
     statusLabel: statusLabel,
     ddayText: ddayText,

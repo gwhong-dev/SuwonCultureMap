@@ -149,4 +149,42 @@ class EventCalendarControllerTest {
     assertThat(status("/api/events/" + e.getId() + "/calendar.ics?date=2026-13-01")).isEqualTo(400);
     assertThat(status("/api/events/" + e.getId() + "/calendar/google?date=abc")).isEqualTo(400);
   }
+
+  // ===== 기간이 30일을 넘는 긴 행사(상설 등): 고른 하루 (11/11 사용자 결정) =====
+  private Event savePeriod(Long idx, LocalDate start, LocalDate end) {
+    return eventRepository.save(Event.builder()
+        .idx(idx).title("상설 전시").category("전시")
+        .latitude(37.2810212008746).longitude(127.016215843564)
+        .info("장소: 수원시립미술관").pubDate(LocalDateTime.of(2026, 10, 1, 0, 0))
+        .startDate(start).endDate(end)
+        .build());
+  }
+
+  @Test
+  void 긴_행사는_기간_안_고른_하루_일정() throws Exception {
+    Event e = savePeriod(900008L, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 12, 1)); // 31일
+
+    MockHttpServletResponse google = mockMvc.perform(get("/api/events/" + e.getId() + "/calendar/google?date=2026-11-15"))
+        .andReturn().getResponse();
+    assertThat(google.getStatus()).isEqualTo(302);
+    assertThat(google.getHeader("Location")).contains("dates=20261115/20261116");
+
+    MockHttpServletResponse ics = mockMvc.perform(get("/api/events/" + e.getId() + "/calendar.ics?date=2026-12-01"))
+        .andReturn().getResponse();
+    assertThat(ics.getStatus()).isEqualTo(200);
+    assertThat(ics.getContentAsString(StandardCharsets.UTF_8))
+        .contains("DTSTART;VALUE=DATE:20261201").contains("DTEND;VALUE=DATE:20261202");
+
+    assertThat(status("/api/events/" + e.getId() + "/calendar.ics?date=2026-10-31")).isEqualTo(400); // 기간 밖
+    assertThat(status("/api/events/" + e.getId() + "/calendar/google?date=2026-12-02")).isEqualTo(400);
+    assertThat(status("/api/events/" + e.getId() + "/calendar.ics")).isEqualTo(200); // 날짜 없으면 기간 전체 (예전 링크)
+  }
+
+  @Test
+  void 기간이_30일_이하면_날짜를_보내도_400() throws Exception {
+    Event d30 = savePeriod(900009L, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30)); // 30일
+    Event d29 = savePeriod(900010L, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 29)); // 29일
+    assertThat(status("/api/events/" + d30.getId() + "/calendar.ics?date=2026-11-15")).isEqualTo(400);
+    assertThat(status("/api/events/" + d29.getId() + "/calendar/google?date=2026-11-15")).isEqualTo(400);
+  }
 }

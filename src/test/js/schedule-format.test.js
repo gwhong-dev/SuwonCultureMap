@@ -143,7 +143,10 @@ test("확인된 회차는 필터에서 모름과 같음", () => {
   const e = { scheduleStatus: "UNKNOWN", startDate: "2026-11-01", endDate: "2026-12-31", dates: [],
     confirmedDates: ["2026-11-08"] };
   assert.strictEqual(matchRunDays(e, ["2026-11-08"]), "maybe");
-  assert.strictEqual(calendarDateChoices(e, NOW_2026), null);
+  // 11/1 ~ 12/31 = 61일 긴 행사 → 확인된 회차가 아니라 기간 안 하루 (오늘 11/2 부터)
+  const c = calendarDateChoices(e, NOW_2026);
+  assert.strictEqual(c.selected, "2026-11-02");
+  assert.ok(!c.dates.includes("2026-11-01"));
 });
 
 // ===== "오늘 진행" · "이번 주말" 필터 =====
@@ -239,6 +242,54 @@ test("날짜 모름 · 하루 행사 · 기간 밖 날짜는 고르지 않음 (�
   assert.strictEqual(calendarDateChoices({ startDate: "2026-11-01", endDate: "2026-11-30", scheduleStatus: "UNKNOWN", dates: [] }, NOW_2026), null);
   assert.strictEqual(calendarDateChoices(event("2026-11-14", "2026-11-14", ["2026-11-14"]), NOW_2026), null);
   assert.strictEqual(calendarDateChoices(event("2026-11-01", "2026-11-03", ["2026-11-16"]), NOW_2026), null);
+});
+
+// ===== 기간이 30일을 넘는 긴 행사: 고른 하루 (11/11 사용자 결정) =====
+const { isLongEvent } = require("../../main/resources/static/schedule-format.js");
+const longEvent = (start, end) => ({ scheduleStatus: "UNKNOWN", startDate: start, endDate: end, dates: [] });
+const KST_1102 = Date.UTC(2026, 10, 2, 3); // 한국 11/2 12:00
+
+test("긴 행사 경계: 29 · 30일은 기간 전체, 31일부터 고른 하루", () => {
+  assert.strictEqual(isLongEvent(longEvent("2026-11-01", "2026-11-29")), false);
+  assert.strictEqual(isLongEvent(longEvent("2026-11-01", "2026-11-30")), false);
+  assert.strictEqual(isLongEvent(longEvent("2026-11-01", "2026-12-01")), true);
+  assert.strictEqual(calendarDateChoices(longEvent("2026-11-01", "2026-11-29"), KST_1102), null);
+  assert.strictEqual(calendarDateChoices(longEvent("2026-11-01", "2026-11-30"), KST_1102), null);
+  assert.ok(calendarDateChoices(longEvent("2026-11-01", "2026-12-01"), KST_1102));
+  assert.strictEqual(isLongEvent(longEvent("2026-11-01", null)), false);
+  assert.strictEqual(isLongEvent(longEvent("2026-12-01", "2026-11-01")), false); // 뒤바뀐 원본
+});
+
+test("긴 행사 기본값: 진행 중이면 오늘, 남은 날부터 목록", () => {
+  const c = calendarDateChoices(longEvent("2026-11-01", "2026-12-01"), KST_1102);
+  assert.strictEqual(c.selected, "2026-11-02");
+  assert.strictEqual(c.dates[0], "2026-11-02");
+  assert.strictEqual(c.dates[c.dates.length - 1], "2026-12-01");
+  assert.strictEqual(c.dates.length, 30);
+  assert.strictEqual(c.labels[0], "11/2 (월)");
+  // 마지막 날 = 오늘이면 하루만
+  assert.deepStrictEqual(calendarDateChoices(longEvent("2026-10-01", "2026-11-02"), KST_1102).dates, ["2026-11-02"]);
+});
+
+test("긴 행사 기본값: 시작 전 · 끝난 행사는 시작일", () => {
+  const before = calendarDateChoices(longEvent("2026-12-10", "2027-03-01"), KST_1102);
+  assert.strictEqual(before.selected, "2026-12-10");
+  assert.strictEqual(before.dates[0], "2026-12-10");
+  assert.strictEqual(before.labels.find((l, i) => before.dates[i] === "2027-01-01"), "2027-01-01 (금)");
+  const ended = calendarDateChoices(longEvent("2026-01-01", "2026-10-31"), KST_1102);
+  assert.strictEqual(ended.selected, "2026-01-01");
+});
+
+test("긴 행사 목록은 최대 90일 (몇 년짜리 상설도)", () => {
+  const c = calendarDateChoices(longEvent("2020-01-01", "2030-12-31"), KST_1102);
+  assert.strictEqual(c.dates.length, 90);
+  assert.strictEqual(c.dates[0], "2026-11-02");
+  assert.strictEqual(c.dates[89], "2027-01-30");
+});
+
+test("진행 날짜가 있는 긴 행사는 진행일만 (긴 행사 규칙보다 먼저)", () => {
+  const e = event("2026-10-03", "2026-11-28", weekdays("2026-10-03", "2026-11-28", [6]));
+  assert.deepStrictEqual(calendarDateChoices(e, KST_1102).dates, ["2026-11-07", "2026-11-14", "2026-11-21", "2026-11-28"]);
 });
 
 // ===== 상태 배지 · D-day (시작일 · 종료일만으로, 오늘은 한국 시간) =====

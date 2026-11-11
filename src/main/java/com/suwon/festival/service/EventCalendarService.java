@@ -9,6 +9,7 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class EventCalendarService {
 
+  static final int LONG_EVENT_DAYS = 30; // 화면 schedule-format.js LONG_EVENT_DAYS 와 같은 값
   private static final DateTimeFormatter DATE = DateTimeFormatter.BASIC_ISO_DATE; // 20261107
   // UTC 시각 형식 (20261107T050000Z) — DTSTAMP·시간 지정 일정·구글 dates 에 공용
   private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'")
@@ -62,15 +64,39 @@ public class EventCalendarService {
     return event;
   }
 
-  // 고른 날짜 검사: 화면에 보낸 진행 날짜 중 하나여야 함 (기간 밖 · 진행하지 않는 날 · 날짜 모르는 행사 → 400)
-  // 인스타 대표는 숨긴 행 날짜까지 합친 날짜로 검사 (행사 목록 응답과 같은 MergedRunDates)
+  // 고른 날짜 검사 (화면 schedule-format.js calendarDateChoices 와 같은 규칙)
+  // ① 진행 날짜 행사: 화면에 보낸 진행 날짜 중 하나 — 인스타 대표는 숨긴 행 날짜까지 합친 날짜(MergedRunDates)
+  // ② 진행 날짜를 못 쓰는 행사 중 기간이 30일을 넘는 긴 행사(상설 등): 기간 안 아무 날
+  // 그 밖(기간 밖 · 진행하지 않는 날 · 날짜 모르는 짧은 행사) → 400
   public void checkRunDate(Event event, LocalDate runDate) {
     if (runDate == null) return;
-    boolean known = Event.SCHEDULE_DATES.equals(event.getScheduleStatus())
-        && mergedRunDates.of(List.of(event)).get(event.getId()).dates().contains(runDate);
-    if (!known) {
+    List<LocalDate> runDates = Event.SCHEDULE_DATES.equals(event.getScheduleStatus())
+        ? mergedRunDates.of(List.of(event)).get(event.getId()).dates()
+        : List.of();
+    boolean ok = usesRunDates(event, runDates)
+        ? runDates.contains(runDate)
+        : isLongEvent(event) && inPeriod(event, runDate);
+    if (!ok) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "행사가 진행되는 날짜가 아닙니다.");
     }
+  }
+
+  // 화면 hasRunDates 와 같은 기준: 진행 날짜가 있고 모두 기간 안
+  private static boolean usesRunDates(Event event, List<LocalDate> runDates) {
+    return !runDates.isEmpty() && event.getEndDate() != null
+        && runDates.stream().allMatch(d -> inPeriod(event, d));
+  }
+
+  private static boolean inPeriod(Event event, LocalDate day) {
+    return !day.isBefore(event.getStartDate()) && !day.isAfter(event.getEndDate());
+  }
+
+  // 시작 · 종료일 포함 일수가 30일을 넘으면 긴 행사 (화면 isLongEvent 와 같은 기준)
+  static boolean isLongEvent(Event event) {
+    LocalDate start = event.getStartDate();
+    LocalDate end = event.getEndDate();
+    if (start == null || end == null || end.isBefore(start)) return false;
+    return ChronoUnit.DAYS.between(start, end) + 1 > LONG_EVENT_DAYS;
   }
 
   // ===== .ics 파일 내용 =====

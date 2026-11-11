@@ -1144,7 +1144,7 @@ function openDetailModal(event) {
   var icsAltLink = document.getElementById("modalIcsAltLink");
   var calDateWrap = document.getElementById("modalCalDateWrap");
   var calDateSelect = document.getElementById("modalCalDate");
-  // 진행 날짜가 정해진 여러 날 행사는 고른 날 1회 일정 (아니면 지금처럼 기간 전체 종일)
+  // 진행 날짜가 정해진 여러 날 행사 · 30일 넘는 긴 행사는 고른 날 1회 일정 (아니면 지금처럼 기간 전체 종일)
   var choices = event.startDate ? calendarDateChoices(event) : null;
   calDateSelect.innerHTML = "";
   if (choices) {
