@@ -1512,7 +1512,7 @@ function favButtonHtml(isFavorited) {
   );
 }
 
-// ----- 칩 줄 (모바일 지도 상단, 가로로 넘김) -----
+// ----- 칩 줄 (지도 상단: 분류 드롭다운 칩 · 날짜 · 무료 · 지난 행사 — PC · 모바일 공통) -----
 function chipLabel(value) {
   if (value === "all") return "전체 분류";
   if (value === "찜") return "♥ 찜";
@@ -2275,7 +2275,7 @@ function showDistrictOnMap(district, events) {
 
 document.getElementById("homeNearbyGo").addEventListener("click", goNearbyOnMap);
 
-// PC 너비로 바뀌면 구 칩이 없어 끌 방법이 없음 → 구 필터를 풂
+// 모바일 ↔ PC 폭이 바뀔 때 (칩 줄은 PC · 모바일 모두 지도 위에 있어 구 · 무료 필터는 그대로 둠)
 mobileQuery.addEventListener("change", function (e) {
   if (e.matches) {
     // 모바일에선 지도 검색창을 누르면 검색 화면이 열려 PC 에서 친 검색어를 지울 수 없음 → 넘어올 때 풂
@@ -2286,12 +2286,7 @@ mobileQuery.addEventListener("change", function (e) {
     }
     return;
   }
-  // PC 엔 칩 줄이 없어 구 · 무료 필터를 끌 수 없음 → 넘어갈 때 풂
-  if (districtFilter || freeOnly) {
-    freeOnly = false;
-    setDistrictFilter(null);
-  }
-  closeSearch(); // 검색 화면도 모바일 전용
+  closeSearch(); // 검색 화면은 모바일 전용
 });
 
 // 찜 | 최근 본 탭 줄도 모바일 전용 → 폭이 바뀌면 다시 그림 (PC 로 가면 찜 목록으로)
