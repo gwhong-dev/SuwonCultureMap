@@ -255,9 +255,9 @@ kakao.maps.load(function () {
   };
   map = new kakao.maps.Map(mapContainer, mapOption);
 
-  // 지도 빈 곳을 누르면 하단 카드 닫기
+  // 지도 빈 곳을 누르면 하단 카드 닫기 (모바일). PC 는 카드 줄이 기본으로 늘 떠 있어서 그대로 둠 (11/11)
   kakao.maps.event.addListener(map, "click", function () {
-    hidePreview();
+    if (mapClickClosesStrip(mobileQuery.matches)) hidePreview(); // strip-nav.js
   });
 
   guardMapDragFromTopbar();
@@ -888,6 +888,7 @@ function renderSidebar(items) {
       hidePreview(); // 필터로 사라진 행사면 닫기
     }
   }
+  if (previewEventId === null) showDefaultPreview(); // PC: 카드 줄은 늘 떠 있게 (모바일은 아무것도 안 함)
 }
 
 document
@@ -1013,6 +1014,9 @@ sidebarToggleBtn.addEventListener("click", function () {
     if (map) {
       map.relayout();
     }
+    // 하단 카드 줄 폭도 바뀜 → 보던 카드를 다시 가운데로
+    var previewCard = previewEventId === null ? null : findPreviewCard(previewEventId);
+    if (previewCard) scrollStripTo(previewCard);
   }, 300);
 });
 
@@ -2309,6 +2313,8 @@ document.getElementById("homeNearbyGo").addEventListener("click", goNearbyOnMap)
 // 모바일 ↔ PC 폭이 바뀔 때 (칩 줄은 PC · 모바일 모두 지도 위에 있어 구 · 무료 필터는 그대로 둠)
 mobileQuery.addEventListener("change", function (e) {
   if (e.matches) {
+    // PC 기본 카드 줄(마커를 누르지 않고 뜬 것)은 모바일로 넘어오면 닫음 — 모바일은 지금처럼 마커를 눌러야 뜸
+    if (previewEventId !== null && !previewOrigin) hidePreview();
     // 모바일에선 지도 검색창을 누르면 검색 화면이 열려 PC 에서 친 검색어를 지울 수 없음 → 넘어올 때 풂
     var searchInput = document.getElementById("searchInput");
     if (searchInput.value) {
@@ -2318,6 +2324,7 @@ mobileQuery.addEventListener("change", function (e) {
     return;
   }
   closeSearch(); // 검색 화면은 모바일 전용
+  if (previewEventId === null) showDefaultPreview(); // PC 로 넘어오면 카드 줄 바로 (applyLayout 은 크기 변경이 멈춘 뒤라 늦음)
 });
 
 // 찜 | 최근 본 탭 줄도 모바일 전용 → 폭이 바뀌면 다시 그림 (PC 로 가면 찜 목록으로)
@@ -2602,15 +2609,19 @@ function findPreviewCard(eventId) {
   );
 }
 
-// "가까운 순 · 현재 / 전체"
+// "가까운 순 · 현재 / 전체" (PC 기본 카드 줄은 "목록 순") + 지금 카드 표시(PC: 테두리 강조 · 양옆 흐리게)
 function updatePreviewLabel() {
   var strip = document.getElementById("previewStrip");
   var cards = Array.from(strip.children);
   var index = cards.findIndex(function (card) {
     return Number(card.dataset.eventId) === previewEventId;
   });
-  document.getElementById("previewLabel").textContent =
-    cards.length === 0 ? "" : "가까운 순 · " + (index + 1) + " / " + cards.length;
+  cards.forEach(function (card, i) {
+    card.classList.toggle("current", i === index);
+    if (i === index) card.setAttribute("aria-current", "true"); // 보조기기도 지금 카드를 알게 (#215 검증 ⑦)
+    else card.removeAttribute("aria-current");
+  });
+  document.getElementById("previewLabel").textContent = stripLabelText(!!previewOrigin, index, cards.length); // strip-nav.js
   var arrows = stripArrowState(index, cards.length); // strip-nav.js
   document.getElementById("previewPrev").hidden = !arrows.prev;
   document.getElementById("previewNext").hidden = !arrows.next;
@@ -2660,6 +2671,24 @@ function showPreview(eventId) {
   document.getElementById("previewArea").classList.add("show");
   scrollStripTo(card);
   selectMarker(eventId, true);
+}
+
+// PC: 지도를 열면 하단 카드 줄을 기본으로 띄움 (11/11, 전엔 마커를 눌러야 뜸)
+//  - 순서 · 첫 카드 = 오른쪽 목록 그대로 (찜 먼저 → 시작일 순). 마커 · 목록을 누르면 그때부터 가까운 순 (showPreview)
+//  - 지도는 움직이지 않고(첫 화면 행궁동 그대로) 첫 카드 마커만 강조. 모바일은 지금처럼 마커를 눌러야 뜸
+function showDefaultPreview() {
+  if (!stripDefaultShown(mobileQuery.matches, lastSortedItems.length)) { // strip-nav.js
+    if (!mobileQuery.matches) hidePreview(); // PC 인데 0건 → 숨김. 모바일은 손대지 않음 (마커로 띄운 카드 유지)
+    return;
+  }
+  previewOrigin = null;
+  renderPreviewStrip(lastSortedItems);
+  var first = document.getElementById("previewStrip").firstElementChild;
+  previewEventId = Number(first.dataset.eventId);
+  updatePreviewLabel();
+  document.getElementById("previewArea").classList.add("show");
+  scrollStripTo(first);
+  selectMarker(previewEventId, false);
 }
 
 function hidePreview() {
@@ -2924,7 +2953,10 @@ function applyLayout() {
     setSheetState(sheetState);
   } else {
     // PC로 돌아가면 모바일용 위치·상태를 모두 원래대로
-    hidePreview();
+    // 하단 카드 줄은 PC 에서 늘 떠 있음 → 보던 카드는 폭이 바뀌었으니 다시 가운데로, 없으면 기본 카드 줄 (11/11)
+    var previewCard = previewEventId === null ? null : findPreviewCard(previewEventId);
+    if (previewCard) scrollStripTo(previewCard);
+    else showDefaultPreview();
     var sidebar = document.getElementById("sidebar");
     sidebar.style.transform = "";
     sidebar.style.transition = "";
