@@ -840,6 +840,29 @@ body {
     color: var(--bg);
     font-weight: 700;
   }
+  /* 분류 칩 = 드롭다운: 칩 글자 위에 투명한 <select> 를 덮음 → 누르면 휴대폰 기본 선택 창 */
+  .chip-select {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .chip-arrow {
+    font-size: 11px;
+  }
+  .chip-select select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    font-size: 16px; /* 16px 미만이면 아이폰이 고를 때 화면을 확대함 (안 보이는 글자라 칩 모양은 그대로) */
+    cursor: pointer;
+  }
+  .chip-select:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 
   /* ----- 사이드바 → 바텀시트 ----- */
   #sidebarToggleBtn {

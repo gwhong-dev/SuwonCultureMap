@@ -1623,9 +1623,9 @@ function favButtonHtml(isFavorited) {
   );
 }
 
-// ----- 카테고리 칩 (드롭다운 대신 가로로 넘기는 버튼) -----
+// ----- 칩 줄 (모바일 지도 상단, 가로로 넘김) -----
 function chipLabel(value) {
-  if (value === "all") return "전체";
+  if (value === "all") return "전체 분류";
   if (value === "찜") return "♥ 찜";
   var style = CATEGORY_STYLE[value];
   return style ? style.emoji + " " + value : value;
@@ -1637,27 +1637,41 @@ function renderCategoryChips() {
   var chips = document.getElementById("categoryChips");
   chips.innerHTML = "";
 
-  // 드롭다운 옵션과 같은 순서로 칩 생성 → 누르면 드롭다운 값을 바꾸고 필터 실행
+  // 분류는 칩 하나(드롭다운): 칩 모양 글자 위에 투명한 <select> 를 덮어 누르면 휴대폰 기본 선택 창
+  // (분류 칩 7개를 늘어놓으면 오른쪽으로 한참 넘겨야 해서 한눈에 안 보임)
+  var categoryChip = document.createElement("label");
+  categoryChip.id = "categoryChip";
+  categoryChip.className = "chip chip-select";
+  var categoryText = document.createElement("span");
+  categoryText.id = "categoryChipText";
+  var categoryArrow = document.createElement("span");
+  categoryArrow.className = "chip-arrow";
+  categoryArrow.setAttribute("aria-hidden", "true");
+  categoryArrow.textContent = "▾";
+  var categoryPicker = document.createElement("select");
+  categoryPicker.id = "categoryChipSelect";
+  categoryPicker.setAttribute("aria-label", "분류");
+  // 드롭다운(PC) 옵션과 같은 순서 → 고르면 PC 드롭다운 값을 바꾸고 필터 실행
   Array.from(select.options).forEach(function (option) {
-    var chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "chip";
-    chip.dataset.value = option.value;
-    chip.textContent = chipLabel(option.value);
-    chip.addEventListener("click", function () {
-      select.value = option.value;
-      filterMarkers();
-    });
-    chips.appendChild(chip);
+    var item = document.createElement("option");
+    item.value = option.value;
+    item.textContent = chipLabel(option.value);
+    categoryPicker.appendChild(item);
   });
+  categoryPicker.addEventListener("change", function () {
+    select.value = categoryPicker.value;
+    filterMarkers();
+  });
+  categoryChip.append(categoryText, categoryArrow, categoryPicker);
+  chips.appendChild(categoryChip);
 
-  // 날짜 칩 3개: 누르면 그 날짜 필터, 한 번 더 누르면 해제 (카테고리 칩과 함께 쓸 수 있음)
+  // 날짜 칩 3개: 누르면 그 날짜 필터, 한 번 더 누르면 해제 (분류와 함께 쓸 수 있음)
   var dateSelect = document.getElementById("dateFilter");
   [
     { value: "today", label: "📅 오늘 진행" },
     { value: "weekend", label: "📅 이번 주말" },
     { value: "week", label: "📅 7일 안" },
-  ].forEach(function (option, index) {
+  ].forEach(function (option) {
     var chip = document.createElement("button");
     chip.type = "button";
     chip.className = "chip";
@@ -1667,7 +1681,7 @@ function renderCategoryChips() {
       dateSelect.value = dateSelect.value === option.value ? "all" : option.value;
       filterMarkers();
     });
-    chips.insertBefore(chip, chips.children[index] || null); // 맨 앞에 (가로 스크롤 뒤에 숨지 않게)
+    chips.appendChild(chip); // 분류 바로 뒤 (가로 스크롤 뒤에 숨지 않게)
   });
 
   // '무료' 칩: 날짜 칩 바로 뒤 (분류 칩과 함께 쓸 수 있음)
@@ -1680,7 +1694,7 @@ function renderCategoryChips() {
     freeOnly = !freeOnly;
     filterMarkers();
   });
-  chips.insertBefore(freeChip, chips.children[3] || null);
+  chips.appendChild(freeChip);
 
   // '지난 행사' 칩은 기존 체크박스를 대신 눌러줌
   var pastChip = document.createElement("button");
@@ -1710,9 +1724,17 @@ function updateChipActive() {
           ? showPast
           : chip.dataset.value === "__free"
             ? freeOnly
-            : chip.dataset.value === selected;
+            : chip.id === "categoryChip"
+              ? selected !== "all" // 분류를 골랐을 때만 켜진 모양
+              : chip.dataset.value === selected;
       chip.classList.toggle("active", active);
     });
+  // 분류 칩: 고른 값 · 글자를 PC 드롭다운 값에 맞춤 (찜 보기 · 구 지도 등 다른 곳에서 값을 바꿔도)
+  var categoryPicker = document.getElementById("categoryChipSelect");
+  if (categoryPicker) {
+    categoryPicker.value = selected;
+    document.getElementById("categoryChipText").textContent = chipLabel(selected);
+  }
   updateDistrictChip();
 }
 

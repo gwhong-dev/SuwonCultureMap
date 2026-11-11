@@ -171,6 +171,19 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
+  void 모바일_지도_칩_줄의_분류는_드롭다운_하나() throws Exception {
+    // 분류 칩 7개(전체 · 행사 · 공연 …)를 늘어놓으면 오른쪽으로 한참 넘겨야 함 → 칩 하나 + 투명 <select>
+    String js = script();
+    assertThat(js).contains("categoryChip.className = \"chip chip-select\"", "categoryPicker.id = \"categoryChipSelect\"");
+    assertThat(js).contains("select.value = categoryPicker.value;"); // 고르면 PC 드롭다운 값으로 필터
+    assertThat(js).contains("categoryPicker.value = selected;"); // 다른 곳에서 바꾼 값도 칩에 맞춤
+    assertThat(js).doesNotContain("select.value = option.value;"); // 분류마다 칩을 만들던 옛 방식 없음
+
+    String css = fetch("/css/index.css");
+    assertThat(css).contains(".chip-select select {", "opacity: 0;");
+  }
+
+  @Test
   void 홈_이달의_행사가_날짜_칩과_곧_종료_사이에_있고_처음엔_숨김() throws Exception {
     // monthEvents 로 고른 행사가 있을 때만 index.js 가 보이게 함 (제목 "11월의 수원 행사"도 index.js 가 채움)
     String html = page();
