@@ -184,6 +184,17 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
+  void 모바일_상단_바는_터치를_지도로_통과시키지_않음() throws Exception {
+    // 아이폰 사파리: 통과(pointer-events: none) 부모 안의 가로 스크롤 칩 줄 터치가 지도로 새어
+    // 칩을 누른 채 끌면 지도가 같이 움직였음 (11/11) → 상단 바가 터치를 직접 받음
+    String css = fetch("/css/index.css");
+    int topbar = css.indexOf("  #topbar {\n    position: absolute;");
+    assertThat(topbar).isPositive();
+    assertThat(css.substring(topbar, css.indexOf("}", topbar))).doesNotContain("pointer-events: none");
+    assertThat(css).doesNotContain("#topbar > * {\n    pointer-events: auto;");
+  }
+
+  @Test
   void PC_도_지도_위에_칩_줄이_있고_상단_바_분류_날짜_칸은_숨김() throws Exception {
     // 사용자: "웹버전 지도 상단에 카테고리/날짜 토글 배치, 모바일처럼" → 칩 줄을 PC 에서도 지도 왼쪽 위에, 값은 숨긴 칸에 그대로
     String css = fetch("/css/index.css");

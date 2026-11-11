@@ -1004,11 +1004,10 @@ body {
     color: var(--text);
     padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 0;
     gap: 8px;
-    pointer-events: none; /* 빈 공간은 통과 → 지도 드래그 가능 */
+    /* 터치는 상단 바가 직접 받음 (지도로 통과시키지 않음).
+       예전엔 바 자체는 통과 · 자식만 터치를 받게 했는데, 아이폰 사파리에서 가로 스크롤 칩 줄의 터치가
+       아래 지도로 새어 칩을 누른 채 끌면 지도가 같이 움직였음 (WebKit 버그 183870 · 225561) */
     transition: background 0.2s;
-  }
-  #topbar > * {
-    pointer-events: auto;
   }
   /* 목록을 끝까지 올렸을 때는 상단을 흰 배경으로 */
   body.sheet-full #topbar {
