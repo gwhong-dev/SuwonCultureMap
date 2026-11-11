@@ -84,6 +84,7 @@ COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml
 
 - `APP_BASE_URL` 을 localhost 그대로 두면 소셜 로그인이 실패한다
 - `KAKAO_ADMIN_KEY` 는 운영에서 필수 (탈퇴 때 카카오 연결 해제 · 카카오 연결 끊기 알림 확인)
+- `GG_BUS_SERVICE_KEY` 는 선택 — 오시는 길 정류소 조회(data.go.kr "경기도_정류소 조회" 인증키 Decoding). 비어 있으면 정류소 칸만 숨김 ([설계](transit-directions.md))
 - `COMPOSE_FILE` · `COMPOSE_PROJECT_NAME` 덕분에 이후 `docker compose` 만 입력하면 된다. 폴더 이름이 바뀌어도 같은 DB 를 쓴다
 - 비밀번호에는 특수문자를 쓰지 않는다 (`$` 등을 compose 가 다르게 해석)
 - DB 비밀번호는 첫 실행 때 DB 에 저장된다. 나중에 `.env` 만 고치면 접속이 실패한다. `docker compose down -v` 는 **DB 를 통째로 삭제**하므로 운영에서 쓰지 않는다
