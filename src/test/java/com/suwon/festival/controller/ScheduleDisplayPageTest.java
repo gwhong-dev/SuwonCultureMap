@@ -184,6 +184,17 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
+  void 모바일_상단_바는_터치를_지도로_통과시키지_않음() throws Exception {
+    // 아이폰 사파리: 통과(pointer-events: none) 부모 안의 가로 스크롤 칩 줄 터치가 지도로 새어
+    // 칩을 누른 채 끌면 지도가 같이 움직였음 (11/11) → 상단 바가 터치를 직접 받음
+    String css = fetch("/css/index.css");
+    int topbar = css.indexOf("  #topbar {\n    position: absolute;");
+    assertThat(topbar).isPositive();
+    assertThat(css.substring(topbar, css.indexOf("}", topbar))).doesNotContain("pointer-events: none");
+    assertThat(css).doesNotContain("#topbar > * {\n    pointer-events: auto;");
+  }
+
+  @Test
   void 홈_이달의_행사가_날짜_칩과_곧_종료_사이에_있고_처음엔_숨김() throws Exception {
     // monthEvents 로 고른 행사가 있을 때만 index.js 가 보이게 함 (제목 "11월의 수원 행사"도 index.js 가 채움)
     String html = page();
