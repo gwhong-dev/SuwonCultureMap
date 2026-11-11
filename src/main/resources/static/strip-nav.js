@@ -55,6 +55,16 @@ function stripLabelText(nearOrder, index, count) {
   return (nearOrder ? "가까운 순" : "목록 순") + " · " + (Math.max(index, 0) + 1) + " / " + count;
 }
 
+// 마커를 누르지 않아도 카드 줄을 띄우나: PC 이고 카드가 있을 때만 (모바일은 지금처럼 마커를 눌러야 뜸, 11/11)
+function stripDefaultShown(isMobile, count) {
+  return !isMobile && count > 0;
+}
+
+// 지도 빈 곳 클릭이 카드 줄을 닫나: 모바일만 (PC 는 카드 줄이 늘 떠 있음)
+function mapClickClosesStrip(isMobile) {
+  return isMobile;
+}
+
 // 키보드 ← → → 옮길 장 수. k = { key, tag(포커스 요소 태그), editable, role, alt(조합키), handled(이미 처리됨) }
 // 입력칸에서 치는 중 · 탭 줄처럼 자기 화살표 키를 쓰는 곳 · 조합키(Alt+← 뒤로 가기 등)는 그대로 둠
 function stripKeyStep(k) {
@@ -74,5 +84,7 @@ if (typeof module !== "undefined") {
     stripSettleIndex: stripSettleIndex,
     stripKeyStep: stripKeyStep,
     stripLabelText: stripLabelText,
+    stripDefaultShown: stripDefaultShown,
+    mapClickClosesStrip: mapClickClosesStrip,
   };
 }

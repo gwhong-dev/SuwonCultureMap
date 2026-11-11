@@ -257,8 +257,7 @@ kakao.maps.load(function () {
 
   // 지도 빈 곳을 누르면 하단 카드 닫기 (모바일). PC 는 카드 줄이 기본으로 늘 떠 있어서 그대로 둠 (11/11)
   kakao.maps.event.addListener(map, "click", function () {
-    if (!mobileQuery.matches) return;
-    hidePreview();
+    if (mapClickClosesStrip(mobileQuery.matches)) hidePreview(); // strip-nav.js
   });
 
   guardMapDragFromTopbar();
@@ -2618,6 +2617,8 @@ function updatePreviewLabel() {
   });
   cards.forEach(function (card, i) {
     card.classList.toggle("current", i === index);
+    if (i === index) card.setAttribute("aria-current", "true"); // 보조기기도 지금 카드를 알게 (#215 검증 ⑦)
+    else card.removeAttribute("aria-current");
   });
   document.getElementById("previewLabel").textContent = stripLabelText(!!previewOrigin, index, cards.length); // strip-nav.js
   var arrows = stripArrowState(index, cards.length); // strip-nav.js
@@ -2675,14 +2676,13 @@ function showPreview(eventId) {
 //  - 순서 · 첫 카드 = 오른쪽 목록 그대로 (찜 먼저 → 시작일 순). 마커 · 목록을 누르면 그때부터 가까운 순 (showPreview)
 //  - 지도는 움직이지 않고(첫 화면 행궁동 그대로) 첫 카드 마커만 강조. 모바일은 지금처럼 마커를 눌러야 뜸
 function showDefaultPreview() {
-  if (mobileQuery.matches) return;
+  if (!stripDefaultShown(mobileQuery.matches, lastSortedItems.length)) { // strip-nav.js
+    if (!mobileQuery.matches) hidePreview(); // PC 인데 0건 → 숨김. 모바일은 손대지 않음 (마커로 띄운 카드 유지)
+    return;
+  }
   previewOrigin = null;
   renderPreviewStrip(lastSortedItems);
   var first = document.getElementById("previewStrip").firstElementChild;
-  if (!first) {
-    hidePreview();
-    return;
-  }
   previewEventId = Number(first.dataset.eventId);
   updatePreviewLabel();
   document.getElementById("previewArea").classList.add("show");

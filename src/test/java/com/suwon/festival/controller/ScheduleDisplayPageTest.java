@@ -311,4 +311,43 @@ class ScheduleDisplayPageTest {
     MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     assertThat(mockMvc.perform(get("/strip-nav.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
   }
+
+  @Test
+  void PC_카드_줄_띠의_빈_곳은_지도가_클릭과_끌기를_받음() throws Exception {
+    // PC 카드 줄은 늘 떠 있음 → 띠(지도 전체 폭)가 다 받으면 첫 · 끝 카드일 때 빈 절반의 마커 클릭 · 끌기가 막힘 (#215 검증 ⑥)
+    // PC 구간: 띠는 통과(none), 라벨 · 카드 · 화살표만 받음(auto). 모바일(공통 규칙)은 띠 전체가 받음 그대로
+    String css = fetch("/css/index.css").replace("\r\n", "\n");
+    int start = css.indexOf("#sidebar.collapsed ~ #previewArea");
+    int media = css.lastIndexOf("@media (min-width: 1025px) {", start);
+    assertThat(media).isPositive();
+    String pc = block(css, css.indexOf("{", media));
+
+    assertThat(rule(pc, "#previewArea.show {")).contains("pointer-events: none;");
+    assertThat(pc).contains("#previewArea.show #previewLabel,", "#previewArea.show .preview-card,", "#previewArea.show .strip-arrow {");
+    assertThat(rule(pc, "#previewArea.show .strip-arrow {")).contains("pointer-events: auto;");
+    // 공통(모바일) 규칙은 그대로 띠 전체가 받음
+    assertThat(rule(css, "\n#previewArea.show {")).contains("pointer-events: auto;");
+
+    // 지금 카드는 보조기기에도 알림, 양옆 카드는 카드 전체가 아니라 포스터만 흐리게 (글자 대비 유지, #215 검증 ⑦)
+    assertThat(script()).contains("card.setAttribute(\"aria-current\", \"true\")", "card.removeAttribute(\"aria-current\")");
+    assertThat(rule(pc, ".preview-card {")).doesNotContain("opacity");
+    assertThat(rule(pc, ".preview-card .preview-poster {")).contains("opacity: 0.5;");
+  }
+
+  // open = 여는 { 의 위치 → 짝이 맞는 } 까지 (안쪽 내용)
+  private static String block(String css, int open) {
+    int depth = 0;
+    for (int i = open; i < css.length(); i++) {
+      if (css.charAt(i) == '{') depth++;
+      else if (css.charAt(i) == '}' && --depth == 0) return css.substring(open + 1, i);
+    }
+    throw new IllegalStateException("닫는 } 없음");
+  }
+
+  // selector 로 시작하는 규칙 하나의 내용 ({ … })
+  private static String rule(String css, String selector) {
+    int at = css.indexOf(selector);
+    assertThat(at).as(selector).isNotNegative();
+    return block(css, css.indexOf("{", at));
+  }
 }

@@ -845,8 +845,18 @@ body {
   #sidebar.collapsed ~ #previewArea {
     right: 0; /* 목록을 접으면 지도 전체 폭 */
   }
-  /* PC 카드 줄 (11/11 시안 PcCard): 지금 카드는 늘 가운데 · 진한 테두리, 양옆 카드는 흐리게
+  /* PC 카드 줄 (11/11 시안 PcCard): 지금 카드는 늘 가운데 · 진한 테두리, 양옆 카드는 포스터만 흐리게
      양쪽 여백 = 줄 폭 절반 - 카드 절반 → 첫 · 끝 카드도 가운데로 올 수 있음 */
+  /* PC 카드 줄 띠는 늘 떠 있음 → 띠 빈 곳(카드 사이 · 양쪽 여백)은 지도가 클릭 · 끌기를 받게,
+     라벨 · 카드 · 화살표만 받음 (#215 검증 ⑥, 모바일은 그대로 띠 전체가 받음) */
+  #previewArea.show {
+    pointer-events: none;
+  }
+  #previewArea.show #previewLabel,
+  #previewArea.show .preview-card,
+  #previewArea.show .strip-arrow {
+    pointer-events: auto;
+  }
   #previewLabel {
     align-self: center;
     margin-left: 0;
@@ -858,14 +868,18 @@ body {
   }
   .preview-card {
     flex: 0 0 360px;
-    opacity: 0.6;
-    transition: opacity 0.2s, border-color 0.2s;
+    transition: border-color 0.2s;
   }
-  .preview-card:hover {
-    opacity: 0.85;
+  /* 양옆 카드: 글자 대비는 그대로 두고(카드 불투명) 포스터만 흐리게 (#215 검증 ⑦) */
+  .preview-card .preview-poster {
+    opacity: 0.5;
+    transition: opacity 0.2s;
+  }
+  .preview-card:hover .preview-poster,
+  .preview-card.current .preview-poster {
+    opacity: 1;
   }
   .preview-card.current {
-    opacity: 1;
     border-color: var(--text);
     box-shadow: inset 0 0 0 1px var(--text), var(--shadow-float); /* 2px 테두리 (자리 크기는 그대로) */
   }

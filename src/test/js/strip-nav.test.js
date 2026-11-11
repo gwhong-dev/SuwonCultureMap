@@ -9,6 +9,8 @@ const {
   stripSettleIndex,
   stripKeyStep,
   stripLabelText,
+  stripDefaultShown,
+  mapClickClosesStrip,
 } = require("../../main/resources/static/strip-nav.js");
 
 test("키보드: → 다음 · ← 이전, 다른 키는 0", () => {
@@ -112,4 +114,15 @@ test("위치 표시: 마커 · 목록을 눌렀으면 가까운 순, PC 기본 �
 test("위치 표시: 카드가 없으면 빈 글, 고른 카드가 없으면 1 부터 (0 / N 이 안 보이게)", () => {
   assert.strictEqual(stripLabelText(false, 0, 0), "");
   assert.strictEqual(stripLabelText(true, -1, 5), "가까운 순 · 1 / 5");
+});
+
+test("기본 카드 줄: PC 이고 카드가 있을 때만 (모바일은 마커를 눌러야 뜸)", () => {
+  assert.strictEqual(stripDefaultShown(false, 32), true);
+  assert.strictEqual(stripDefaultShown(false, 0), false);
+  assert.strictEqual(stripDefaultShown(true, 32), false);
+});
+
+test("지도 빈 곳 클릭: 모바일만 카드 줄을 닫음 (PC 는 늘 떠 있음)", () => {
+  assert.strictEqual(mapClickClosesStrip(true), true);
+  assert.strictEqual(mapClickClosesStrip(false), false);
 });
