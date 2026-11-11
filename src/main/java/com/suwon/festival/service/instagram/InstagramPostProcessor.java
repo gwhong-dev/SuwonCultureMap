@@ -60,9 +60,9 @@ public class InstagramPostProcessor {
   private static final Pattern PERMANENT_HTTP = Pattern.compile("\\(HTTP 4(?!29|01|03)\\d\\d\\)");
   private static final Pattern MORE_DAYS = Pattern.compile("부터|까지|매주|매일|외\\s*\\d|\\d\\s*회|회차");
 
-  // 게시물 1개 처리 결과 (개수만)
+  // 게시물 1개 처리 결과 (개수만). imageReason: 사진 처리 이유 (행사가 안 나온 글 = null, 사진을 안 받음)
   public record Outcome(boolean newMedia, Map<InstagramBlock.Status, Integer> blocks,
-      int eventsSaved, int eventsUpdated, int duplicateBlocks) {
+      int eventsSaved, int eventsUpdated, int duplicateBlocks, InstagramImageStore.Reason imageReason) {
   }
 
   private final InstagramMediaRepository mediaRepository;
@@ -232,14 +232,20 @@ public class InstagramPostProcessor {
     }
 
     // 사진: 행사가 나온 글만 받음 (행사 없는 글의 사진은 받지 않음). 같은 글의 행사들이 같은 파일을 씀
+    InstagramImageStore.Reason imageReason = null;
     if (!ready.isEmpty()) {
-      String image = imageStore.resolve(post.id(), post.imageUrl());
-      for (Event e : ready) e.useImage(image);
+      InstagramImageStore.Resolution image = imageStore.resolveWithReason(post.id(), post.imageUrl());
+      imageReason = image.reason();
+      for (Event e : ready) e.useImage(image.url());
+      // 사진 없음 원인 진단: id · 종류만 (사진 주소엔 서명 값이 있어 남기지 않음)
+      if (imageReason == InstagramImageStore.Reason.NO_URL) {
+        log.info("인스타 사진 주소 없음 mediaId={} mediaType={}", post.id(), post.mediaType());
+      }
     }
 
     media.markProcessed(now);
     logAfterCommit(logLines);
-    return new Outcome(isNew, counts, saved, updated, duplicates);
+    return new Outcome(isNew, counts, saved, updated, duplicates, imageReason);
   }
 
   // 같은 키(= 같은 장소명)로 최근에 검색해 실패했으면 다시 검색하지 않음

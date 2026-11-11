@@ -19,6 +19,9 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -42,6 +45,7 @@ import com.suwon.festival.service.schedule.EventScheduleWriter;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@ExtendWith(OutputCaptureExtension.class)
 class InstagramImageSyncTest {
 
   static final Path DIR;
@@ -171,6 +175,29 @@ class InstagramImageSyncTest {
     service.sync();
 
     assertThat(DIR.resolve(ID + ".jpg")).doesNotExist();
+  }
+
+  @Test
+  void 사진_결과를_계정별_이유로_로그에_남기고_주소는_남기지_않음(CapturedOutput output) {
+    String video = "1790000000000102";
+    String noEvent = "1790000000000103";
+    server.answers.put("/a.jpg", new Answer(200, "image/jpeg", FakeImageServer.JPEG, false));
+    String signed = server.url("/a.jpg") + "?oh=SIGNED_VALUE";
+    client.answers.put("suwon_city", List.of(
+        post(ID, CAPTION, signed),
+        new InstagramPost(video, CAPTION.replace("가을", "겨울"), "https://www.instagram.com/p/v/", POSTED, "VIDEO", null),
+        post(noEvent, "오늘의 수원 풍경 사진입니다", signed)));
+
+    service.sync();
+    service.sync();
+
+    assertThat(output.getOut())
+        .contains("인스타 사진 주소 없음 mediaId=" + video + " mediaType=VIDEO")
+        .contains("인스타 사진 결과 account=suwon_city 사진 {NO_URL=1, STORED_NEW=1} · 받아 온 게시물 3개 ["
+            + ID + ", " + video + ", " + noEvent + "]")
+        .contains("인스타 사진 결과 account=suwon_city 사진 {NO_URL=1, ALREADY_STORED=1}")
+        .doesNotContain("SIGNED_VALUE")
+        .doesNotContain(server.url("/a.jpg"));
   }
 
   private static InstagramPost post(String id, String caption, String imageUrl) {
