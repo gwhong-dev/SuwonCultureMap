@@ -25,9 +25,3 @@
 :root {
   --font-brand: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
 }
-/* 로고 마크(성벽 여장 + 지도 핀). 색은 currentColor → 바탕에 맞춰 글자색을 따라감 */
-.brand-mark {
-  flex: none;
-  width: 1.25em;
-  height: 1.25em;
-}
