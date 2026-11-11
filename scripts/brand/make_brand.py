@@ -110,6 +110,23 @@ def seal_inner(song, white="#fff", frame=2.2, weight=1.1):
     )
 
 
+# 작은 도장(48px 이하: 화면 로고 · 파비콘 32): 안쪽 테두리 없이 글자를 크고 굵게, 핀도 조금 크게
+SMALL_GLYPH_BOX = {"수": (15, 11, 71, 47), "원": (15, 52.5, 71, 89)}
+PIN_SMALL = (
+    "M85.5 95C82 89.8 77.5 86 77.5 80A8 8 0 1 1 93.5 80"
+    "C93.5 86 89 89.8 85.5 95ZM85.5 76.6A3.4 3.4 0 1 0 85.5 83.4A3.4 3.4 0 1 0 85.5 76.6Z"
+)
+
+
+def seal_sm(song, white="#fff", weight=2.8):
+    d = "".join(fit(song, ch, box) for ch, box in SMALL_GLYPH_BOX.items())
+    return (
+        f'<path fill="{BRICK}" d="{SEAL_OUTER}"/>'
+        f'<path fill="{white}" stroke="{white}" stroke-width="{weight}" stroke-linejoin="round" d="{d}"/>'
+        f'<path fill="{white}" fill-rule="evenodd" d="{PIN_SMALL}"/>'
+    )
+
+
 def seal_small(song):
     """16px 파비콘: "수" 한 글자 + 핀 점. 테두리 선 없음 (16px 에선 뭉개짐)"""
     d = fit(song, "수", (12, 12, 70, 88))
@@ -158,14 +175,15 @@ def main():
     word_vb = f"0 {fmt(top)} {fmt(vb_w)} {fmt(vb_h)}"
     sprite = (
         f'<svg xmlns="http://www.w3.org/2000/svg">{CREDIT}'
-        f'<symbol id="seal" viewBox="0 0 100 100">{seal_inner(song, frame=2.6, weight=1.8)}</symbol>'  # 화면은 32~36px → 선 · 글자 조금 굵게
+        f'<symbol id="seal" viewBox="0 0 100 100">{seal_inner(song)}</symbol>'
+        f'<symbol id="seal-sm" viewBox="0 0 100 100">{seal_sm(song)}</symbol>'  # 화면 로고(32~48px)는 작은 도장
         f'<symbol id="wordmark" viewBox="0 {fmt(top)} {fmt(name_w)} {fmt(name_bot - top)}"><path fill="currentColor" d="{name_d}"/></symbol>'
         f'<symbol id="tagline" viewBox="4 {fmt(sub_top2)} {fmt(sub_w)} {fmt(sub_bot2 - sub_top2)}"><path fill="currentColor" d="{sub_d}"/></symbol>'
         "</svg>\n"
     )
     (BRAND / "logo.svg").write_text(sprite, encoding="utf-8")
     (BRAND / "logo-mark.svg").write_text(svg("0 0 100 100", seal_inner(song), 32, 32), encoding="utf-8")
-    (BRAND / "favicon.svg").write_text(svg("0 0 100 100", seal_inner(song, frame=3.2, weight=2.6), 32, 32), encoding="utf-8")
+    (BRAND / "favicon.svg").write_text(svg("0 0 100 100", seal_sm(song), 32, 32), encoding="utf-8")
     (WORK / "favicon-16.svg").write_text(svg("0 0 100 100", seal_small(song), 16, 16), encoding="utf-8")
     (WORK / "icon.svg").write_text(svg("0 0 100 100", seal_icon(song), 512, 512), encoding="utf-8")
     (WORK / "wordmark.svg").write_text(
