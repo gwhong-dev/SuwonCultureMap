@@ -430,9 +430,9 @@ body {
 .modal-link-btn {
   padding: 0.5rem 1rem;
   border-radius: 8px;
-  border: 1px solid var(--accent);
+  border: 1px solid #b4472a; /* PC 상세 창은 다크 모드에도 흰 바탕 → 밝은 --accent 대신 벽돌색 고정 (5.4:1) */
   background: #fff;
-  color: var(--accent);
+  color: #b4472a;
   cursor: pointer;
   font-size: 0.9rem;
   text-decoration: none;
