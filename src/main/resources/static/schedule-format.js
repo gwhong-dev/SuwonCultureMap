@@ -126,7 +126,7 @@ function scheduleRowText(event, timeText) {
   return text;
 }
 
-// ===== "오늘 진행" · "이번 주말" · "7일 안" 필터 (설계 7번) =====
+// ===== "진행 중"(오늘 진행) · "이번 주말" · "7일 안" 필터 (설계 7번) =====
 // 오늘은 한국 시간 기준 (toISOString 은 UTC 라 오전 9시 전엔 전날이 됨)
 function koreaToday(now) {
   return new Date((now === undefined ? Date.now() : now) + 9 * 3600000).toISOString().slice(0, 10);

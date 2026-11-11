@@ -175,6 +175,22 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
+  void 지도_칩_줄은_진행_중이고_7일_안은_PC_에만() throws Exception {
+    // 사용자 결정(11/11, Chips 시안): "오늘 진행" → "진행 중", 모바일 칩 줄에서 '7일 안' 빼기 (필터 규칙은 그대로)
+    String js = script();
+    assertThat(js).contains("{ value: \"today\", label: \"📅 진행 중\" }", "pcOnly: true", "\"chip chip-pc-only\"");
+    assertThat(js).doesNotContain("오늘 진행");
+    assertThat(page()).contains("<option value=\"today\">진행 중</option>").doesNotContain("오늘 진행");
+
+    // 모바일 구간에서만 숨김, 홈 "+7일"로 켜졌을 때(active)는 보여서 해제할 수 있음
+    String css = fetch("/css/index.css");
+    int mobile = css.indexOf("@media (max-width: 1024px)");
+    int rule = css.indexOf("#categoryChips .chip-pc-only:not(.active) {");
+    assertThat(rule).isGreaterThan(mobile);
+    assertThat(css.indexOf("display: none;", rule)).isGreaterThan(rule);
+  }
+
+  @Test
   void 모바일_지도_칩_줄의_분류는_드롭다운_하나() throws Exception {
     // 분류 칩 7개(전체 · 행사 · 공연 …)를 늘어놓으면 오른쪽으로 한참 넘겨야 함 → 칩 하나 + 투명 <select>
     String js = script();

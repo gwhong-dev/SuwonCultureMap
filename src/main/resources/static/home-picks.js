@@ -6,7 +6,7 @@ var homeSchedule =
     : { eventStatus: eventStatus, koreaToday: koreaToday, matchRunDays: matchRunDays };
 
 // 홈 3칸 (11/11 시안): ① 지금 진행 중 ② 곧 종료 | 곧 시작 (7일 안) ③ 달별 행사 (다음 달부터)
-// 겹침 규칙: ① 은 ② "곧 종료"에 나온 행사를 빼고 보여 줌 (같은 행사가 위아래 두 번 나오지 않게). 수 N 은 오늘 진행 전체
+// 겹침 규칙: ① 은 ② "곧 종료"에 나온 행사를 빼고 보여 줌 (같은 행사가 위아래 두 번 나오지 않게). 수 N 은 진행 중 전체 (오늘 진행하는 행사)
 var HOME_SOON_DAYS = 7; // 오늘 포함 7일 = 지도 칩 "7일 안"(nextSevenDays)과 같음
 var HOME_NOW_MAX = 10; // 지금 진행 중 가로 카드 수
 var HOME_MONTHS_AHEAD = 11; // 달별 칩: 다음 달 ~ 11달 뒤 (12달 뒤는 이번 달과 이름이 같아 뺌)
@@ -58,8 +58,8 @@ function startingSoon(events, now) {
     );
 }
 
-// ① 지금 진행 중: 운영중이고 오늘 진행 (진행 날짜를 알면 오늘이 그중 하나, 모르면 기간 안 = 지도 칩 "오늘 진행"과 같음)
-// 수 N = "전체 →"(목록 + 오늘 진행) 수와 같게 matchRunDays 그대로 씀 → 시작일 없는 행사는 빠짐. 끝나는 날 가까운 순
+// ① 지금 진행 중: 운영중이고 오늘 진행 (진행 날짜를 알면 오늘이 그중 하나, 모르면 기간 안 = 지도 날짜 칩 "진행 중"(today)과 같음)
+// 수 N = "전체 →"(목록 + 날짜 칩 "진행 중") 수와 같게 matchRunDays 그대로 씀 → 시작일 없는 행사는 빠짐. 끝나는 날 가까운 순
 function nowOpenEvents(events, now) {
   var today = homeSchedule.koreaToday(now);
   return events

@@ -1584,16 +1584,17 @@ function renderCategoryChips() {
   categoryChip.append(categoryText, categoryArrow, categoryPicker);
   chips.appendChild(categoryChip);
 
-  // 날짜 칩 3개: 누르면 그 날짜 필터, 한 번 더 누르면 해제 (분류와 함께 쓸 수 있음)
+  // 날짜 칩: 누르면 그 날짜 필터, 한 번 더 누르면 해제 (분류와 함께 쓸 수 있음)
+  // '7일 안'은 PC 칩 줄에만 (모바일은 CSS 로 숨김 — 홈 "+7일"로 켜졌을 때만 보여서 해제할 수 있게)
   var dateSelect = document.getElementById("dateFilter");
   [
-    { value: "today", label: "📅 오늘 진행" },
+    { value: "today", label: "📅 진행 중" },
     { value: "weekend", label: "📅 이번 주말" },
-    { value: "week", label: "📅 7일 안" },
+    { value: "week", label: "📅 7일 안", pcOnly: true },
   ].forEach(function (option) {
     var chip = document.createElement("button");
     chip.type = "button";
-    chip.className = "chip";
+    chip.className = option.pcOnly ? "chip chip-pc-only" : "chip";
     chip.dataset.date = option.value;
     chip.textContent = option.label;
     chip.addEventListener("click", function () {
@@ -1954,7 +1955,7 @@ function renderHomeNow() {
     // 진행 중이 없거나, 진행 중 행사가 모두 아래 "곧 종료"에 나옴 (겹쳐 보이지 않게)
     track.innerHTML =
       '<p class="home-empty">' +
-      (count ? "진행 중인 행사는 모두 아래 '곧 종료'에 있어요" : "오늘 진행 중인 행사가 없어요") +
+      (count ? "진행 중인 행사는 모두 아래 '곧 종료'에 있어요" : "지금 진행 중인 행사가 없어요") +
       "</p>";
     return;
   }
@@ -1963,7 +1964,7 @@ function renderHomeNow() {
   bindHomeCards(track);
 }
 
-// "전체 →": 목록 탭 + 날짜 칩 "오늘 진행" (다른 필터는 풀어서 목록 수 = N)
+// "전체 →": 목록 탭 + 날짜 칩 "진행 중"(값 today) (다른 필터는 풀어서 목록 수 = N)
 document.getElementById("homeNowAll").addEventListener("click", function () {
   document.getElementById("searchInput").value = "";
   document.getElementById("categorySelect").value = "all";

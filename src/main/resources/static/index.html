@@ -40,7 +40,7 @@
       </select>
       <select id="dateFilter" aria-label="진행 날짜">
         <option value="all">전체 날짜</option>
-        <option value="today">오늘 진행</option>
+        <option value="today">진행 중</option>
         <option value="weekend">이번 주말</option>
         <option value="week">7일 안</option>
       </select>
@@ -111,7 +111,7 @@
         </button>
       </header>
       <!-- 홈 3칸 (11/11 시안): ① 지금 진행 중 ② 곧 종료 | 곧 시작 (7일 안) ③ 달별 행사. 고르는 규칙은 home-picks.js
-           겹침 규칙: ① 가로 카드는 ② "곧 종료"에 나온 행사를 뺌. 수 N 은 오늘 진행 전체 (= "전체 →" 목록 수) -->
+           겹침 규칙: ① 가로 카드는 ② "곧 종료"에 나온 행사를 뺌. 수 N 은 진행 중 전체 (= "전체 →" 목록 수, 날짜 칩 "진행 중") -->
       <section id="homeNow" class="home-now" aria-labelledby="homeNowTitle">
         <div class="home-section-head">
           <h1 id="homeNowTitle" class="home-section-title">지금 진행 중 <strong id="homeNowCount">…</strong></h1>
