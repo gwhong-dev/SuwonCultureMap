@@ -1393,6 +1393,15 @@ body {
     font-size: 0.85rem;
     cursor: pointer;
   }
+  .theme-mode-seg button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .theme-mode-seg svg {
+    width: 22px;
+    height: 22px;
+  }
   .theme-mode-seg button:first-child {
     border-left: 0;
   }

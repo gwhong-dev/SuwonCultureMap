@@ -194,3 +194,15 @@ test("기기 설정을 따르는 중 기기가 어두워지면 PC 단추 이름�
   p.listeners.forEach((fn) => fn());
   assert.strictEqual(p.toggle.attrs["aria-label"], "밝은 화면으로");
 });
+
+test("☰ 화면 모드 3칸은 그림만 → 칸마다 이름(aria-label)이 있음", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../../main/resources/static/index.html"), "utf8");
+  for (const [mode, label] of [
+    ["system", "기기 설정"],
+    ["light", "라이트"],
+    ["dark", "다크"],
+  ]) {
+    const re = new RegExp('<button type="button" data-mode="' + mode + '"[^>]*aria-label="' + label + '"[^>]*><svg');
+    assert.ok(re.test(html), mode + " 칸 이름 없음");
+  }
+});
