@@ -1,6 +1,6 @@
 /* ===== 색 토큰 (PC · 모바일 공통) =====
    테마 고르기: 기본은 기기 설정(prefers-color-scheme)을 따름
-   <html data-theme="light"> → 기기가 어두운 모드여도 밝게 / data-theme="dark" → 늘 어둡게 (전환 버튼은 theme.js)
+   <html data-theme="light"> → 기기가 어두운 모드여도 밝게 / data-theme="dark" → 늘 어둡게 (전환 버튼 · theme.js 는 다음 PR feat/theme-toggle)
    어두운 값은 아래 두 곳(미디어쿼리 · data-theme="dark")에 똑같이 둠 — src/test/js/theme-tokens.test.js 가 같은지 확인 */
 :root {
   --sidebar-width: 450px; /* PC 사이드바 폭 (모바일은 바텀시트라 사용 안 함) */
