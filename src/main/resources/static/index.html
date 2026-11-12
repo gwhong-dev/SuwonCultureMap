@@ -102,7 +102,7 @@
              모바일 = 목록 탭에서만: 날짜 줄(오늘부터) + 달력 펼치기 / PC = 목록 위 탭 [진행 중 · 진행 예정 · 달력 ▾] -->
         <div id="datePanel" class="date-panel" hidden>
           <div class="pc-date-tabs" role="group" aria-label="진행 상태 · 날짜">
-            <button type="button" class="pc-date-tab" data-status="open" aria-pressed="true">진행 중 <span id="pcOpenCount"></span></button>
+            <button type="button" class="pc-date-tab" data-status="open" aria-pressed="false">진행 중 <span id="pcOpenCount"></span></button>
             <button type="button" class="pc-date-tab" data-status="upcoming" aria-pressed="false">진행 예정 <span id="pcUpcomingCount"></span></button>
             <button type="button" id="pcCalBtn" class="pc-cal-btn" aria-expanded="false" aria-controls="calMonth">달력 ▾</button>
           </div>
@@ -363,6 +363,8 @@
               <span id="detailAddress" class="route-addr"></span>
               <button id="detailCopyBtn" type="button" class="copy-btn">주소 복사</button>
             </div>
+            <!-- 오시는 길: 가까운 정류장(버스 번호) · 역 — /api/events/{id}/transit, 비면 숨김 (transit-nearby.js) -->
+            <div id="detailTransit" hidden></div>
           </section>
         </div>
         <!-- 모바일 전용 하단 고정: ♡ + 길찾기 -->
@@ -385,6 +387,7 @@
     ></script>
     <script src="/schedule-format.js"></script>
     <script src="/route-links.js"></script>
+    <script src="/transit-nearby.js"></script>
     <script src="/event-detail.js"></script>
     <script src="/favorite-ui.js"></script>
     <script src="/recent-views.js"></script>
