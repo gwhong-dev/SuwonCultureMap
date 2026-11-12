@@ -50,11 +50,12 @@ class SocialLoginNoPersonalDataTest {
   }
 
   @Test
-  void 이메일_비밀번호_닉네임_칸이_없음() {
+  void 이메일_비밀번호_칸이_없음() {
+    // NICKNAME 은 V9 부터 있음 — 소셜이 준 이름이 아니라 서비스가 만든 랜덤 이름(회원이 수정). 소셜 이름을 안 읽는 건 아래 시험이 확인
     Integer count = jdbcTemplate.queryForObject(
         "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS"
             + " WHERE UPPER(TABLE_NAME) IN ('MEMBER', 'LOGIN_METHOD')"
-            + " AND UPPER(COLUMN_NAME) IN ('EMAIL', 'PASSWORD', 'NICKNAME')",
+            + " AND UPPER(COLUMN_NAME) IN ('EMAIL', 'PASSWORD', 'NAME', 'PHONE')",
         Integer.class);
 
     assertThat(count).isZero();

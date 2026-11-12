@@ -13,6 +13,7 @@ import com.suwon.festival.repository.LoginMethodRepository;
 import com.suwon.festival.repository.MemberRepository;
 import com.suwon.festival.security.OAuthStateManager;
 import com.suwon.festival.service.AuthService;
+import com.suwon.festival.service.MemberService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -35,6 +36,7 @@ public class AuthController {
   private final LoginMethodRepository loginMethodRepository;
   private final MemberRepository memberRepository;
   private final OAuthStateManager stateManager;
+  private final MemberService memberService;
 
   // ===== 소셜 로그인 설정값 (프로필별 properties에서 주입) =====
   @Value("${kakao.rest-api-key}")
@@ -166,6 +168,7 @@ public class AuthController {
           .map(loginMethod -> loginMethod.getProvider())
           .toList();
       result.put("linkedProviders", linkedProviders);
+      result.put("nickname", memberService.ensureNickname(memberId)); // 없으면(가입 직후 · 옛 회원) 이때 랜덤으로 붙임
     }
 
     return result;

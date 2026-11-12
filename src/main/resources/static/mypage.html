@@ -20,15 +20,40 @@
   <body>
     <div class="page-card">
       <h1>마이페이지</h1>
-      <div class="member-id" id="memberIdText">회원 정보 불러오는 중...</div>
+
+      <!-- 닉네임 (11/13 확정 시안 P5): 첫 글자 동그라미 + 닉네임 + 회원 번호, 아래 수정 칸 -->
+      <section class="profile">
+        <div class="profile-head">
+          <div class="profile-initial" id="profileInitial" aria-hidden="true"></div>
+          <div class="profile-names">
+            <strong class="profile-nickname" id="profileNickname">불러오는 중...</strong>
+            <span class="member-id" id="memberIdText"></span>
+          </div>
+        </div>
+        <form class="nickname-form" id="nicknameForm" novalidate>
+          <label class="nickname-label" for="nicknameInput">닉네임</label>
+          <div class="nickname-row">
+            <input type="text" id="nicknameInput" maxlength="12" autocomplete="off" aria-describedby="nicknameHelp nicknameStatus" />
+            <button type="button" class="nickname-reroll" id="nicknameReroll" aria-label="랜덤 이름 다시 뽑기" title="랜덤 이름 다시 뽑기">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"></path></svg>
+            </button>
+          </div>
+          <p class="nickname-status" id="nicknameStatus" role="status" aria-live="polite"></p>
+          <p class="nickname-help" id="nicknameHelp">2~12자 · 한글 · 영문 · 숫자 · 띄어쓰기 · 다른 회원과 겹치면 안 돼요</p>
+          <button type="submit" class="nickname-save" id="nicknameSave">닉네임 저장</button>
+        </form>
+      </section>
 
       <div class="section-title">연동된 소셜 계정</div>
       <div id="providerList"></div>
 
-      <button type="button" class="withdraw-btn" id="withdrawBtn">회원 탈퇴</button>
+      <button type="button" class="logout-btn" id="logoutBtn">로그아웃</button>
 
-      <a class="back-link" href="about.html">서비스 안내</a>
-      <a class="back-link" href="privacy.html">개인정보 처리방침</a>
+      <div class="page-links">
+        <a class="back-link" href="about.html">서비스 안내</a>
+        <a class="back-link" href="privacy.html">개인정보 처리방침</a>
+        <button type="button" class="withdraw-btn" id="withdrawBtn">회원 탈퇴</button>
+      </div>
       <a class="back-link" href="index.html">← 지도로 돌아가기</a>
 
       <!-- 데이터 정보 (11/11 사용자 결정: 목록 줄이 아니라 마이 페이지 맨 아래에만)

@@ -41,4 +41,12 @@ public class Member {
     @Column(nullable = false) // 공란 금지
     private LocalDateTime createdAt;
 
+    // 닉네임 (V9): 가입 때 랜덤 조합, 마이페이지에서 수정. 겹치지 않음(UNIQUE). 옛 회원은 처음엔 null
+    @Column(length = 40, unique = true)
+    private String nickname;
+
+    public void changeNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
 }
