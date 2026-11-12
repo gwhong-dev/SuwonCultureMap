@@ -92,7 +92,7 @@ function syncUrlState() {
   nav.update();
 }
 var homeOpen = false; // 모바일 홈 화면(하단 탭 "홈")이 지도 위를 덮고 있나
-var sheetState = "peek"; // "peek"(살짝 — 결과 바만) | "half"(절반) | "full"(전체)
+var sheetState = "peek"; // "peek"(지도 탭 — 결과 바만) | "full"(목록 보기 — 지도를 다 덮음, P3)
 var sheetY = 0; // 바텀시트의 현재 위치 (위에서부터 px)
 var previewEventId = null; // 하단 카드로 보고 있는 행사 id
 var previewOrigin = null; // 마커를 탭한 행사 — 카드 순서는 여기서 가까운 순
@@ -255,11 +255,7 @@ kakao.maps.load(function () {
   };
   map = new kakao.maps.Map(mapContainer, mapOption);
 
-  // 지도 빈 곳을 누르면 하단 카드 닫기 (모바일). PC 는 카드 줄이 기본으로 늘 떠 있어서 그대로 둠 (11/11)
-  kakao.maps.event.addListener(map, "click", function () {
-    if (mapClickClosesStrip(mobileQuery.matches)) hidePreview(); // strip-nav.js
-  });
-
+  // 지도 빈 곳을 눌러도 하단 카드 줄은 그대로 (PC 11/11 · 모바일 P3 — 지도 탭이면 카드 줄이 늘 떠 있음)
   guardMapDragFromTopbar();
   loadEvents();
 });
@@ -446,6 +442,12 @@ function cardDateText(item) {
   return item.runMatch === "maybe" ? text + " · " + MAYBE_RUN_NOTE : text;
 }
 
+// 장소 · 구 한 줄 (P3 모바일 카드 · 목록 줄 "정조테마공연장 · 팔달구"). 둘 다 모르면 빈 글
+function placeLineHtml(event, className) {
+  var text = [eventPlace(event), eventDistrict(event)].filter(Boolean).join(" · ");
+  return text ? '<div class="' + className + '">' + escapeHtml(text) + "</div>" : "";
+}
+
 // 구 필터 (null = 전체). 홈 "내 주변"의 "지도에서 보기"가 켜고, 지도 칩 줄 맨 앞 "📍 ○○구 ✕" 칩으로 끔
 var districtFilter = null;
 // 무료만 (지도 칩 줄 "💸 무료", 한 번 더 누르면 해제). 판정은 event-detail.js isFreeEvent
@@ -463,7 +465,7 @@ function filterMarkers() {
   var selectedCategory = document.getElementById("categorySelect").value;
   var showPast = document.getElementById("showPastCheckbox").checked;
   var runDays = filterDays(document.getElementById("dateFilter").value); // 한국 시간 기준, 필터 없으면 null
-  var statusTab = currentStatusTab(); // PC 목록 위 탭 (진행 중 · 진행 예정), 모바일 · 날짜 고름이면 null
+  var statusTab = currentStatusTab(); // 목록 위 탭 (진행 중 · 진행 예정), 날짜를 골랐으면 null
 
   updateChipActive(); // 모바일 칩 선택 표시 동기화
   updateTabBar(); // 모바일 하단 탭 선택 표시 동기화
@@ -838,6 +840,7 @@ function renderSidebar(items) {
       '<div class="date">' +
       escapeHtml(dateText) +
       "</div>" +
+      placeLineHtml(item.event, "place") + // 모바일 목록 줄 (P3): 장소 · 구 (PC 는 CSS 로 숨김 — 요약 줄에 장소가 있음)
       '<div class="title">' +
       escapeHtml(item.event.title) +
       "</div>" +
@@ -854,7 +857,7 @@ function renderSidebar(items) {
       );
       map.setLevel(5);
 
-      // PC: 지도 하단 카드도 그 행사로 (상세를 닫으면 카드로 이어서 둘러봄). 모바일은 상세가 전체 화면이라 띄우지 않음
+      // PC: 지도 하단 카드도 그 행사로 (상세를 닫으면 카드로 이어서 둘러봄). 모바일은 상세가 전체 화면 · 목록이 지도를 덮어 띄우지 않음
       if (!mobileQuery.matches) showPreview(item.event.id);
 
       openDetailModal(item.event);
@@ -871,7 +874,7 @@ function renderSidebar(items) {
 
   // ===== (모바일) 결과 개수 + 미리보기 카드도 같은 목록으로 갱신 =====
   document.getElementById("resultCount").innerHTML =
-    (recent ? "최근 본 " : onFavScreen() ? "찜 " : "검색 결과 ") + "<strong>" + sorted.length + "개</strong>";
+    (recent ? "최근 본 " : onFavScreen() ? "찜 " : "행사 ") + "<strong>" + sorted.length + "</strong>개"; // P3 시안 "행사 32개"
   updateSheetHeaderLabel();
   lastSortedItems = sorted;
   renderPreviewStrip(sorted);
@@ -884,7 +887,7 @@ function renderSidebar(items) {
       hidePreview(); // 필터로 사라진 행사면 닫기
     }
   }
-  if (previewEventId === null) showDefaultPreview(); // PC: 카드 줄은 늘 떠 있게 (모바일은 아무것도 안 함)
+  if (previewEventId === null) showDefaultPreview(); // 카드 줄은 늘 떠 있게 (PC · 모바일 지도 탭)
 }
 
 document
@@ -1042,7 +1045,9 @@ document.getElementById("modalImage").addEventListener("error", function () {
 });
 
 // ===== 상세정보 큰 팝업창 열기/닫기 =====
-function openDetailModal(event) {
+// pager = 모바일 카드 줄에서 열었을 때 앞뒤 행사 { ids, index, scope } (P3, stripDetailPager). 그 밖에서 열면 없음
+function openDetailModal(event, pager) {
+  detailPager = pager || null;
   // 사진이 없으면(인스타 행사) 기본 그림. 불러오다 실패해도 기본 그림 (위 error 처리)
   document.getElementById("modalImage").src = event.imageUrl || "";
   showModalImage(!!event.imageUrl, event);
@@ -1123,6 +1128,7 @@ function openDetailModal(event) {
   };
 
   renderDetailMobile(event); // 모바일 전용 부분 (분류 · 구, 정보 표, 소개, 위치, 하단 바)
+  renderDetailPager();
 
   // 모바일은 페이지 전체가 스크롤됨 → 닫을 때 돌아갈 목록 위치를 기억하고 맨 위에서 시작
   if (!document.body.classList.contains("detail-open")) detailReturnScrollY = window.scrollY;
@@ -1401,6 +1407,105 @@ document.getElementById("shareKakaoBtn").addEventListener("click", function () {
   }
 });
 
+// ----- 상세 좌우 넘기기 (P3 확정 시안 HomeOverscroll ③): 모바일 지도 탭 카드 줄에서 연 상세 -----
+// 상세 위 ‹ "상세 · 진행 중 2 / 9" › + 좌우로 밀기 → 카드 줄 앞뒤 행사. 닫으면 카드 줄도 그 행사에 있음
+var detailPager = null;
+
+// 지금 카드 줄 순서 그대로 (eventId 의 자리부터)
+function stripDetailPager(eventId) {
+  var ids = Array.from(document.getElementById("previewStrip").children).map(function (card) {
+    return Number(card.dataset.eventId);
+  });
+  var index = ids.indexOf(eventId);
+  if (index < 0 || ids.length < 2) return null;
+  return {
+    ids: ids,
+    index: index,
+    scope: listScopeName(document.getElementById("dateFilter").value, currentStatusTab()), // strip-nav.js
+  };
+}
+
+function renderDetailPager() {
+  var box = document.getElementById("detailPager");
+  box.hidden = !detailPager;
+  if (!detailPager) return;
+  document.getElementById("detailPagerText").textContent = detailPagerLabel(
+    detailPager.scope,
+    detailPager.index,
+    detailPager.ids.length,
+  ); // strip-nav.js
+  var arrows = stripArrowState(detailPager.index, detailPager.ids.length); // strip-nav.js — 처음 · 끝이면 그쪽을 막음
+  document.getElementById("detailPrev").disabled = !arrows.prev;
+  document.getElementById("detailNext").disabled = !arrows.next;
+}
+
+function stepDetail(delta) {
+  if (!detailPager) return;
+  var target = stripStepTarget(detailPager.index, delta, detailPager.ids.length); // strip-nav.js
+  if (target < 0 || target === detailPager.index) return;
+  var id = detailPager.ids[target];
+  var found = markerList.find(function (item) {
+    return item.event.id === id;
+  });
+  if (!found) return;
+  var focused = document.activeElement;
+  openDetailModal(found.event, { ids: detailPager.ids, index: target, scope: detailPager.scope });
+  // 카드 줄도 같은 행사로 (상세를 닫으면 그 카드 · 마커)
+  var card = findPreviewCard(id);
+  if (card) {
+    previewEventId = id;
+    updatePreviewLabel();
+    scrollStripTo(card);
+    selectMarker(id, true);
+  }
+  // 넘기기 버튼으로 넘겼으면 초점을 그 버튼에 (끝에 닿아 막히면 반대쪽)
+  var prev = document.getElementById("detailPrev");
+  var next = document.getElementById("detailNext");
+  if (focused === prev || focused === next) {
+    if (!focused.disabled) focused.focus();
+    else (focused === prev ? next : prev).focus();
+  }
+}
+
+document.getElementById("detailPrev").addEventListener("click", function () {
+  stepDetail(-1);
+});
+document.getElementById("detailNext").addEventListener("click", function () {
+  stepDetail(1);
+});
+
+// 좌우로 밀기 (작은 지도 · 정류장 칸 · 입력칸에서 시작한 밀기는 빼고)
+(function setupDetailSwipe() {
+  var card = document.querySelector("#detailModal .modal-card");
+  var start = null;
+  card.addEventListener(
+    "touchstart",
+    function (e) {
+      var skip = e.target.closest && e.target.closest("#modalMap, #detailTransit, select, input, textarea");
+      start = detailPager && e.touches.length === 1 && !skip ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+    },
+    { passive: true },
+  );
+  card.addEventListener(
+    "touchend",
+    function (e) {
+      if (!start) return;
+      var t = e.changedTouches[0];
+      var step = swipeStep(t.clientX - start.x, t.clientY - start.y); // strip-nav.js
+      start = null;
+      if (step) stepDetail(step);
+    },
+    { passive: true },
+  );
+  card.addEventListener(
+    "touchcancel",
+    function () {
+      start = null;
+    },
+    { passive: true },
+  );
+})();
+
 // ===== 행사 번호로 상세 열기 (홈 카드 · 검색 결과 등) =====
 function openDetailFromMarker(eventId) {
   var found = markerList.find(function (item) {
@@ -1418,6 +1523,7 @@ function closeDetailModal() {
   if (wasOpen && mobileQuery.matches) window.scrollTo(0, detailReturnScrollY); // 보던 목록 위치로
   if (wasOpen && homeOpen) drawNearbyMap(); // 상세가 덮은 동안 화면이 돌았으면 작은 지도 크기 다시 맞춤
   detailEvent = null;
+  detailPager = null;
   closeShareSheet();
   dialogFocus.closed("detail"); // 보던 목록 위치로 스크롤한 뒤 (포커스가 화면을 끌고 가지 않게)
   nav.close("detail");
@@ -1706,7 +1812,7 @@ function updateDateChip() {
 }
 
 // ----- 날짜 고르기 (calendar-strip.js, 11/11 시안 CalClosed · CalOpen · PcCard) -----
-// 모바일 = 목록 탭 위 날짜 줄(오늘부터 2주, 칸마다 그날 진행 행사 수) + "달력 펼치기"(한 달, 점 = 행사 수)
+// 모바일 = 목록 화면 위 탭 줄 [진행 중 N · 진행 예정 N · 달력 ▾] (PC 와 같음, P3 — 2주 날짜 줄은 안 씀)
 // PC = 목록 위 탭 [진행 중 N · 진행 예정 N · 달력 ▾]. 날짜를 고르면 #dateFilter 값("2026-11-14") → 목록 · 지도 · 카드 줄 모두 그날만
 // PC 탭: null 전체(기본, 진행 중 + 진행 예정 — 11/12 사용자) | "open" 진행 중 | "upcoming" 진행 예정
 // 켜진 탭을 다시 누르면 전체로. 날짜를 고르면 탭 대신 날짜
@@ -1716,10 +1822,10 @@ var calShownMonth = null; // 달력에 보이는 달 { year, month }
 var lastDateBaseItems = []; // 마지막 필터의 "날짜 빼고 통과한 행사" (달력 넘기기 등 필터 없이 다시 그릴 때)
 var lastDateVisibleCount = 0;
 
-// PC 진행 탭은 날짜 · 검색어 · '찜' · 지난 행사가 없을 때만 걸림 (모바일은 탭이 없음, calendar-strip.js statusTabApplies)
+// PC 진행 탭은 날짜 · 검색어 · '찜' · 지난 행사가 없을 때만 걸림 (calendar-strip.js statusTabApplies, PC · 모바일 같음)
+// 모바일 목록 화면도 같은 탭 줄 [진행 중 N · 진행 예정 N · 달력 ▾] (P3 확정 시안 MobileList) → mobile 값은 넘기지 않음
 function currentStatusTab() {
   return statusTabApplies({
-    mobile: mobileQuery.matches,
     dateValue: document.getElementById("dateFilter").value,
     keyword: document.getElementById("searchInput").value.trim(),
     category: document.getElementById("categorySelect").value,
@@ -1904,7 +2010,7 @@ document.getElementById("calMonth").addEventListener("keydown", function (e) {
   e.preventDefault();
   e.stopPropagation(); // 페이지 전체 Esc(상세 닫기 등)로 넘기지 않음
   openCalendar(false);
-  document.getElementById(mobileQuery.matches ? "calOpenBtn" : "pcCalBtn").focus();
+  document.getElementById("pcCalBtn").focus(); // 모바일도 탭 줄의 달력 ▾ (P3)
 });
 document.getElementById("dateStrip").addEventListener("click", onDayClick);
 document.getElementById("calGrid").addEventListener("click", onDayClick);
@@ -1936,7 +2042,7 @@ document.querySelectorAll("#datePanel .pc-date-tab").forEach(function (tab) {
 document.getElementById("dateClearBtn").addEventListener("click", function () {
   setDateFilter("all");
 });
-// PC ↔ 모바일: 진행 탭은 PC 에만 걸리므로 목록을 다시 거름, 펼친 달력은 접음
+// PC ↔ 모바일: 펼친 달력은 접고 목록을 다시 그림
 mobileQuery.addEventListener("change", function () {
   calOpen = false;
   filterMarkers();
@@ -1971,10 +2077,8 @@ function updateDistrictChip() {
 function getSheetPositions() {
   var appHeight = document.getElementById("app").clientHeight;
   var headerHeight = document.getElementById("sheetHeader").offsetHeight;
-  var topbarHeight = document.getElementById("topbar").offsetHeight;
   return {
-    full: topbarHeight, // 검색창 바로 아래까지
-    half: Math.round(appHeight * 0.5),
+    full: 0, // 목록 보기 = 지도 · 검색창까지 다 덮는 화면 (P3 확정 시안 MobileList, 머리줄 "행사 N개 · 지도 보기")
     peek: appHeight - headerHeight, // 결과 바만 보이게 (아이폰 홈 바 여백은 하단 탭이 맡음)
   };
 }
@@ -1987,7 +2091,7 @@ function setSheetY(y, animate) {
 }
 
 // 목록 전체 = 페이지 전체가 스크롤 (index.css, 사파리 주소창이 줄어들게)
-// 켜고 끌 때 보던 목록 위치를 목록 상자 ↔ 페이지 사이로 옮김 (절반 ↔ 전체 전환에도 위치 유지)
+// 켜고 끌 때 보던 목록 위치를 목록 상자 ↔ 페이지 사이로 옮김 (끌어내리는 동안에도 위치 유지)
 function setListPageScroll(on) {
   if (document.body.classList.contains("sheet-full") === on) return;
   var list = document.getElementById("list");
@@ -2011,10 +2115,16 @@ function setSheetState(state) {
   setSheetY(y, true);
   // 시트가 내려가 있는 만큼 목록 아래 여백 → 마지막 카드까지 스크롤 가능 (전체는 CSS 가 하단 탭 자리만큼)
   document.getElementById("list").style.paddingBottom = state === "full" ? "" : y + 24 + "px";
-  document.getElementById("sheetToggleText").textContent = state === "peek" ? "목록 보기" : "접기";
+  document.getElementById("sheetToggleText").textContent = state === "peek" ? "목록 보기" : "지도 보기";
   updateSheetHeaderLabel();
-  if (state !== "peek") hidePreview(); // 목록이 올라오면 하단 카드는 닫음
+  if (state !== "peek") hidePreview(); // 목록이 지도를 덮으면 하단 카드는 닫음
+  else if (previewEventId === null) showDefaultPreview(); // 지도 탭 = 카드 줄 기본 표시 (P3)
   updateTabBar();
+}
+
+// 지도 탭이 보이나 (모바일): 홈 · 목록 · 찜 · 검색 화면이 지도를 덮고 있지 않음 → 카드 줄 기본 표시 (strip-nav.js stripDefaultShown)
+function mobileMapShown() {
+  return !homeOpen && !favTabOpen && !searchOpen && sheetState === "peek";
 }
 
 // 결과 바(버튼)의 보조기기용 이름 · 열림 상태
@@ -2024,21 +2134,21 @@ function updateSheetHeaderLabel() {
   header.setAttribute("aria-expanded", expanded ? "true" : "false");
   header.setAttribute(
     "aria-label",
-    document.getElementById("resultCount").textContent + ", " + (expanded ? "접기" : "목록 보기"),
+    document.getElementById("resultCount").textContent + ", " + (expanded ? "지도 보기" : "목록 보기"),
   );
 }
 
 function nearestSheetState(y) {
   var pos = getSheetPositions();
-  return ["full", "half", "peek"].reduce(function (best, s) {
+  return ["full", "peek"].reduce(function (best, s) {
     return Math.abs(pos[s] - y) < Math.abs(pos[best] - y) ? s : best;
   }, "peek");
 }
 
-// 손잡이 부분을 끌어서 올리고 내리기 (탭하면 살짝 ↔ 절반)
+// 결과 바를 끌어서 올리고 내리기. 탭 · Enter · Space = 지도 탭 ↔ 목록 보기 (P3: 절반 단계 없음)
 (function setupSheetDrag() {
   var header = document.getElementById("sheetHeader");
-  var ORDER = ["full", "half", "peek"];
+  var ORDER = ["full", "peek"];
   var dragging = false;
   var startY = 0;
   var startSheetY = 0;
@@ -2076,7 +2186,7 @@ function nearestSheetState(y) {
 
     // 거의 안 움직였으면 '탭'으로 처리
     if (e.type === "pointerup" && Math.abs(e.clientY - startY) < 6) {
-      setSheetState(sheetState === "peek" ? "half" : "peek");
+      toggleListView();
       return;
     }
 
@@ -2085,24 +2195,34 @@ function nearestSheetState(y) {
     if (velocity < -0.4) {
       target = ORDER[Math.max(0, from - 1)]; // 위로 튕기면 한 단계 위
     } else if (velocity > 0.4) {
-      target = ORDER[Math.min(2, from + 1)]; // 아래로 튕기면 한 단계 아래
+      target = ORDER[Math.min(ORDER.length - 1, from + 1)]; // 아래로 튕기면 한 단계 아래
     } else {
       target = nearestSheetState(sheetY); // 천천히 놓으면 가까운 위치로
     }
-    setSheetState(target);
+    // 탭을 거쳐서 → 찜 화면을 끌어내려도 찜 상태가 남지 않고 지도 탭 · 카드 줄로 (#240 검증 ⚠️)
+    selectTab(target === "peek" ? "map" : favTabOpen ? "fav" : "list");
   }
   header.addEventListener("pointerup", endDrag);
   header.addEventListener("pointercancel", endDrag);
 
-  // 키보드: Enter · Space 로 살짝 ↔ 절반
+  // 키보드: Enter · Space
   header.addEventListener("keydown", function (e) {
     if (!mobileQuery.matches) return;
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      setSheetState(sheetState === "peek" ? "half" : "peek");
+      toggleListView();
     }
   });
 })();
+
+// "목록 보기 ▴" ↔ "지도 보기": 목록 탭 ↔ 지도 탭과 같음 (찜 화면에서 "지도 보기"도 지도 탭으로)
+function toggleListView() {
+  selectTab(sheetState === "peek" ? "list" : "map");
+}
+// 목록 보기 화면 하단 가운데 떠 있는 [지도 보기] (P3 확정 시안 MobileList)
+document.getElementById("listMapBtn").addEventListener("click", function () {
+  selectTab("map");
+});
 
 // ----- 하단 탭 (홈 · 지도 · 목록 · 찜 · 마이) -----
 // 한 화면(index.html) 안의 상태를 탭으로 오가게 함: 홈 = 지도 위를 덮는 홈 화면, 지도 = 목록 살짝,
@@ -2159,8 +2279,8 @@ function showHome() {
     filterMarkers(); // 찜 화면 흔적(탭 줄 · 칩 흐림 · tabpanel · "찜 N개")을 지움 → 홈 뒤 PC 폭으로 바뀌어도 남지 않게
   }
   hidePreview();
+  homeOpen = true; // 시트를 내리기 전에 → 지도 탭 카드 줄이 홈 뒤에서 뜨지 않게 (mobileMapShown)
   if (sheetState !== "peek") setSheetState("peek"); // 목록 전체(페이지 스크롤)는 풀어 두고 홈으로
-  homeOpen = true;
   document.body.classList.add("home-open");
   window.scrollTo(0, 0);
   drawNearbyMap(); // 숨은 칸에선 크기가 0 이라 작은 지도는 보일 때 그림
@@ -2244,21 +2364,75 @@ function renderHomeNow() {
       "</p>";
     return;
   }
-  track.innerHTML = cards.map(nowCardHtml).join("");
+  // 끝에 좁은 안내 (P3 확정 시안 HomeOverscroll): 밀어서 보이면 "더 밀면 전체", 끝에서 한 번 더 밀면 지도 탭 (아래 끝 넘김)
+  // 누르거나 키보드로도 같은 곳으로 (버튼)
+  track.innerHTML =
+    cards.map(nowCardHtml).join("") +
+    '<button type="button" class="now-more" aria-label="진행 중 행사 전체를 지도에서 보기">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>' +
+    '<span class="now-more-text" aria-hidden="true">더 밀면 전체</span>' +
+    "</button>";
   track.scrollLeft = 0; // 다시 그릴 때 처음 카드부터
   bindHomeCards(track);
+  track.querySelector(".now-more").addEventListener("click", function () {
+    showNowEvents("map");
+  });
 }
 
-// "전체 →": 목록 탭 + 날짜 필터 오늘(값 today → 목록 위 날짜 줄의 '오늘' 칸이 켜짐) (다른 필터는 풀어서 목록 수 = N)
-document.getElementById("homeNowAll").addEventListener("click", function () {
+// 진행 중 행사 전체: 날짜 필터 오늘(값 today = 홈 수 N 과 같은 판정) + 다른 필터는 풀어서 목록 수 = N
+//  - "전체 →" = 목록 탭, 끝 넘김 · 끝 안내 = 지도 탭 + 카드 줄 (P3, 거기서 연 상세는 좌우로 앞뒤 행사)
+function showNowEvents(tab) {
   document.getElementById("searchInput").value = "";
   document.getElementById("categorySelect").value = "all";
   document.getElementById("dateFilter").value = "today";
   document.getElementById("showPastCheckbox").checked = false;
   freeOnly = false;
   districtFilter = null;
-  selectTab("list"); // filterMarkers 가 목록 · 칩 표시까지 맞춤
+  pcStatusTab = null;
+  selectTab(tab); // filterMarkers 가 목록 · 칩 · 카드 줄까지 맞춤
+}
+document.getElementById("homeNowAll").addEventListener("click", function () {
+  showNowEvents("list");
 });
+
+// 끝 넘김: 끝에 닿은 채로 시작해 왼쪽으로 한 번 더 밀면 지도 탭 (home-picks.js homeEndSwipe — 첫 밀기는 안내만 보임)
+(function setupNowEndSwipe() {
+  var track = document.getElementById("homeNowTrack");
+  var start = null;
+  track.addEventListener(
+    "touchstart",
+    function (e) {
+      if (e.touches.length !== 1 || !track.querySelector(".now-more")) {
+        start = null;
+        return;
+      }
+      start = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+        atEnd: atScrollEnd(track.scrollLeft, track.scrollWidth, track.clientWidth),
+      };
+    },
+    { passive: true },
+  );
+  track.addEventListener(
+    "touchend",
+    function (e) {
+      if (!start) return;
+      var t = e.changedTouches[0];
+      var go = homeEndSwipe(start.atEnd, t.clientX - start.x, t.clientY - start.y);
+      start = null;
+      if (go) showNowEvents("map");
+    },
+    { passive: true },
+  );
+  track.addEventListener(
+    "touchcancel",
+    function () {
+      start = null;
+    },
+    { passive: true },
+  );
+})();
 
 // 행사 행 (디자인 2번 공통 부품): 포스터 56×70 + 배지 + 제목 + 보조 줄(분류 · 구 · 기간)
 // 사진이 없거나 못 불러오면 기본 그림(P6). 홈 곧 종료 · 곧 시작에서 쓰고, 검색 결과(S2)에서도 같이 씀
@@ -2568,8 +2742,9 @@ document.getElementById("homeNearbyGo").addEventListener("click", goNearbyOnMap)
 // 모바일 ↔ PC 폭이 바뀔 때 (칩 줄은 PC · 모바일 모두 지도 위에 있어 구 · 무료 필터는 그대로 둠)
 mobileQuery.addEventListener("change", function (e) {
   if (e.matches) {
-    // PC 기본 카드 줄(마커를 누르지 않고 뜬 것)은 모바일로 넘어오면 닫음 — 모바일은 지금처럼 마커를 눌러야 뜸
-    if (previewEventId !== null && !previewOrigin) hidePreview();
+    // 모바일로 넘어오면: 지도 탭이면 카드 줄 그대로(글만 모바일로), 홈 · 목록 등이 덮고 있으면 닫음 (P3)
+    if (!mobileMapShown()) hidePreview();
+    else if (previewEventId !== null) updatePreviewLabel();
     // 모바일에선 지도 검색창을 누르면 검색 화면이 열려 PC 에서 친 검색어를 지울 수 없음 → 넘어올 때 풂
     var searchInput = document.getElementById("searchInput");
     if (searchInput.value) {
@@ -2612,6 +2787,7 @@ function closeSearch() {
   searchViewInput.blur();
   document.getElementById("searchView").hidden = true;
   document.body.classList.remove("search-open");
+  if (previewEventId === null) showDefaultPreview(); // 지도 탭으로 돌아오면 카드 줄 (P3)
 }
 
 // 제목 + 검색어 강조 (띄어쓰기 무시한 자리). 장소로만 맞으면 강조 없음. typing = 치는 중 규칙 (home-picks.js searchTyping)
@@ -2805,20 +2981,13 @@ function renderPreviewStrip(sortedItems) {
 
   groups.forEach(function (group) {
     group.forEach(function (item) {
-      var stacked = item.groupSize > 1;
-      var sub = [];
-      if (stacked) {
-        sub.push('<span class="preview-stack">같은 장소 ' + (item.groupIndex + 1) + "/" + item.groupSize + "</span>");
-      }
-      sub.push(escapeHtml(cardDateText(item)));
-      var place = eventPlace(item.event);
-      if (place) sub.push(escapeHtml(place));
-      var district = eventDistrict(item.event);
-      if (district) sub.push(district);
-
       var card = document.createElement("article");
       card.className = "preview-card";
       card.dataset.eventId = item.event.id;
+      // 같은 장소 i / n 은 카드 밖 띠 #previewPlaceBand 로 (P3 · P1 확정 시안, updatePreviewLabel)
+      card.dataset.groupIndex = item.groupIndex || 0;
+      card.dataset.groupSize = item.groupSize || 1;
+      card.dataset.place = eventPlace(item.event) || "";
       card.innerHTML =
         (item.event.imageUrl
           ? '<img class="preview-poster" src="' + escapeHtml(item.event.imageUrl) + '" alt="" loading="lazy">'
@@ -2828,9 +2997,10 @@ function renderPreviewStrip(sortedItems) {
         '<div class="preview-title">' +
         escapeHtml(item.event.title) +
         "</div>" +
-        '<div class="preview-sub">' +
-        sub.join(" · ") +
+        '<div class="preview-date">' +
+        escapeHtml(cardDateText(item)) +
         "</div>" +
+        placeLineHtml(item.event, "preview-place") +
         '<div class="preview-actions">' +
         '<button type="button" class="preview-detail">상세 보기</button>' +
         '<button type="button" class="preview-route">' +
@@ -2840,8 +3010,18 @@ function renderPreviewStrip(sortedItems) {
         favButtonHtml(favoriteEventIds.has(item.event.id));
       posterOnError(card.querySelector("img.preview-poster"), item.event); // 사진을 못 불러오면 기본 그림 (P6)
 
-      card.addEventListener("click", function () {
-        openDetailModal(item.event); // 카드 어디를 눌러도 상세 (상세 보기 버튼 포함)
+      function openCardDetail() {
+        // 카드 어디를 눌러도 상세 (상세 보기 버튼 포함). 모바일은 상세에서 좌우로 카드 줄 앞뒤 행사 (P3)
+        openDetailModal(item.event, mobileQuery.matches ? stripDetailPager(item.event.id) : null);
+      }
+      card.addEventListener("click", openCardDetail);
+      // 키보드: 카드에 초점 → Enter 로 상세 (모바일 카드는 상세 보기 · ♥ 버튼을 숨겨 카드 말고 갈 곳이 없음, #240 검증 ⚠️)
+      card.tabIndex = 0;
+      card.setAttribute("aria-label", item.event.title);
+      card.addEventListener("keydown", function (e) {
+        if (e.key !== "Enter" || e.target !== card) return;
+        e.preventDefault();
+        openCardDetail();
       });
       card.querySelector(".preview-route").addEventListener("click", function (e) {
         e.stopPropagation(); // 길찾기 창만 열고 상세는 열지 않음
@@ -2864,7 +3044,8 @@ function findPreviewCard(eventId) {
   );
 }
 
-// "가까운 순 · 현재 / 전체" (PC 기본 카드 줄은 "목록 순") + 지금 카드 표시(PC: 테두리 강조 · 양옆 흐리게)
+// "가까운 순 · 현재 / 전체" (PC 기본 카드 줄은 "목록 순", 모바일은 "밀어서 다음 행사") + 지금 카드 표시(PC: 테두리 강조 · 양옆 흐리게)
+// + 카드 줄 위 띠 "이 장소 행사 1 / 6" (같은 장소 행사가 2개 이상일 때만)
 function updatePreviewLabel() {
   var strip = document.getElementById("previewStrip");
   var cards = Array.from(strip.children);
@@ -2876,7 +3057,16 @@ function updatePreviewLabel() {
     if (i === index) card.setAttribute("aria-current", "true"); // 보조기기도 지금 카드를 알게 (#215 검증 ⑦)
     else card.removeAttribute("aria-current");
   });
-  document.getElementById("previewLabel").textContent = stripLabelText(!!previewOrigin, index, cards.length); // strip-nav.js
+  document.getElementById("previewLabel").textContent = stripLabelText(!!previewOrigin, index, cards.length, mobileQuery.matches); // strip-nav.js
+  var current = cards[index];
+  var band = document.getElementById("previewPlaceBand");
+  var bandCount = current ? placeBandCount(Number(current.dataset.groupIndex), Number(current.dataset.groupSize)) : ""; // strip-nav.js
+  band.hidden = !bandCount;
+  if (bandCount) {
+    band.innerHTML =
+      "이 장소 행사 <strong>" + bandCount + "</strong>" +
+      (current.dataset.place ? '<span class="band-place"> · ' + escapeHtml(current.dataset.place) + "</span>" : "");
+  }
   var arrows = stripArrowState(index, cards.length); // strip-nav.js
   document.getElementById("previewPrev").hidden = !arrows.prev;
   document.getElementById("previewNext").hidden = !arrows.next;
@@ -2928,12 +3118,12 @@ function showPreview(eventId) {
   selectMarker(eventId, true);
 }
 
-// PC: 지도를 열면 하단 카드 줄을 기본으로 띄움 (11/11, 전엔 마커를 눌러야 뜸)
-//  - 순서 · 첫 카드 = 오른쪽 목록 그대로 (찜 먼저 → 시작일 순). 마커 · 목록을 누르면 그때부터 가까운 순 (showPreview)
-//  - 지도는 움직이지 않고(첫 화면 행궁동 그대로) 첫 카드 마커만 강조. 모바일은 지금처럼 마커를 눌러야 뜸
+// 지도를 열면 하단 카드 줄을 기본으로 띄움 (PC 11/11 · 모바일 지도 탭 P3, 전엔 마커를 눌러야 뜸)
+//  - 순서 · 첫 카드 = 목록 그대로 (찜 먼저 → 시작일 순). 마커 · 목록을 누르면 그때부터 가까운 순 (showPreview)
+//  - PC 는 지도를 움직이지 않고(첫 화면 행궁동 그대로) 첫 카드 마커만 강조. 모바일은 첫 카드 마커로 옮김 (카드에 가려 안 보일 수 있어서)
 function showDefaultPreview() {
-  if (!stripDefaultShown(mobileQuery.matches, lastSortedItems.length)) { // strip-nav.js
-    if (!mobileQuery.matches) hidePreview(); // PC 인데 0건 → 숨김. 모바일은 손대지 않음 (마커로 띄운 카드 유지)
+  if (!stripDefaultShown(mobileQuery.matches, lastSortedItems.length, mobileMapShown())) { // strip-nav.js
+    hidePreview(); // 0건 · 지도가 가려짐 → 숨김
     return;
   }
   previewOrigin = null;
@@ -2943,7 +3133,7 @@ function showDefaultPreview() {
   updatePreviewLabel();
   document.getElementById("previewArea").classList.add("show");
   scrollStripTo(first);
-  selectMarker(previewEventId, false);
+  selectMarker(previewEventId, mobileQuery.matches);
 }
 
 function hidePreview() {
@@ -3176,9 +3366,9 @@ document.getElementById("routeCopyBtn").addEventListener("click", function () {
 // ----- 검색창 (모바일) -----
 var searchInputEl = document.getElementById("searchInput");
 searchInputEl.addEventListener("input", function () {
-  // 검색하면 결과가 보이도록 목록을 절반까지 올림
+  // 검색하면 결과가 보이도록 목록 보기로 (P3: 절반 단계 없음. 모바일은 보통 검색 화면이 대신 열림)
   if (mobileQuery.matches && sheetState === "peek") {
-    setSheetState("half");
+    setSheetState("full");
   }
 });
 searchInputEl.addEventListener("keydown", function (e) {
