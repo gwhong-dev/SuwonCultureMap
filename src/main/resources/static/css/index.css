@@ -142,6 +142,12 @@ body {
   width: 18px;
   height: 18px;
 }
+.theme-toggle .icon-moon {
+  display: var(--icon-moon);
+}
+.theme-toggle .icon-sun {
+  display: var(--icon-sun);
+}
 .theme-mode {
   display: none;
 }
@@ -1363,7 +1369,6 @@ body {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    order: 10;
     margin-top: 4px;
     padding-top: 12px;
     border-top: 1px solid var(--line);

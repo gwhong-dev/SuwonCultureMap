@@ -1,7 +1,7 @@
 // 화면 모드 (기기 설정 · 라이트 · 다크) — 모든 페이지 head 에서 css 보다 먼저, 동기로 읽음 (인라인 스크립트는 CSP 로 막힘)
 // 저장: localStorage "theme" = "system" | "light" | "dark" (없거나 틀린 값 = system)
 // 적용: <html data-theme="light|dark"> — system 이면 속성을 지워 css/theme.css 의 prefers-color-scheme 를 따름
-// 단추: PC 상단 바 ☾/☀ (두 단계, [data-theme-toggle]) · 모바일 ☰ 메뉴 "화면 모드" 3칸 ([data-theme-mode] 안의 [data-mode])
+// 단추: PC 상단 바 ☾/☀ (두 단계, [data-theme-toggle], 그림은 css) · 모바일 ☰ 메뉴 "화면 모드" 3칸 ([data-theme-mode] 안의 [data-mode])
 // 시험: node --test src/test/js/ (CI 에서 실행)
 
 var THEME_KEY = "theme";
@@ -77,47 +77,43 @@ function systemDarkQuery(win) {
   }
 }
 
-var THEME_ICONS = {
-  moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg>',
-  sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" /></svg>',
-};
-
 // 단추 연결 (본문이 그려진 뒤). 단추가 없는 페이지(about 등)는 아무것도 안 함
+// 고른 모드는 메모리(current)에 들고 있음 → 저장소가 막혀 저장이 안 돼도 단추는 양쪽으로 바뀜
+// ☾/☀ 그림은 css 가 테마에 맞춰 보이고(--icon-moon · --icon-sun), 여기서는 이름 · aria-pressed 만 바꿈
 function initThemeControls(doc, win) {
   var storage = safeStorage(win);
   var query = systemDarkQuery(win);
+  var current = readMode(storage);
   var toggles = doc.querySelectorAll("[data-theme-toggle]");
   var modeButtons = doc.querySelectorAll("[data-theme-mode] [data-mode]");
 
   function render() {
-    var mode = readMode(storage);
-    var look = toggleLabel(mode, query && query.matches);
+    var look = toggleLabel(current, query && query.matches);
     for (var i = 0; i < toggles.length; i++) {
-      toggles[i].innerHTML = THEME_ICONS[look.icon];
       toggles[i].setAttribute("aria-label", look.label);
       toggles[i].setAttribute("title", look.label);
     }
     for (var j = 0; j < modeButtons.length; j++) {
-      modeButtons[j].setAttribute("aria-pressed", String(modeButtons[j].getAttribute("data-mode") === mode));
+      modeButtons[j].setAttribute("aria-pressed", String(modeButtons[j].getAttribute("data-mode") === current));
     }
   }
   function choose(mode) {
-    applyMode(doc.documentElement, saveMode(storage, mode));
+    current = saveMode(storage, mode);
+    applyMode(doc.documentElement, current);
     render();
   }
 
   for (var i = 0; i < toggles.length; i++) {
     toggles[i].addEventListener("click", function () {
-      choose(toggledMode(readMode(storage), query && query.matches));
+      choose(toggledMode(current, query && query.matches));
     });
   }
   for (var j = 0; j < modeButtons.length; j++) {
-    modeButtons[j].addEventListener("click", function (e) {
-      e.stopPropagation(); // ☰ 메뉴가 닫히지 않게
+    modeButtons[j].addEventListener("click", function () {
       choose(this.getAttribute("data-mode"));
     });
   }
-  // 기기 설정을 따르는 중에 기기 모드가 바뀌면 PC 단추 모양도 바꿈
+  // 기기 설정을 따르는 중에 기기 모드가 바뀌면 PC 단추 이름도 바꿈
   if (query) {
     if (query.addEventListener) query.addEventListener("change", render);
     else if (query.addListener) query.addListener(render);

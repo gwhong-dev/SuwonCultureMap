@@ -13,6 +13,7 @@ const {
   toggledMode,
   toggleLabel,
   applyMode,
+  initThemeControls,
 } = require("../../main/resources/static/theme.js");
 
 function memoryStorage(initial) {
@@ -120,4 +121,76 @@ test("페이지 5개: head 에서 theme.js 를 css 보다 먼저 동기로, them
     assert.ok(script < firstCss, page + ": theme.js 가 css 보다 뒤");
     assert.ok(themeCss >= 0 && themeCss < ownCss, page + ": theme.css 가 " + pageCss + " 보다 뒤");
   }
+});
+
+// 가짜 화면: 단추 · 3칸 · <html> · matchMedia
+function fakePage(storage, systemDark) {
+  function el(attrs) {
+    const a = Object.assign({}, attrs);
+    const handlers = [];
+    return {
+      attrs: a,
+      getAttribute: (k) => (k in a ? a[k] : null),
+      setAttribute: (k, v) => (a[k] = String(v)),
+      removeAttribute: (k) => delete a[k],
+      addEventListener: (type, fn) => handlers.push(fn),
+      click() {
+        handlers.forEach((fn) => fn.call(this, {}));
+      },
+    };
+  }
+  const root = el({});
+  const toggle = el({});
+  const modes = ["system", "light", "dark"].map((m) => el({ "data-mode": m }));
+  const listeners = [];
+  const query = { matches: systemDark, addEventListener: (t, fn) => listeners.push(fn) };
+  const doc = {
+    documentElement: root,
+    querySelectorAll: (sel) => (sel === "[data-theme-toggle]" ? [toggle] : modes),
+  };
+  const win = {
+    get localStorage() {
+      if (storage === "throw") throw new Error("SecurityError");
+      return storage;
+    },
+    matchMedia: () => query,
+  };
+  return { doc, win, root, toggle, modes, query, listeners };
+}
+
+test("PC 단추: 저장소가 막혀도 누를 때마다 다크 ↔ 라이트로 바뀜 (메모리 값 사용)", () => {
+  for (const storage of ["throw", brokenStorage]) {
+    const p = fakePage(storage, false);
+    initThemeControls(p.doc, p.win);
+    assert.strictEqual(p.toggle.attrs["aria-label"], "어두운 화면으로");
+    p.toggle.click();
+    assert.strictEqual(p.root.attrs["data-theme"], "dark");
+    assert.strictEqual(p.toggle.attrs["aria-label"], "밝은 화면으로");
+    p.toggle.click();
+    assert.strictEqual(p.root.attrs["data-theme"], "light");
+    assert.strictEqual(p.toggle.attrs["aria-label"], "어두운 화면으로");
+  }
+});
+
+test("모바일 3칸: 고른 칸만 aria-pressed, 저장 · 적용, 기기 설정이면 속성 없음", () => {
+  const s = memoryStorage({ theme: "dark" });
+  const p = fakePage(s, false);
+  initThemeControls(p.doc, p.win);
+  assert.deepStrictEqual(p.modes.map((b) => b.attrs["aria-pressed"]), ["false", "false", "true"]);
+  p.modes[1].click();
+  assert.strictEqual(s.data.theme, "light");
+  assert.strictEqual(p.root.attrs["data-theme"], "light");
+  assert.deepStrictEqual(p.modes.map((b) => b.attrs["aria-pressed"]), ["false", "true", "false"]);
+  p.modes[0].click();
+  assert.strictEqual(s.data.theme, "system");
+  assert.ok(!("data-theme" in p.root.attrs));
+});
+
+test("기기 설정을 따르는 중 기기가 어두워지면 PC 단추 이름도 바뀜", () => {
+  const p = fakePage(memoryStorage({}), false);
+  initThemeControls(p.doc, p.win);
+  assert.strictEqual(p.toggle.attrs["aria-label"], "어두운 화면으로");
+  p.query.matches = true;
+  p.listeners.forEach((fn) => fn());
+  assert.strictEqual(p.toggle.attrs["aria-label"], "밝은 화면으로");
 });

@@ -30,6 +30,8 @@
   --fav-soft: #fff4e0; /* 찜 표시 바탕 */
   --danger: #b42318; /* 오류 · 탈퇴 글자 */
   --danger-soft: #fdecec; /* 오류 안내 바탕 */
+  --icon-moon: block; /* PC ☾/☀ 단추: 밝을 땐 ☾ (첫 그리기부터 맞게 css 로) */
+  --icon-sun: none;
   --shimmer: rgba(255, 255, 255, 0.55); /* 불러오는 중 칸의 빛 */
   --search-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235F5A54' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E"); /* 검색칸 돋보기 (배경 그림이라 --sub 를 못 써서 색을 직접) */
 }
@@ -60,6 +62,8 @@
     --fav-soft: #3a2e1a;
     --danger: #f19a8f;
     --danger-soft: #3a1d1a;
+    --icon-moon: none;
+    --icon-sun: block;
     --shimmer: rgba(255, 255, 255, 0.08);
     --search-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A9A39B' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E");
   }
@@ -90,6 +94,8 @@
   --fav-soft: #3a2e1a;
   --danger: #f19a8f;
   --danger-soft: #3a1d1a;
+  --icon-moon: none;
+  --icon-sun: block;
   --shimmer: rgba(255, 255, 255, 0.08);
   --search-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A9A39B' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E");
 }
