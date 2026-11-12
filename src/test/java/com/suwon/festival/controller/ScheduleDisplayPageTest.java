@@ -183,6 +183,8 @@ class ScheduleDisplayPageTest {
     assertThat(js).contains("chip.id = \"dateChip\";", "chip.className = \"chip chip-mobile-only\";");
     // 고른 날짜는 같은 #dateFilter 값 → 같은 그날 진행 판정 (filterDays · matchRunDays)
     assertThat(js).contains("function setDateFilter(value)", "matchesStatusTab(item.event, statusTab)");
+    // PC 기본 = 전체(진행 중 + 진행 예정, 11/12 사용자), 켜진 탭을 다시 누르면 전체로
+    assertThat(js).contains("var pcStatusTab = null;", "currentStatusTab() === tab.dataset.status ? null : tab.dataset.status");
 
     String html = page();
     assertThat(html).contains("id=\"datePanel\"", "id=\"dateStrip\"", "id=\"calMonth\"", "id=\"calGrid\"");
