@@ -355,3 +355,21 @@ test("검색 결과(07)는 개수 제한 없음 — 입력 중 행(최대 20)과
   assert.ok(all.length > SEARCH_SUGGEST_MAX);
   assert.deepStrictEqual(all.slice(0, 3).map((e) => e.id), [1, 2, 3]); // 종료 임박순
 });
+
+// ----- ① 끝 넘김 (P3, 11/13 확정 시안 HomeOverscroll) -----
+const { HOME_END_SWIPE_PX, atScrollEnd, homeEndSwipe } = require("../../main/resources/static/home-picks.js");
+
+test("끝 넘김: 줄이 끝까지 넘어갔나 (1~2px 어긋남 허용)", () => {
+  assert.strictEqual(atScrollEnd(600, 1000, 400), true);
+  assert.strictEqual(atScrollEnd(598.5, 1000, 400), true);
+  assert.strictEqual(atScrollEnd(500, 1000, 400), false);
+  assert.strictEqual(atScrollEnd(0, 400, 400), true); // 카드가 적어 넘길 게 없음
+});
+
+test("끝 넘김: 끝에 닿은 채 시작해 왼쪽으로 40px 이상 밀어야 지도로 (첫 밀기는 안내만 보임)", () => {
+  assert.strictEqual(homeEndSwipe(true, -HOME_END_SWIPE_PX, 0), true);
+  assert.strictEqual(homeEndSwipe(false, -200, 0), false); // 끝에 닿기 전에 시작 = 안내까지만
+  assert.strictEqual(homeEndSwipe(true, -(HOME_END_SWIPE_PX - 1), 0), false);
+  assert.strictEqual(homeEndSwipe(true, 80, 0), false); // 오른쪽으로 = 앞 카드로
+  assert.strictEqual(homeEndSwipe(true, -50, 80), false); // 세로 스크롤
+});
