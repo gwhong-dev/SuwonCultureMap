@@ -981,6 +981,229 @@ body {
   outline-offset: 2px;
 }
 
+/* ----- 날짜 고르기 (calendar-strip.js, 11/11 시안 CalClosed · CalOpen · PcCard) -----
+   모바일 = 목록 탭 위 날짜 줄 + 달력 펼치기, PC = 목록 위 탭 [진행 중 · 진행 예정 · 달력 ▾] (아래 PC · 모바일 구간에서 나눔) */
+.date-panel {
+  flex: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+}
+.date-panel[hidden],
+.cal-month[hidden],
+.date-heading[hidden] {
+  display: none;
+}
+.pc-date-tabs {
+  display: flex;
+  align-items: stretch;
+}
+.pc-date-tab,
+.pc-cal-btn {
+  height: 48px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: inset 0 -2px 0 transparent;
+  background: var(--bg);
+  color: var(--sub);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.pc-date-tab {
+  flex: 1;
+}
+.pc-cal-btn {
+  flex: none;
+  padding: 0 14px;
+  border-left: 1px solid var(--line);
+  color: var(--text);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.pc-date-tab.active,
+.pc-cal-btn.active {
+  box-shadow: inset 0 -2px 0 var(--text);
+  color: var(--text);
+  font-weight: 700;
+}
+.strip-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 16px 10px;
+}
+.strip-month,
+.cal-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+.cal-toggle,
+.cal-nav,
+.date-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cal-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+.cal-close {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+.date-strip {
+  display: flex;
+  gap: 6px;
+  padding: 0 12px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.date-strip::-webkit-scrollbar {
+  display: none;
+}
+.strip-day {
+  flex: none;
+  width: 50px;
+  padding: 8px 0 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.strip-dow {
+  font-size: 12px;
+}
+.strip-num {
+  font-size: 18px;
+  font-weight: 700;
+}
+.strip-count {
+  font-size: 10px;
+}
+.cal-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 16px 6px;
+}
+.cal-title {
+  margin-right: auto;
+}
+.cal-nav {
+  width: 36px;
+  padding: 0;
+  font-size: 18px;
+}
+.cal-nav:disabled,
+.cal-day:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  padding: 4px 10px 8px;
+  text-align: center;
+}
+.cal-dow {
+  padding: 6px 0;
+  color: var(--sub);
+  font-size: 12px;
+}
+.cal-day {
+  height: 48px;
+  margin: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+.cal-day.today {
+  border-color: var(--accent);
+  font-weight: 700;
+}
+.cal-dots {
+  height: 8px;
+  color: var(--accent);
+  font-size: 6px;
+  line-height: 8px;
+  letter-spacing: 1px;
+}
+/* 토 = 파랑 · 일 = 벽돌색, 고른 날은 진한 바탕 (아래 active 가 이김) */
+.strip-day.sat,
+.cal-day.sat,
+.cal-dow.sat {
+  color: var(--blue);
+}
+.strip-day.sun,
+.cal-day.sun,
+.cal-dow.sun {
+  color: var(--accent);
+}
+.strip-day.active,
+.cal-day.active {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 700;
+}
+.cal-day.active .cal-dots {
+  color: var(--bg);
+}
+.date-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--line);
+  font-size: 15px;
+  font-weight: 700;
+}
+.date-clear {
+  height: 32px;
+  color: var(--sub);
+  font-weight: 400;
+}
+.pc-date-tab:focus-visible,
+.pc-cal-btn:focus-visible,
+.strip-day:focus-visible,
+.cal-day:focus-visible,
+.cal-nav:focus-visible,
+.cal-toggle:focus-visible,
+.date-clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 /* PC: 칩 줄을 지도 왼쪽 위에 띄움 (상단 바의 분류 · 날짜 드롭다운 · 지난 행사 체크박스 대신, 값은 그 숨긴 칸에 그대로 저장) */
 @media (min-width: 1025px) {
   #topbar {
@@ -1010,6 +1233,13 @@ body {
     padding: 0; /* 상단 바 입력칸 모양(#topbar select)이 투명 선택 상자에 묻지 않게 */
     border: 0;
     border-radius: 0;
+  }
+  /* 날짜 해제 칩 · 모바일 날짜 줄은 모바일 전용 (PC 는 목록 위 탭 · 달력 ▾ 에서 고르고 보임) */
+  #categoryChips .chip-mobile-only,
+  .strip-head,
+  .date-strip,
+  .cal-close {
+    display: none;
   }
 }
 
@@ -1149,8 +1379,10 @@ body {
   #categoryChips::-webkit-scrollbar {
     display: none;
   }
-  /* '7일 안' 칩은 PC 에만. 홈 "+7일"로 켜진 동안만 보여서 눌러 해제할 수 있게 */
-  #categoryChips .chip-pc-only:not(.active) {
+  /* 날짜 고르기: 모바일은 PC 탭 없이 날짜 줄, 달력을 펼치면 날짜 줄 대신 한 달 달력 (CalOpen) */
+  .pc-date-tabs,
+  .date-panel.cal-open .strip-head,
+  .date-panel.cal-open .date-strip {
     display: none;
   }
   /* ----- 사이드바 → 바텀시트 ----- */

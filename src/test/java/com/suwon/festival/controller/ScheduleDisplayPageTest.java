@@ -171,19 +171,29 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
-  void 지도_칩_줄은_진행_중이고_7일_안은_PC_에만() throws Exception {
-    // 사용자 결정(11/11, Chips 시안): "오늘 진행" → "진행 중", 모바일 칩 줄에서 '7일 안' 빼기 (필터 규칙은 그대로)
+  void 지도_위_날짜_칩은_없고_날짜는_목록_위_날짜_줄_달력_PC_탭에서_고름() throws Exception {
+    // 사용자 확정 시안(11/11 CalClosed · CalOpen · PcCard): 지도 칩 줄의 진행 중 · 이번 주말 · 7일 안 칩 삭제
     String js = script();
-    assertThat(js).contains("{ value: \"today\", label: \"📅 진행 중\" }", "pcOnly: true", "\"chip chip-pc-only\"");
-    assertThat(js).doesNotContain("오늘 진행");
-    assertThat(page()).contains("<option value=\"today\">진행 중</option>").doesNotContain("오늘 진행");
+    assertThat(js).doesNotContain("label: \"📅 진행 중\"", "label: \"📅 이번 주말\"", "chip-pc-only", "오늘 진행");
+    // 날짜 필터가 켜져 있으면 지도 칩 줄에 해제 칩만 (모바일 전용)
+    assertThat(js).contains("chip.id = \"dateChip\";", "chip.className = \"chip chip-mobile-only\";");
+    // 고른 날짜는 같은 #dateFilter 값 → 같은 그날 진행 판정 (filterDays · matchRunDays)
+    assertThat(js).contains("function setDateFilter(value)", "matchesStatusTab(item.event, statusTab)");
 
-    // 모바일 구간에서만 숨김, 홈 "+7일"로 켜졌을 때(active)는 보여서 해제할 수 있음
+    String html = page();
+    assertThat(html).contains("id=\"datePanel\"", "id=\"dateStrip\"", "id=\"calMonth\"", "id=\"calGrid\"");
+    assertThat(html).contains("data-status=\"open\"", "data-status=\"upcoming\"", "id=\"pcCalBtn\"");
+    assertThat(html.indexOf("id=\"datePanel\"")).isLessThan(html.indexOf("<div id=\"list\"></div>")); // 목록 위
+    int rules = html.indexOf("<script src=\"/calendar-strip.js\"></script>");
+    assertThat(rules).isGreaterThan(html.indexOf("<script src=\"/schedule-format.js\"></script>"));
+    assertThat(rules).isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
+    assertThat(html).contains("<option value=\"today\">진행 중</option>", "<option value=\"week\">7일 안</option>"); // 홈 날짜 칩 값
+
+    // 모바일 = PC 탭 숨김, PC = 날짜 줄 · 해제 칩 숨김
     String css = fetch("/css/index.css");
     int mobile = css.indexOf("@media (max-width: 1024px)");
-    int rule = css.indexOf("#categoryChips .chip-pc-only:not(.active) {");
-    assertThat(rule).isGreaterThan(mobile);
-    assertThat(css.indexOf("display: none;", rule)).isGreaterThan(rule);
+    assertThat(css.indexOf("  .pc-date-tabs,", mobile)).isGreaterThan(mobile);
+    assertThat(css).contains("#categoryChips .chip-mobile-only,");
   }
 
   @Test
@@ -254,7 +264,8 @@ class ScheduleDisplayPageTest {
     assertThat(js).contains("districtEvents(homeEvents(), homeDistrict)", "showDistrictOnMap(homeDistrict, nearbyPicks)", "districtFilter = district;");
     assertThat(js).contains("setDistrictFilter(null)"); // 지도 칩 줄 "📍 ○○구 ✕" 로 해제
     // 칩 줄 선택 표시 루프(updateChipActive)가 다시 돌아도 구 칩은 켜진 모양 유지 (검증 ❌ 반영)
-    assertThat(js).contains("updateDistrictChip();\n}", "chip.classList.add(\"active\");");
+    // (날짜 해제 칩도 같은 자리에서 다시 맞춤 — 11/11 캘린더)
+    assertThat(js).contains("updateDistrictChip();\n  updateDateChip();\n}", "chip.classList.add(\"active\");");
   }
 
   @Test
