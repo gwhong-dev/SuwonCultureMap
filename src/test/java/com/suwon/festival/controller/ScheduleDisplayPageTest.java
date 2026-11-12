@@ -397,10 +397,45 @@ class ScheduleDisplayPageTest {
     // 공통(모바일) 규칙은 그대로 띠 전체가 받음
     assertThat(rule(css, "\n#previewArea.show {")).contains("pointer-events: auto;");
 
-    // 지금 카드는 보조기기에도 알림, 양옆 카드는 카드 전체가 아니라 포스터만 흐리게 (글자 대비 유지, #215 검증 ⑦)
+    // 지금 카드는 보조기기에도 알림, 카드는 흐리게 하지 않음 (글자 대비 유지, #215 검증 ⑦)
+    // 11/13 확정 시안 P1: 카드 3장이 같이 보이므로 양옆 포스터 흐림도 없앰 — 고른 카드는 2px 테두리로만
     assertThat(script()).contains("card.setAttribute(\"aria-current\", \"true\")", "card.removeAttribute(\"aria-current\")");
     assertThat(rule(pc, ".preview-card {")).doesNotContain("opacity");
-    assertThat(rule(pc, ".preview-card .preview-poster {")).contains("opacity: 0.5;");
+    assertThat(rule(pc, ".preview-card .preview-poster {")).doesNotContain("opacity");
+  }
+
+  @Test
+  void PC_하단_카드는_확정_시안_P1_모양이고_길찾기는_버튼_위_작은_창() throws Exception {
+    // docs/design/2026-11-13-improvement-drafts.md P1 — 규칙은 pc-card.js (index.js 보다 앞)
+    String html = page();
+    int rules = html.indexOf("<script src=\"/pc-card.js\"></script>");
+    assertThat(rules).isPositive().isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
+    // 같은 장소는 카드 밖 띠, 카드 줄 아래 키보드 안내, PC 길찾기 작은 창
+    assertThat(html).contains("id=\"previewPlaceBand\"", "id=\"previewHint\"", "Enter 상세 · Space 찜 · ← → 넘기기");
+    assertThat(html).contains("id=\"routePop\"", "카카오맵에서 길찾기", "네이버 지도에서 길찾기", "id=\"routePopCopy\"");
+
+    String js = script();
+    // PC [길찾기] = 버튼 위 작은 창 (하단 시트 모양 CSS 가 모바일 구간에만 있어 PC 에서 깨지던 것), 모바일 = 하단 시트 그대로
+    assertThat(js).contains("if (mobileQuery.matches) openRouteSheet(item.event);", "else toggleRoutePop(item.event, this);");
+    assertThat(js).contains("dialogFocus.opened(\"routePop\"", "dialogFocus.closed(\"routePop\")");
+    // 카드 안 '같은 장소 1/6' 은 모바일 한 줄에만 (PC 는 CSS 로 숨기고 띠로)
+    assertThat(js).contains("pcCardKeyAction(", "shouldHopMarker(");
+    // PC 첫 화면은 화성행궁 중심으로 확대
+    // (네 곳 = 화성행궁 · 방화수류정 · 팔달문 · 지동시장을 범위로, 아래는 카드 줄만큼 비움. 모바일은 level 6 그대로)
+    assertThat(js).contains("if (!mobileQuery.matches) fitPcFirstView();", "map.setBounds(bounds, 70, 24, 270, 24);");
+
+    String css = fetch("/css/index.css").replace("\r\n", "\n");
+    int media = css.lastIndexOf("@media (min-width: 1025px) {", css.indexOf("#sidebar.collapsed ~ #previewArea"));
+    String pc = block(css, css.indexOf("{", media));
+    assertThat(rule(pc, ".preview-card {")).contains("flex: 0 0 262px;", "height: 196px;");
+    assertThat(pc).contains(".preview-card .preview-place {", ".route-pop:not([hidden]) {", "@container (max-width: 960px)");
+    assertThat(rule(pc, "\n  .strip-arrow {")).contains("border-radius: 50%;", "width: 40px;");
+    // 마커 튀어오름은 움직임 줄이기 설정이면 생략
+    int reduce = css.indexOf("@media (prefers-reduced-motion: reduce)");
+    assertThat(block(css, css.indexOf("{", reduce))).contains(".marker-hop-icon,", ".marker-hop-ring,");
+
+    MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+    assertThat(mockMvc.perform(get("/pc-card.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
   }
 
   // open = 여는 { 의 위치 → 짝이 맞는 } 까지 (안쪽 내용)

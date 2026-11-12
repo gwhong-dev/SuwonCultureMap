@@ -919,10 +919,14 @@ body {
   #sidebar.collapsed ~ #previewArea {
     right: 0; /* 목록을 접으면 지도 전체 폭 */
   }
-  /* PC 카드 줄 (11/11 시안 PcCard): 지금 카드는 늘 가운데 · 진한 테두리, 양옆 카드는 포스터만 흐리게
-     양쪽 여백 = 줄 폭 절반 - 카드 절반 → 첫 · 끝 카드도 가운데로 올 수 있음 */
-  /* PC 카드 줄 띠는 늘 떠 있음 → 띠 빈 곳(카드 사이 · 양쪽 여백)은 지도가 클릭 · 끌기를 받게,
-     라벨 · 카드 · 화살표만 받음 (#215 검증 ⑥, 모바일은 그대로 띠 전체가 받음) */
+  /* PC 카드 줄 (11/13 확정 시안 P1 — docs/design/2026-11-13-improvement-drafts.md):
+     지도 영역(목록 칸 뺀 폭) 가운데에 카드 3장(좁으면 2장) + 양옆 원형 ‹ ›, 위 '이 장소 행사' 띠, 아래 키보드 안내
+     카드 줄 띠는 늘 떠 있음 → 띠 빈 곳은 지도가 클릭 · 끌기를 받게, 라벨 · 카드 · 화살표만 받음 (#215 검증 ⑥, 모바일은 그대로 띠 전체가 받음) */
+  #previewArea {
+    bottom: 8px;
+    gap: 8px;
+    container-type: inline-size; /* 지도 영역 폭으로 카드 3장 · 2장을 고름 (아래 @container) */
+  }
   #previewArea.show {
     pointer-events: none;
   }
@@ -932,31 +936,328 @@ body {
   #previewArea.show .strip-arrow {
     pointer-events: auto;
   }
+  /* "목록 순 · 1 / N" 라벨은 PC 에서 숨김 — 같은 장소는 위 띠, 넘기기는 양옆 ‹ › 로 (시안에 없음) */
   #previewLabel {
+    display: none;
+  }
+  .place-band:not([hidden]) {
     align-self: center;
-    margin-left: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 30px;
+    padding: 0 12px;
+    background: var(--text);
+    color: var(--bg);
+    font-size: 13px;
+    box-shadow: var(--shadow-float);
+  }
+  .place-band strong {
+    font-weight: 700;
+  }
+  .band-place {
+    opacity: 1; /* 공통 규칙의 0.75 대신 아래 색으로 (대비 계산) */
+    color: color-mix(in srgb, var(--bg) 65%, var(--text)); /* 시안 #a9a39b — 띠 바탕(--text) 위 흐린 글자 (밝을 때 7.9:1 · 어두울 때 5.3:1) */
+  }
+  /* 카드 262px × 3 + 사이 12px × 2 + 줄 안쪽 여백(그림자 · 포커스 테두리 자리) 16px × 2 */
+  #previewStripWrap {
+    align-self: center;
+    width: calc(262px * 3 + 12px * 2 + 32px);
+    max-width: 100%;
   }
   #previewStrip {
     gap: 12px;
-    padding-left: calc(50% - 180px);
-    padding-right: calc(50% - 180px);
+    padding: 4px 16px 8px;
+    scroll-padding-inline: 16px;
   }
   .preview-card {
-    flex: 0 0 360px;
+    flex: 0 0 262px;
+    scroll-snap-align: start; /* 줄 폭 = 카드 3장(2장) → 시작선에 맞춰야 반쪽 카드 없이 딱 맞음 */
+    height: 196px;
+    display: grid;
+    grid-template-columns: 60px minmax(0, 1fr);
+    grid-template-rows: auto 1fr; /* 위: 사진 옆 배지 · 제목, 남는 높이는 제목 칸이 받아 기간 · 장소 · 버튼은 아래로 */
+    column-gap: 10px;
+    row-gap: 6px;
+    padding: 12px;
     transition: border-color 0.2s;
   }
-  /* 양옆 카드: 글자 대비는 그대로 두고(카드 불투명) 포스터만 흐리게 (#215 검증 ⑦) */
-  .preview-card .preview-poster {
-    opacity: 0.5;
-    transition: opacity 0.2s;
+  .preview-card .preview-body {
+    display: contents; /* 배지 · 제목 · 기간 · 장소 · 버튼을 카드 칸(grid)에 바로 놓음 */
   }
-  .preview-card:hover .preview-poster,
-  .preview-card.current .preview-poster {
-    opacity: 1;
+  .preview-card .preview-poster {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    width: 60px;
+    height: 84px;
+  }
+  .preview-card .preview-body .badge-row,
+  .preview-card .preview-date,
+  .preview-card .preview-place {
+    display: none; /* 모바일 배지(운영중) · 한 줄 요약 대신 아래 PC 배지 · 기간 줄 · 장소 줄 */
+  }
+  .pc-badges {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding-right: 22px; /* ♡ 자리 (하트 그림은 버튼 가운데 18px) */
+  }
+  .pc-badges .status-badge,
+  .pc-badges .dday-badge {
+    padding: 2px 5px; /* '진행 중' + '종료까지 D-48' 이 한 줄에 들어가게 (시안 2px 5px) */
+  }
+  .preview-card .preview-title {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: start;
+    padding-right: 18px;
+  }
+  .pc-card-date,
+  .pc-card-place {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--text);
+  }
+  .pc-card-date span,
+  .pc-card-place span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pc-card-date svg,
+  .pc-card-place svg {
+    flex: none;
+    width: 15px;
+    height: 15px;
+    color: var(--sub);
+  }
+  .preview-card .preview-actions {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
+  .preview-card .preview-detail,
+  .preview-card .preview-route {
+    flex: 1;
+    justify-content: center;
+    height: 32px;
+  }
+  .preview-route.open {
+    background: var(--accent-ink); /* 길찾기 창이 열려 있는 동안 '길찾기 ▴' */
+  }
+  .preview-card .card-fav {
+    top: 6px;
+    right: 6px;
+    width: 32px;
+    height: 32px;
   }
   .preview-card.current {
     border-color: var(--text);
     box-shadow: inset 0 0 0 1px var(--text), var(--shadow-float); /* 2px 테두리 (자리 크기는 그대로) */
+  }
+  .preview-card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  /* 양옆 원형 ‹ › (40px, --text 바탕 · 흰 글자): 카드 줄 바깥 12px */
+  .strip-arrow {
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--text);
+    color: var(--bg);
+    box-shadow: var(--shadow-float);
+  }
+  .strip-arrow.prev {
+    left: -36px; /* 줄 안쪽 여백 16px - 12px - 40px */
+  }
+  .strip-arrow.next {
+    right: -36px;
+    background: var(--text);
+    color: var(--bg);
+  }
+  .strip-arrow.prev:hover,
+  .strip-arrow.next:hover {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .preview-hint {
+    display: block;
+    align-self: center;
+    padding: 1px 6px;
+    font-size: 11px;
+    color: var(--sub);
+    background: color-mix(in srgb, var(--bg) 85%, transparent); /* 지도 그림 위에서도 읽히게 */
+  }
+  /* 지도 영역이 좁으면(목록 칸을 편 1280px 화면 등) 카드 2장 */
+  @container (max-width: 960px) {
+    #previewStripWrap {
+      width: calc(262px * 2 + 12px + 32px);
+    }
+  }
+  /* 더 좁으면(1025~1089px 화면 + 목록 칸) 바깥 화살표가 화면 밖 · 목록 칸으로 넘침 → 줄 안쪽으로 (#241 검증) */
+  @container (max-width: 640px) {
+    .strip-arrow.prev {
+      left: 4px;
+    }
+    .strip-arrow.next {
+      right: 4px;
+    }
+  }
+
+  /* ----- PC 길찾기 작은 창: [길찾기] 버튼 위 300px (위치는 index.js placeRoutePop) ----- */
+  .route-pop:not([hidden]) {
+    position: fixed;
+    z-index: 60; /* 하단 카드(25) 위, 상세창(100) 아래 */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 300px;
+    box-sizing: border-box;
+    padding: 16px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-float);
+  }
+  .route-pop-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .route-pop-head strong {
+    font-size: 15px;
+  }
+  .route-pop-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin: -6px -6px -6px 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--sub);
+    cursor: pointer;
+  }
+  .route-pop-close svg {
+    width: 18px;
+    height: 18px;
+  }
+  .route-pop-addr {
+    padding: 8px 10px;
+    background: var(--surface);
+    color: var(--sub);
+    font-size: 13px;
+    line-height: 1.45;
+    word-break: keep-all;
+  }
+  .route-pop-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-size: 14px;
+    text-decoration: none;
+  }
+  .route-pop-link:hover {
+    border-color: var(--text);
+  }
+  .route-pop-icon {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .route-pop-icon.kakao {
+    background: #fee500; /* 카카오 노랑 */
+    color: #191919;
+  }
+  .route-pop-icon.naver {
+    background: #03c75a; /* 네이버 초록 */
+    color: #ffffff;
+  }
+  .route-pop-copy {
+    align-self: flex-start;
+    height: 32px;
+    padding: 0 4px;
+    border: 0;
+    background: none;
+    color: var(--accent-ink);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .route-pop-copy[hidden] {
+    display: none;
+  }
+  .route-pop a:focus-visible,
+  .route-pop button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+/* PC 전용 하단 카드 부품 (11/13 확정 시안 P1) — 모바일에서는 숨김 (모바일 카드는 P3 담당) */
+@media (max-width: 1024px) {
+  .pc-badges,
+  .pc-card-date,
+  .pc-card-place,
+  .preview-hint,
+  .route-pop {
+    display: none;
+  }
+}
+
+/* 같은 장소 다음 카드로 넘길 때 마커 튀어오름 (index.js hopMarker): 0.2초 위로 + 1.2배 → 0.4초 제자리 + 벽돌색 고리 한 번 */
+.marker-hop {
+  position: relative;
+  pointer-events: none;
+}
+.marker-hop-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 100%;
+  animation: markerHop 0.4s ease-in-out;
+}
+.marker-hop-ring {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  opacity: 0;
+  animation: markerRing 0.45s ease-out 0.4s;
+}
+@keyframes markerHop {
+  50% {
+    transform: translateY(-8px) scale(1.2);
+  }
+}
+@keyframes markerRing {
+  from {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.7);
   }
 }
 
@@ -3296,6 +3597,8 @@ body {
   #sidebar,
   #previewArea,
   .strip-arrow,
+  .marker-hop-icon,
+  .marker-hop-ring,
   .modal-card,
   .sk::after {
     transition: none !important;
