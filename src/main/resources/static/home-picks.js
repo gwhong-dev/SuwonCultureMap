@@ -1,11 +1,15 @@
-// 모바일 홈(디자인 01) 칸별 행사 고르기 규칙 (계획 docs/design/mobile-home-search-plan.md 2번)
+// 모바일 홈 칸별 행사 고르기 규칙 — 11/11 시안 3칸 · 내 주변 · 검색 (계획 docs/design/mobile-home-search-plan.md 2번)
 // 오늘 · 상태는 schedule-format.js 와 같은 기준(한국 시간). 시험: node --test src/test/js/ (CI 에서 실행)
 var homeSchedule =
   typeof module !== "undefined"
     ? require("./schedule-format.js")
-    : { eventStatus: eventStatus, koreaToday: koreaToday };
+    : { eventStatus: eventStatus, koreaToday: koreaToday, matchRunDays: matchRunDays };
 
-var HOME_SOON_MAX = 3; // 곧 종료 · 곧 시작 행 수
+// 홈 3칸 (11/11 시안): ① 지금 진행 중 ② 곧 종료 | 곧 시작 (7일 안) ③ 달별 행사 (다음 달부터)
+// 겹침 규칙: ① 은 ② "곧 종료"에 나온 행사를 빼고 보여 줌 (같은 행사가 위아래 두 번 나오지 않게). 수 N 은 진행 중 전체 (오늘 진행하는 행사)
+var HOME_SOON_DAYS = 7; // 오늘 포함 7일 = 지도 칩 "7일 안"(nextSevenDays)과 같음
+var HOME_NOW_MAX = 10; // 지금 진행 중 가로 카드 수
+var HOME_MONTHS_AHEAD = 11; // 달별 칩: 다음 달 ~ 11달 뒤 (12달 뒤는 이번 달과 이름이 같아 뺌)
 
 function homeAddDays(isoDate, days) {
   var parts = isoDate.split("-");
@@ -13,30 +17,9 @@ function homeAddDays(isoDate, days) {
   return new Date(day + days * 86400000).toISOString().slice(0, 10);
 }
 
-// 이번 주 = 한국 시간 월 ~ 일 (일요일이면 지난 월요일부터)
-function weekRange(now) {
-  var today = homeSchedule.koreaToday(now);
-  var weekday = new Date(today + "T00:00:00Z").getUTCDay(); // 0 = 일
-  var monday = homeAddDays(today, weekday === 0 ? -6 : 1 - weekday);
-  return { start: monday, end: homeAddDays(monday, 6) };
-}
-
-// "11월 2일 – 8일" · 달이 바뀌면 "10월 27일 – 11월 2일"
-function weekLabel(range) {
-  var s = range.start.split("-");
-  var e = range.end.split("-");
-  var end = s[1] === e[1] ? Number(e[2]) + "일" : Number(e[1]) + "월 " + Number(e[2]) + "일";
-  return Number(s[1]) + "월 " + Number(s[2]) + "일 – " + end;
-}
-
-// 이번 주와 기간이 겹치고 종료 안 된 행사 (날짜 없는 행사는 뺌)
-function thisWeekEvents(events, now) {
-  var week = weekRange(now);
-  return events.filter(function (event) {
-    var status = homeSchedule.eventStatus(event, now);
-    if (status !== "open" && status !== "upcoming") return false;
-    return !event.startDate || event.startDate <= week.end; // 종료 안 됨 = 끝나는 날 ≥ 오늘 ≥ 월요일
-  });
+// 7일 안의 마지막 날 (오늘 + 6일, 한국 시간)
+function soonLastDay(now) {
+  return homeAddDays(homeSchedule.koreaToday(now), HOME_SOON_DAYS - 1);
 }
 
 // 같은 날이면 제목 순 (새로고침마다 순서가 바뀌지 않게)
@@ -47,83 +30,92 @@ function byDateThenTitle(dateOf) {
   };
 }
 
-// 곧 종료: 운영중, 종료일 가까운 순 3개
-function endingSoon(events, now) {
-  return events
-    .filter(function (event) {
-      return homeSchedule.eventStatus(event, now) === "open";
-    })
-    .sort(
-      byDateThenTitle(function (event) {
-        return event.endDate || event.startDate;
-      }),
-    )
-    .slice(0, HOME_SOON_MAX);
+function endDateOf(event) {
+  return event.endDate || event.startDate;
 }
 
-// 곧 시작: 오픈예정, 시작일 가까운 순 3개
-function startingSoon(events, now) {
+// ② 곧 종료: 운영중이고 끝나는 날이 7일 안, 끝나는 날 가까운 순 (종료일 없는 행사 = 시작일 하루)
+function endingSoon(events, now) {
+  var last = soonLastDay(now);
   return events
     .filter(function (event) {
-      return homeSchedule.eventStatus(event, now) === "upcoming";
+      return homeSchedule.eventStatus(event, now) === "open" && endDateOf(event) <= last;
+    })
+    .sort(byDateThenTitle(endDateOf));
+}
+
+// ② 곧 시작: 시작 전이고 7일 안에 시작, 시작일 가까운 순
+function startingSoon(events, now) {
+  var last = soonLastDay(now);
+  return events
+    .filter(function (event) {
+      return homeSchedule.eventStatus(event, now) === "upcoming" && event.startDate <= last;
     })
     .sort(
       byDateThenTitle(function (event) {
         return event.startDate;
       }),
-    )
-    .slice(0, HOME_SOON_MAX);
+    );
 }
 
-var HOME_CAROUSEL_MAX = 5; // 포스터 캐러셀 카드 수
-
-// 포스터 캐러셀: 이번 주 행사 중 사진 있는 것 → 운영중 먼저 → 종료일 가까운 순 → 최대 5
-function carouselPicks(events, now) {
-  var byEnd = byDateThenTitle(function (event) {
-    return event.endDate || event.startDate;
-  });
-  return thisWeekEvents(events, now)
-    .filter(function (event) {
-      return Boolean(event.imageUrl && event.imageUrl.trim());
-    })
-    .sort(function (a, b) {
-      var aOpen = homeSchedule.eventStatus(a, now) === "open" ? 0 : 1;
-      var bOpen = homeSchedule.eventStatus(b, now) === "open" ? 0 : 1;
-      return aOpen !== bOpen ? aOpen - bOpen : byEnd(a, b);
-    })
-    .slice(0, HOME_CAROUSEL_MAX);
-}
-
-var HOME_MONTH_MAX = 10; // 이달의 행사 카드 수 (끝에 "전체 보기" 카드 따로)
-
-// 이번 달 = 한국 시간 1일 ~ 말일
-function monthRange(now) {
+// ① 지금 진행 중: 운영중이고 오늘 진행 (진행 날짜를 알면 오늘이 그중 하나, 모르면 기간 안 = 지도 날짜 칩 "진행 중"(today)과 같음)
+// 수 N = "전체 →"(목록 + 날짜 칩 "진행 중") 수와 같게 matchRunDays 그대로 씀 → 시작일 없는 행사는 빠짐. 끝나는 날 가까운 순
+function nowOpenEvents(events, now) {
   var today = homeSchedule.koreaToday(now);
-  var parts = today.split("-");
-  var lastDay = new Date(Date.UTC(Number(parts[0]), Number(parts[1]), 0)).getUTCDate(); // 다음 달 0일 = 이달 말일
-  return { start: parts[0] + "-" + parts[1] + "-01", end: parts[0] + "-" + parts[1] + "-" + lastDay };
-}
-
-// "11월의 수원 행사"
-function monthTitle(now) {
-  return Number(monthRange(now).start.split("-")[1]) + "월의 수원 행사";
-}
-
-// 이달의 행사: 이번 달과 기간이 겹치고 종료 안 된 행사, 시작일 순 최대 10개 (날짜 없는 행사는 뺌)
-function monthEvents(events, now) {
-  var month = monthRange(now);
   return events
     .filter(function (event) {
-      var status = homeSchedule.eventStatus(event, now);
-      if (status !== "open" && status !== "upcoming") return false;
-      return !event.startDate || event.startDate <= month.end; // 종료 안 됨 = 끝나는 날 ≥ 오늘 ≥ 1일
+      if (homeSchedule.eventStatus(event, now) !== "open") return false;
+      return homeSchedule.matchRunDays(event, [today]) !== "no";
     })
-    .sort(
-      byDateThenTitle(function (event) {
-        return event.startDate || event.endDate;
-      }),
-    )
-    .slice(0, HOME_MONTH_MAX);
+    .sort(byDateThenTitle(endDateOf));
+}
+
+function hasImage(event) {
+  return Boolean(event.imageUrl && event.imageUrl.trim());
+}
+
+// ① 가로 카드: 지금 진행 중 중 ② 곧 종료에 없는 것 → 사진 있는 것 먼저 → 끝나는 날 가까운 순, 최대 10
+function nowOpenCards(events, now) {
+  var ending = {};
+  endingSoon(events, now).forEach(function (event) {
+    ending[event.id] = true;
+  });
+  return nowOpenEvents(events, now)
+    .filter(function (event) {
+      return !ending[event.id];
+    })
+    .sort(function (a, b) {
+      var diff = (hasImage(a) ? 0 : 1) - (hasImage(b) ? 0 : 1);
+      return diff !== 0 ? diff : byDateThenTitle(endDateOf)(a, b);
+    })
+    .slice(0, HOME_NOW_MAX);
+}
+
+// ③ 달별 행사: 다음 달부터 11달 뒤까지, 그 달에 시작하는 오픈예정 행사 → 행사 있는 달만
+// [{ key: "2026-12", label: "12월", events: [시작일 순] }]. 이번 달 행사는 ① · ② 와 지도에서 봄
+function monthGroups(events, now) {
+  var parts = homeSchedule.koreaToday(now).split("-");
+  var year = Number(parts[0]);
+  var month = Number(parts[1]); // 1 ~ 12
+  var groups = [];
+  for (var i = 1; i <= HOME_MONTHS_AHEAD; i++) {
+    var m = ((month - 1 + i) % 12) + 1;
+    var y = year + Math.floor((month - 1 + i) / 12);
+    var key = y + "-" + (m < 10 ? "0" : "") + m;
+    var picks = events
+      .filter(function (event) {
+        return (
+          homeSchedule.eventStatus(event, now) === "upcoming" && event.startDate && event.startDate.slice(0, 7) === key
+        );
+      })
+      .sort(
+        byDateThenTitle(function (event) {
+          return event.startDate;
+        }),
+      );
+    if (picks.length) groups.push({ key: key, label: m + "월", events: picks });
+  }
+  return groups;
 }
 
 // 행사의 구: 서버가 좌표로 구한 값(D1) 먼저, 없으면(동기화 전 · 수원 밖) 원문 장소 글에서 찾음
@@ -314,14 +306,11 @@ if (typeof module !== "undefined") {
     districtEvents: districtEvents,
     eventDistrict: eventDistrict,
     matchesDistrict: matchesDistrict,
-    carouselPicks: carouselPicks,
-    weekRange: weekRange,
-    weekLabel: weekLabel,
-    thisWeekEvents: thisWeekEvents,
+    HOME_NOW_MAX: HOME_NOW_MAX,
     endingSoon: endingSoon,
     startingSoon: startingSoon,
-    monthRange: monthRange,
-    monthTitle: monthTitle,
-    monthEvents: monthEvents,
+    nowOpenEvents: nowOpenEvents,
+    nowOpenCards: nowOpenCards,
+    monthGroups: monthGroups,
   };
 }

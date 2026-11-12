@@ -48,12 +48,11 @@
 
 | 규칙 | 정함 | 함수 (예정) |
 |---|---|---|
-| 이번 주 | 한국 시간 월 ~ 일 | `weekRange(now)` |
-| 이번 주 N개 | 이번 주와 기간이 겹치고 종료 안 된 행사 | `thisWeekEvents(events, now)` |
-| 캐러셀 5개 | 이번 주 행사 중 사진 있는 것 → 운영중 먼저 → 종료일 가까운 순 → 최대 5 | `carouselPicks(events, now)` |
-| 곧 종료 | 운영중, 종료일 가까운 순 3개 | `endingSoon(events, now)` |
-| 곧 시작 | 오픈예정, 시작일 가까운 순 3개 | `startingSoon(events, now)` |
-| 이달의 행사 | 이번 달과 기간이 겹치고 종료 안 된 행사, 시작일 순 최대 10개 | `monthEvents(events, now)` |
+| ① 지금 진행 중 N (11/11 시안) | 운영중 + 오늘 진행(`matchRunDays`, 지도 칩 "오늘 진행"과 같음) | `nowOpenEvents(events, now)` |
+| ① 가로 카드 | 진행 중 − ② 곧 종료 (겹쳐 보이지 않게) → 사진 있는 것 먼저 → 종료 가까운 순, 최대 10 | `nowOpenCards(events, now)` |
+| ② 곧 종료 | 운영중이고 종료가 7일 안(오늘 포함 7일), 종료 가까운 순 | `endingSoon(events, now)` |
+| ② 곧 시작 | 시작 전이고 7일 안에 시작, 시작일 가까운 순 | `startingSoon(events, now)` |
+| ③ 달별 행사 | 다음 달 ~ 11달 뒤, 그 달에 시작하는 오픈예정 행사, 행사 있는 달만 | `monthGroups(events, now)` |
 | 검색 일치 | 띄어쓰기 · 대소문자 무시, **제목 + 장소** (강조는 제목만) | `searchEvents(events, keyword, now)` |
 | 검색 정렬 | 입력 중: 운영중 · 오픈예정 → 종료. 결과: 종료 임박순 (종료는 맨 아래) | 위 함수 안 |
 

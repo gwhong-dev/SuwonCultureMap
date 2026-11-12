@@ -138,7 +138,7 @@ class ScheduleDisplayPageTest {
 
   @Test
   void 모바일_홈_화면과_홈_탭이_있고_홈_규칙_파일을_화면_스크립트보다_먼저_불러옴() throws Exception {
-    // 이번 주 · 곧 종료 · 곧 시작 고르기(weekRange · endingSoon …)가 home-picks.js 에 있음 → index.js 보다 앞
+    // 지금 진행 중 · 곧 종료 · 곧 시작 · 달별 고르기(nowOpenCards · endingSoon · monthGroups …)가 home-picks.js 에 있음 → index.js 보다 앞
     String html = page();
     int rules = html.indexOf("<script src=\"/home-picks.js\"></script>");
     assertThat(rules).isPositive().isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
@@ -150,24 +150,44 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
-  void 홈_포스터_캐러셀이_곧_종료_탭보다_위에_있고_처음엔_숨김() throws Exception {
-    // carouselPicks 로 고른 행사가 있을 때만 index.js 가 보이게 함 (없으면 빈 칸이 남지 않게)
+  void 홈은_지금_진행_중_곧_종료_곧_시작_달별_행사_3칸_순서이고_이번_주_줄은_없음() throws Exception {
+    // 11/11 사용자 확정 시안: ① 지금 진행 중 N (가로 카드, 전체 →) ② 곧 종료 N | 곧 시작 N (7일 안) ③ 달별 행사
     String html = page();
-    int carousel = html.indexOf("<section id=\"homeCarousel\"");
-    assertThat(carousel).isPositive().isLessThan(html.indexOf("id=\"homeSoonList\""));
-    assertThat(html.substring(carousel, html.indexOf(">", carousel))).contains(" hidden");
-    assertThat(html).contains("id=\"homeCarouselTrack\"", "id=\"homeCarouselFill\"", "id=\"homeCarouselCount\"");
+    int now = html.indexOf("<section id=\"homeNow\"");
+    int soon = html.indexOf("id=\"homeSoonList\"");
+    int months = html.indexOf("<section id=\"homeMonths\"");
+    assertThat(now).isPositive().isLessThan(soon);
+    assertThat(months).isGreaterThan(soon).isLessThan(html.indexOf("<section id=\"homeNearby\""));
+    assertThat(html).contains("id=\"homeNowCount\"", "id=\"homeNowAll\"", "id=\"homeNowTrack\"");
+    assertThat(html).contains("id=\"homeEndingCount\"", "id=\"homeStartingCount\"", "7일 안</span>");
+    assertThat(html.substring(months, html.indexOf(">", months))).contains(" hidden"); // 고를 달이 있을 때만 보임
+    assertThat(html).contains("id=\"homeMonthChips\"", "id=\"homeMonthTrack\"");
+    assertThat(html).contains("<option value=\"week\">7일 안</option>"); // "7일 안" = 지도 날짜 칩과 같은 기간
+    // 옛 홈: 이번 주 줄 · 포스터 캐러셀 · 날짜 칩 · 이달의 행사 없음
+    assertThat(html).doesNotContain("이번 주 수원 행사", "id=\"homeCarousel\"", "id=\"homeDateChips\"", "id=\"homeMonth\"");
+
+    String js = script();
+    assertThat(js).contains("nowOpenCards(events)", "nowOpenEvents(events).length", "monthGroups(homeEvents())");
+    assertThat(js).contains("group.label + \" · \" + group.events.length"); // 달 칩 "12월 · 14"
+    assertThat(js).doesNotContain("carouselPicks", "thisWeekEvents", "weekRange");
+    // "전체 →" = 목록 탭 + 오늘 진행 (다른 필터는 풀어서 목록 수 = N)
+    assertThat(js).contains("document.getElementById(\"dateFilter\").value = \"today\";\n  document.getElementById(\"showPastCheckbox\").checked = false;");
   }
 
   @Test
-  void 홈_날짜_칩_3개가_캐러셀과_곧_종료_사이에_있고_PC_선택상자에_7일_안() throws Exception {
-    // 칩 값은 #dateFilter 값과 같아야 지도 탭으로 넘길 때 그대로 씀
-    String html = page();
-    int chips = html.indexOf("id=\"homeDateChips\"");
-    assertThat(chips).isGreaterThan(html.indexOf("id=\"homeCarousel\"")).isLessThan(html.indexOf("id=\"homeSoonList\""));
-    assertThat(html.substring(chips, html.indexOf("</nav>", chips)))
-        .contains("data-date=\"today\"", "data-date=\"weekend\"", "data-date=\"week\"", "+7일");
-    assertThat(html).contains("<option value=\"week\">7일 안</option>");
+  void 지도_칩_줄은_진행_중이고_7일_안은_PC_에만() throws Exception {
+    // 사용자 결정(11/11, Chips 시안): "오늘 진행" → "진행 중", 모바일 칩 줄에서 '7일 안' 빼기 (필터 규칙은 그대로)
+    String js = script();
+    assertThat(js).contains("{ value: \"today\", label: \"📅 진행 중\" }", "pcOnly: true", "\"chip chip-pc-only\"");
+    assertThat(js).doesNotContain("오늘 진행");
+    assertThat(page()).contains("<option value=\"today\">진행 중</option>").doesNotContain("오늘 진행");
+
+    // 모바일 구간에서만 숨김, 홈 "+7일"로 켜졌을 때(active)는 보여서 해제할 수 있음
+    String css = fetch("/css/index.css");
+    int mobile = css.indexOf("@media (max-width: 1024px)");
+    int rule = css.indexOf("#categoryChips .chip-pc-only:not(.active) {");
+    assertThat(rule).isGreaterThan(mobile);
+    assertThat(css.indexOf("display: none;", rule)).isGreaterThan(rule);
   }
 
   @Test
@@ -213,16 +233,6 @@ class ScheduleDisplayPageTest {
     assertThat(hidden).doesNotContain("#categoryChips");
     // PC 로 넘어갈 때 구 · 무료 필터를 풀던 코드 없음 (PC 칩 줄에서 끌 수 있음)
     assertThat(script()).doesNotContain("PC 엔 칩 줄이 없어");
-  }
-
-  @Test
-  void 홈_이달의_행사가_날짜_칩과_곧_종료_사이에_있고_처음엔_숨김() throws Exception {
-    // monthEvents 로 고른 행사가 있을 때만 index.js 가 보이게 함 (제목 "11월의 수원 행사"도 index.js 가 채움)
-    String html = page();
-    int month = html.indexOf("<section id=\"homeMonth\"");
-    assertThat(month).isGreaterThan(html.indexOf("id=\"homeDateChips\"")).isLessThan(html.indexOf("id=\"homeSoonList\""));
-    assertThat(html.substring(month, html.indexOf(">", month))).contains(" hidden");
-    assertThat(html).contains("id=\"homeMonthTitle\"", "id=\"homeMonthTrack\"");
   }
 
   @Test
@@ -302,7 +312,9 @@ class ScheduleDisplayPageTest {
     assertThat(html).contains("id=\"previewPrev\"", "id=\"previewNext\"", "aria-label=\"이전 카드\"", "aria-label=\"다음 카드\"");
 
     String js = script();
-    assertThat(js).contains("stripArrowState(", "stripStepTarget(", "wheelStep(", "stripKeyStep(");
+    assertThat(js).contains("stripArrowState(", "stripStepTarget(", "wheelStep(", "stripKeyStep(", "stripLabelText(");
+    // PC 는 지도를 열면 카드 줄을 기본으로 띄움 (11/11) — 마커를 누르지 않아도
+    assertThat(js).contains("function showDefaultPreview(", "showDefaultPreview();");
     // PC 도 모바일과 같은 하단 카드 (예전 PC 말풍선 InfoWindow 는 없앰)
     assertThat(js).doesNotContain("kakao.maps.InfoWindow");
 
@@ -330,5 +342,44 @@ class ScheduleDisplayPageTest {
     MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     assertThat(mockMvc.perform(get("/sync-status.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
     assertThat(fetch("/sync-status.js")).contains("/api/sync-status", "[data-sync-status]", "syncStatusText(", "행사 정보 마지막 갱신 · ");
+  }
+
+  @Test
+  void PC_카드_줄_띠의_빈_곳은_지도가_클릭과_끌기를_받음() throws Exception {
+    // PC 카드 줄은 늘 떠 있음 → 띠(지도 전체 폭)가 다 받으면 첫 · 끝 카드일 때 빈 절반의 마커 클릭 · 끌기가 막힘 (#215 검증 ⑥)
+    // PC 구간: 띠는 통과(none), 라벨 · 카드 · 화살표만 받음(auto). 모바일(공통 규칙)은 띠 전체가 받음 그대로
+    String css = fetch("/css/index.css").replace("\r\n", "\n");
+    int start = css.indexOf("#sidebar.collapsed ~ #previewArea");
+    int media = css.lastIndexOf("@media (min-width: 1025px) {", start);
+    assertThat(media).isPositive();
+    String pc = block(css, css.indexOf("{", media));
+
+    assertThat(rule(pc, "#previewArea.show {")).contains("pointer-events: none;");
+    assertThat(pc).contains("#previewArea.show #previewLabel,", "#previewArea.show .preview-card,", "#previewArea.show .strip-arrow {");
+    assertThat(rule(pc, "#previewArea.show .strip-arrow {")).contains("pointer-events: auto;");
+    // 공통(모바일) 규칙은 그대로 띠 전체가 받음
+    assertThat(rule(css, "\n#previewArea.show {")).contains("pointer-events: auto;");
+
+    // 지금 카드는 보조기기에도 알림, 양옆 카드는 카드 전체가 아니라 포스터만 흐리게 (글자 대비 유지, #215 검증 ⑦)
+    assertThat(script()).contains("card.setAttribute(\"aria-current\", \"true\")", "card.removeAttribute(\"aria-current\")");
+    assertThat(rule(pc, ".preview-card {")).doesNotContain("opacity");
+    assertThat(rule(pc, ".preview-card .preview-poster {")).contains("opacity: 0.5;");
+  }
+
+  // open = 여는 { 의 위치 → 짝이 맞는 } 까지 (안쪽 내용)
+  private static String block(String css, int open) {
+    int depth = 0;
+    for (int i = open; i < css.length(); i++) {
+      if (css.charAt(i) == '{') depth++;
+      else if (css.charAt(i) == '}' && --depth == 0) return css.substring(open + 1, i);
+    }
+    throw new IllegalStateException("닫는 } 없음");
+  }
+
+  // selector 로 시작하는 규칙 하나의 내용 ({ … })
+  private static String rule(String css, String selector) {
+    int at = css.indexOf(selector);
+    assertThat(at).as(selector).isNotNegative();
+    return block(css, css.indexOf("{", at));
   }
 }

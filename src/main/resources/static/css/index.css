@@ -68,7 +68,9 @@ body {
   border: 1px solid #ccc;
 }
 /* PC 상단 바 왼쪽 로고: 낙관(도장) + 워드마크 / 아래 줄 부제 (static/brand/logo.svg 의 symbol)
-   글자 비율: 워드마크 가로 = 높이 × 5.05, 부제 가로 = 높이 × 8.44 */
+   글자 비율: 워드마크 가로 = 높이 × 5.05, 부제 가로 = 높이 × 8.44
+   부제 왼쪽 끝 = 워드마크 첫 글자 '수'의 가로 중심 → 부제 margin-left = 워드마크 높이 × 0.5
+   ('수' 윤곽 x 1.5~91.7 / 높이 90.5 → 중심 0.515, 부제 첫 글자 안쪽 여백 약 0.25px 를 뺌) */
 .topbar-brand {
   display: flex;
   align-items: center;
@@ -106,6 +108,7 @@ body {
 .topbar-brand .brand-sub {
   width: 80px;
   height: 9.5px;
+  margin-left: 9px; /* 워드마크 높이 18px × 0.5 */
   color: #e9906f; /* 어두운 상단 바 위 벽돌색 (밝게 → 대비 5:1 이상) */
 }
 /* 로그인 상태 + 버튼 묶음 (PC: 상단바 오른쪽 / 모바일: ☰ 메뉴 안) */
@@ -666,7 +669,8 @@ body {
   color: var(--text);
   border: 1px solid var(--line);
 }
-/* 카드 줄 + 좌우 화살표 (화살표는 마우스 PC 에서만, 처음 · 끝 카드에서는 그쪽을 숨김 — strip-nav.js) */
+/* 카드 줄 + 좌우 화살표 (화살표는 마우스 PC 에서만, 처음 · 끝 카드에서는 그쪽을 숨김 — strip-nav.js)
+   화살표 = 44px 사각 · 늘 보이게 (흰 바탕 · 진한 테두리 · 그림자, '다음'은 진한 바탕 — 11/11 시안 PcCard) */
 #previewStripWrap {
   position: relative;
 }
@@ -677,40 +681,41 @@ body {
   z-index: 1;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: transparent;
+  border: 1px solid var(--text);
+  border-radius: 0;
+  background: var(--bg);
   color: var(--text);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   transform: translateY(-50%);
-  transition: background-color 0.2s, box-shadow 0.2s, color 0.2s,
-    transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 .strip-arrow.prev {
-  left: 6px;
+  left: 16px;
 }
 .strip-arrow.next {
-  right: 6px;
+  right: 16px;
+  background: var(--text);
+  color: var(--bg);
 }
 .strip-arrow svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 @media (hover: hover) and (pointer: fine) {
   .strip-arrow:not([hidden]) {
     display: flex;
   }
-  .strip-arrow:hover {
-    background: var(--bg);
-    color: var(--accent);
-    box-shadow: var(--shadow-float);
-    transform: translateY(-50%) scale(1.12);
+  .strip-arrow.prev:hover {
+    background: var(--surface);
   }
-  .strip-arrow:active {
-    transform: translateY(-50%) scale(0.96);
+  .strip-arrow.next:hover {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
   }
 }
 .strip-arrow:focus-visible {
@@ -842,6 +847,44 @@ body {
 @media (min-width: 1025px) {
   #sidebar.collapsed ~ #previewArea {
     right: 0; /* 목록을 접으면 지도 전체 폭 */
+  }
+  /* PC 카드 줄 (11/11 시안 PcCard): 지금 카드는 늘 가운데 · 진한 테두리, 양옆 카드는 포스터만 흐리게
+     양쪽 여백 = 줄 폭 절반 - 카드 절반 → 첫 · 끝 카드도 가운데로 올 수 있음 */
+  /* PC 카드 줄 띠는 늘 떠 있음 → 띠 빈 곳(카드 사이 · 양쪽 여백)은 지도가 클릭 · 끌기를 받게,
+     라벨 · 카드 · 화살표만 받음 (#215 검증 ⑥, 모바일은 그대로 띠 전체가 받음) */
+  #previewArea.show {
+    pointer-events: none;
+  }
+  #previewArea.show #previewLabel,
+  #previewArea.show .preview-card,
+  #previewArea.show .strip-arrow {
+    pointer-events: auto;
+  }
+  #previewLabel {
+    align-self: center;
+    margin-left: 0;
+  }
+  #previewStrip {
+    gap: 12px;
+    padding-left: calc(50% - 180px);
+    padding-right: calc(50% - 180px);
+  }
+  .preview-card {
+    flex: 0 0 360px;
+    transition: border-color 0.2s;
+  }
+  /* 양옆 카드: 글자 대비는 그대로 두고(카드 불투명) 포스터만 흐리게 (#215 검증 ⑦) */
+  .preview-card .preview-poster {
+    opacity: 0.5;
+    transition: opacity 0.2s;
+  }
+  .preview-card:hover .preview-poster,
+  .preview-card.current .preview-poster {
+    opacity: 1;
+  }
+  .preview-card.current {
+    border-color: var(--text);
+    box-shadow: inset 0 0 0 1px var(--text), var(--shadow-float); /* 2px 테두리 (자리 크기는 그대로) */
   }
 }
 
@@ -1104,6 +1147,10 @@ body {
     scrollbar-width: none;
   }
   #categoryChips::-webkit-scrollbar {
+    display: none;
+  }
+  /* '7일 안' 칩은 PC 에만. 홈 "+7일"로 켜진 동안만 보여서 눌러 해제할 수 있게 */
+  #categoryChips .chip-pc-only:not(.active) {
     display: none;
   }
   /* ----- 사이드바 → 바텀시트 ----- */
@@ -1720,7 +1767,7 @@ body {
     font-weight: 700;
   }
 
-  /* ----- 홈 (디자인 01): 헤더 · 이번 주 행사 수 · 곧 종료 / 곧 시작 ----- */
+  /* ----- 홈 (11/11 시안 3칸): 헤더 · 지금 진행 중 · 곧 종료 | 곧 시작 · 달별 행사 · 내 주변 ----- */
   body.home-open #homeView {
     display: block;
   }
@@ -1760,58 +1807,67 @@ body {
   .home-logo .brand-sub {
     width: 84px;
     height: 10px;
+    margin-left: 10px; /* 워드마크 높이 20px × 0.5 */
     color: var(--accent);
   }
-  .home-week {
-    padding: 8px 20px 20px;
+  /* 홈 3칸 (11/11 시안): 칸 제목 18px 굵게 + 수는 벽돌색, 오른쪽 "전체 →" */
+  .home-section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 12px 8px 10px 20px;
   }
-  #homeWeekRange {
-    font-size: 13px;
-    color: var(--sub);
-  }
-  .home-week h1 {
-    margin: 4px 0 0;
-    font-size: 22px;
+  .home-section-title {
+    margin: 0;
+    padding: 0 20px 10px;
+    font-size: 18px;
     font-weight: 700;
     line-height: 1.35;
   }
-  .home-week strong {
+  .home-section-head .home-section-title {
+    padding: 0;
+  }
+  .home-section-title strong {
     color: var(--accent);
   }
-  /* 포스터 캐러셀: 카드 280px, 왼쪽 맞춤이라 다음 카드가 오른쪽에 살짝 보임. 한 번에 한 장씩 넘어감 */
-  .home-carousel {
-    padding-bottom: 24px;
+  .home-more {
+    min-height: 44px;
+    padding: 0 12px;
+    border: 0;
+    background: none;
+    color: var(--sub);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
   }
-  .carousel-track {
-    --poster-w: min(280px, calc(100vw - 72px)); /* 320px 폰에서도 다음 카드가 보이게 */
-    position: relative; /* 카드 offsetLeft 기준 */
+  .home-more[hidden] {
+    display: none;
+  }
+  /* ① 지금 진행 중 · ③ 달별 행사: 가로로 넘기는 카드 줄 */
+  .now-track,
+  .month-track {
     display: flex;
-    gap: 20px; /* = 왼쪽 여백 → 이전 카드는 화면 밖, 다음 카드만 보임 */
-    /* 오른쪽 여백 = 화면 폭 − (왼쪽 여백 20 + 카드 폭): 마지막 칸(첫 번째 복제)도 왼쪽 맞춤 자리까지 스크롤되게.
-       20px 만 두면 넓은 폭(아이패드 세로 · 폰 가로)에서 끝에 닿기 전에 스크롤이 멈춰 처음으로 못 넘어감 */
-    padding: 0 max(20px, calc(100% - 20px - var(--poster-w))) 0 20px;
+    gap: 10px;
+    padding: 0 20px;
     overflow-x: auto;
     overscroll-behavior-x: contain;
-    scroll-snap-type: x mandatory;
+    scroll-snap-type: x proximity;
     scroll-padding-left: 20px;
     scrollbar-width: none;
   }
-  .carousel-track::-webkit-scrollbar {
+  .now-track::-webkit-scrollbar,
+  .month-track::-webkit-scrollbar {
     display: none;
   }
-  .poster-slide {
-    flex: 0 0 var(--poster-w);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
+  .now-track .home-empty {
+    flex: 1;
+    padding: 20px 0;
   }
-  .poster-card {
+  .home-card {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    width: 100%;
+    gap: 6px;
+    min-width: 0;
     padding: 0;
     border: 0;
     background: none;
@@ -1819,6 +1875,13 @@ body {
     font: inherit;
     text-align: left;
     cursor: pointer;
+    scroll-snap-align: start;
+  }
+  .now-card {
+    flex: 0 0 200px;
+  }
+  .month-card {
+    flex: 0 0 110px;
   }
   .poster-img {
     position: relative;
@@ -1826,9 +1889,12 @@ body {
     align-items: center;
     justify-content: center;
     width: 100%;
-    aspect-ratio: 4 / 5; /* 280 × 350, 행사 행 포스터 56×70 과 같은 비율 */
+    aspect-ratio: 4 / 3; /* 진행 중 200 × 150 */
     overflow: hidden;
     background: var(--surface);
+  }
+  .month-card .poster-img {
+    aspect-ratio: 1; /* 달별 110 × 110 */
   }
   .poster-img img {
     position: absolute;
@@ -1837,122 +1903,81 @@ body {
     height: 100%;
     object-fit: cover;
   }
-  .poster-title {
+  /* 사진 위 왼쪽 위 "운영중" 배지 */
+  .poster-img .status-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+  }
+  .card-title {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     overflow: hidden;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 700;
     line-height: 1.35;
   }
-  .carousel-progress {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 20px 0;
+  .month-card .card-title {
+    font-size: 13px;
+    font-weight: 500;
   }
-  .carousel-progress[hidden] {
-    display: none;
-  }
-  .carousel-bar {
-    position: relative;
-    flex: 1;
-    height: 2px;
-    background: var(--line);
-  }
-  .carousel-fill {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    background: var(--text);
-    transition: width 0.2s ease;
-  }
-  .carousel-count {
-    color: var(--sub);
+  .home-card .row-sub {
     font-size: 12px;
-    font-variant-numeric: tabular-nums;
   }
-  /* 날짜 칩: 지도 칩(.chip)과 같은 모양, 한 줄 */
-  .home-dates {
-    display: flex;
-    gap: 8px;
-    padding: 0 20px 24px;
+  /* ② 곧 종료 | 곧 시작: 고른 탭 = 굵게 + 검은 밑줄, 수는 벽돌색. 오른쪽 "7일 안" */
+  .home-section {
+    padding-top: 22px;
   }
-  /* 이달의 행사: 카드 148px 가로 줄, 끝에 "전체 보기 →" 카드 (무한 반복 없음) */
-  .home-month {
-    padding-bottom: 28px;
+  /* ③ 달별 행사: 달 칩 "12월 · 14" (고른 달 = 검은 바탕), 아래 카드 줄 */
+  .home-months {
+    padding-top: 24px;
   }
-  .home-month[hidden] {
+  .home-months[hidden] {
     display: none;
   }
-  .home-section-title {
-    margin: 0;
-    padding: 0 20px 12px;
-    font-size: 17px;
-    font-weight: 700;
-  }
-  .month-track {
+  .month-chips {
     display: flex;
-    gap: 12px;
-    padding: 0 20px;
+    gap: 6px;
+    padding: 0 20px 10px;
     overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x proximity;
-    scroll-padding-left: 20px;
     scrollbar-width: none;
   }
-  .month-track::-webkit-scrollbar {
+  .month-chips::-webkit-scrollbar {
     display: none;
   }
-  .month-card,
-  .month-more {
-    flex: 0 0 148px;
-    scroll-snap-align: start;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-  }
-  .month-card {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 0;
-  }
-  .month-card .poster-img {
-    aspect-ratio: 4 / 5; /* 148 × 185 */
-  }
-  .month-title {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    overflow: hidden;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1.35;
-  }
-  .month-card .row-sub {
-    font-size: 12px;
-  }
-  /* "전체 보기 →": 포스터 칸 높이만큼 테두리 상자 */
-  .month-more {
-    align-self: flex-start;
-    height: 185px;
+  .month-chip {
+    flex: none;
+    height: 34px;
+    padding: 0 13px;
     border: 1px solid var(--line);
-    color: var(--sub);
-    font-size: 14px;
-    text-align: center;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .month-chip.active {
+    border-color: var(--text);
+    background: var(--text);
+    color: var(--bg);
+    font-weight: 700;
   }
   .home-tabs {
     display: flex;
-    gap: 20px;
+    align-items: center;
     padding: 0 20px;
     border-bottom: 1px solid var(--line);
+  }
+  .home-tab-list {
+    display: flex;
+    gap: 18px;
+  }
+  .home-tabs-note {
+    margin-left: auto;
+    color: var(--sub);
+    font-size: 12px;
   }
   .home-tab {
     height: 44px;
@@ -1961,13 +1986,16 @@ body {
     background: none;
     color: var(--sub);
     font: inherit;
-    font-size: 15px;
+    font-size: 16px;
     cursor: pointer;
   }
   .home-tab.active {
     color: var(--text);
     font-weight: 700;
-    box-shadow: inset 0 -2px 0 var(--accent);
+    box-shadow: inset 0 -2px 0 var(--text);
+  }
+  .home-tab.active .home-tab-count {
+    color: var(--accent);
   }
   .home-empty {
     display: flex;
@@ -2626,7 +2654,6 @@ body {
   #previewArea,
   .strip-arrow,
   .modal-card,
-  .carousel-fill,
   .sk::after {
     transition: none !important;
     animation: none !important;
