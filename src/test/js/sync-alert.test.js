@@ -13,7 +13,7 @@ function status(lastSuccessAt, consecutiveFailures) {
 
 // ===== decide =====
 
-test("마지막 성공이 13시간 안이고 실패 1회 이하면 ok", () => {
+test("마지막 성공이 25시간 안이고 실패 1회 이하면 ok", () => {
   assert.strictEqual(decide(status("2026-11-12T06:00:05", 0), NOW).state, "ok");
   assert.strictEqual(decide(status("2026-11-11T18:01:00", 1), NOW).state, "ok"); // 06시 1회 실패 = 아직 알리지 않음
 });
@@ -28,11 +28,32 @@ test("성공이 한 번도 없어도 연속 실패 2회면 alert", () => {
   assert.strictEqual(decide(status(null, 2), NOW).state, "alert");
 });
 
-test("마지막 성공이 13시간 넘으면 실패 횟수와 상관없이 alert (예약 실행이 아예 안 돈 경우)", () => {
-  const r = decide(status("2026-11-11T17:59:00", 0), NOW); // 13시간 1분 전
+test("마지막 성공이 25시간 넘으면 실패 횟수와 상관없이 alert (예약 실행이 아예 안 돈 경우)", () => {
+  const r = decide(status("2026-11-11T05:59:00", 0), NOW); // 25시간 1분 전
   assert.strictEqual(r.state, "alert");
-  assert.match(r.reasons.join(), /13\.0시간 전/);
-  assert.strictEqual(decide(status("2026-11-11T18:00:00", 0), NOW).state, "ok"); // 딱 13시간 = 아직
+  assert.match(r.reasons.join(), /25\.0시간 전/);
+  assert.strictEqual(decide(status("2026-11-11T06:00:00", 0), NOW).state, "ok"); // 딱 25시간 = 아직
+});
+
+// 실제 점검은 매시 17분 (sync-alert.yml) — 그 시각 기준 경계
+test("06시 성공 → 18시 1회 실패: 19:17 · 다음 날 05:17 점검 모두 알리지 않음", () => {
+  const at = (t) => Date.parse(t + "+09:00");
+  const s = status("2026-11-11T06:02:00", 1);
+  assert.strictEqual(decide(s, at("2026-11-11T19:17:00")).state, "ok");
+  assert.strictEqual(decide(s, at("2026-11-12T05:17:00")).state, "ok");
+});
+
+test("06시 성공 → 18시 · 06시 2회 실패: 다음 날 06:17 점검에 alert", () => {
+  const r = decide(status("2026-11-11T06:02:00", 2), Date.parse("2026-11-12T06:17:00+09:00"));
+  assert.strictEqual(r.state, "alert");
+  assert.deepStrictEqual(r.reasons, ["재단 동기화 2회 연속 실패"]);
+});
+
+test("예약 실행이 멈춤(FAIL 도 안 남음): 06시 성공 뒤 다음 날 07:17 점검에 alert", () => {
+  const at = (t) => Date.parse(t + "+09:00");
+  const s = status("2026-11-11T06:02:00", 0);
+  assert.strictEqual(decide(s, at("2026-11-12T06:17:00")).state, "ok"); // 24.25시간
+  assert.strictEqual(decide(s, at("2026-11-12T07:17:00")).state, "alert"); // 25.25시간
 });
 
 test("이력 없음(막 배포) · 실패 1회뿐 · 응답 없음 · 형식 이상은 unknown — 알리지도 닫지도 않음", () => {
@@ -46,7 +67,7 @@ test("이력 없음(막 배포) · 실패 1회뿐 · 응답 없음 · 형식 이
 
 test("연속 실패 값이 없는 옛 서버면 시각만으로 판단", () => {
   assert.strictEqual(decide({ lastSuccessAt: "2026-11-12T06:00:00" }, NOW).state, "ok");
-  assert.strictEqual(decide({ lastSuccessAt: "2026-11-11T06:00:00" }, NOW).state, "alert");
+  assert.strictEqual(decide({ lastSuccessAt: "2026-11-10T06:00:00" }, NOW).state, "alert");
 });
 
 test("기준값은 바꿀 수 있음", () => {

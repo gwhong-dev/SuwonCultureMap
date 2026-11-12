@@ -3,8 +3,10 @@
 //  재단 동기화 실패 알림 — .github/workflows/sync-alert.yml 이 1시간마다 실행
 //  1) 운영 GET /api/sync-status 읽기 (lastSuccessAt = 재단 마지막 성공(한국 시간), consecutiveFailures = 그 뒤 연속 실패)
 //  2) 판단 (decide):
-//     - alert  : 연속 실패 2회 이상 또는 마지막 성공이 13시간 넘게 지남 (동기화 06 · 18시 → 한 번 빠지면 13시간)
-//     - ok     : 마지막 성공이 13시간 안 + 연속 실패 2회 미만
+//     - alert  : 연속 실패 2회 이상 또는 마지막 성공이 25시간 넘게 지남
+//       (동기화 06 · 18시 → 25시간 = 예약 2번을 놓침. 예약 실행 자체가 안 돌아 FAIL 도 안 남는 경우용.
+//        13시간이면 1회 실패만으로 다음 점검에 알림이 떠서 "2회 연속" 기준과 어긋남 — PR #226 검증)
+//     - ok     : 마지막 성공이 25시간 안 + 연속 실패 2회 미만
 //     - unknown: 응답 없음 · 형식 이상 · 성공 이력 없음(막 배포 · 첫 동기화 전) → Issue 를 건드리지 않음
 //       (응답 없음은 가동 감시(uptime.yml)가 따로 Issue 를 엶)
 //  3) alert → "sync" 라벨 Issue 1개만 (이미 열려 있으면 새로 안 만듦) / ok → 열린 Issue 에 복구 시각 남기고 닫음
@@ -18,7 +20,7 @@ const LABEL = "sync";
 const DEFAULTS = {
   url: "https://suwonbible.com/api/sync-status",
   failLimit: 2,
-  staleHours: 13,
+  staleHours: 25,
   tries: 3,
   waitMs: 10000,
 };
