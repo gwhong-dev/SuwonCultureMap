@@ -110,15 +110,49 @@ function matchesStatusTab(event, tab, now) {
   return tab === "upcoming" ? status === "upcoming" : status !== "upcoming" && status !== "ended";
 }
 
-// PC 진행 탭을 걸지 않는 경우: 모바일 · 날짜를 고름 · 검색어 · '찜' 분류 · 지난 행사 보기
+// PC 진행 탭을 걸지 않는 경우: 모바일 · 날짜를 고름 · 검색어 · '찜' 분류 · 지난 행사 보기(숨은 체크박스, 칩은 11/13 삭제)
 // (검색 · 찜 · 지난 행사는 "그 행사를 찾는" 목록이라 탭 때문에 0건이 되지 않게 전부 보여 줌)
 function statusTabApplies(state) {
   return !state.mobile && state.dateValue === "all" && !state.keyword && state.category !== "찜" && !state.showPast;
 }
 
-// 달력에서 오늘 전 날짜는 못 고름 (지난 행사는 따로 "지난 행사" 칩)
+// 오늘 전 날짜 (11/13 P2: 지난 날도 고를 수 있음 — 달력 칸은 회색 바탕, 고르면 그날 열린 행사만)
 function isPastDay(isoDate, now) {
   return isoDate < calSchedule.koreaToday(now);
+}
+
+// 날짜 필터가 "하루"면 그 날짜("today" = 오늘), 아니면(전체 · 주말 · 7일) null → 하루 이동 ◂ 전날 · 다음날 ▸ 은 하루일 때만
+function singleDay(filterValue, now) {
+  if (isDayValue(filterValue)) return filterValue;
+  if (filterValue === "today") return calSchedule.koreaToday(now);
+  return null;
+}
+
+// 고른 날짜가 오늘 전이면 그 날짜 (지난 행사 안내 · 종료 행사도 보여 줄 때), 아니면 null
+function pastSelectedDay(filterValue, now) {
+  var day = singleDay(filterValue, now);
+  return day && isPastDay(day, now) ? day : null;
+}
+
+// 종료 행사를 목록 · 지도에서 뺄까: 기본은 뺌, 지난 날짜를 골랐거나(그날 열린 행사) 지난 행사 보기면 안 뺌
+function hidesEndedEvents(filterValue, showPast, now) {
+  return !showPast && !pastSelectedDay(filterValue, now);
+}
+
+// 하루 이동 칸 글자: 넓으면 "11월 8일 (일)", 좁으면 "11.8 (일)" (375px 에서도 한 줄 — 11/13 사용자 지적)
+function shortDayTitle(isoDate) {
+  return +isoDate.slice(5, 7) + "." + +isoDate.slice(8, 10) + " (" + CAL_WEEKDAYS[weekdayOf(isoDate)] + ")";
+}
+
+// 지난 날을 골랐을 때 아래 안내
+function pastDayNote(isoDate) {
+  return "지난 행사 · " + dayTitle(isoDate) + " 에 열린 행사만 지도와 목록에 표시";
+}
+
+// 달 이동 버튼 글자: 앞 = "‹ 10월", 뒤 = "12월 ›"
+function monthStepLabel(ym, delta) {
+  var month = shiftMonth(ym, delta).month;
+  return delta < 0 ? "‹ " + month + "월" : month + "월 ›";
 }
 
 if (typeof module !== "undefined") {
@@ -139,5 +173,11 @@ if (typeof module !== "undefined") {
     matchesStatusTab: matchesStatusTab,
     statusTabApplies: statusTabApplies,
     isPastDay: isPastDay,
+    singleDay: singleDay,
+    pastSelectedDay: pastSelectedDay,
+    hidesEndedEvents: hidesEndedEvents,
+    shortDayTitle: shortDayTitle,
+    pastDayNote: pastDayNote,
+    monthStepLabel: monthStepLabel,
   };
 }

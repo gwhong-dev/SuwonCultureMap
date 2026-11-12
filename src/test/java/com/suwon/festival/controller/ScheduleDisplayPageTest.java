@@ -203,6 +203,26 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
+  void 달력_지난_날짜_하루_이동_연월_고르기가_연결됨() throws Exception {
+    // 11/13 P2: '지난 행사' 칩 삭제('무료' 칩은 유지), 지난 날을 고르면 그날 열린 행사(종료 포함)
+    String js = script();
+    assertThat(js).doesNotContain("🕘 지난 행사", "\"__past\"", "button.disabled = isPastDay(date);");
+    assertThat(js).contains("freeChip.textContent = \"💸 무료\";");
+    assertThat(js).contains("hidesEndedEvents(dateValue,", "matchesOthers && matchesPast && matchesDate");
+    assertThat(js).contains("addDays(day, i === 0 ? -1 : 1)", "monthStepLabel(calShownMonth, nav[1])");
+
+    String html = page();
+    assertThat(html).contains("id=\"dayNav\"", "id=\"dayPrevBtn\"", "id=\"dayNextBtn\"", "id=\"pastDayNote\"");
+    assertThat(html).contains("id=\"calPicker\"", "id=\"calPickerMonths\"", "aria-controls=\"calPicker\"");
+    // 빠른 고르기는 "2026년 11월 ▾" 줄 바로 아래 붙어 달력을 덮음
+    assertThat(html.indexOf("id=\"calPicker\"")).isLessThan(html.indexOf("id=\"calGrid\""));
+
+    // 하루 이동은 늘 한 줄, 좁으면 글자 빼고 ◂ ▸ 만
+    String css = fetch("/css/index.css");
+    assertThat(css).contains("container: daynav / inline-size;", "@container daynav (max-width: 300px)", "white-space: nowrap;");
+  }
+
+  @Test
   void 모바일_지도_탭_카드_줄_목록_보기_홈_끝_넘김_상세_넘기기가_있음() throws Exception {
     // P3 확정 시안 (docs/design/2026-11-13-improvement-drafts.md): 지도 탭 카드 기본 표시 · 목록 보기 = 지도를 다 덮는 화면
     String html = page();
