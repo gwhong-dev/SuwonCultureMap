@@ -18,6 +18,12 @@ const {
   matchesStatusTab,
   statusTabApplies,
   isPastDay,
+  singleDay,
+  pastSelectedDay,
+  hidesEndedEvents,
+  shortDayTitle,
+  pastDayNote,
+  monthStepLabel,
 } = require("../../main/resources/static/calendar-strip.js");
 const { filterDays, matchRunDays } = require("../../main/resources/static/schedule-format.js");
 
@@ -143,7 +149,49 @@ test("PC 진행 탭이 걸리는 때: PC · 날짜 안 고름 · 검색어 없�
   assert.ok(!statusTabApplies({ ...base, showPast: true }));
 });
 
-test("지난 날짜는 못 고름 (오늘은 고름)", () => {
+test("지난 날짜 판별: 어제는 지난 날, 오늘은 아님 (11/13 P2: 지난 날도 고를 수 있음)", () => {
   assert.ok(isPastDay("2026-11-10", NOW));
   assert.ok(!isPastDay("2026-11-11", NOW));
+});
+
+test("하루 필터: 날짜 · 오늘만 하루, 주말 · 7일 · 전체는 하루 아님 (하루 이동 ◂ ▸ 은 하루일 때만)", () => {
+  assert.strictEqual(singleDay("2026-11-08", NOW), "2026-11-08");
+  assert.strictEqual(singleDay("today", NOW), "2026-11-11");
+  assert.strictEqual(singleDay("weekend", NOW), null);
+  assert.strictEqual(singleDay("week", NOW), null);
+  assert.strictEqual(singleDay("all", NOW), null);
+});
+
+test("지난 날을 고르면 종료 행사도 보임, 그 밖엔 종료 행사 숨김 (지난 행사 보기 체크면 늘 보임)", () => {
+  assert.strictEqual(pastSelectedDay("2026-11-08", NOW), "2026-11-08");
+  assert.strictEqual(pastSelectedDay("2026-11-11", NOW), null); // 오늘
+  assert.strictEqual(pastSelectedDay("today", NOW), null);
+  assert.strictEqual(pastSelectedDay("weekend", NOW), null);
+  assert.ok(!hidesEndedEvents("2026-11-08", false, NOW));
+  assert.ok(hidesEndedEvents("2026-11-11", false, NOW));
+  assert.ok(hidesEndedEvents("today", false, NOW));
+  assert.ok(hidesEndedEvents("weekend", false, NOW));
+  assert.ok(hidesEndedEvents("all", false, NOW));
+  assert.ok(!hidesEndedEvents("all", true, NOW));
+});
+
+test("지난 날 고름 = 그날 열린 행사만 (matchRunDays 그대로: 종료 행사도 그날 열렸으면 보임)", () => {
+  const ended = { startDate: "2026-11-01", endDate: "2026-11-09", scheduleStatus: "DATES", dates: ["2026-11-01", "2026-11-08", "2026-11-09"] }; // 11/9 종료, 진행일 있음
+  const later = { startDate: "2026-11-10", endDate: "2026-11-20" };
+  assert.strictEqual(matchRunDays(ended, filterDays("2026-11-08", NOW)), "yes");
+  assert.strictEqual(matchRunDays(later, filterDays("2026-11-08", NOW)), "no");
+  assert.deepStrictEqual(countRunDays([ended, later], ["2026-11-08", "2026-11-10"]), { "2026-11-08": 1, "2026-11-10": 1 });
+});
+
+test("하루 이동 칸 글자: 좁으면 11.8 (일), 지난 날 안내 문구", () => {
+  assert.strictEqual(shortDayTitle("2026-11-08"), "11.8 (일)");
+  assert.strictEqual(shortDayTitle("2026-12-25"), "12.25 (금)");
+  assert.strictEqual(pastDayNote("2026-11-08"), "지난 행사 · 11월 8일 (일) 에 열린 행사만 지도와 목록에 표시");
+});
+
+test("달 이동 버튼: ‹ 10월 · 12월 › (해 넘김 포함)", () => {
+  assert.strictEqual(monthStepLabel({ year: 2026, month: 11 }, -1), "‹ 10월");
+  assert.strictEqual(monthStepLabel({ year: 2026, month: 11 }, 1), "12월 ›");
+  assert.strictEqual(monthStepLabel({ year: 2026, month: 1 }, -1), "‹ 12월");
+  assert.strictEqual(monthStepLabel({ year: 2026, month: 12 }, 1), "1월 ›");
 });

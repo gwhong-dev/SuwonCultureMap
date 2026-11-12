@@ -1752,6 +1752,7 @@ function renderDatePanel(baseItems, visibleCount, favScreen) {
   var dayMode = dateValue !== "all";
   var panel = document.getElementById("datePanel");
   panel.classList.toggle("cal-open", calOpen);
+  if (!calOpen && calPickerOpen) setCalPicker(false); // 달력이 닫히면 빠른 고르기도 (PC 날짜 · 탭을 키보드로 누른 경우 등)
 
   // PC 탭: 날짜를 골랐으면 진행 탭 대신 "달력" 탭이 켜지고 고른 날짜를 보여 줌
   // 검색어 · 찜 · 지난 행사 보기 중엔 진행 탭이 안 걸리므로 둘 다 꺼진 모양 (누르면 그 탭으로 거름)
@@ -1781,7 +1782,8 @@ function renderDatePanel(baseItems, visibleCount, favScreen) {
       return day.date;
     }),
   );
-  document.getElementById("stripMonth").textContent = monthOf(marked[0] || today).month + "월";
+  // 날짜 줄은 오늘부터라 지난 날을 골랐으면 오늘의 달 (10월 15일을 골라도 줄 위는 11월)
+  document.getElementById("stripMonth").textContent = monthOf(marked[0] && marked[0] >= today ? marked[0] : today).month + "월";
   var strip = document.getElementById("dateStrip");
   var stripScroll = strip.scrollLeft;
   rebuildKeepingFocus(strip, function () {
@@ -1823,10 +1825,7 @@ function renderCalendarMonth(events, marked, today) {
   var cells = monthCells(calShownMonth.year, calShownMonth.month);
   var dates = cells.filter(Boolean);
   var counts = countRunDays(events, dates);
-  var titleBtn = document.getElementById("calTitle");
-  titleBtn.textContent = calShownMonth.year + "년 " + calShownMonth.month + "월 " + (calPickerOpen ? "▴" : "▾");
-  titleBtn.setAttribute("aria-label", calShownMonth.year + "년 " + calShownMonth.month + "월, 연도 · 달 고르기");
-  titleBtn.setAttribute("aria-expanded", calPickerOpen ? "true" : "false");
+  updateCalTitle();
   // 달 이동 "‹ 10월" "12월 ›" — 지난달도 갈 수 있음 (11/13 P2)
   [["calPrev", -1, "이전 달"], ["calNext", 1, "다음 달"]].forEach(function (nav) {
     var button = document.getElementById(nav[0]);
@@ -1889,20 +1888,29 @@ function refreshDatePanel() {
 function openCalendar(open) {
   calOpen = open;
   if (open) calShownMonth = null; // 고른 날짜(없으면 오늘)의 달부터
-  if (!open) setCalPicker(false);
+  setCalPicker(false); // 열 때 · 닫을 때 모두 빠른 고르기는 닫힌 채로 (키보드로 탭 · 날짜를 눌러 달력이 닫힌 경우도)
   refreshDatePanel();
 }
 
+// 달력 제목 "2026년 11월 ▾" (빠른 고르기가 열리면 ▴)
+function updateCalTitle() {
+  if (!calShownMonth) return;
+  var titleBtn = document.getElementById("calTitle");
+  titleBtn.textContent = calShownMonth.year + "년 " + calShownMonth.month + "월 " + (calPickerOpen ? "▴" : "▾");
+  titleBtn.setAttribute("aria-label", calShownMonth.year + "년 " + calShownMonth.month + "월, 연도 · 달 고르기");
+  titleBtn.setAttribute("aria-expanded", calPickerOpen ? "true" : "false");
+}
+
 // ----- 연/월 빠른 고르기 (11/13 P2): "2026년 11월 ▾" 바로 아래 붙어 달력을 덮음. 위 ‹ 2025 · 2026년 · 2027 ›, 아래 1~12월 4×3
+// 여닫기만으로는 달력 칸을 다시 그리지 않음 (바깥 날짜를 눌러 닫을 때 누른 칸이 사라져 첫 클릭이 씹히지 않게 — 검증 ⚠️)
 function setCalPicker(open) {
   calPickerOpen = open;
-  var picker = document.getElementById("calPicker");
-  picker.hidden = !open;
+  document.getElementById("calPicker").hidden = !open;
   if (open) {
     calPickerYear = calShownMonth.year;
     renderCalPicker();
   }
-  if (calShownMonth) refreshDatePanel(); // 제목 ▾/▴ · aria-expanded
+  updateCalTitle();
 }
 
 function renderCalPicker() {
@@ -1956,7 +1964,8 @@ document.getElementById("calPickerMonths").addEventListener("click", function (e
   var button = e.target.closest("button[data-month]");
   if (!button) return;
   calShownMonth = { year: calPickerYear, month: +button.dataset.month };
-  closeCalPicker(true); // 그 달 달력으로 바꾸고 닫음 (제목 버튼이 새 달로 다시 그려짐)
+  closeCalPicker(true); // 닫고 그 달 달력으로 다시 그림
+  refreshDatePanel();
 });
 // Esc = 빠른 고르기만 닫음 (달력까지 접지 않게 calMonth 의 Esc 로 안 넘김)
 document.getElementById("calPicker").addEventListener("keydown", function (e) {

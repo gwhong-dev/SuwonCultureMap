@@ -1106,7 +1106,6 @@ body {
 }
 /* 11/13 P2: 왼쪽 "2026년 11월 ▾"(빠른 고르기) · 오른쪽 "‹ 10월" "12월 ›"(달 이동, 테두리 40px) — 하루 이동(벽돌 글자)과 다른 모양 */
 .cal-head {
-  position: relative; /* 빠른 고르기가 이 줄 바로 아래 붙음 */
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1129,12 +1128,16 @@ body {
   padding: 0 12px;
   font-size: 14px;
 }
+.cal-body {
+  position: relative; /* 빠른 고르기가 제목 줄 바로 아래 붙어 달력 칸 전체를 덮음 */
+}
 .cal-picker {
   position: absolute;
-  top: 100%;
+  top: 0;
   left: 10px;
   right: 10px;
-  z-index: 5; /* 아래 달력 칸 위를 덮음 */
+  bottom: 8px;
+  z-index: 5;
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 2px;
