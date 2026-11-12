@@ -945,6 +945,11 @@ function mergeGuestFavorites() {
     });
 }
 
+// 상단 바 · ☰ 메뉴에 보이는 회원 이름 — 이름 글자는 여기 한 곳에서만 정함 (P5 닉네임은 이 함수만 바꾸면 됨)
+function memberLabel(data) {
+  return "회원 #" + data.memberId;
+}
+
 function checkAuth() {
   fetch("/api/auth/me")
     .then((r) => r.json())
@@ -956,21 +961,21 @@ function checkAuth() {
       var mypageBtn = document.getElementById("mypageBtn");
       var logoutBtn = document.getElementById("logoutBtn");
 
+      // P4: 비로그인 = [로그인] 만 / 로그인 = 이름 + [마이페이지] (로그아웃은 ☰ 메뉴 줄)
+      status.hidden = !isLoggedIn;
+      logoutBtn.hidden = !isLoggedIn;
       if (isLoggedIn) {
-        status.textContent =
-          "로그인됨 (회원 번호: " + data.memberId + ")";
+        status.textContent = memberLabel(data);
         loginPageBtn.style.display = "none";
         mypageBtn.style.display = "inline-block";
-        logoutBtn.style.display = "inline-block";
         // 로그인 상태면 이 기기 찜을 먼저 합친 뒤 즐겨찾기 목록을 받아옴
         return mergeGuestFavorites().then(function () {
           return fetch("/api/favorites").then((r) => r.json());
         });
       } else {
-        status.textContent = "로그인 안 됨";
+        status.textContent = "";
         loginPageBtn.style.display = "inline-block";
         mypageBtn.style.display = "none";
-        logoutBtn.style.display = "none";
         return guestFavorites.list().map(function (id) {
           return { id: id }; // 비회원 찜 (이 기기)
         });
@@ -3181,20 +3186,33 @@ searchInputEl.addEventListener("keydown", function (e) {
   if (e.key === "Enter") searchInputEl.blur(); // 키보드 닫기
 });
 
-// ----- ☰ 메뉴 열기/닫기 -----
+// ----- ☰ 메뉴 열기/닫기 (PC · 모바일 공통, P4) -----
+// 펼친 판: 모바일 = 로그인 · 메뉴 줄 · 화면 모드 전체(#topbarActions) / PC = 메뉴 줄만(#menuLinks)
+function menuPanel() {
+  return document.getElementById(mobileQuery.matches ? "topbarActions" : "menuLinks");
+}
+function setMenuOpen(open) {
+  document.getElementById("topbar").classList.toggle("menu-open", open);
+  document.getElementById("mobileMenuBtn").setAttribute("aria-expanded", open ? "true" : "false");
+}
 document
   .getElementById("mobileMenuBtn")
   .addEventListener("click", function (e) {
     e.stopPropagation();
-    document.getElementById("topbar").classList.toggle("menu-open");
+    setMenuOpen(!document.getElementById("topbar").classList.contains("menu-open"));
   });
 document.addEventListener("click", function (e) {
-  var topbar = document.getElementById("topbar");
   if (
-    topbar.classList.contains("menu-open") &&
-    !document.getElementById("topbarActions").contains(e.target)
+    document.getElementById("topbar").classList.contains("menu-open") &&
+    !menuPanel().contains(e.target)
   ) {
-    topbar.classList.remove("menu-open");
+    setMenuOpen(false);
+  }
+});
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape" && document.getElementById("topbar").classList.contains("menu-open")) {
+    setMenuOpen(false);
+    document.getElementById("mobileMenuBtn").focus();
   }
 });
 
@@ -3213,7 +3231,7 @@ function applyLayout() {
     sidebar.style.transition = "";
     document.getElementById("list").style.paddingBottom = "";
     document.body.classList.remove("sheet-full");
-    document.getElementById("topbar").classList.remove("menu-open");
+    setMenuOpen(false);
   }
   if (map) map.relayout(); // 카카오맵은 크기가 바뀌면 다시 계산시켜야 함
 }
