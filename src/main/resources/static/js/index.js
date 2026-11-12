@@ -842,8 +842,8 @@ function renderSidebar(items) {
 
     var dateText = cardDateText(item);
 
-    var imgSrc = cardImageUrl(item.event); // 사진이 없으면(인스타 행사 등) null → 사진 칸 없이
-    div.className = "event-item" + (imgSrc ? "" : " no-photo");
+    var imgSrc = cardImageUrl(item.event); // 사진이 없으면(인스타 행사 등) null → 기본 그림 (P6)
+    div.className = "event-item";
     var infoText = item.event.info
       ? extractSummaryInfo(item.event.info, item.event.fee) // 사이드바엔 요금/장소/시간만
       : cardFallbackInfo(item.event); // info 원문이 없으면 장소 · 시간 칸
@@ -852,7 +852,7 @@ function renderSidebar(items) {
     div.innerHTML =
       (imgSrc
         ? '<img class="event-thumb" src="' + escapeHtml(imgSrc) + '" loading="lazy">'
-        : "") +
+        : defaultPosterHtml(item.event, "event-thumb")) +
       (isFavorited ? '<span class="favorite-badge">★</span>' : "") + // 찜한 행사만 별 표시
       favButtonHtml(isFavorited) + // 모바일: 사진 위 ♥ 버튼
       '<div class="event-body">' +
@@ -867,14 +867,7 @@ function renderSidebar(items) {
       escapeHtml(infoText) +
       "</div>" +
       "</div>";
-    var thumb = div.querySelector(".event-thumb");
-    if (thumb) {
-      // 사진을 못 불러오면 빈 칸을 남기지 않고 사진 없는 카드로 바꿈
-      thumb.addEventListener("error", function () {
-        thumb.remove();
-        div.classList.add("no-photo");
-      });
-    }
+    posterOnError(div.querySelector("img.event-thumb"), item.event); // 사진을 못 불러오면 기본 그림 (P6)
 
     div.addEventListener("click", function () {
       map.setCenter(
@@ -1057,20 +1050,23 @@ var isAppleMobile =
   /iPhone|iPad|iPod/.test(navigator.userAgent) ||
   (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
-// 상세 사진 칸 보이기 · 숨기기. 숨기면 PC 의 흰 × 가 안 보이므로 카드에 no-image 를 붙여 색을 바꿈
-function showModalImage(visible) {
+// 상세 사진 칸: 사진이 없거나 못 불러오면 기본 그림(P6). 밝은 그림 위에선 PC 의 흰 × 가 안 보이므로 no-image 로 색을 바꿈
+function showModalImage(visible, event) {
   document.getElementById("modalImage").hidden = !visible;
+  var poster = document.getElementById("modalPoster");
+  poster.innerHTML = visible ? "" : defaultPosterHtml(event, "modal-image");
+  poster.hidden = visible;
   document.querySelector("#detailModal .modal-card").classList.toggle("no-image", !visible);
 }
 document.getElementById("modalImage").addEventListener("error", function () {
-  if (this.getAttribute("src")) showModalImage(false); // src="" 로 비울 때 나는 error 는 무시
+  if (this.getAttribute("src") && detailEvent) showModalImage(false, detailEvent); // src="" 로 비울 때 나는 error 는 무시
 });
 
 // ===== 상세정보 큰 팝업창 열기/닫기 =====
 function openDetailModal(event) {
-  // 사진이 없으면(인스타 행사) 회색 빈 칸 대신 사진 칸을 숨김. 불러오다 실패해도 숨김 (아래 error 처리)
+  // 사진이 없으면(인스타 행사) 기본 그림. 불러오다 실패해도 기본 그림 (위 error 처리)
   document.getElementById("modalImage").src = event.imageUrl || "";
-  showModalImage(!!event.imageUrl);
+  showModalImage(!!event.imageUrl, event);
   document.getElementById("modalTitle").textContent = event.title;
   document.getElementById("modalBadges").innerHTML = badgeRowHtml(event);
   // 날짜 필터 중이면 카드와 같이 "기간 중 · 일정 확인" 을 붙임 (상세만 보고 오늘 한다고 믿지 않게)
@@ -2223,19 +2219,19 @@ window.addEventListener("resize", function () {
   drawNearbyMap(); // 화면 회전 · 폭 변화 뒤 작은 지도 크기 · 범위 다시 맞춤
 });
 
-// 사진 칸 + 분류 글자 (사진이 없거나 못 불러오면 회색 칸에 분류 글자). 진행 중 · 달별 카드가 같이 씀
+// 사진 칸 (사진이 없거나 못 불러오면 기본 그림 P6). 진행 중 · 달별 카드가 같이 씀
 function cardPosterHtml(event, badge) {
   var status = badge ? eventStatus(event) : null;
   return (
     '<span class="poster-img">' +
-    '<span class="row-poster-text">' + escapeHtml(event.category || "") + "</span>" +
+    defaultPosterHtml(event, "dp-fill") + // 사진이 없거나 못 불러오면(사진을 숨김) 보이는 기본 그림 (P6)
     (event.imageUrl ? '<img src="' + escapeHtml(event.imageUrl) + '" alt="" loading="lazy">' : "") +
     (status ? '<span class="status-badge ' + status + '">' + statusLabel(status) + "</span>" : "") +
     "</span>"
   );
 }
 
-// 카드를 누르면 상세, 사진 실패 → 숨겨서 회색 칸 + 분류 글자
+// 카드를 누르면 상세, 사진 실패 → 숨겨서 아래 기본 그림이 보이게
 function bindHomeCards(root) {
   root.querySelectorAll(".home-card").forEach(function (card) {
     var img = card.querySelector("img");
@@ -2291,7 +2287,7 @@ document.getElementById("homeNowAll").addEventListener("click", function () {
 });
 
 // 행사 행 (디자인 2번 공통 부품): 포스터 56×70 + 배지 + 제목 + 보조 줄(분류 · 구 · 기간)
-// 사진이 없거나 못 불러오면 회색 칸에 분류 글자. 홈 곧 종료 · 곧 시작에서 쓰고, 검색 결과(S2)에서도 같이 씀
+// 사진이 없거나 못 불러오면 기본 그림(P6). 홈 곧 종료 · 곧 시작에서 쓰고, 검색 결과(S2)에서도 같이 씀
 function eventRowHtml(event) {
   var status = eventStatus(event);
   var dday = ddayText(event);
@@ -2299,7 +2295,7 @@ function eventRowHtml(event) {
   return (
     '<button type="button" class="event-row" data-event-id="' + event.id + '">' +
     '<span class="row-poster">' +
-    '<span class="row-poster-text">' + escapeHtml(event.category || "") + "</span>" +
+    defaultPosterHtml(event, "dp-fill") + // 사진이 없거나 못 불러오면(사진을 숨김) 보이는 기본 그림 (P6)
     (event.imageUrl ? '<img src="' + escapeHtml(event.imageUrl) + '" alt="" loading="lazy">' : "") +
     "</span>" +
     '<span class="row-body">' +
@@ -2315,7 +2311,7 @@ function eventRowHtml(event) {
   );
 }
 
-// 행 안의 사진 실패 → 숨겨서 회색 칸 + 분류 글자가 보이게 · 행을 누르면 상세
+// 행 안의 사진 실패 → 숨겨서 아래 기본 그림(P6)이 보이게 · 행을 누르면 상세
 function bindEventRows(root) {
   root.querySelectorAll(".event-row").forEach(function (row) {
     var img = row.querySelector("img");
@@ -2741,7 +2737,7 @@ function renderSearch() {
       openDetailFromMarker(Number(row.dataset.eventId));
     });
   });
-  bindEventRows(list); // 결과 행: 사진 실패 → 회색 칸, 누르면 상세
+  bindEventRows(list); // 결과 행: 사진 실패 → 기본 그림, 누르면 상세
   list.querySelectorAll(".result-row .card-fav").forEach(function (button) {
     button.addEventListener("click", function () {
       toggleFavorite(Number(button.dataset.eventId)); // 끝나면 filterMarkers → updateSearchFavs 가 ♡ 표시를 맞춤
@@ -2901,9 +2897,9 @@ function renderPreviewStrip(sortedItems) {
       card.className = "preview-card";
       card.dataset.eventId = item.event.id;
       card.innerHTML =
-        '<img class="preview-poster" src="' +
-        escapeHtml(item.event.imageUrl || "") +
-        '" alt="" loading="lazy">' +
+        (item.event.imageUrl
+          ? '<img class="preview-poster" src="' + escapeHtml(item.event.imageUrl) + '" alt="" loading="lazy">'
+          : defaultPosterHtml(item.event, "preview-poster")) + // 사진이 없으면 기본 그림 (P6)
         '<div class="preview-body">' +
         badgeRowHtml(item.event) +
         pc.badges +
@@ -2921,7 +2917,7 @@ function renderPreviewStrip(sortedItems) {
         "</div>" +
         "</div>" +
         favButtonHtml(favoriteEventIds.has(item.event.id));
-      hideOnError(card.querySelector(".preview-poster"));
+      posterOnError(card.querySelector("img.preview-poster"), item.event); // 사진을 못 불러오면 기본 그림 (P6)
 
       card.addEventListener("click", function () {
         openDetailModal(item.event); // 카드 어디를 눌러도 상세 (상세 보기 버튼 포함)
