@@ -1,7 +1,12 @@
+/* ===== 색 토큰 (PC · 모바일 공통) =====
+   테마 고르기: 기본은 기기 설정(prefers-color-scheme)을 따름
+   <html data-theme="light"> → 기기가 어두운 모드여도 밝게 / data-theme="dark" → 늘 어둡게 (전환 버튼은 theme.js)
+   어두운 값은 아래 두 곳(미디어쿼리 · data-theme="dark")에 똑같이 둠 — src/test/js/theme-tokens.test.js 가 같은지 확인 */
 :root {
   --sidebar-width: 450px; /* PC 사이드바 폭 (모바일은 바텀시트라 사용 안 함) */
+  color-scheme: light; /* 입력칸 · 선택 상자 · 스크롤바 같은 브라우저 기본 부품 색 */
 
-  /* ===== 모바일 디자인 값 (docs/design/mobile-design-v1.md 1번) — 모바일 화면에서만 사용 ===== */
+  /* ===== 디자인 값 (docs/design/mobile-design-v1.md 1번) ===== */
   --bg: #ffffff; /* 바탕 */
   --surface: #f4f2ef; /* 회색 칸 (주소 박스 등) */
   --line: #e3dfd9; /* 구분선 · 테두리 */
@@ -17,13 +22,22 @@
   --gray: #6b6660; /* 종료 배지 글자 */
   --shadow-float: 0 6px 18px rgba(0, 0, 0, 0.12); /* 지도 위에 떠 있는 카드에만 */
   --dim: rgba(20, 19, 18, 0.5); /* 하단 시트 뒤 덮개 */
+  --bar: #f6f1e7; /* PC 상단 바 (종이색) */
+  --bar-line: #e3dac8; /* PC 상단 바 아래 선 */
+  --brand-sub: #b4472a; /* 로고 부제 (벽돌) */
+  --seal-frame: transparent; /* 도장 뒤 칸: 밝을 땐 없음, 어두울 땐 종이색 칸 */
+  --fav: #c77d00; /* 찜 표시 글자 · 아이콘 */
+  --fav-soft: #fff4e0; /* 찜 표시 바탕 */
+  --shimmer: rgba(255, 255, 255, 0.55); /* 불러오는 중 칸의 빛 */
+  --search-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235F5A54' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E"); /* 검색칸 돋보기 (배경 그림이라 --sub 를 못 써서 색을 직접) */
   --font-mobile: var(--font-brand); /* Pretendard (css/fonts.css) — PC · 모바일 같은 글꼴 */
   --tab-height: 64px; /* 하단 탭 높이 */
   --sheet-bar-height: 52px; /* "검색 결과 N개 · 목록 보기" 바 높이 */
 }
-/* 어두운 테마: 기기 설정을 따름 (토글은 나중). PC 는 토큰을 안 쓰므로 영향 없음 */
+/* 어두운 테마 ① 기기 설정이 어두움 (data-theme="light" 로 밝게 고른 경우는 제외) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg: #141312;
     --surface: #1e1c1a;
     --line: #35322e;
@@ -39,12 +53,49 @@
     --gray: #a9a39b;
     --shadow-float: 0 6px 18px rgba(0, 0, 0, 0.5);
     --dim: rgba(0, 0, 0, 0.62);
+    --bar: #1e1c1a;
+    --bar-line: #35322e;
+    --brand-sub: #e07a57;
+    --seal-frame: #f6f1e7;
+    --fav: #e8a64a;
+    --fav-soft: #3a2e1a;
+    --shimmer: rgba(255, 255, 255, 0.08);
+    --search-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A9A39B' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E");
   }
+}
+/* 어두운 테마 ② 직접 고름 (data-theme="dark") — 위 ① 과 같은 값 */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #141312;
+  --surface: #1e1c1a;
+  --line: #35322e;
+  --text: #f2efea;
+  --sub: #a9a39b;
+  --accent: #e07a57;
+  --on-accent: #141312;
+  --accent-soft: #3a241c;
+  --accent-ink: #f0a285;
+  --blue-soft: #1c2733;
+  --blue: #8db4dc;
+  --gray-soft: #2a2825;
+  --gray: #a9a39b;
+  --shadow-float: 0 6px 18px rgba(0, 0, 0, 0.5);
+  --dim: rgba(0, 0, 0, 0.62);
+  --bar: #1e1c1a;
+  --bar-line: #35322e;
+  --brand-sub: #e07a57;
+  --seal-frame: #f6f1e7;
+  --fav: #e8a64a;
+  --fav-soft: #3a2e1a;
+  --shimmer: rgba(255, 255, 255, 0.08);
+  --search-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A9A39B' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E");
 }
 
 body {
   margin: 0;
   font-family: var(--font-brand);
+  background: var(--bg);
+  color: var(--text);
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -56,8 +107,9 @@ body {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.875rem;
-  background: #222;
-  color: #fff;
+  background: var(--bar);
+  color: var(--text);
+  border-bottom: 1px solid var(--bar-line);
   font-size: 0.85rem;
   flex-wrap: wrap;
 }
@@ -65,7 +117,9 @@ body {
 #topbar select {
   padding: 0.375rem;
   border-radius: 6px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
 }
 /* PC 상단 바 왼쪽 로고: 낙관(도장) + 워드마크 / 아래 줄 부제 (static/brand/logo.svg 의 symbol)
    글자 비율: 워드마크 가로 = 높이 × 5.05, 부제 가로 = 높이 × 8.44
@@ -84,12 +138,12 @@ body {
   width: 32px;
   height: 32px;
 }
-/* 어두운 상단 바: 도장을 종이색 칸에 얹어 바탕과 떼어 놓음 (벽돌 · #222 대비가 약해서) */
+/* 도장 뒤 칸: 밝은 종이색 바에선 없음, 어두운 테마에선 종이색 칸에 얹어 바탕과 떼어 놓음 (벽돌 · 어두운 바탕 대비가 약해서) */
 .topbar-brand .brand-seal {
   box-sizing: content-box;
   padding: 2px;
   border-radius: 3px;
-  background: #f6f1e7;
+  background: var(--seal-frame);
 }
 .brand-words {
   display: flex;
@@ -103,13 +157,13 @@ body {
 .topbar-brand .brand-name {
   width: 91px;
   height: 18px;
-  color: #fff;
+  color: var(--text);
 }
 .topbar-brand .brand-sub {
   width: 80px;
   height: 9.5px;
   margin-left: 9px; /* 워드마크 높이 18px × 0.5 */
-  color: #e9906f; /* 어두운 상단 바 위 벽돌색 (밝게 → 대비 5:1 이상) */
+  color: var(--brand-sub); /* 종이색 바 위 벽돌 #b4472a (4.8:1) · 어두운 바 위 #e07a57 (5.7:1) */
 }
 /* 로그인 상태 + 버튼 묶음 (PC: 상단바 오른쪽 / 모바일: ☰ 메뉴 안) */
 #topbarActions {
@@ -148,8 +202,8 @@ body {
   color: #fff;
 }
 .login-btn.logout {
-  background: #555;
-  color: #fff;
+  background: var(--sub);
+  color: var(--bg);
 }
 /* 로그인 · 마이페이지 · 서비스 안내 · 처리방침: 브랜드 벽돌색 한 가지 (전엔 파랑 #4a90d9) */
 .login-btn.login {
@@ -173,8 +227,9 @@ body {
   flex: none;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid #ddd;
-  background: #fff;
+  border-left: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
   overflow: hidden;
   transition: width 0.25s ease;
 }
@@ -191,9 +246,10 @@ body {
   transform: translate(50%, -50%);
   width: 28px;
   height: 48px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--line);
   border-radius: 6px;
-  background: #fff;
+  background: var(--bg);
+  color: var(--text);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -216,7 +272,7 @@ body {
   display: flex;
   gap: 0.625rem;
   padding: 0.625rem 0.875rem;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--line);
   cursor: pointer;
 }
 /* ===== 찜한 행사 표시 (Side-bar 카드 우측 상단 별) ===== */
@@ -228,11 +284,11 @@ body {
   color: #f5a623;
 }
 .event-item:hover {
-  background: #f7f7f7;
+  background: var(--surface);
 }
 .event-item .date {
   font-size: 0.78rem;
-  color: #888;
+  color: var(--sub);
 }
 .event-item .title {
   font-size: 0.9rem;
@@ -245,11 +301,11 @@ body {
   position: relative; /* ← 이 줄 추가 */
   gap: 0.625rem;
   padding: 0.625rem 0.875rem;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--line);
   cursor: pointer;
 }
 .event-item:hover {
-  background: #f7f7f7;
+  background: var(--surface);
 }
 .event-thumb {
   width: 150px;
@@ -257,7 +313,7 @@ body {
   object-fit: cover;
   border-radius: 6px;
   flex: none;
-  background: #eee;
+  background: var(--surface);
 }
 .event-body {
   flex: 1;
@@ -269,7 +325,7 @@ body {
 }
 .event-body .date {
   font-size: 0.75rem;
-  color: #888;
+  color: var(--sub);
 }
 .event-body .title {
   font-size: 0.9rem;
@@ -278,7 +334,7 @@ body {
 }
 .event-body .info {
   font-size: 0.78rem;
-  color: #666;
+  color: var(--sub);
   margin-top: 0.25rem;
   white-space: pre-line; /* info의 \n을 실제 줄바꿈으로 표시 (모달과 동일) */
   display: -webkit-box;
@@ -294,14 +350,15 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--dim);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
 }
 .modal-card {
-  background: #fff;
+  background: var(--bg);
+  color: var(--text);
   width: 420px;
   max-width: 90vw;
   max-height: 85vh;
@@ -325,14 +382,14 @@ body {
   height: 220px;
   object-fit: cover;
   display: block;
-  background: #ddd;
+  background: var(--surface);
 }
 /* 사진이 없는 행사(인스타): 사진 칸을 숨기고, 흰 × 를 본문 위에서 보이는 색으로 */
 .modal-image[hidden] {
   display: none;
 }
 .modal-card.no-image .modal-close {
-  color: #666;
+  color: var(--sub);
 }
 @media (min-width: 1025px) {
   .modal-card.no-image .modal-body {
@@ -348,8 +405,8 @@ body {
   margin-bottom: 0.375rem;
   padding: 0.125rem 0.5rem;
   border-radius: 999px;
-  background: #fff4e0;
-  color: #c77d00;
+  background: var(--fav-soft);
+  color: var(--fav);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -362,13 +419,13 @@ body {
   padding: 0.625rem 0.875rem 0.375rem;
   font-size: 0.8rem;
   font-weight: 700;
-  color: #666;
-  background: #fafafa;
-  border-bottom: 1px solid #f0f0f0;
+  color: var(--sub);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
 }
 .modal-date {
   font-size: 0.8rem;
-  color: #888;
+  color: var(--sub);
 }
 .modal-title {
   font-size: 1.15rem;
@@ -380,13 +437,13 @@ body {
   gap: 0.5rem;
   margin: 0.25rem 0 0.75rem;
   font-size: 0.85rem;
-  color: #444;
+  color: var(--text);
 }
 .modal-ics-alt {
   display: inline-block;
   margin: 0 0 0.75rem;
   font-size: 0.8rem;
-  color: #777;
+  color: var(--sub);
 }
 .modal-ics-alt[hidden],
 .modal-cal-date[hidden] {
@@ -398,16 +455,16 @@ body {
 }
 .modal-schedule {
   font-size: 0.85rem;
-  color: #444;
+  color: var(--text);
   white-space: pre-line;
   line-height: 1.6;
   margin-bottom: 0.625rem;
   padding-bottom: 0.625rem;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--line);
 }
 .modal-info {
   font-size: 0.88rem;
-  color: #444;
+  color: var(--text);
   white-space: pre-line;
   line-height: 1.6;
   margin-bottom: 1rem;
@@ -415,8 +472,8 @@ body {
 .favorite-btn {
   padding: 0.5rem 1rem;
   border-radius: 8px;
-  border: 1px solid #f5a623;
-  background: #fff;
+  border: 1px solid #f5a623; /* 찜 별 주황 — 밝고 어두운 테마 같은 색 */
+  background: var(--bg);
   color: #f5a623;
   cursor: pointer;
   font-size: 0.9rem;
@@ -433,9 +490,9 @@ body {
 .modal-link-btn {
   padding: 0.5rem 1rem;
   border-radius: 8px;
-  border: 1px solid #b4472a; /* PC 상세 창은 다크 모드에도 흰 바탕 → 밝은 --accent 대신 벽돌색 고정 (5.4:1) */
-  background: #fff;
-  color: #b4472a;
+  border: 1px solid var(--accent);
+  background: var(--bg);
+  color: var(--accent);
   cursor: pointer;
   font-size: 0.9rem;
   text-decoration: none;
@@ -488,15 +545,15 @@ body {
   gap: 0.75rem;
   padding: 2.5rem 1rem;
   text-align: center;
-  color: #666;
+  color: var(--sub);
   font-size: 0.875rem;
 }
 .load-error button {
   padding: 0.5rem 1.25rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--line);
   border-radius: 2px;
-  background: #fff;
-  color: #222;
+  background: var(--bg);
+  color: var(--text);
   font: inherit;
   cursor: pointer;
 }
@@ -508,7 +565,7 @@ body {
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  color: #666;
+  color: var(--sub);
   font-size: 0.8125rem;
 }
 .guest-note button {
@@ -516,7 +573,7 @@ body {
   padding: 0.25rem 0;
   border: 0;
   background: none;
-  color: #666;
+  color: var(--sub);
   font: inherit;
   text-decoration: underline;
   cursor: pointer;
@@ -526,8 +583,8 @@ body {
 .fav-alerts {
   margin: 0.5rem 0.75rem;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #e3dfd9;
-  background: #faf8f5;
+  border: 1px solid var(--line);
+  background: var(--surface);
 }
 .fav-alerts-title {
   display: block;
@@ -562,12 +619,12 @@ body {
   white-space: nowrap;
 }
 .fav-alert-badge.ending {
-  background: #f7e9e3;
-  color: #93391f;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
 }
 .fav-alert-badge.starting {
-  background: #e6eef6;
-  color: #2d5b88;
+  background: var(--blue-soft);
+  color: var(--blue);
 }
 .fav-alert-name {
   overflow: hidden;
@@ -583,25 +640,25 @@ body {
   gap: 0.5rem;
   padding: 2.5rem 1rem;
   text-align: center;
-  color: #666;
+  color: var(--sub);
   font-size: 0.875rem;
 }
 .fav-empty svg {
   width: 40px;
   height: 40px;
-  color: #c77d00;
+  color: var(--fav);
 }
 .fav-empty-title {
-  color: #222;
+  color: var(--text);
   font-size: 1rem;
 }
 .fav-empty button {
   margin-top: 0.5rem;
   padding: 0.5rem 1.25rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--line);
   border-radius: 2px;
-  background: #fff;
-  color: #222;
+  background: var(--bg);
+  color: var(--text);
   font: inherit;
   cursor: pointer;
 }
@@ -619,8 +676,8 @@ body {
     gap: 12px;
     min-height: 44px;
     padding: 0 6px 0 16px;
-    background: #222;
-    color: #fff;
+    background: var(--text); /* 바탕과 반대 색 (밝을 땐 어두운 칸, 어두울 땐 밝은 칸) */
+    color: var(--bg);
     font-size: 14px;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
   }
@@ -629,7 +686,7 @@ body {
     padding: 0 10px;
     border: 0;
     background: none;
-    color: #fff;
+    color: var(--bg);
     font: inherit;
     font-weight: 700;
     cursor: pointer;
@@ -1275,6 +1332,7 @@ body {
     z-index: 30;
     background: transparent;
     color: var(--text);
+    border-bottom: 0; /* PC 종이색 바의 아래 선은 모바일에서 안 씀 (지도 위에 떠 있음) */
     padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 0;
     gap: 8px;
     /* 터치는 상단 바가 직접 받음 (지도로 통과시키지 않음).
@@ -1304,21 +1362,13 @@ body {
     font: inherit;
     font-size: 16px; /* 16px 미만이면 아이폰이 입력할 때 화면을 확대함 */
     color: var(--text);
-    background: var(--bg)
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235F5A54' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E")
-      no-repeat 12px center / 20px;
+    background: var(--bg) var(--search-icon) no-repeat 12px center / 20px;
     outline: none;
     -webkit-appearance: none;
     appearance: none;
   }
   #topbar #searchInput::placeholder {
     color: var(--sub);
-  }
-  /* 어두운 테마: 돋보기 아이콘은 배경 이미지라 토큰을 못 써서 색을 따로 지정 (sub 어두운 값) */
-  @media (prefers-color-scheme: dark) {
-    #topbar #searchInput {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A9A39B' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E");
-    }
   }
   #mobileMenuBtn {
     display: flex;
@@ -1571,13 +1621,8 @@ body {
     position: absolute;
     inset: 0;
     transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    background: linear-gradient(90deg, transparent, var(--shimmer), transparent);
     animation: shimmer 1.4s infinite;
-  }
-  @media (prefers-color-scheme: dark) {
-    .sk::after {
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
-    }
   }
   .sk-thumb {
     width: 100%;
@@ -2029,8 +2074,13 @@ body {
     color: var(--text);
   }
   .home-logo .brand-seal {
+    box-sizing: content-box;
     width: 44px;
     height: 44px;
+    padding: 2px;
+    margin: -2px; /* 칸 여백만큼 당겨 밝은 테마 자리를 그대로 */
+    border-radius: 3px;
+    background: var(--seal-frame); /* 어두운 테마에서만 종이색 칸 (PC 상단 바와 같음) */
   }
   .home-logo .brand-name {
     width: 101px;
@@ -2040,7 +2090,7 @@ body {
     width: 84px;
     height: 10px;
     margin-left: 10px; /* 워드마크 높이 20px × 0.5 */
-    color: var(--accent);
+    color: var(--brand-sub);
   }
   /* 홈 3칸 (11/11 시안): 칸 제목 18px 굵게 + 수는 벽돌색, 오른쪽 "전체 →" */
   .home-section-head {
