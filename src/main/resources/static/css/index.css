@@ -1,94 +1,9 @@
-/* ===== 색 토큰 (PC · 모바일 공통) =====
-   테마 고르기: 기본은 기기 설정(prefers-color-scheme)을 따름
-   <html data-theme="light"> → 기기가 어두운 모드여도 밝게 / data-theme="dark" → 늘 어둡게 (전환 버튼 · theme.js 는 다음 PR feat/theme-toggle)
-   어두운 값은 아래 두 곳(미디어쿼리 · data-theme="dark")에 똑같이 둠 — src/test/js/theme-tokens.test.js 가 같은지 확인 */
+/* 색 토큰 · 테마는 css/theme.css (index.html 에서 먼저 읽음) */
 :root {
   --sidebar-width: 450px; /* PC 사이드바 폭 (모바일은 바텀시트라 사용 안 함) */
-  color-scheme: light; /* 입력칸 · 선택 상자 · 스크롤바 같은 브라우저 기본 부품 색 */
-
-  /* ===== 디자인 값 (docs/design/mobile-design-v1.md 1번) ===== */
-  --bg: #ffffff; /* 바탕 */
-  --surface: #f4f2ef; /* 회색 칸 (주소 박스 등) */
-  --line: #e3dfd9; /* 구분선 · 테두리 */
-  --text: #1c1b1a; /* 본문 */
-  --sub: #5f5a54; /* 보조 글자 */
-  --accent: #b4472a; /* 주 색 (화성 벽돌) · 버튼 · 선택 탭 */
-  --on-accent: #ffffff; /* 주 색 위 글자 */
-  --accent-soft: #f7e9e3; /* D-day 배지 · 선택 칩 바탕 */
-  --accent-ink: #93391f; /* D-day 배지 · 선택 칩 글자 */
-  --blue-soft: #e6eef6; /* 오픈예정 배지 바탕 */
-  --blue: #2d5b88; /* 오픈예정 배지 글자 */
-  --gray-soft: #eceae6; /* 종료 배지 바탕 */
-  --gray: #6b6660; /* 종료 배지 글자 */
-  --shadow-float: 0 6px 18px rgba(0, 0, 0, 0.12); /* 지도 위에 떠 있는 카드에만 */
-  --dim: rgba(20, 19, 18, 0.5); /* 하단 시트 뒤 덮개 */
-  --bar: #f6f1e7; /* PC 상단 바 (종이색) */
-  --bar-line: #e3dac8; /* PC 상단 바 아래 선 */
-  --brand-sub: #b4472a; /* 로고 부제 (벽돌) */
-  --seal-frame: transparent; /* 도장 뒤 칸: 밝을 땐 없음, 어두울 땐 종이색 칸 */
-  --fav: #c77d00; /* 찜 표시 글자 · 아이콘 */
-  --fav-soft: #fff4e0; /* 찜 표시 바탕 */
-  --shimmer: rgba(255, 255, 255, 0.55); /* 불러오는 중 칸의 빛 */
-  --search-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235F5A54' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E"); /* 검색칸 돋보기 (배경 그림이라 --sub 를 못 써서 색을 직접) */
   --font-mobile: var(--font-brand); /* Pretendard (css/fonts.css) — PC · 모바일 같은 글꼴 */
   --tab-height: 64px; /* 하단 탭 높이 */
   --sheet-bar-height: 52px; /* "검색 결과 N개 · 목록 보기" 바 높이 */
-}
-/* 어두운 테마 ① 기기 설정이 어두움 (data-theme="light" 로 밝게 고른 경우는 제외) */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --bg: #141312;
-    --surface: #1e1c1a;
-    --line: #35322e;
-    --text: #f2efea;
-    --sub: #a9a39b;
-    --accent: #e07a57;
-    --on-accent: #141312;
-    --accent-soft: #3a241c;
-    --accent-ink: #f0a285;
-    --blue-soft: #1c2733;
-    --blue: #8db4dc;
-    --gray-soft: #2a2825;
-    --gray: #a9a39b;
-    --shadow-float: 0 6px 18px rgba(0, 0, 0, 0.5);
-    --dim: rgba(0, 0, 0, 0.62);
-    --bar: #1e1c1a;
-    --bar-line: #35322e;
-    --brand-sub: #e07a57;
-    --seal-frame: #f6f1e7;
-    --fav: #e8a64a;
-    --fav-soft: #3a2e1a;
-    --shimmer: rgba(255, 255, 255, 0.08);
-    --search-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A9A39B' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E");
-  }
-}
-/* 어두운 테마 ② 직접 고름 (data-theme="dark") — 위 ① 과 같은 값 */
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #141312;
-  --surface: #1e1c1a;
-  --line: #35322e;
-  --text: #f2efea;
-  --sub: #a9a39b;
-  --accent: #e07a57;
-  --on-accent: #141312;
-  --accent-soft: #3a241c;
-  --accent-ink: #f0a285;
-  --blue-soft: #1c2733;
-  --blue: #8db4dc;
-  --gray-soft: #2a2825;
-  --gray: #a9a39b;
-  --shadow-float: 0 6px 18px rgba(0, 0, 0, 0.5);
-  --dim: rgba(0, 0, 0, 0.62);
-  --bar: #1e1c1a;
-  --bar-line: #35322e;
-  --brand-sub: #e07a57;
-  --seal-frame: #f6f1e7;
-  --fav: #e8a64a;
-  --fav-soft: #3a2e1a;
-  --shimmer: rgba(255, 255, 255, 0.08);
-  --search-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A9A39B' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E");
 }
 
 body {
@@ -204,6 +119,37 @@ body {
 .login-btn.logout {
   background: var(--sub);
   color: var(--bg);
+}
+/* 화면 모드 ☾/☀ (PC 상단 바, 로그인 단추 왼쪽 · theme.js) — 모바일은 ☰ 메뉴의 3칸(.theme-mode) */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--bar-line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.theme-toggle:hover {
+  background: var(--bg);
+}
+.theme-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+.theme-toggle .icon-moon {
+  display: var(--icon-moon);
+}
+.theme-toggle .icon-sun {
+  display: var(--icon-sun);
+}
+.theme-mode {
+  display: none;
 }
 /* 로그인 · 마이페이지 · 서비스 안내 · 처리방침: 브랜드 벽돌색 한 가지 (전엔 파랑 #4a90d9) */
 .login-btn.login {
@@ -1414,6 +1360,55 @@ body {
     padding: 11px 12px;
     font-size: 0.9rem;
     text-align: center;
+  }
+  /* ☰ 메뉴 맨 아래 "화면 모드" [기기 설정 · 라이트 · 다크] (PC ☾/☀ 단추는 숨김) */
+  #topbarActions .theme-toggle {
+    display: none;
+  }
+  .theme-mode {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+  .theme-mode-title {
+    font-size: 0.85rem;
+    color: var(--sub);
+  }
+  .theme-mode-seg {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border: 1px solid var(--line);
+  }
+  .theme-mode-seg button {
+    min-height: 44px;
+    padding: 0 4px;
+    border: 0;
+    border-left: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .theme-mode-seg button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .theme-mode-seg svg {
+    width: 22px;
+    height: 22px;
+  }
+  .theme-mode-seg button:first-child {
+    border-left: 0;
+  }
+  .theme-mode-seg button[aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    font-weight: 700;
   }
 
   /* ----- 카테고리 칩 (가로 스크롤) ----- */
