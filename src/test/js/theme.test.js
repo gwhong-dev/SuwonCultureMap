@@ -206,3 +206,14 @@ test("☰ 화면 모드 3칸은 그림만 → 칸마다 이름(aria-label)이 �
     assert.ok(re.test(html), mode + " 칸 이름 없음");
   }
 });
+
+test("☾/☀ 단추 2개 (PC 상단 바 · 모바일 홈 상단): 그림 둘 다 들어 있고 이름이 있음", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../../main/resources/static/index.html"), "utf8");
+  const buttons = html.match(/<button[^>]*data-theme-toggle[^>]*>[\s\S]*?<\/button>/g) || [];
+  assert.strictEqual(buttons.length, 2);
+  for (const b of buttons) {
+    assert.ok(/aria-label="어두운 화면으로"/.test(b), "이름 없음");
+    assert.ok(/class="icon-moon"/.test(b) && /class="icon-sun"/.test(b), "☾ · ☀ 그림 중 하나가 없음");
+  }
+  assert.ok(/class="home-head-actions"[\s\S]*?id="homeThemeBtn"[\s\S]*?id="homeSearchBtn"/.test(html), "홈 단추는 검색 왼쪽");
+});
