@@ -1,0 +1,94 @@
+/* ===== 사진 없는 행사 기본 그림 (확정 시안 P6, 그리는 함수는 /default-poster.js) =====
+   사진 자리의 크기 클래스(event-thumb · preview-poster · modal-image · dp-fill)를 같이 달아 사진과 같은 자리 · 크기에 들어감
+   크기가 56px(홈 행)부터 상세(전체 폭)까지 달라서 글자 크기는 그림의 짧은 변 기준(cqmin = 짧은 변의 1%)으로 줄고 늘어남
+   (폭 기준이면 넓고 낮은 홈 진행 중 카드 200×150 에서 3줄 제목이 아래 장소 줄에 잘림)
+   색은 theme.css 토큰만 (다크 값도 거기) — 글자 대비 4.5:1 이상은 src/test/js/default-poster.test.js 가 확인 */
+.default-poster {
+  container-type: size; /* 폭 · 높이는 사진 자리 클래스가 정함 (글자 길이로 늘어나지 않음) */
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: var(--dp-bg);
+  color: var(--dp-ink);
+  font-family: var(--font-brand);
+  text-align: left;
+  line-height: 1.25;
+}
+/* 분류색: 공연 파랑 · 전시 벽돌 · 축제 초록 · 그 밖 회색 */
+.dp-perform {
+  --dp-bg: var(--blue-soft);
+  --dp-ink: var(--blue);
+}
+.dp-exhibit {
+  --dp-bg: var(--accent-soft);
+  --dp-ink: var(--accent-ink);
+}
+.dp-festival {
+  --dp-bg: var(--green-soft);
+  --dp-ink: var(--green);
+}
+.dp-etc {
+  --dp-bg: var(--surface);
+  --dp-ink: var(--sub);
+}
+.dp-inner {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2px, 4cqmin, 10px);
+  height: 100%;
+  box-sizing: border-box;
+  padding: clamp(5px, 9cqmin, 20px);
+}
+/* 위: 분류 라벨 (10.5~12px 굵게 — 확정 시안 값, 작은 칸도 10.5px) */
+.dp-label {
+  flex: none;
+  font-size: clamp(10.5px, 8cqmin, 12px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 가운데: 행사 이름 (세리프 · 본문색 · 최대 3줄, 넘치면 줄임표) */
+.dp-title {
+  flex: 0 1 auto;
+  margin: auto 0; /* 위아래 가운데 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  color: var(--text);
+  font-family: "Noto Serif KR", "Nanum Myeongjo", "AppleMyungjo", "Batang", "바탕", serif;
+  font-size: clamp(10.5px, 10.5cqmin, 22px);
+  font-weight: 700;
+  line-height: 1.3;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+/* 아래: 장소 (분류 글자색, 한 줄) */
+.dp-place {
+  flex: none;
+  font-size: clamp(9px, 7.5cqmin, 13px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 홈 행(56px)처럼 아주 좁은 칸은 장소를 빼고 라벨 · 이름만 */
+@container (max-width: 72px) {
+  .dp-place {
+    display: none;
+  }
+}
+/* 사진 칸(홈 카드 · 행)을 꽉 채움 — 사진이 있으면 그 위에 덮이고, 못 불러와 사진을 숨기면 보임 */
+.dp-fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/* 홈 '진행 중' 카드: 왼쪽 위 운영중 배지가 분류 라벨을 덮지 않게 내용을 배지 아래로 */
+.poster-img:has(.status-badge) .dp-inner {
+  padding-top: 30px;
+}
