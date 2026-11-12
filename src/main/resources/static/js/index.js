@@ -995,6 +995,9 @@ document
   .getElementById("logoutBtn")
   .addEventListener("click", function () {
     fetch("/api/auth/logout", { method: "POST" }).then(function () {
+      // 로그아웃 줄은 곧 숨겨짐 → 메뉴를 닫고 초점을 ☰ 로 (초점이 사라지지 않게)
+      setMenuOpen(false);
+      document.getElementById("mobileMenuBtn").focus();
       checkAuth();
     });
   });
@@ -3199,8 +3202,26 @@ document
   .getElementById("mobileMenuBtn")
   .addEventListener("click", function (e) {
     e.stopPropagation();
-    setMenuOpen(!document.getElementById("topbar").classList.contains("menu-open"));
+    var open = !document.getElementById("topbar").classList.contains("menu-open");
+    setMenuOpen(open);
+    if (open) {
+      // 키보드로 열어도 바로 메뉴 안을 돌 수 있게 첫 줄로 초점 (메뉴 줄이 HTML 에서 ☰ 보다 앞이라)
+      var first = Array.prototype.find.call(menuPanel().querySelectorAll("a, button"), function (el) {
+        return el.offsetParent !== null; // 숨긴 단추(로그인 전 로그아웃 · PC ☾ 등) 건너뜀
+      });
+      if (first) first.focus();
+    }
   });
+// 초점이 메뉴 · ☰ 밖으로 나가면 닫음 (Tab 으로 지나쳐 가도 열린 채 남지 않게)
+document.addEventListener("focusin", function (e) {
+  if (
+    document.getElementById("topbar").classList.contains("menu-open") &&
+    !menuPanel().contains(e.target) &&
+    e.target !== document.getElementById("mobileMenuBtn")
+  ) {
+    setMenuOpen(false);
+  }
+});
 document.addEventListener("click", function (e) {
   if (
     document.getElementById("topbar").classList.contains("menu-open") &&
@@ -3217,7 +3238,12 @@ document.addEventListener("keydown", function (e) {
 });
 
 // ----- 화면 크기 변경 (회전, PC 창 크기 조절) 대응 -----
+var menuLayoutMobile = mobileQuery.matches; // ☰ 판 모양이 PC · 모바일에서 달라서, 바뀌면 닫음
 function applyLayout() {
+  if (mobileQuery.matches !== menuLayoutMobile) {
+    menuLayoutMobile = mobileQuery.matches;
+    setMenuOpen(false);
+  }
   if (mobileQuery.matches) {
     setSheetState(sheetState);
   } else {
