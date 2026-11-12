@@ -25,7 +25,10 @@
     <meta name="twitter:card" content="summary_large_image" />
     <!-- 본문 글꼴(Pretendard 보통 굵기)을 CSS 보다 먼저 받기 시작 → 글꼴 바뀜 깜빡임 줄임 -->
     <link rel="preload" href="/brand/fonts/Pretendard-Regular.subset.woff2" as="font" type="font/woff2" crossorigin />
+    <!-- 화면 모드: css 보다 먼저 동기로 읽어 첫 그리기 전에 <html data-theme> 설정 (깜빡임 방지) -->
+    <script src="/theme.js"></script>
     <link rel="stylesheet" href="/css/fonts.css" />
+    <link rel="stylesheet" href="/css/theme.css" />
     <link rel="stylesheet" href="/css/index.css" />
   </head>
   <body>
@@ -51,7 +54,17 @@
       </label>
       <div id="topbarActions">
         <span id="authStatus">로그인 확인 중...</span>
+        <!-- 화면 모드 (theme.js): PC = ☾/☀ 두 단계 단추, 모바일 ☰ 메뉴 = 3칸 -->
+        <button id="themeToggleBtn" type="button" class="theme-toggle" data-theme-toggle aria-label="어두운 화면으로" title="어두운 화면으로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg></button>
         <a id="loginPageBtn" class="login-btn login" href="login.html">로그인</a>
+        <div class="theme-mode" data-theme-mode role="group" aria-labelledby="themeModeTitle">
+          <span id="themeModeTitle" class="theme-mode-title">화면 모드</span>
+          <div class="theme-mode-seg">
+            <button type="button" data-mode="system" aria-pressed="true">기기 설정</button>
+            <button type="button" data-mode="light" aria-pressed="false">라이트</button>
+            <button type="button" data-mode="dark" aria-pressed="false">다크</button>
+          </div>
+        </div>
         <a id="mypageBtn" class="login-btn login" href="mypage.html">마이페이지</a>
         <button id="logoutBtn" class="login-btn logout">
           로그아웃
