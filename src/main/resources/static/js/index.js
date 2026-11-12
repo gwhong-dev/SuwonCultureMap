@@ -948,6 +948,11 @@ function mergeGuestFavorites() {
     });
 }
 
+// 상단 바 · ☰ 메뉴에 보이는 회원 이름 — 이름 글자는 여기 한 곳에서만 정함 (P5 닉네임은 이 함수만 바꾸면 됨)
+function memberLabel(data) {
+  return "회원 #" + data.memberId;
+}
+
 function checkAuth() {
   fetch("/api/auth/me")
     .then((r) => r.json())
@@ -959,21 +964,21 @@ function checkAuth() {
       var mypageBtn = document.getElementById("mypageBtn");
       var logoutBtn = document.getElementById("logoutBtn");
 
+      // P4: 비로그인 = [로그인] 만 / 로그인 = 이름 + [마이페이지] (로그아웃은 ☰ 메뉴 줄)
+      status.hidden = !isLoggedIn;
+      logoutBtn.hidden = !isLoggedIn;
       if (isLoggedIn) {
-        status.textContent =
-          "로그인됨 (회원 번호: " + data.memberId + ")";
+        status.textContent = memberLabel(data);
         loginPageBtn.style.display = "none";
         mypageBtn.style.display = "inline-block";
-        logoutBtn.style.display = "inline-block";
         // 로그인 상태면 이 기기 찜을 먼저 합친 뒤 즐겨찾기 목록을 받아옴
         return mergeGuestFavorites().then(function () {
           return fetch("/api/favorites").then((r) => r.json());
         });
       } else {
-        status.textContent = "로그인 안 됨";
+        status.textContent = "";
         loginPageBtn.style.display = "inline-block";
         mypageBtn.style.display = "none";
-        logoutBtn.style.display = "none";
         return guestFavorites.list().map(function (id) {
           return { id: id }; // 비회원 찜 (이 기기)
         });
@@ -993,6 +998,9 @@ document
   .getElementById("logoutBtn")
   .addEventListener("click", function () {
     fetch("/api/auth/logout", { method: "POST" }).then(function () {
+      // 로그아웃 줄은 곧 숨겨짐 → 메뉴를 닫고 초점을 ☰ 로 (초점이 사라지지 않게)
+      setMenuOpen(false);
+      document.getElementById("mobileMenuBtn").focus();
       checkAuth();
     });
   });
@@ -3361,25 +3369,61 @@ searchInputEl.addEventListener("keydown", function (e) {
   if (e.key === "Enter") searchInputEl.blur(); // 키보드 닫기
 });
 
-// ----- ☰ 메뉴 열기/닫기 -----
+// ----- ☰ 메뉴 열기/닫기 (PC · 모바일 공통, P4) -----
+// 펼친 판: 모바일 = 로그인 · 메뉴 줄 · 화면 모드 전체(#topbarActions) / PC = 메뉴 줄만(#menuLinks)
+function menuPanel() {
+  return document.getElementById(mobileQuery.matches ? "topbarActions" : "menuLinks");
+}
+function setMenuOpen(open) {
+  document.getElementById("topbar").classList.toggle("menu-open", open);
+  document.getElementById("mobileMenuBtn").setAttribute("aria-expanded", open ? "true" : "false");
+}
 document
   .getElementById("mobileMenuBtn")
   .addEventListener("click", function (e) {
     e.stopPropagation();
-    document.getElementById("topbar").classList.toggle("menu-open");
+    var open = !document.getElementById("topbar").classList.contains("menu-open");
+    setMenuOpen(open);
+    if (open) {
+      // 키보드로 열어도 바로 메뉴 안을 돌 수 있게 첫 줄로 초점 (메뉴 줄이 HTML 에서 ☰ 보다 앞이라)
+      var first = Array.prototype.find.call(menuPanel().querySelectorAll("a, button"), function (el) {
+        return el.offsetParent !== null; // 숨긴 단추(로그인 전 로그아웃 · PC ☾ 등) 건너뜀
+      });
+      if (first) first.focus();
+    }
   });
-document.addEventListener("click", function (e) {
-  var topbar = document.getElementById("topbar");
+// 초점이 메뉴 · ☰ 밖으로 나가면 닫음 (Tab 으로 지나쳐 가도 열린 채 남지 않게)
+document.addEventListener("focusin", function (e) {
   if (
-    topbar.classList.contains("menu-open") &&
-    !document.getElementById("topbarActions").contains(e.target)
+    document.getElementById("topbar").classList.contains("menu-open") &&
+    !menuPanel().contains(e.target) &&
+    e.target !== document.getElementById("mobileMenuBtn")
   ) {
-    topbar.classList.remove("menu-open");
+    setMenuOpen(false);
+  }
+});
+document.addEventListener("click", function (e) {
+  if (
+    document.getElementById("topbar").classList.contains("menu-open") &&
+    !menuPanel().contains(e.target)
+  ) {
+    setMenuOpen(false);
+  }
+});
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape" && document.getElementById("topbar").classList.contains("menu-open")) {
+    setMenuOpen(false);
+    document.getElementById("mobileMenuBtn").focus();
   }
 });
 
 // ----- 화면 크기 변경 (회전, PC 창 크기 조절) 대응 -----
+var menuLayoutMobile = mobileQuery.matches; // ☰ 판 모양이 PC · 모바일에서 달라서, 바뀌면 닫음
 function applyLayout() {
+  if (mobileQuery.matches !== menuLayoutMobile) {
+    menuLayoutMobile = mobileQuery.matches;
+    setMenuOpen(false);
+  }
   if (mobileQuery.matches) {
     setSheetState(sheetState);
   } else {
@@ -3393,7 +3437,7 @@ function applyLayout() {
     sidebar.style.transition = "";
     document.getElementById("list").style.paddingBottom = "";
     document.body.classList.remove("sheet-full");
-    document.getElementById("topbar").classList.remove("menu-open");
+    setMenuOpen(false);
   }
   if (map) map.relayout(); // 카카오맵은 크기가 바뀌면 다시 계산시켜야 함
 }
