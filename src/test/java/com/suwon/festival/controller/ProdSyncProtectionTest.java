@@ -74,6 +74,15 @@ class ProdSyncProtectionTest {
   }
 
   @Test
+  void 데이터_갱신_시각_조회도_운영에서_로그인_없이_열려_있음() throws Exception {
+    int status = MockMvcBuilders.webAppContextSetup(context).build()
+        .perform(MockMvcRequestBuilders.get("/api/sync-status"))
+        .andReturn().getResponse().getStatus();
+
+    assertThat(status).isEqualTo(200);
+  }
+
+  @Test
   void 운영_세션_쿠키는_HTTPS_전용_설정() {
     Environment env = context.getEnvironment();
 

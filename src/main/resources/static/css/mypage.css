@@ -100,3 +100,20 @@ body {
 .back-link + .back-link {
   margin-left: 0.75rem;
 }
+
+/* ===== 맨 아래 데이터 정보: 행사 정보 마지막 갱신 시각(sync-status.js) · 출처 =====
+   마이 페이지는 다크 모드가 없음(흰 카드 고정) → 보조 글자 색 #888 그대로 */
+.data-info {
+  margin-top: 1.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eee;
+}
+.data-info-line {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #888;
+}
+.data-info-line[hidden] {
+  display: none;
+}
