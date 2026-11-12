@@ -42,7 +42,7 @@ class RepositorySchemaTest {
   @Test
   void Flyway가_마지막_버전까지_적용함() {
     assertThat(flyway.info().current()).isNotNull();
-    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("7"); // V7 = event.fee · contact · host
+    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("8"); // V8 = sync_log (동기화 이력)
     assertThat(flyway.info().pending()).isEmpty();
   }
 

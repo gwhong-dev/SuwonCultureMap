@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -21,23 +22,37 @@ import com.suwon.festival.dto.xml.ContentInfoDetail;
 import com.suwon.festival.dto.xml.EventItem;
 import com.suwon.festival.dto.xml.SwcfRssResponse;
 import com.suwon.festival.entity.Event;
+import com.suwon.festival.entity.SyncLog;
 import com.suwon.festival.repository.EventRepository;
 import com.suwon.festival.service.schedule.EventScheduleWriter;
 import com.suwon.festival.service.schedule.ScheduleBodyText;
 import com.suwon.festival.service.schedule.ScheduleReader;
 import com.suwon.festival.service.schedule.ScheduleResult;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class EventSyncService {
 
   private final RestTemplate restTemplate;
   private final EventRepository eventRepository;
   private final EventScheduleWriter eventScheduleWriter;
+  private final SyncLogService syncLogService; // null = 이력 안 남김 (시험용 생성자)
+
+  @Autowired
+  public EventSyncService(RestTemplate restTemplate, EventRepository eventRepository,
+      EventScheduleWriter eventScheduleWriter, SyncLogService syncLogService) {
+    this.restTemplate = restTemplate;
+    this.eventRepository = eventRepository;
+    this.eventScheduleWriter = eventScheduleWriter;
+    this.syncLogService = syncLogService;
+  }
+
+  // 시험용: 동기화 이력 없이
+  EventSyncService(RestTemplate restTemplate, EventRepository eventRepository, EventScheduleWriter eventScheduleWriter) {
+    this(restTemplate, eventRepository, eventScheduleWriter, null);
+  }
 
   @Value("${swcf.api.key.event}")
   private String apiKey;
@@ -74,9 +89,24 @@ public class EventSyncService {
       log.info("재단 동기화가 이미 실행 중 → 이번 실행은 건너뜀");
       return SyncResult.skippedAlreadyRunning();
     }
+    // 실행마다 이력 1줄 (sync_log). 건너뛴 실행(이미 도는 중)은 안 남김. 이력 저장 실패는 SyncLogService 가 삼킴
+    LocalDateTime startedAt = syncLogService == null ? null : syncLogService.now();
+    Integer fetched = null;
     try {
       String xml = fetchRawXml();
-      return syncItems(parseItems(xml), ScheduleBodyText.byIdx(xml));
+      List<EventItem> items = parseItems(xml);
+      fetched = items.size();
+      SyncResult result = syncItems(items, ScheduleBodyText.byIdx(xml));
+      if (syncLogService != null) {
+        syncLogService.success(SyncLog.Source.SWCF, startedAt, fetched, result.saved(), result.updated(),
+            result.skipped() > 0 ? "형식 오류로 건너뛴 행사 " + result.skipped() + "건" : null);
+      }
+      return result;
+    } catch (Exception e) {
+      if (syncLogService != null) {
+        syncLogService.fail(SyncLog.Source.SWCF, startedAt, fetched, e); // 예외 종류만 (메시지엔 API 키가 든 주소가 섞일 수 있음)
+      }
+      throw e;
     } finally {
       running.set(false);
     }
