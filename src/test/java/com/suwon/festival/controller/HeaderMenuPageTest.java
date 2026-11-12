@@ -45,7 +45,8 @@ class HeaderMenuPageTest {
   @Test
   void 회원_이름_글자는_함수_하나에서만_정함() throws Exception {
     String js = fetch("/js/index.js");
-    assertThat(js).contains("function memberLabel(data) {\n  return \"회원 #\" + data.memberId;\n}");
+    // P5(#239): 닉네임이 있으면 닉네임, 없으면 회원 번호
+    assertThat(js).contains("function memberLabel(data) {\n  return data.nickname || \"회원 #\" + data.memberId;\n}");
     assertThat(js.split("회원 #", -1)).hasSize(2); // 이름 글자는 memberLabel 한 곳뿐
   }
 

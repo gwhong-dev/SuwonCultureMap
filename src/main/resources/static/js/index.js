@@ -945,9 +945,10 @@ function mergeGuestFavorites() {
     });
 }
 
-// 상단 바 · ☰ 메뉴에 보이는 회원 이름 — 이름 글자는 여기 한 곳에서만 정함 (P5 닉네임은 이 함수만 바꾸면 됨)
+// 상단 바 · ☰ 메뉴에 보이는 회원 이름 — 이름 글자는 여기 한 곳에서만 정함
+// P5(#239): 닉네임이 있으면 닉네임, 없으면(같은 순간 이름 충돌로 이번 응답에 빠진 경우) 회원 번호
 function memberLabel(data) {
-  return "회원 #" + data.memberId;
+  return data.nickname || "회원 #" + data.memberId;
 }
 
 function checkAuth() {
