@@ -163,6 +163,7 @@ main 에 머지 → CI 통과 → GitHub Actions `Deploy` → AWS SSM(원격 명
 - `deploy/Caddyfile` 이 바뀐 배포에서만 앱 응답 확인 뒤 Caddy 를 새로 띄운다 (실행 중 Caddy 의 설정과 저장소 파일을 비교, 같으면 Caddy 는 그대로)
 - 실패하면 Actions 가 빨간불 + 서버 출력이 Actions 로그에 남는다 (공개 저장소라 진단 로그는 IP · 메일 · 토큰 · 비밀번호 값을 가린 마지막 40줄만, 원본은 서버의 `docker compose logs`). **자동으로 되돌리지 않는다** (DB 구조가 이미 바뀌었을 수 있음)
 - SSM Run Command · OIDC 는 추가 요금 없음
+- [ ] **자동 배포는 서버 `.env` 를 바꾸지 않는다** → 운영 `.env` 에만 있는 설정(새 환경변수)을 새로 만들면 배포 뒤 서버 `.env` 에 넣고(먼저 `cp .env .env.bak-날짜`, 값은 화면에 출력하지 않음) `docker compose up -d` 로 앱만 다시 띄운다 (11/12 `GG_BUS_SERVICE_KEY` 가 빠져 운영 정류장 0건이었음)
 
 ### 처음 1회 설정 (AWS 콘솔, 서울 리전)
 

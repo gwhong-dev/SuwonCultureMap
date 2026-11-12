@@ -55,6 +55,24 @@ test("상단 바 · 로고 토큰 (확정 시안 B: 종이색 바)", () => {
   assert.strictEqual(darkMedia["--seal-frame"], "#f6f1e7");
 });
 
+// WCAG 명암비 (#rrggbb 두 색)
+function contrast(a, b) {
+  const lum = (hex) => {
+    const [r, g, bl] = [1, 3, 5].map((i) => {
+      const v = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+  return (x + 0.05) / (y + 0.05);
+}
+
+test("마이 페이지 '연동됨' 글자(--success)는 카드 바탕(--bg) 위 4.5:1 이상 (두 테마)", () => {
+  assert.ok(contrast(light["--success"], light["--bg"]) >= 4.5, "밝은 테마");
+  assert.ok(contrast(darkMedia["--success"], darkMedia["--bg"]) >= 4.5, "어두운 테마");
+});
+
 test("어두운 미디어쿼리는 theme.css 토큰 블록 하나뿐 (data-theme=light 로 끌 수 있게)", () => {
   const count = (css.match(/@media \(prefers-color-scheme: dark\)/g) || []).length;
   assert.strictEqual(count, 1);
@@ -83,8 +101,7 @@ test("about · login · mypage · privacy 도 토큰만 (소셜 로그인 · 연
   for (const name of ["about.css", "login.css", "mypage.css", "privacy.css"]) {
     const rest = read(name)
       .replace(/\/\*[\s\S]*?\*\//g, "")
-      .replace(/\.(social-btn|link-btn)\.(kakao|google|naver) \{[^}]*\}/g, "")
-      .replace(/\.linked-badge \{[^}]*\}/g, ""); // "연결됨" 네이버 초록
+      .replace(/\.(social-btn|link-btn)\.(kakao|google|naver) \{[^}]*\}/g, "");
     assert.deepStrictEqual(fixedColors(rest), [], name);
   }
 });
