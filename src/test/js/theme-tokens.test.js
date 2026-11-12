@@ -6,11 +6,12 @@ const path = require("node:path");
 
 const css = fs.readFileSync(path.join(__dirname, "../../main/resources/static/css/index.css"), "utf8").replace(/\r\n/g, "\n");
 
-// 선택자 바로 뒤 { ... } 안의 "--이름: 값" 들을 읽음
+// 선택자 바로 뒤 { ... } 안의 "--이름: 값" 들을 읽음 (줄 앞 공백 · 선택자 뒤 공백은 상관없음)
 function block(selector) {
-  const start = css.indexOf(selector + " {");
-  assert.ok(start >= 0, selector + " 블록이 없음");
-  const open = css.indexOf("{", start);
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const m = new RegExp("(?:^|\\n)\\s*" + escaped + "\\s*\\{").exec(css);
+  assert.ok(m, selector + " 블록이 없음");
+  const open = css.indexOf("{", m.index);
   const close = css.indexOf("}", open);
   const decls = {};
   for (const m of css.slice(open + 1, close).matchAll(/(--[\w-]+|color-scheme)\s*:\s*([^;]+);/g)) {
@@ -20,7 +21,7 @@ function block(selector) {
 }
 
 const light = block(":root");
-const darkMedia = block('  :root:not([data-theme="light"])');
+const darkMedia = block(':root:not([data-theme="light"])');
 const darkPicked = block(':root[data-theme="dark"]');
 
 test("어두운 값: 기기 설정(미디어쿼리)과 직접 고름(data-theme=dark)이 같음", () => {
@@ -58,6 +59,7 @@ test("PC 부분에 고정 색 없음 (브랜드 버튼 · 찜 별 · 사진 위 
     .replace(/\.login-btn\.(kakao|google|naver) \{[^}]*\}/g, "") // 소셜 로그인 버튼은 각 회사 색
     .replace(/\.favorite-(badge|btn)[^{]*\{[^}]*\}/g, "") // 찜 별 주황 (두 테마 같은 색)
     .replace(/\.modal-close \{[^}]*\}/g, ""); // 사진 위 흰 ×
-  const left = pc.match(/#[0-9a-fA-F]{3,8}\b/g) || [];
+  // #색 · white · black · 밝은 rgba (검정 그림자 rgba(0, 0, 0, …)만 허용)
+  const left = pc.match(/#[0-9a-fA-F]{3,8}\b|:\s*(white|black)\b|rgba?\((?!0, 0, 0,)[^)]*\)/g) || [];
   assert.deepStrictEqual(left, []);
 });
