@@ -110,35 +110,30 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
         </button>
       </header>
-      <div class="home-week">
-        <span id="homeWeekRange"></span>
-        <h1>이번 주 수원 행사 <strong id="homeWeekCount">…</strong></h1>
-      </div>
-      <!-- 포스터 캐러셀: 스와이프 · 끝에서 처음으로 (앞뒤에 복제 카드 1장씩). 고를 행사가 없으면 숨김 -->
-      <section id="homeCarousel" class="home-carousel" aria-roledescription="캐러셀" aria-label="이번 주 추천 행사" hidden>
-        <div id="homeCarouselTrack" class="carousel-track"></div>
-        <div class="carousel-progress" aria-hidden="true">
-          <span class="carousel-bar"><span id="homeCarouselFill" class="carousel-fill"></span></span>
-          <span id="homeCarouselCount" class="carousel-count"></span>
+      <!-- 홈 3칸 (11/11 시안): ① 지금 진행 중 ② 곧 종료 | 곧 시작 (7일 안) ③ 달별 행사. 고르는 규칙은 home-picks.js
+           겹침 규칙: ① 가로 카드는 ② "곧 종료"에 나온 행사를 뺌. 수 N 은 진행 중 전체 (= "전체 →" 목록 수, 날짜 칩 "진행 중") -->
+      <section id="homeNow" class="home-now" aria-labelledby="homeNowTitle">
+        <div class="home-section-head">
+          <h1 id="homeNowTitle" class="home-section-title">지금 진행 중 <strong id="homeNowCount">…</strong></h1>
+          <button type="button" id="homeNowAll" class="home-more">전체 →</button>
         </div>
-      </section>
-      <!-- 날짜 칩: 누르면 지도 탭으로 넘어가며 그 날짜 필터 (값은 #dateFilter 와 같음) -->
-      <nav id="homeDateChips" class="home-dates" aria-label="날짜로 행사 보기">
-        <button type="button" class="chip" data-date="today">오늘</button>
-        <button type="button" class="chip" data-date="weekend">이번 주말</button>
-        <button type="button" class="chip" data-date="week">+7일</button>
-      </nav>
-      <!-- 이달의 행사: 가로 카드 148px, 무한 반복 없이 끝에 "전체 보기 →" (→ 목록 탭). 고를 행사가 없으면 숨김 -->
-      <section id="homeMonth" class="home-month" aria-labelledby="homeMonthTitle" hidden>
-        <h2 id="homeMonthTitle" class="home-section-title"></h2>
-        <div id="homeMonthTrack" class="month-track"></div>
+        <div id="homeNowTrack" class="now-track"></div>
       </section>
       <section class="home-section" aria-label="곧 종료 · 곧 시작">
-        <div class="home-tabs" role="tablist" aria-label="곧 종료 · 곧 시작">
-          <button type="button" class="home-tab active" data-soon="ending" id="homeTabEnding" role="tab" aria-selected="true" aria-controls="homeSoonList">곧 종료</button>
-          <button type="button" class="home-tab" data-soon="starting" id="homeTabStarting" role="tab" aria-selected="false" aria-controls="homeSoonList" tabindex="-1">곧 시작</button>
+        <div class="home-tabs">
+          <div class="home-tab-list" role="tablist" aria-label="곧 종료 · 곧 시작">
+            <button type="button" class="home-tab active" data-soon="ending" id="homeTabEnding" role="tab" aria-selected="true" aria-controls="homeSoonList">곧 종료 <span id="homeEndingCount" class="home-tab-count"></span></button>
+            <button type="button" class="home-tab" data-soon="starting" id="homeTabStarting" role="tab" aria-selected="false" aria-controls="homeSoonList" tabindex="-1">곧 시작 <span id="homeStartingCount" class="home-tab-count"></span></button>
+          </div>
+          <span class="home-tabs-note">7일 안</span>
         </div>
         <div id="homeSoonList" role="tabpanel" aria-labelledby="homeTabEnding"></div>
+      </section>
+      <!-- 달별 행사: 다음 달부터 그 달에 시작하는 행사. 달 칩 "12월 · 14" 를 누르면 그 달 카드. 고를 행사가 없으면 숨김 -->
+      <section id="homeMonths" class="home-months" aria-labelledby="homeMonthsTitle" hidden>
+        <h2 id="homeMonthsTitle" class="home-section-title">달별 행사</h2>
+        <div id="homeMonthChips" class="month-chips" role="group" aria-label="달 고르기"></div>
+        <div id="homeMonthTrack" class="month-track"></div>
       </section>
       <!-- 내 주변: 구 칩 4개 + 작은 지도(그 구 행사 위치, 손으로 못 움직임) + "○○구 행사 N개 · 지도에서 보기" → 지도 탭 + 구 필터
            구 칩 · 작은 지도는 index.js 가 채움. 행사를 받기 전 · 실패하면 숨김 -->

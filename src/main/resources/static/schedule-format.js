@@ -145,7 +145,7 @@ function upcomingWeekend(now) {
   return [saturday, addDays(saturday, 1)];
 }
 
-// 오늘 포함 7일 (홈 "+7일" 칩 · PC "7일 안")
+// 오늘 포함 7일 (지도 칩 "7일 안" · 홈 곧 종료 | 곧 시작 "7일 안"과 같은 기간)
 function nextSevenDays(now) {
   var today = koreaToday(now);
   var days = [];
