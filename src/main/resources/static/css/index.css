@@ -326,10 +326,6 @@ body {
   flex: 1;
   min-width: 0;
 }
-/* 사진 없는 카드(인스타 행사 등): 사진 칸 없이 글만, 오른쪽 위 ★ 와 안 겹치게 */
-.event-item.no-photo .event-body {
-  padding-right: 1.5rem;
-}
 .event-body .date {
   font-size: 0.75rem;
   color: var(--sub);
@@ -391,17 +387,12 @@ body {
   display: block;
   background: var(--surface);
 }
-/* 사진이 없는 행사(인스타): 사진 칸을 숨기고, 흰 × 를 본문 위에서 보이는 색으로 */
+/* 사진이 없는 행사(인스타): 사진 칸을 숨기고 기본 그림(P6, css/default-poster.css)을 보임. 흰 × 를 밝은 그림 위에서 보이는 색으로 */
 .modal-image[hidden] {
   display: none;
 }
 .modal-card.no-image .modal-close {
   color: var(--sub);
-}
-@media (min-width: 1025px) {
-  .modal-card.no-image .modal-body {
-    padding-top: 2.25rem; /* PC: × 와 날짜 줄이 겹치지 않게 (모바일은 × 대신 상단 헤더) */
-  }
 }
 .modal-body {
   padding: 1rem 1.25rem;
@@ -1723,10 +1714,6 @@ body {
   .card-fav.active {
     color: var(--accent);
   }
-  /* 사진 없는 목록 줄: ♥ 버튼(44px)이 제목 위에 겹치지 않게 오른쪽을 비움 */
-  .event-item.no-photo .event-body {
-    padding-right: 40px;
-  }
 
   /* 하단 카드 (P3 확정 시안 MobileMap): 지도 탭이면 늘. 띠 "이 장소 행사 1 / 6" → 카드 1장 → "밀어서 다음 행사 · 1 / 32" → 결과 바 */
   #previewArea {
@@ -2726,10 +2713,6 @@ body {
     height: 70px;
     overflow: hidden;
     background: var(--surface);
-  }
-  .row-poster-text {
-    color: var(--sub);
-    font-size: 11px;
   }
   .row-poster img {
     position: absolute;
