@@ -334,6 +334,28 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
+  void 데이터_갱신_시각은_마이_페이지_맨_아래에만_있음() throws Exception {
+    // 11/11 사용자 결정: 목록 결과 줄(모바일 · PC)에는 안 넣고, 마이 페이지를 열었을 때만
+    String index = page();
+    assertThat(index).doesNotContain("data-sync-status", "sync-status.js");
+    assertThat(fetch("/css/index.css")).doesNotContain(".sync-status");
+
+    // 마이 페이지 맨 아래 정보 칸: 1줄 갱신 시각(값 오기 전 · 실패면 hidden) · 2줄 출처(고정)
+    String mypage = fetch("/mypage.html");
+    int info = mypage.indexOf("<div class=\"data-info\">");
+    int sync = mypage.indexOf("<p class=\"data-info-line\" data-sync-status hidden></p>");
+    int source = mypage.indexOf("<p class=\"data-info-line\">출처 · 수원문화재단 공공데이터, 공식 인스타그램 계정</p>");
+    assertThat(info).isGreaterThan(mypage.indexOf("← 지도로 돌아가기"));
+    assertThat(sync).isGreaterThan(info).isLessThan(source);
+    assertThat(mypage.indexOf("<script src=\"/sync-status.js\"></script>")).isPositive();
+    assertThat(fetch("/css/mypage.css")).contains(".data-info-line", "font-size: 12px;");
+
+    MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+    assertThat(mockMvc.perform(get("/sync-status.js")).andReturn().getResponse().getStatus()).isEqualTo(200);
+    assertThat(fetch("/sync-status.js")).contains("/api/sync-status", "[data-sync-status]", "syncStatusText(", "행사 정보 마지막 갱신 · ");
+  }
+
+  @Test
   void PC_카드_줄_띠의_빈_곳은_지도가_클릭과_끌기를_받음() throws Exception {
     // PC 카드 줄은 늘 떠 있음 → 띠(지도 전체 폭)가 다 받으면 첫 · 끝 카드일 때 빈 절반의 마커 클릭 · 끌기가 막힘 (#215 검증 ⑥)
     // PC 구간: 띠는 통과(none), 라벨 · 카드 · 화살표만 받음(auto). 모바일(공통 규칙)은 띠 전체가 받음 그대로

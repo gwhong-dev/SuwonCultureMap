@@ -1,5 +1,6 @@
 package com.suwon.festival.service.instagram;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -19,7 +20,9 @@ import org.springframework.stereotype.Service;
 
 import com.suwon.festival.entity.Event;
 import com.suwon.festival.entity.InstagramBlock;
+import com.suwon.festival.entity.SyncLog;
 import com.suwon.festival.repository.EventRepository;
+import com.suwon.festival.service.SyncLogService;
 import com.suwon.festival.service.instagram.InstagramFetchException.Kind;
 
 // 인스타 5단계: 대상 계정마다 최근 게시물 수집 → 게시물별 정리 · 좌표 · 저장 (설계 문서 2번 파이프라인)
@@ -42,6 +45,7 @@ public class InstagramSyncService {
   private final InstagramImageStore imageStore;
   private final EventRepository eventRepository;
   private final ExpiredInstagramEventCleaner expiredCleaner; // null = 지난 행사 정리 안 함 (시험용 생성자)
+  private final SyncLogService syncLogService; // null = 동기화 이력 안 남김 (시험용 생성자)
 
   // 예약 동기화와 POST /api/instagram/sync 가 겹치면 뒤의 것을 건너뜀 (ScheduledSyncJob 과 같은 방식, 서버 1대 기준)
   //  겹치면 한쪽 사진 정리가 다른 쪽이 아직 저장 안 한 사진 파일을 지울 수 있음
@@ -52,7 +56,9 @@ public class InstagramSyncService {
       InstagramTokenExpiry tokenExpiry, InstagramSwitch instagramSwitch,
       @Value("${instagram.accounts:}") String accounts,
       @Value("${instagram.fetch-limit:10}") int fetchLimit,
-      InstagramImageStore imageStore, EventRepository eventRepository, ExpiredInstagramEventCleaner expiredCleaner) {
+      InstagramImageStore imageStore, EventRepository eventRepository, ExpiredInstagramEventCleaner expiredCleaner,
+      SyncLogService syncLogService) {
+    this.syncLogService = syncLogService;
     this.imageStore = imageStore;
     this.expiredCleaner = expiredCleaner;
     this.eventRepository = eventRepository;
@@ -71,10 +77,18 @@ public class InstagramSyncService {
     this.fetchLimit = fetchLimit;
   }
 
+  // 시험용: 동기화 이력 없이
+  public InstagramSyncService(InstagramClient client, InstagramPostProcessor processor,
+      InstagramTokenExpiry tokenExpiry, InstagramSwitch instagramSwitch, String accounts, int fetchLimit,
+      InstagramImageStore imageStore, EventRepository eventRepository, ExpiredInstagramEventCleaner expiredCleaner) {
+    this(client, processor, tokenExpiry, instagramSwitch, accounts, fetchLimit, imageStore, eventRepository,
+        expiredCleaner, null);
+  }
+
   // 시험용: 사진 저장 없이
   InstagramSyncService(InstagramClient client, InstagramPostProcessor processor, InstagramTokenExpiry tokenExpiry,
       InstagramSwitch instagramSwitch, String accounts, int fetchLimit) {
-    this(client, processor, tokenExpiry, instagramSwitch, accounts, fetchLimit, InstagramImageStore.disabled(), null, null);
+    this(client, processor, tokenExpiry, instagramSwitch, accounts, fetchLimit, InstagramImageStore.disabled(), null, null, null);
   }
 
   // 수집이 끝나면(꺼져 있어도) 종료 7일 지난 인스타 행사를 지우고(ExpiredInstagramEventCleaner),
@@ -85,7 +99,7 @@ public class InstagramSyncService {
       return InstagramSyncResult.alreadyRunning();
     }
     try {
-      return collect();
+      return collectAndRecord();
     } finally {
       try {
         cleanupExpired();
@@ -94,6 +108,34 @@ public class InstagramSyncService {
         running.set(false);
       }
     }
+  }
+
+  // 실행마다 이력 1줄 (sync_log). 꺼져 있음 · 설정 없음(수집 안 함)은 안 남김
+  //  계정이 하나도 안 되면 FAIL, 일부만 실패면 SUCCESS + 실패 계정 수. 오류 글은 종류 · 개수만 (토큰 · 응답 메시지 X)
+  private InstagramSyncResult collectAndRecord() {
+    LocalDateTime startedAt = syncLogService == null ? null : syncLogService.now();
+    InstagramSyncResult result;
+    try {
+      result = collect();
+    } catch (RuntimeException e) {
+      if (syncLogService != null && instagramSwitch.isEnabled()) {
+        syncLogService.fail(SyncLog.Source.INSTAGRAM, startedAt, null, e);
+      }
+      throw e;
+    }
+    if (syncLogService != null && result.configured()) {
+      int failedAccounts = result.accounts() - result.accountsOk();
+      String accountNote = failedAccounts > 0 ? "계정 수집 실패 " + failedAccounts + "/" + result.accounts() : null;
+      if (result.accountsOk() == 0 && result.accounts() > 0) {
+        syncLogService.fail(SyncLog.Source.INSTAGRAM, startedAt, result.posts(), accountNote);
+      } else {
+        String postNote = result.postErrors() > 0 ? "게시물 처리 실패 " + result.postErrors() + "건" : null;
+        String note = accountNote == null ? postNote : postNote == null ? accountNote : accountNote + " · " + postNote;
+        syncLogService.success(SyncLog.Source.INSTAGRAM, startedAt, result.posts(), result.eventsSaved(),
+            result.eventsUpdated(), note);
+      }
+    }
+    return result;
   }
 
   void cleanupExpired() {
