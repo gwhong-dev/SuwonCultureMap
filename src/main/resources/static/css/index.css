@@ -2744,6 +2744,84 @@ body {
     font-size: 16px;
     font-weight: 700;
   }
+  /* 오시는 길: 가까운 정류장(버스 번호 칩) · 역 — transit-nearby.js */
+  #detailTransit {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 8px;
+  }
+  #detailTransit[hidden] {
+    display: none;
+  }
+  .transit-title {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .transit-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .transit-item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .transit-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .transit-name {
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 0;
+    word-break: keep-all;
+  }
+  .transit-lines {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--sub);
+  }
+  .transit-dist {
+    flex: none;
+    font-size: 13px;
+    color: var(--sub);
+  }
+  .transit-routes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .transit-chip,
+  .transit-more {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+  }
+  .transit-chip[hidden] {
+    display: none;
+  }
+  .transit-more {
+    background: var(--bg);
+    color: var(--sub);
+    cursor: pointer;
+  }
+  .transit-note {
+    margin: 0;
+    font-size: 12px;
+    color: var(--sub);
+  }
   #detailIntroText {
     margin: 0;
     font-size: 14px;

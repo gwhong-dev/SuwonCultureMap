@@ -376,12 +376,6 @@ function showEvents(events) {
     ),
   );
 
-  // 공유 링크가 오픈예정 행사면 PC 목록 탭도 "진행 예정"으로 → 지도 · 목록에서 그 행사가 보이게
-  var sharedId = Number(initialParams.get("event"));
-  events.forEach(function (event) {
-    if (event.id === sharedId && matchesStatusTab(event, "upcoming")) pcStatusTab = "upcoming";
-  });
-
   filterMarkers();
   renderHome();
   if (searchOpen) renderSearch(); // 받는 중에 검색 화면을 열었으면 행을 채움
@@ -1135,6 +1129,7 @@ function openDetailModal(event) {
   if (mobileQuery.matches) window.scrollTo(0, 0);
   selectDetailTab("detailRows", false);
   renderDetailMap(event); // 지도는 창이 보인 뒤에 그려야 크기를 잡음
+  loadDetailTransit(event); // 주변 탭: 가까운 정류장 · 역 (모바일만)
   measureIntro();
   dialogFocus.opened("detail", card);
   nav.open("detail");
@@ -1229,6 +1224,34 @@ function renderDetailMap(event) {
   var position = new kakao.maps.LatLng(event.latitude, event.longitude);
   new kakao.maps.StaticMap(box, { center: position, level: 4, marker: { position: position } });
 }
+
+// 오시는 길: 가까운 정류장(버스 번호) · 역 (transit-nearby.js 가 HTML 을 만듦)
+// - 모바일 주변 탭에만 (PC 는 위치 칸이 숨겨져 있어 부르지 않음 → 경기도 API 하루 한도 아낌)
+// - 응답이 비었거나 실패면 칸을 숨긴 채 둠 (주소 · 길찾기는 그대로)
+var transitTicket = 0; // 응답이 오기 전에 다른 행사를 열면 늦게 온 응답은 버림
+function loadDetailTransit(event) {
+  var box = document.getElementById("detailTransit");
+  var ticket = ++transitTicket;
+  box.hidden = true;
+  box.innerHTML = "";
+  if (!mobileQuery.matches || !event.latitude || !event.longitude) return;
+  fetch("/api/events/" + event.id + "/transit")
+    .then(function (res) {
+      return res.ok ? res.json() : null;
+    })
+    .then(function (data) {
+      if (ticket !== transitTicket || !detailEvent || detailEvent.id !== event.id) return;
+      var html = transitNearbyHtml(data);
+      if (!html) return;
+      box.innerHTML = html;
+      box.hidden = false;
+    })
+    .catch(function () {});
+}
+document.getElementById("detailTransit").addEventListener("click", function (e) {
+  var more = e.target.closest(".transit-more");
+  if (more) expandTransitRoutes(more);
+});
 
 // 소개가 3줄을 넘을 때만 더보기 표시 (창이 보인 뒤에 재야 함)
 function measureIntro() {
@@ -1681,7 +1704,9 @@ function updateDateChip() {
 // ----- 날짜 고르기 (calendar-strip.js, 11/11 시안 CalClosed · CalOpen · PcCard) -----
 // 모바일 = 목록 탭 위 날짜 줄(오늘부터 2주, 칸마다 그날 진행 행사 수) + "달력 펼치기"(한 달, 점 = 행사 수)
 // PC = 목록 위 탭 [진행 중 N · 진행 예정 N · 달력 ▾]. 날짜를 고르면 #dateFilter 값("2026-11-14") → 목록 · 지도 · 카드 줄 모두 그날만
-var pcStatusTab = "open"; // PC 탭: "open" 진행 중 | "upcoming" 진행 예정 (날짜를 고르면 탭 대신 날짜)
+// PC 탭: null 전체(기본, 진행 중 + 진행 예정 — 11/12 사용자) | "open" 진행 중 | "upcoming" 진행 예정
+// 켜진 탭을 다시 누르면 전체로. 날짜를 고르면 탭 대신 날짜
+var pcStatusTab = null;
 var calOpen = false; // 한 달 달력이 펼쳐져 있나
 var calShownMonth = null; // 달력에 보이는 달 { year, month }
 var lastDateBaseItems = []; // 마지막 필터의 "날짜 빼고 통과한 행사" (달력 넘기기 등 필터 없이 다시 그릴 때)
@@ -1898,7 +1923,8 @@ document.getElementById("pcCalBtn").addEventListener("click", function () {
 });
 document.querySelectorAll("#datePanel .pc-date-tab").forEach(function (tab) {
   tab.addEventListener("click", function () {
-    pcStatusTab = tab.dataset.status;
+    // 켜진 탭을 다시 누르면 해제 → 전체 (날짜를 골라 둔 상태에서 누르면 그 탭으로)
+    pcStatusTab = currentStatusTab() === tab.dataset.status ? null : tab.dataset.status;
     calOpen = false;
     setDateFilter("all");
   });
