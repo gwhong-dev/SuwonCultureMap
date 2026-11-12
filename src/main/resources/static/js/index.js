@@ -1129,6 +1129,7 @@ function openDetailModal(event) {
   if (mobileQuery.matches) window.scrollTo(0, 0);
   selectDetailTab("detailRows", false);
   renderDetailMap(event); // 지도는 창이 보인 뒤에 그려야 크기를 잡음
+  loadDetailTransit(event); // 주변 탭: 가까운 정류장 · 역 (모바일만)
   measureIntro();
   dialogFocus.opened("detail", card);
   nav.open("detail");
@@ -1223,6 +1224,34 @@ function renderDetailMap(event) {
   var position = new kakao.maps.LatLng(event.latitude, event.longitude);
   new kakao.maps.StaticMap(box, { center: position, level: 4, marker: { position: position } });
 }
+
+// 오시는 길: 가까운 정류장(버스 번호) · 역 (transit-nearby.js 가 HTML 을 만듦)
+// - 모바일 주변 탭에만 (PC 는 위치 칸이 숨겨져 있어 부르지 않음 → 경기도 API 하루 한도 아낌)
+// - 응답이 비었거나 실패면 칸을 숨긴 채 둠 (주소 · 길찾기는 그대로)
+var transitTicket = 0; // 응답이 오기 전에 다른 행사를 열면 늦게 온 응답은 버림
+function loadDetailTransit(event) {
+  var box = document.getElementById("detailTransit");
+  var ticket = ++transitTicket;
+  box.hidden = true;
+  box.innerHTML = "";
+  if (!mobileQuery.matches || !event.latitude || !event.longitude) return;
+  fetch("/api/events/" + event.id + "/transit")
+    .then(function (res) {
+      return res.ok ? res.json() : null;
+    })
+    .then(function (data) {
+      if (ticket !== transitTicket || !detailEvent || detailEvent.id !== event.id) return;
+      var html = transitNearbyHtml(data);
+      if (!html) return;
+      box.innerHTML = html;
+      box.hidden = false;
+    })
+    .catch(function () {});
+}
+document.getElementById("detailTransit").addEventListener("click", function (e) {
+  var more = e.target.closest(".transit-more");
+  if (more) expandTransitRoutes(more);
+});
 
 // 소개가 3줄을 넘을 때만 더보기 표시 (창이 보인 뒤에 재야 함)
 function measureIntro() {

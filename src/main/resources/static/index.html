@@ -350,6 +350,8 @@
               <span id="detailAddress" class="route-addr"></span>
               <button id="detailCopyBtn" type="button" class="copy-btn">주소 복사</button>
             </div>
+            <!-- 오시는 길: 가까운 정류장(버스 번호) · 역 — /api/events/{id}/transit, 비면 숨김 (transit-nearby.js) -->
+            <div id="detailTransit" hidden></div>
           </section>
         </div>
         <!-- 모바일 전용 하단 고정: ♡ + 길찾기 -->
@@ -372,6 +374,7 @@
     ></script>
     <script src="/schedule-format.js"></script>
     <script src="/route-links.js"></script>
+    <script src="/transit-nearby.js"></script>
     <script src="/event-detail.js"></script>
     <script src="/favorite-ui.js"></script>
     <script src="/recent-views.js"></script>
