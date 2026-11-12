@@ -2193,7 +2193,7 @@ function renderHomeNow() {
   bindHomeCards(track);
 }
 
-// "전체 →": 목록 탭 + 날짜 칩 "진행 중"(값 today) (다른 필터는 풀어서 목록 수 = N)
+// "전체 →": 목록 탭 + 날짜 필터 오늘(값 today → 목록 위 날짜 줄의 '오늘' 칸이 켜짐) (다른 필터는 풀어서 목록 수 = N)
 document.getElementById("homeNowAll").addEventListener("click", function () {
   document.getElementById("searchInput").value = "";
   document.getElementById("categorySelect").value = "all";
