@@ -195,10 +195,10 @@ class ScheduleDisplayPageTest {
     assertThat(rules).isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
     assertThat(html).contains("<option value=\"today\">진행 중</option>", "<option value=\"week\">7일 안</option>"); // 홈 날짜 칩 값
 
-    // 모바일 = PC 탭 숨김, PC = 날짜 줄 · 해제 칩 숨김
+    // 모바일 목록 화면도 PC 와 같은 탭 줄 (P3) → 모바일 = 2주 날짜 줄 숨김, PC = 날짜 줄 · 해제 칩 숨김
     String css = fetch("/css/index.css");
     int mobile = css.indexOf("@media (max-width: 1024px)");
-    assertThat(css.indexOf("  .pc-date-tabs,", mobile)).isGreaterThan(mobile);
+    assertThat(css.indexOf("  .strip-head,", mobile)).isGreaterThan(mobile);
     assertThat(css).contains("#categoryChips .chip-mobile-only,");
   }
 
@@ -220,6 +220,30 @@ class ScheduleDisplayPageTest {
     // 하루 이동은 늘 한 줄, 좁으면 글자 빼고 ◂ ▸ 만
     String css = fetch("/css/index.css");
     assertThat(css).contains("container: daynav / inline-size;", "@container daynav (max-width: 300px)", "white-space: nowrap;");
+  }
+
+  @Test
+  void 모바일_지도_탭_카드_줄_목록_보기_홈_끝_넘김_상세_넘기기가_있음() throws Exception {
+    // P3 확정 시안 (docs/design/2026-11-13-improvement-drafts.md): 지도 탭 카드 기본 표시 · 목록 보기 = 지도를 다 덮는 화면
+    String html = page();
+    assertThat(html).contains("id=\"previewPlaceBand\"", "id=\"listMapBtn\"", "id=\"detailPager\"", "id=\"detailPrev\"", "id=\"detailNext\"");
+    assertThat(html.indexOf("id=\"previewPlaceBand\"")).isLessThan(html.indexOf("id=\"previewStripWrap\"")); // 띠는 카드 줄 위
+    // 떠 있는 [지도 보기] 는 시트 밖 (시트의 transform 안에 있으면 fixed 가 화면 기준이 아님, #240 검증 ❌)
+    assertThat(html.indexOf("id=\"listMapBtn\"")).isGreaterThan(html.indexOf("</aside>"));
+
+    String js = script();
+    // 모바일도 지도 탭이면 카드 줄 기본 (홈 · 목록 · 찜 · 검색이 덮으면 안 띄움), 위치 글 = "밀어서 다음 행사"
+    assertThat(js).contains("stripDefaultShown(mobileQuery.matches, lastSortedItems.length, mobileMapShown())");
+    assertThat(js).contains("stripLabelText(!!previewOrigin, index, cards.length, mobileQuery.matches)");
+    assertThat(js).doesNotContain("mapClickClosesStrip", "\"half\"", "preview-stack");
+    // 홈 끝 넘김 → 지도 탭 + 진행 중, 카드 줄에서 연 상세는 좌우로 앞뒤 행사
+    assertThat(js).contains("homeEndSwipe(start.atEnd,", "showNowEvents(\"map\")", "showNowEvents(\"list\")");
+    assertThat(js).contains("stripDetailPager(item.event.id)", "swipeStep(t.clientX - start.x, t.clientY - start.y)");
+
+    String css = fetch("/css/index.css");
+    int mobile = css.indexOf("@media (max-width: 1024px)");
+    assertThat(css.indexOf("writing-mode: vertical-rl;", mobile)).isGreaterThan(mobile); // 세로 글자 "더 밀면 전체"
+    assertThat(css.indexOf("body.sheet-full:not(.fav-screen) #listMapBtn {", mobile)).isGreaterThan(mobile);
   }
 
   @Test

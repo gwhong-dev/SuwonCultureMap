@@ -3,7 +3,7 @@
   --sidebar-width: 450px; /* PC 사이드바 폭 (모바일은 바텀시트라 사용 안 함) */
   --font-mobile: var(--font-brand); /* Pretendard (css/fonts.css) — PC · 모바일 같은 글꼴 */
   --tab-height: 64px; /* 하단 탭 높이 */
-  --sheet-bar-height: 52px; /* "검색 결과 N개 · 목록 보기" 바 높이 */
+  --sheet-bar-height: 40px; /* 모바일 지도 탭 "행사 N개 · 목록 보기 ▴" 바 높이 (P3 확정 시안 MobileMap) */
 }
 
 body {
@@ -326,10 +326,6 @@ body {
   flex: 1;
   min-width: 0;
 }
-/* 사진 없는 카드(인스타 행사 등): 사진 칸 없이 글만, 오른쪽 위 ★ 와 안 겹치게 */
-.event-item.no-photo .event-body {
-  padding-right: 1.5rem;
-}
 .event-body .date {
   font-size: 0.75rem;
   color: var(--sub);
@@ -391,17 +387,12 @@ body {
   display: block;
   background: var(--surface);
 }
-/* 사진이 없는 행사(인스타): 사진 칸을 숨기고, 흰 × 를 본문 위에서 보이는 색으로 */
+/* 사진이 없는 행사(인스타): 사진 칸을 숨기고 기본 그림(P6, css/default-poster.css)을 보임. 흰 × 를 밝은 그림 위에서 보이는 색으로 */
 .modal-image[hidden] {
   display: none;
 }
 .modal-card.no-image .modal-close {
   color: var(--sub);
-}
-@media (min-width: 1025px) {
-  .modal-card.no-image .modal-body {
-    padding-top: 2.25rem; /* PC: × 와 날짜 줄이 겹치지 않게 (모바일은 × 대신 상단 헤더) */
-  }
 }
 .modal-body {
   padding: 1rem 1.25rem;
@@ -533,6 +524,8 @@ body {
 #detailIntro,
 #detailLocation,
 #detailBar,
+#listMapBtn,
+.event-body .place,
 .skeleton-card {
   display: none;
 }
@@ -833,23 +826,39 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-/* 기간 · 장소 · 구. 일정이 길면 2줄까지 (상세 · 목록에는 전체가 나옴) */
-.preview-sub {
-  font-size: 12px;
-  color: var(--sub);
+/* 기간 줄 · 장소 줄 (P3 · P1 확정 시안). 일정이 길면 기간은 2줄까지 (상세 · 목록에는 전체가 나옴) */
+.preview-date {
+  font-size: 13px;
+  color: var(--text);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.preview-stack {
-  display: inline-block;
-  margin-right: 4px;
-  padding: 0 5px;
+.preview-place {
+  font-size: 13px;
+  color: var(--sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 카드 줄 위 띠 "이 장소 행사 1 / 6 · 장소" — 같은 장소 행사가 2개 이상일 때만 (JS 가 hidden 을 끔) */
+.place-band {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px;
   background: var(--text);
   color: var(--bg);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 13px;
+}
+.place-band[hidden] {
+  display: none;
+}
+.band-place {
+  opacity: 0.75;
 }
 .preview-actions {
   display: flex;
@@ -918,6 +927,7 @@ body {
     pointer-events: none;
   }
   #previewArea.show #previewLabel,
+  #previewArea.show .place-band,
   #previewArea.show .preview-card,
   #previewArea.show .strip-arrow {
     pointer-events: auto;
@@ -1477,10 +1487,9 @@ body {
        아래 지도로 새어 칩을 누른 채 끌면 지도가 같이 움직였음 (WebKit 버그 183870 · 225561) */
     transition: background 0.2s;
   }
-  /* 목록을 끝까지 올렸을 때는 상단을 흰 배경으로 */
+  /* 목록 보기(P3)는 지도 · 검색창까지 다 덮음 → 상단 바는 숨기고 결과 바가 머리줄 (아래 body.sheet-full) */
   body.sheet-full #topbar {
-    background: var(--bg);
-    box-shadow: 0 1px 0 var(--line);
+    display: none;
   }
   /* 드롭다운·체크박스는 아래 칩 버튼으로 대체 */
   #topbar .topbar-brand,
@@ -1632,11 +1641,37 @@ body {
   #categoryChips::-webkit-scrollbar {
     display: none;
   }
-  /* 날짜 고르기: 모바일은 PC 탭 없이 날짜 줄, 달력을 펼치면 날짜 줄 대신 한 달 달력 (CalOpen) */
-  .pc-date-tabs,
-  .date-panel.cal-open .strip-head,
-  .date-panel.cal-open .date-strip {
+  /* 날짜 고르기: 모바일 목록 화면도 PC 와 같은 탭 줄 [진행 중 N] [진행 예정 N] [달력 ▾] 을 칩 모양으로 (P3 확정 시안 MobileList)
+     2주 날짜 줄 · 달력 펼치기 · 접기 버튼은 안 씀 (달력 ▾ 로 펼치고 접음) */
+  .strip-head,
+  .date-strip,
+  .cal-close {
     display: none;
+  }
+  .pc-date-tabs {
+    align-items: center;
+    gap: 8px;
+    box-sizing: border-box;
+    height: 48px;
+    padding: 0 16px;
+  }
+  .pc-date-tab,
+  .pc-cal-btn {
+    flex: none;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    box-shadow: none;
+    color: var(--text);
+    font-size: 13px;
+  }
+  .pc-date-tab.active,
+  .pc-cal-btn.active {
+    border-color: var(--text);
+    background: var(--text);
+    color: var(--bg);
+    box-shadow: none;
   }
   /* ----- 사이드바 → 바텀시트 ----- */
   #sidebarToggleBtn {
@@ -1667,7 +1702,7 @@ body {
     flex: none;
     box-sizing: border-box;
     height: var(--sheet-bar-height);
-    padding: 6px 0 0;
+    padding: 0;
     border-bottom: 1px solid var(--line);
     cursor: grab;
     touch-action: none; /* 끌어올릴 때 페이지가 같이 움직이지 않게 */
@@ -1675,9 +1710,7 @@ body {
     -webkit-user-select: none;
   }
   .sheet-handle {
-    width: 36px;
-    height: 4px;
-    background: var(--line);
+    display: none; /* P3: 손잡이 대신 "목록 보기 ▴" (끌기는 바 어디서나 그대로) */
   }
   .sheet-bar {
     flex: 1;
@@ -1686,14 +1719,15 @@ body {
     justify-content: space-between;
     width: 100%;
     box-sizing: border-box;
-    padding: 0 20px;
+    padding: 0 16px;
   }
   #resultCount {
-    font-size: 14px;
-    color: var(--text);
+    font-size: 13px;
+    color: var(--sub);
   }
   #resultCount strong {
-    color: var(--accent);
+    color: var(--text);
+    font-weight: 700;
   }
   #sheetHeader:focus-visible {
     outline: 2px solid var(--accent);
@@ -1705,63 +1739,79 @@ body {
     gap: 4px;
     font-size: 13px;
     font-weight: 500;
-    color: var(--text);
+    color: var(--accent-ink);
   }
   #sheetToggle svg {
     width: 16px;
     height: 16px;
-    transition: transform 0.2s;
   }
-  body:not(.sheet-peek) #sheetToggle svg {
-    transform: rotate(180deg); /* 열려 있으면 ⌄ */
+  /* 지도 탭 = "목록 보기 ▴", 목록 보기 화면 = [지도 그림 · 지도 보기] (아래 body.sheet-full) */
+  #sheetToggle .toggle-map,
+  body.sheet-full #sheetToggle .toggle-up {
+    display: none;
+  }
+  body.sheet-full #sheetToggle .toggle-map {
+    display: block;
   }
 
-  /* ----- 목록 카드: 큰 사진 위 + 글 아래 (태블릿은 2열) ----- */
+  /* ----- 목록 줄 (P3 확정 시안 MobileList): 작은 사진 64×84 + 배지 · 제목 · 기간 · 장소 — 한 번에 많이 보이게 (태블릿은 2열) ----- */
   #list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 24px 16px;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 0 16px;
     align-content: start;
-    padding: 16px 16px 0;
+    padding: 0 16px;
     overscroll-behavior: contain;
   }
   .event-item {
-    flex-direction: column;
-    gap: 10px;
-    padding: 0;
-    border-bottom: none;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 0;
   }
   .event-item:hover {
     background: none;
   }
   .event-thumb {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 4 / 3;
+    width: 64px;
+    height: 84px;
     border-radius: 0;
     background: var(--surface);
   }
   .event-body {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
+    padding-right: 40px; /* ♥ 자리 */
+  }
+  .event-body .badge-row {
+    order: -2; /* 배지 → 제목 → 기간 → 장소 */
   }
   .event-body .title {
-    order: -1; /* 제목을 날짜보다 위로 */
+    order: -1;
     margin-top: 0;
     font-size: 15px;
     font-weight: 700;
     color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
   .event-body .date {
     font-size: 13px;
-    color: var(--sub);
+    color: var(--text);
   }
-  .event-body .info {
-    margin-top: 2px;
+  .event-body .place {
+    display: block;
     font-size: 13px;
     color: var(--sub);
-    -webkit-line-clamp: 2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .event-body .info {
+    display: none; /* 요금 · 시간 요약은 상세에서 (모바일 줄은 장소 줄로) */
   }
   .favorite-badge {
     display: none; /* 모바일은 ♥ 버튼으로 대체 */
@@ -1775,14 +1825,14 @@ body {
     border-bottom: 1px solid var(--line);
   }
 
-  /* ----- 찜 하트 버튼 (목록 카드 / 미리보기 카드) ----- */
+  /* ----- 찜 하트 버튼 (목록 줄 오른쪽 위) ----- */
   .card-fav {
     display: flex;
     align-items: center;
     justify-content: center;
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 4px;
+    right: -10px;
     width: 44px;
     height: 44px;
     border: none;
@@ -1796,16 +1846,61 @@ body {
   .card-fav.active {
     color: var(--accent);
   }
-  /* 사진 없는 목록 카드: ♥ 버튼(44px)이 제목 위에 겹치지 않게 오른쪽을 비움 */
-  .event-item.no-photo .event-body {
-    min-height: 64px;
-    padding: 10px 56px 0 0;
-  }
 
-  /* 하단 카드: 모바일은 지도 전체 폭 · 결과 바 위 (공통 모양은 위 "하단 카드") */
+  /* 하단 카드 (P3 확정 시안 MobileMap): 지도 탭이면 늘. 띠 "이 장소 행사 1 / 6" → 카드 1장 → "밀어서 다음 행사 · 1 / 32" → 결과 바 */
   #previewArea {
     right: 0;
-    bottom: calc(var(--sheet-bar-height) + 12px);
+    bottom: calc(var(--sheet-bar-height) + 6px);
+    gap: 8px;
+  }
+  .place-band {
+    order: 1;
+    align-self: flex-start;
+    margin-left: 16px;
+    font-size: 12px;
+  }
+  .band-place {
+    display: none; /* 모바일 띠는 수만 (장소는 카드 안 장소 줄) */
+  }
+  #previewStripWrap {
+    order: 2;
+  }
+  #previewLabel {
+    order: 3;
+    align-self: center;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--sub);
+    font-size: 12px;
+    font-weight: 400;
+    text-shadow: 0 0 3px var(--bg), 0 0 3px var(--bg); /* 지도 위 글 (바탕 없이) */
+  }
+  #previewStrip {
+    padding: 0 16px 4px;
+    scroll-padding: 0 16px;
+  }
+  .preview-card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+  .preview-card {
+    flex: 0 0 min(100%, 420px); /* 폰 = 줄 폭 - 양옆 16px (390 화면에서 358px) */
+    min-height: 132px;
+  }
+  .preview-poster {
+    width: 80px;
+    height: 108px;
+  }
+  .preview-body {
+    gap: 5px;
+    padding-right: 0;
+  }
+  /* 모바일 카드는 배지 · 제목 · 기간 · 장소만 (누르면 상세, 길찾기 · 찜은 상세에서) */
+  .preview-actions,
+  .preview-card .card-fav {
+    display: none;
   }
 
   /* ----- 스켈레톤 로딩 (행사 목록을 받는 동안 회색 블록) + 실패 안내 ----- */
@@ -2498,6 +2593,38 @@ body {
     font-size: 14px;
     text-align: center;
   }
+  /* ① 끝 좁은 안내 (P3 확정 시안 HomeOverscroll): 폭 52px · 바탕 없이 화살표 + 세로 글자 "더 밀면 전체" (벽돌 글자)
+     끝에서 한 번 더 밀면 지도 탭 + 진행 중 + 카드 줄 (index.js setupNowEndSwipe). 사용자: "해 보고 수정" */
+  .now-more {
+    flex: 0 0 52px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 0;
+    border: 0;
+    background: none;
+    color: var(--accent-ink);
+    font: inherit;
+    cursor: pointer;
+    scroll-snap-align: end;
+  }
+  .now-more svg {
+    width: 20px;
+    height: 20px;
+  }
+  .now-more-text {
+    writing-mode: vertical-rl;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  .now-more:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
   /* ----- 검색 화면 (디자인 06 입력 중): 화면 전체, 글자만 있는 행 56px ----- */
   #searchView:not([hidden]) {
     position: fixed;
@@ -2719,10 +2846,6 @@ body {
     overflow: hidden;
     background: var(--surface);
   }
-  .row-poster-text {
-    color: var(--sub);
-    font-size: 11px;
-  }
   .row-poster img {
     position: absolute;
     inset: 0;
@@ -2797,6 +2920,45 @@ body {
   }
   #detailHead .head-actions {
     display: flex;
+  }
+  /* 지도 탭 카드 줄에서 연 상세: 가운데 ‹ "상세 · 진행 중 2 / 9" › (P3) */
+  .detail-pager {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+  .detail-pager[hidden] {
+    display: none;
+  }
+  #detailPagerText {
+    font-size: 12px;
+    color: var(--sub);
+    white-space: nowrap;
+  }
+  .pager-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .pager-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+  .pager-btn:disabled {
+    color: var(--line);
+    cursor: default;
+  }
+  .pager-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
   }
   .icon-btn.active {
     color: var(--accent);
@@ -3145,9 +3307,6 @@ body {
   body.sheet-full #app {
     overflow: visible;
   }
-  body.sheet-full #topbar {
-    position: fixed;
-  }
   body.sheet-full #tabBar {
     position: fixed;
     left: 0;
@@ -3159,16 +3318,64 @@ body {
     min-height: 100%;
     overflow: visible; /* hidden 이면 아래 손잡이 바의 sticky 가 페이지 스크롤을 못 따라감 */
   }
+  /* 머리줄 "행사 32개" + [지도 보기] 56px (P3 확정 시안 MobileList) — 페이지를 내려도 위에 붙음 */
   body.sheet-full #sheetHeader {
     position: sticky;
-    top: 0; /* 시트가 검색창 높이만큼 내려가 있어서 화면에선 검색창 바로 아래 */
+    top: 0;
     z-index: 2;
+    height: calc(56px + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
     background: var(--bg);
+    cursor: pointer;
+  }
+  body.sheet-full #resultCount {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  body.sheet-full #sheetToggle {
+    gap: 6px;
+    height: 36px;
+    box-sizing: border-box;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    color: var(--text);
   }
   body.sheet-full #list {
     flex: none;
     overflow: visible;
-    padding-bottom: calc(var(--tab-height) + env(safe-area-inset-bottom, 0px) + 24px);
+    padding-bottom: calc(var(--tab-height) + env(safe-area-inset-bottom, 0px) + 88px); /* 떠 있는 [지도 보기] 자리 */
+  }
+  /* 하단 가운데 떠 있는 [지도 보기] (검정, 44px) — 찜 화면엔 없음 */
+  body.sheet-full:not(.fav-screen) #listMapBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--tab-height) + env(safe-area-inset-bottom, 0px) + 20px);
+    z-index: 25; /* 목록 시트(20) 위, 하단 탭(40) 아래 */
+    height: 44px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: 2px;
+    background: var(--text);
+    color: var(--bg);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: var(--shadow-float);
+    transform: translateX(-50%);
+    cursor: pointer;
+  }
+  #listMapBtn svg {
+    width: 16px;
+    height: 16px;
+  }
+  #listMapBtn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
   /* 홈: 지도 위를 덮는 화면. 하단 탭은 화면에 고정, 홈은 페이지 길이만큼 늘림 */
   body.home-open {

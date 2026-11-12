@@ -10,8 +10,12 @@ const {
   stripKeyStep,
   stripLabelText,
   stripDefaultShown,
-  mapClickClosesStrip,
-} = require("../../main/resources/static/strip-nav.js");
+  placeBandCount,
+  listScopeName,
+  detailPagerLabel,
+  SWIPE_MIN_PX,
+  swipeStep,
+} =require("../../main/resources/static/strip-nav.js");
 
 test("키보드: → 다음 · ← 이전, 다른 키는 0", () => {
   assert.strictEqual(stripKeyStep({ key: "ArrowRight" }), 1);
@@ -116,13 +120,41 @@ test("위치 표시: 카드가 없으면 빈 글, 고른 카드가 없으면 1 �
   assert.strictEqual(stripLabelText(true, -1, 5), "가까운 순 · 1 / 5");
 });
 
-test("기본 카드 줄: PC 이고 카드가 있을 때만 (모바일은 마커를 눌러야 뜸)", () => {
-  assert.strictEqual(stripDefaultShown(false, 32), true);
-  assert.strictEqual(stripDefaultShown(false, 0), false);
-  assert.strictEqual(stripDefaultShown(true, 32), false);
+test("위치 표시: 모바일은 카드 아래 '밀어서 다음 행사 · 1 / 32' (P3)", () => {
+  assert.strictEqual(stripLabelText(false, 0, 32, true), "밀어서 다음 행사 · 1 / 32");
+  assert.strictEqual(stripLabelText(true, 4, 32, true), "밀어서 다음 행사 · 5 / 32"); // 마커로 띄워도 같은 글
+  assert.strictEqual(stripLabelText(false, 0, 0, true), "");
 });
 
-test("지도 빈 곳 클릭: 모바일만 카드 줄을 닫음 (PC 는 늘 떠 있음)", () => {
-  assert.strictEqual(mapClickClosesStrip(true), true);
-  assert.strictEqual(mapClickClosesStrip(false), false);
+test("기본 카드 줄: PC 는 카드가 있으면 늘, 모바일은 지도 탭일 때만 (P3)", () => {
+  assert.strictEqual(stripDefaultShown(false, 32), true);
+  assert.strictEqual(stripDefaultShown(false, 0), false);
+  assert.strictEqual(stripDefaultShown(true, 32, true), true);
+  assert.strictEqual(stripDefaultShown(true, 32, false), false); // 홈 · 목록 · 찜 · 검색 화면이 지도를 덮음
+  assert.strictEqual(stripDefaultShown(true, 0, true), false);
+});
+
+test("같은 장소 띠: 2개 이상일 때만 '1 / 6', 하나뿐이면 빈 글 (띠 숨김)", () => {
+  assert.strictEqual(placeBandCount(0, 6), "1 / 6");
+  assert.strictEqual(placeBandCount(5, 6), "6 / 6");
+  assert.strictEqual(placeBandCount(0, 1), "");
+  assert.strictEqual(placeBandCount(undefined, undefined), "");
+});
+
+test("상세 넘기기 줄: 거른 이름 + 순서 ('상세 · 진행 중 2 / 9')", () => {
+  assert.strictEqual(listScopeName("today", null), "진행 중"); // 홈 끝 넘김 · 전체 →
+  assert.strictEqual(listScopeName("all", "open"), "진행 중");
+  assert.strictEqual(listScopeName("all", "upcoming"), "진행 예정");
+  assert.strictEqual(listScopeName("all", null), "");
+  assert.strictEqual(listScopeName("2026-11-14", null), "");
+  assert.strictEqual(detailPagerLabel("진행 중", 1, 9), "상세 · 진행 중 2 / 9");
+  assert.strictEqual(detailPagerLabel("", 0, 32), "상세 · 1 / 32");
+});
+
+test("상세 좌우 밀기: 가로 60px 이상 · 세로의 2배 넘을 때만, 왼쪽으로 밀면 다음", () => {
+  assert.strictEqual(swipeStep(-SWIPE_MIN_PX, 0), 1);
+  assert.strictEqual(swipeStep(80, 10), -1);
+  assert.strictEqual(swipeStep(-(SWIPE_MIN_PX - 1), 0), 0); // 짧음
+  assert.strictEqual(swipeStep(-80, 50), 0); // 비스듬함 = 세로 스크롤
+  assert.strictEqual(swipeStep(0, -200), 0);
 });
