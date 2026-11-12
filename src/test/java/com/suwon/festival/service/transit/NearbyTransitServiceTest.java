@@ -168,6 +168,31 @@ class NearbyTransitServiceTest {
   }
 
   @Test
+  void 예상_못한_예외도_버스만_빈_목록으로_10분_기억() {
+    when(gbis.findAround(anyDouble(), anyDouble())).thenThrow(new IllegalStateException("응답 모양이 다름"));
+
+    assertThat(service.find(LAT, LNG).busStops()).isEmpty(); // 500 이 아니라 빈 목록
+    service.find(LAT, LNG);
+    verify(gbis, times(1)).findAround(anyDouble(), anyDouble());
+  }
+
+  @Test
+  void 하루_호출_상한을_넘으면_부르지_않고_다음_날_다시() {
+    // 상한 7 = 장소 1곳 몫 (1 + 3 × 2)
+    NearbyTransitService limited = new NearbyTransitService(gbis, kakao, clock, NearbyTransitService.CALLS_PER_PLACE);
+    when(gbis.findAround(anyDouble(), anyDouble())).thenReturn(List.of(station(1, "행궁동", 120)));
+    routes(1, "2");
+
+    assertThat(limited.find(LAT, LNG).busStops()).hasSize(1);
+    assertThat(limited.find(37.2657, 127.0001).busStops()).isEmpty(); // 다른 장소: 오늘 몫 다 씀
+    verify(gbis, times(1)).findAround(anyDouble(), anyDouble());
+
+    clock.add(Duration.ofHours(24)); // 다음 날 (한국 시간 기준 날짜가 바뀜)
+    assertThat(limited.find(37.2657, 127.0001).busStops()).hasSize(1);
+    verify(gbis, times(2)).findAround(anyDouble(), anyDouble());
+  }
+
+  @Test
   void 역_검색이_실패해도_버스는_그대로() {
     when(gbis.findAround(anyDouble(), anyDouble())).thenReturn(List.of(station(1, "행궁동", 120)));
     routes(1, "2");

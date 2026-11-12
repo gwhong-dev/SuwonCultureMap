@@ -4,6 +4,8 @@ import java.math.BigInteger;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -45,6 +47,11 @@ public class NearbyTransitService {
   static final Duration SUBWAY_TTL = Duration.ofHours(1);
   static final Duration FAIL_TTL = Duration.ofMinutes(10);
   static final int CACHE_CLEAN_SIZE = 500; // 이 수를 넘으면 저장할 때 만료된 것을 치움
+  // 경기도 개발계정 하루 1,000회 중 800회까지만 (장소 1곳 = 최대 1 + 3 × 2 = 7회를 미리 잡음, 날짜는 한국 시간)
+  // → 재시작으로 캐시가 비거나 행사 번호를 차례로 긁어도 한도를 다 쓰지 않음. 넘으면 버스 칸만 숨김
+  static final int DAILY_CALL_LIMIT = 800;
+  static final int CALLS_PER_PLACE = 1 + MAX_STOPS * MAX_STATIONS_PER_STOP;
+  private static final ZoneId KOREA = ZoneId.of("Asia/Seoul");
 
   private static final String RESERVED = "(예약)";
   private static final Pattern LEADING_NUMBER = Pattern.compile("^(\\d+)");
@@ -66,16 +73,36 @@ public class NearbyTransitService {
   private final Clock clock;
   private final TtlCache<List<BusStop>> busCache = new TtlCache<>();
   private final TtlCache<List<Subway>> subwayCache = new TtlCache<>();
+  private final int dailyCallLimit;
+  private LocalDate budgetDay;  // budget* 는 reserveCalls 안에서만 (synchronized)
+  private int budgetUsed;
 
   @Autowired
   public NearbyTransitService(GbisStationClient gbis, KakaoSubwayClient kakao) {
-    this(gbis, kakao, Clock.systemUTC());
+    this(gbis, kakao, Clock.systemUTC(), DAILY_CALL_LIMIT);
   }
 
   NearbyTransitService(GbisStationClient gbis, KakaoSubwayClient kakao, Clock clock) {
+    this(gbis, kakao, clock, DAILY_CALL_LIMIT);
+  }
+
+  NearbyTransitService(GbisStationClient gbis, KakaoSubwayClient kakao, Clock clock, int dailyCallLimit) {
     this.gbis = gbis;
     this.kakao = kakao;
     this.clock = clock;
+    this.dailyCallLimit = dailyCallLimit;
+  }
+
+  // 오늘 호출 몫을 미리 잡음. 모자라면 false (다음 날 0 부터)
+  private synchronized boolean reserveCalls(int calls) {
+    LocalDate today = LocalDate.ofInstant(clock.instant(), KOREA);
+    if (!today.equals(budgetDay)) {
+      budgetDay = today;
+      budgetUsed = 0;
+    }
+    if (budgetUsed + calls > dailyCallLimit) return false;
+    budgetUsed += calls;
+    return true;
   }
 
   public NearbyTransit find(double latitude, double longitude) {
@@ -95,6 +122,10 @@ public class NearbyTransitService {
 
   private Cached<List<BusStop>> loadBusStops(double latitude, double longitude) {
     if (!gbis.isConfigured()) return new Cached<>(List.of(), FAIL_TTL); // 키를 나중에 넣어도 10분 안에 반영
+    if (!reserveCalls(CALLS_PER_PLACE)) {
+      log.warn("오시는 길 버스 정보: 오늘 경기도 API 호출 상한({}회) 도달 → 버스 칸 숨김", dailyCallLimit);
+      return new Cached<>(List.of(), FAIL_TTL);
+    }
     try {
       List<StopGroup> groups = groupByName(gbis.findAround(latitude, longitude));
       List<BusStop> stops = new ArrayList<>();
@@ -106,9 +137,10 @@ public class NearbyTransitService {
         stops.add(new BusStop(g.name, g.distanceMeters(), walkMinutes(g.distanceMeters()), routeNames(names)));
       }
       return new Cached<>(List.copyOf(stops), BUS_TTL);
-    } catch (GbisException e) {
-      // GbisException 메시지에는 키 · 주소가 없음 (GbisStationClient 참고)
-      log.warn("오시는 길 버스 정보 실패 ({}): {}", cacheKey(latitude, longitude), e.getMessage());
+    } catch (RuntimeException e) {
+      // GbisException 메시지에는 키 · 주소가 없음 (GbisStationClient 참고). 그 밖의 예외는 종류만 남김
+      String why = e instanceof GbisException ? e.getMessage() : e.getClass().getSimpleName();
+      log.warn("오시는 길 버스 정보 실패 ({}): {}", cacheKey(latitude, longitude), why);
       return new Cached<>(List.of(), FAIL_TTL);
     }
   }
