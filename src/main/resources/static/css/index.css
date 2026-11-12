@@ -87,8 +87,13 @@ body {
   gap: 0.5rem;
   margin-left: auto;
 }
+/* 로그인했을 때만 이름 (회원 #N) — '로그인 안 됨' · '로그인됨' 글자는 없음 (P4) */
 #authStatus {
   margin-right: 0.25rem;
+  font-weight: 600;
+}
+#authStatus[hidden] {
+  display: none;
 }
 .past-toggle {
   display: flex;
@@ -116,9 +121,64 @@ body {
   background: #03c75a;
   color: #fff;
 }
-.login-btn.logout {
-  background: var(--sub);
-  color: var(--bg);
+/* ☰ 메뉴 (P4): PC = 상단 바 오른쪽 끝 단추 + 아래로 펼친 줄 / 모바일 크기는 아래 max-width 1024px */
+#mobileMenuBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--bar-line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 1rem;
+  cursor: pointer;
+}
+#mobileMenuBtn:hover {
+  background: var(--bg);
+}
+.menu-links {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0.875rem;
+  z-index: 40;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 4px 0;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  box-shadow: var(--shadow-float);
+}
+#topbar.menu-open .menu-links {
+  display: flex;
+}
+/* 메뉴 한 줄 = 높이 40px (서비스 안내 · 개인정보 처리방침, 로그인 땐 로그아웃도) */
+.menu-link {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.menu-link:hover,
+.menu-link:focus-visible {
+  background: var(--surface);
+}
+.menu-link[hidden] {
+  display: none;
 }
 /* 화면 모드 ☾/☀ (PC 상단 바, 로그인 단추 왼쪽 · theme.js) — 모바일은 ☰ 메뉴의 3칸(.theme-mode) */
 .theme-toggle {
@@ -152,7 +212,7 @@ body {
 .theme-mode {
   display: none;
 }
-/* 로그인 · 마이페이지 · 서비스 안내 · 처리방침: 브랜드 벽돌색 한 가지 (전엔 파랑 #4a90d9) */
+/* 로그인 · 마이페이지: 브랜드 벽돌색 한 가지 (전엔 파랑 #4a90d9) */
 .login-btn.login {
   background: var(--accent);
   color: var(--on-accent);
@@ -446,13 +506,11 @@ body {
 
 /* 첫 화면에서 숨김 → index.js 가 로그인 상태 · 상세 열기에 맞춰 보여 줌 */
 #mypageBtn,
-#logoutBtn,
 #detailModal {
   display: none;
 }
 
 /* ===== 모바일 전용 요소: PC에서는 숨김 ===== */
-#mobileMenuBtn,
 #sheetHeader,
 #tabBar,
 #homeView,
@@ -1345,8 +1403,25 @@ body {
   }
   #authStatus {
     margin: 0 0 4px;
-    font-size: 0.85rem;
-    color: var(--sub);
+    font-size: 0.9rem;
+    color: var(--text);
+  }
+  /* 모바일은 메뉴 줄이 ☰ 판 안에 그대로 (따로 펼치지 않음) */
+  .menu-links,
+  #topbar.menu-open .menu-links {
+    display: flex;
+    position: static;
+    min-width: 0;
+    padding: 4px 0 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  .menu-link {
+    padding: 0 2px;
+    font-size: 0.9rem;
   }
   #topbarActions .login-btn {
     padding: 11px 12px;
