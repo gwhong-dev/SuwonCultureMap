@@ -35,6 +35,11 @@ ul {
   padding-left: 1.25rem;
 }
 
+/* 본문 링크 (문의 메일 등): 벽돌색 — 어두운 테마에선 밝은 벽돌 */
+a {
+  color: var(--accent);
+}
+
 .back-link {
   display: inline-block;
   margin-top: 1.5rem;
