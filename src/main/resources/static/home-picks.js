@@ -91,6 +91,20 @@ function nowOpenCards(events, now) {
     .slice(0, HOME_NOW_MAX);
 }
 
+// ① 끝 넘김 (P3, 11/13 확정 시안 HomeOverscroll): 마지막 카드에서 밀면 끝의 좁은 안내 "더 밀면 전체" 가 보이고,
+// 끝에 닿은 채로 한 번 더 밀면 지도 탭 + '진행 중' + 카드 줄. 사용자: "실제 적용해 봐야 알겠다" → 값은 운영에서 보고 조정
+var HOME_END_SWIPE_PX = 40;
+
+// 가로 줄이 끝까지 넘어갔나 (소수점 · 1px 어긋남 허용)
+function atScrollEnd(scrollLeft, scrollWidth, clientWidth) {
+  return scrollLeft + clientWidth >= scrollWidth - 2;
+}
+
+// 끝에 닿은 채 시작한 밀기가 "한 번 더 밀기"인가. dx · dy = 손가락이 움직인 거리 (끝 - 시작, 왼쪽으로 밀면 dx < 0)
+function homeEndSwipe(startedAtEnd, dx, dy) {
+  return !!startedAtEnd && -dx >= HOME_END_SWIPE_PX && Math.abs(dx) > Math.abs(dy);
+}
+
 // ③ 달별 행사: 다음 달부터 11달 뒤까지, 그 달에 시작하는 오픈예정 행사 → 행사 있는 달만
 // [{ key: "2026-12", label: "12월", events: [시작일 순] }]. 이번 달 행사는 ① · ② 와 지도에서 봄
 function monthGroups(events, now) {
@@ -311,6 +325,9 @@ if (typeof module !== "undefined") {
     startingSoon: startingSoon,
     nowOpenEvents: nowOpenEvents,
     nowOpenCards: nowOpenCards,
+    HOME_END_SWIPE_PX: HOME_END_SWIPE_PX,
+    atScrollEnd: atScrollEnd,
+    homeEndSwipe: homeEndSwipe,
     monthGroups: monthGroups,
   };
 }
