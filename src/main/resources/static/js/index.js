@@ -2203,7 +2203,8 @@ function nearestSheetState(y) {
     } else {
       target = nearestSheetState(sheetY); // 천천히 놓으면 가까운 위치로
     }
-    setSheetState(target);
+    // 탭을 거쳐서 → 찜 화면을 끌어내려도 찜 상태가 남지 않고 지도 탭 · 카드 줄로 (#240 검증 ⚠️)
+    selectTab(target === "peek" ? "map" : favTabOpen ? "fav" : "list");
   }
   header.addEventListener("pointerup", endDrag);
   header.addEventListener("pointercancel", endDrag);
@@ -3013,9 +3014,18 @@ function renderPreviewStrip(sortedItems) {
         favButtonHtml(favoriteEventIds.has(item.event.id));
       hideOnError(card.querySelector(".preview-poster"));
 
-      card.addEventListener("click", function () {
+      function openCardDetail() {
         // 카드 어디를 눌러도 상세 (상세 보기 버튼 포함). 모바일은 상세에서 좌우로 카드 줄 앞뒤 행사 (P3)
         openDetailModal(item.event, mobileQuery.matches ? stripDetailPager(item.event.id) : null);
+      }
+      card.addEventListener("click", openCardDetail);
+      // 키보드: 카드에 초점 → Enter 로 상세 (모바일 카드는 상세 보기 · ♥ 버튼을 숨겨 카드 말고 갈 곳이 없음, #240 검증 ⚠️)
+      card.tabIndex = 0;
+      card.setAttribute("aria-label", item.event.title);
+      card.addEventListener("keydown", function (e) {
+        if (e.key !== "Enter" || e.target !== card) return;
+        e.preventDefault();
+        openCardDetail();
       });
       card.querySelector(".preview-route").addEventListener("click", function (e) {
         e.stopPropagation(); // 길찾기 창만 열고 상세는 열지 않음

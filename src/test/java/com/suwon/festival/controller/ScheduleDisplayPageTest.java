@@ -208,6 +208,8 @@ class ScheduleDisplayPageTest {
     String html = page();
     assertThat(html).contains("id=\"previewPlaceBand\"", "id=\"listMapBtn\"", "id=\"detailPager\"", "id=\"detailPrev\"", "id=\"detailNext\"");
     assertThat(html.indexOf("id=\"previewPlaceBand\"")).isLessThan(html.indexOf("id=\"previewStripWrap\"")); // 띠는 카드 줄 위
+    // 떠 있는 [지도 보기] 는 시트 밖 (시트의 transform 안에 있으면 fixed 가 화면 기준이 아님, #240 검증 ❌)
+    assertThat(html.indexOf("id=\"listMapBtn\"")).isGreaterThan(html.indexOf("</aside>"));
 
     String js = script();
     // 모바일도 지도 탭이면 카드 줄 기본 (홈 · 목록 · 찜 · 검색이 덮으면 안 띄움), 위치 글 = "밀어서 다음 행사"

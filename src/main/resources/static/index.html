@@ -134,11 +134,12 @@
           </div>
         </div>
         <div id="list"></div>
-        <!-- 모바일 목록 보기 화면 하단 가운데 떠 있는 [지도 보기] (P3 확정 시안 MobileList) -->
-        <button type="button" id="listMapBtn" class="list-map-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z" /></svg>지도 보기
-        </button>
       </aside>
+      <!-- 모바일 목록 보기 화면 하단 가운데 떠 있는 [지도 보기] (P3 확정 시안 MobileList)
+           시트(#sidebar) 밖에 둠: 시트는 transform 이 있어 안에 두면 fixed 가 화면이 아니라 시트 기준이 됨 (#240 검증 ❌) -->
+      <button type="button" id="listMapBtn" class="list-map-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z" /></svg>지도 보기
+      </button>
       <!-- 하단 카드 ("가까운 순 · 1 / N" + 좌우로 넘기는 카드). PC = 기본으로 늘 표시 (11/11), 모바일 = 지도 탭이면 늘 (P3)
            모바일은 위치 글이 카드 아래 "밀어서 다음 행사 · 1 / 32" (CSS order). 띠 = 같은 장소 행사가 2개 이상일 때만 -->
       <div id="previewArea">
