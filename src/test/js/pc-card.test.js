@@ -1,11 +1,10 @@
-// PC 지도 하단 카드 규칙 시험 (11/13 확정 시안 P1) — 배지 · 기간 줄 · 장소 줄 · 같은 장소 띠 · 마커 튀어오름 · 키보드 · 길찾기 창 자리
+// PC 지도 하단 카드 규칙 시험 (11/13 확정 시안 P1) — 배지 · 기간 줄 · 장소 줄 · 마커 튀어오름 · 키보드 · 길찾기 창 자리
 const test = require("node:test");
 const assert = require("node:assert");
 const {
   pcCardBadges,
   pcCardPeriod,
   pcCardPlace,
-  placeBand,
   shouldHopMarker,
   pcCardKeyAction,
   routePopPosition,
@@ -46,13 +45,6 @@ test("장소 줄: '장소 · 구', 장소 이름에 구가 들어 있으면 한 
   assert.strictEqual(pcCardPlace("정조테마공연장", null), "정조테마공연장");
   assert.strictEqual(pcCardPlace(null, "팔달구"), "팔달구");
   assert.strictEqual(pcCardPlace(null, null), null);
-});
-
-test("같은 장소 띠: 행사가 2개 이상일 때만 '1 / 6' + 장소", () => {
-  assert.deepStrictEqual(placeBand(0, 6, "정조테마공연장"), { count: "1 / 6", place: "정조테마공연장" });
-  assert.deepStrictEqual(placeBand(5, 6, null), { count: "6 / 6", place: "" });
-  assert.strictEqual(placeBand(0, 1, "정조테마공연장"), null);
-  assert.strictEqual(placeBand(undefined, undefined, "x"), null); // 마커를 그리기 전
 });
 
 test("마커 튀어오름: 같은 장소 마커의 다른 카드로 넘길 때만, 움직임 줄이기면 생략", () => {

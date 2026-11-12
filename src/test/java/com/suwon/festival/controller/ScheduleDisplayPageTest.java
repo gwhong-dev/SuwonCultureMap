@@ -195,11 +195,35 @@ class ScheduleDisplayPageTest {
     assertThat(rules).isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
     assertThat(html).contains("<option value=\"today\">진행 중</option>", "<option value=\"week\">7일 안</option>"); // 홈 날짜 칩 값
 
-    // 모바일 = PC 탭 숨김, PC = 날짜 줄 · 해제 칩 숨김
+    // 모바일 목록 화면도 PC 와 같은 탭 줄 (P3) → 모바일 = 2주 날짜 줄 숨김, PC = 날짜 줄 · 해제 칩 숨김
     String css = fetch("/css/index.css");
     int mobile = css.indexOf("@media (max-width: 1024px)");
-    assertThat(css.indexOf("  .pc-date-tabs,", mobile)).isGreaterThan(mobile);
+    assertThat(css.indexOf("  .strip-head,", mobile)).isGreaterThan(mobile);
     assertThat(css).contains("#categoryChips .chip-mobile-only,");
+  }
+
+  @Test
+  void 모바일_지도_탭_카드_줄_목록_보기_홈_끝_넘김_상세_넘기기가_있음() throws Exception {
+    // P3 확정 시안 (docs/design/2026-11-13-improvement-drafts.md): 지도 탭 카드 기본 표시 · 목록 보기 = 지도를 다 덮는 화면
+    String html = page();
+    assertThat(html).contains("id=\"previewPlaceBand\"", "id=\"listMapBtn\"", "id=\"detailPager\"", "id=\"detailPrev\"", "id=\"detailNext\"");
+    assertThat(html.indexOf("id=\"previewPlaceBand\"")).isLessThan(html.indexOf("id=\"previewStripWrap\"")); // 띠는 카드 줄 위
+    // 떠 있는 [지도 보기] 는 시트 밖 (시트의 transform 안에 있으면 fixed 가 화면 기준이 아님, #240 검증 ❌)
+    assertThat(html.indexOf("id=\"listMapBtn\"")).isGreaterThan(html.indexOf("</aside>"));
+
+    String js = script();
+    // 모바일도 지도 탭이면 카드 줄 기본 (홈 · 목록 · 찜 · 검색이 덮으면 안 띄움), 위치 글 = "밀어서 다음 행사"
+    assertThat(js).contains("stripDefaultShown(mobileQuery.matches, lastSortedItems.length, mobileMapShown())");
+    assertThat(js).contains("stripLabelText(!!previewOrigin, index, cards.length, mobileQuery.matches)");
+    assertThat(js).doesNotContain("mapClickClosesStrip", "\"half\"", "preview-stack");
+    // 홈 끝 넘김 → 지도 탭 + 진행 중, 카드 줄에서 연 상세는 좌우로 앞뒤 행사
+    assertThat(js).contains("homeEndSwipe(start.atEnd,", "showNowEvents(\"map\")", "showNowEvents(\"list\")");
+    assertThat(js).contains("stripDetailPager(item.event.id)", "swipeStep(t.clientX - start.x, t.clientY - start.y)");
+
+    String css = fetch("/css/index.css");
+    int mobile = css.indexOf("@media (max-width: 1024px)");
+    assertThat(css.indexOf("writing-mode: vertical-rl;", mobile)).isGreaterThan(mobile); // 세로 글자 "더 밀면 전체"
+    assertThat(css.indexOf("body.sheet-full:not(.fav-screen) #listMapBtn {", mobile)).isGreaterThan(mobile);
   }
 
   @Test
@@ -387,7 +411,7 @@ class ScheduleDisplayPageTest {
     int rules = html.indexOf("<script src=\"/pc-card.js\"></script>");
     assertThat(rules).isPositive().isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
     // 같은 장소는 카드 밖 띠, 카드 줄 아래 키보드 안내, PC 길찾기 작은 창
-    assertThat(html).contains("id=\"previewPlaceBand\"", "<span>이 장소 행사</span>", "id=\"previewHint\"", "Enter 상세 · Space 찜 · ← → 넘기기");
+    assertThat(html).contains("id=\"previewPlaceBand\"", "id=\"previewHint\"", "Enter 상세 · Space 찜 · ← → 넘기기");
     assertThat(html).contains("id=\"routePop\"", "카카오맵에서 길찾기", "네이버 지도에서 길찾기", "id=\"routePopCopy\"");
 
     String js = script();
@@ -395,7 +419,7 @@ class ScheduleDisplayPageTest {
     assertThat(js).contains("if (mobileQuery.matches) openRouteSheet(item.event);", "else toggleRoutePop(item.event, this);");
     assertThat(js).contains("dialogFocus.opened(\"routePop\"", "dialogFocus.closed(\"routePop\")");
     // 카드 안 '같은 장소 1/6' 은 모바일 한 줄에만 (PC 는 CSS 로 숨기고 띠로)
-    assertThat(js).contains("placeBand(item.groupIndex, item.groupSize", "pcCardKeyAction(", "shouldHopMarker(");
+    assertThat(js).contains("pcCardKeyAction(", "shouldHopMarker(");
     // PC 첫 화면은 화성행궁 중심으로 확대
     // (네 곳 = 화성행궁 · 방화수류정 · 팔달문 · 지동시장을 범위로, 아래는 카드 줄만큼 비움. 모바일은 level 6 그대로)
     assertThat(js).contains("if (!mobileQuery.matches) fitPcFirstView();", "map.setBounds(bounds, 70, 24, 270, 24);");
@@ -404,7 +428,7 @@ class ScheduleDisplayPageTest {
     int media = css.lastIndexOf("@media (min-width: 1025px) {", css.indexOf("#sidebar.collapsed ~ #previewArea"));
     String pc = block(css, css.indexOf("{", media));
     assertThat(rule(pc, ".preview-card {")).contains("flex: 0 0 262px;", "height: 196px;");
-    assertThat(pc).contains(".preview-card .preview-sub {", ".route-pop:not([hidden]) {", "@container (max-width: 960px)");
+    assertThat(pc).contains(".preview-card .preview-place {", ".route-pop:not([hidden]) {", "@container (max-width: 960px)");
     assertThat(rule(pc, "\n  .strip-arrow {")).contains("border-radius: 50%;", "width: 40px;");
     // 마커 튀어오름은 움직임 줄이기 설정이면 생략
     int reduce = css.indexOf("@media (prefers-reduced-motion: reduce)");

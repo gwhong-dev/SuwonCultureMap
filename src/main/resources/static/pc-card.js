@@ -1,5 +1,5 @@
 // PC 지도 하단 카드 규칙 (11/13 확정 시안 P1 — docs/design/2026-11-13-improvement-drafts.md)
-//  - 카드 배지 · 기간 줄 · 장소 줄 글자, 카드 줄 위 '이 장소 행사 1 / 6' 띠, 마커 튀어오름 판단, 카드 줄 키보드, 길찾기 작은 창 자리
+//  - 카드 배지 · 기간 줄 · 장소 줄 글자 (띠 '이 장소 행사 1 / 6' 은 strip-nav.js placeBandCount — P3), 마커 튀어오름 판단, 카드 줄 키보드, 길찾기 작은 창 자리
 //  - 모바일 하단 카드는 그대로 (P3 담당) — 여기 함수는 PC 카드만 씀
 // 시험: node --test src/test/js/ (CI 에서 실행)
 
@@ -43,12 +43,6 @@ function pcCardPlace(place, district) {
   return parts.length ? parts.join(" · ") : null;
 }
 
-// 카드 줄 위 띠: 같은 장소 행사가 2개 이상일 때만 { count: "1 / 6", place }. 아니면 null (띠 숨김)
-function placeBand(groupIndex, groupSize, place) {
-  if (!(groupSize > 1)) return null;
-  return { count: groupIndex + 1 + " / " + groupSize, place: place || "" };
-}
-
 // 같은 장소 다음 카드로 넘길 때만 마커가 튀어오름 (지도가 움직이지 않아 넘긴 걸 알리려고)
 //  - 다른 장소로 넘기면 지도가 그 마커로 움직이니 생략, 움직임 줄이기 설정이면 생략
 function shouldHopMarker(prevMarker, nextMarker, prevId, nextId, reduceMotion) {
@@ -83,7 +77,6 @@ if (typeof module !== "undefined") {
     pcCardBadges: pcCardBadges,
     pcCardPeriod: pcCardPeriod,
     pcCardPlace: pcCardPlace,
-    placeBand: placeBand,
     shouldHopMarker: shouldHopMarker,
     pcCardKeyAction: pcCardKeyAction,
     routePopPosition: routePopPosition,
