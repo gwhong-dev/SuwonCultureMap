@@ -153,7 +153,9 @@ function nextSevenDays(now) {
   return days;
 }
 
+// filter: "today" · "weekend" · "week" 또는 날짜 하나 "2026-11-14" (목록 위 날짜 줄 · 달력, calendar-strip.js)
 function filterDays(filter, now) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(filter || "")) return [filter];
   if (filter === "today") return [koreaToday(now)];
   if (filter === "weekend") return upcomingWeekend(now);
   if (filter === "week") return nextSevenDays(now);
@@ -281,6 +283,7 @@ if (typeof module !== "undefined") {
     formatScheduleDetail: formatScheduleDetail,
     scheduleRowText: scheduleRowText,
     koreaToday: koreaToday,
+    addDays: addDays,
     upcomingWeekend: upcomingWeekend,
     filterDays: filterDays,
     matchRunDays: matchRunDays,

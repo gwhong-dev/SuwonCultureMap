@@ -376,6 +376,12 @@ function showEvents(events) {
     ),
   );
 
+  // 공유 링크가 오픈예정 행사면 PC 목록 탭도 "진행 예정"으로 → 지도 · 목록에서 그 행사가 보이게
+  var sharedId = Number(initialParams.get("event"));
+  events.forEach(function (event) {
+    if (event.id === sharedId && matchesStatusTab(event, "upcoming")) pcStatusTab = "upcoming";
+  });
+
   filterMarkers();
   renderHome();
   if (searchOpen) renderSearch(); // 받는 중에 검색 화면을 열었으면 행을 채움
@@ -463,11 +469,13 @@ function filterMarkers() {
   var selectedCategory = document.getElementById("categorySelect").value;
   var showPast = document.getElementById("showPastCheckbox").checked;
   var runDays = filterDays(document.getElementById("dateFilter").value); // 한국 시간 기준, 필터 없으면 null
+  var statusTab = currentStatusTab(); // PC 목록 위 탭 (진행 중 · 진행 예정), 모바일 · 날짜 고름이면 null
 
   updateChipActive(); // 모바일 칩 선택 표시 동기화
   updateTabBar(); // 모바일 하단 탭 선택 표시 동기화
 
   var visibleItems = [];
+  var dateBaseItems = []; // 날짜 · 진행 탭만 빼고 나머지 조건을 통과한 행사 → 날짜 줄 · 달력 · 탭 개수
   var favScreen = onFavScreen();
 
   markerList.forEach(function (item) {
@@ -493,18 +501,19 @@ function filterMarkers() {
     item.runMatch = runDays ? matchRunDays(item.event, runDays) : null;
     var matchesDate = item.runMatch !== "no";
 
-    var visible =
+    var matchesOthers =
       matchesKeyword &&
       matchesCategory &&
       matchesPast &&
-      matchesDate &&
       matchesDistrict(item.event, districtFilter) &&
       (!freeOnly || isFreeEvent(item.event));
+    if (matchesOthers) dateBaseItems.push(item);
 
-    if (visible) {
+    if (matchesOthers && matchesDate && matchesStatusTab(item.event, statusTab)) {
       visibleItems.push(item);
     }
   });
+  renderDatePanel(dateBaseItems, visibleItems.length, favScreen);
 
   // 찜 탭(모바일) "최근 본": 위 조건 대신 최근 본 순서 그대로 (기록이라 검색어 · 날짜 · 지난 행사와 상관없이)
   if (!favScreen) favView = "fav"; // 찜 탭을 나가면 다음엔 '찜'부터
@@ -1588,27 +1597,10 @@ function renderCategoryChips() {
   categoryChip.append(categoryText, categoryArrow, categoryPicker);
   chips.appendChild(categoryChip);
 
-  // 날짜 칩: 누르면 그 날짜 필터, 한 번 더 누르면 해제 (분류와 함께 쓸 수 있음)
-  // '7일 안'은 PC 칩 줄에만 (모바일은 CSS 로 숨김 — 홈 "+7일"로 켜졌을 때만 보여서 해제할 수 있게)
-  var dateSelect = document.getElementById("dateFilter");
-  [
-    { value: "today", label: "📅 진행 중" },
-    { value: "weekend", label: "📅 이번 주말" },
-    { value: "week", label: "📅 7일 안", pcOnly: true },
-  ].forEach(function (option) {
-    var chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = option.pcOnly ? "chip chip-pc-only" : "chip";
-    chip.dataset.date = option.value;
-    chip.textContent = option.label;
-    chip.addEventListener("click", function () {
-      dateSelect.value = dateSelect.value === option.value ? "all" : option.value;
-      filterMarkers();
-    });
-    chips.appendChild(chip); // 분류 바로 뒤 (가로 스크롤 뒤에 숨지 않게)
-  });
+  // 날짜 칩(진행 중 · 이번 주말 · 7일 안)은 없앰 (11/11 캘린더 시안): 날짜는 목록 위 날짜 줄 · 달력(모바일),
+  // 목록 위 탭(PC)에서 고름. 날짜 필터가 켜져 있으면 분류 칩 바로 뒤에 해제 칩만 (updateDateChip)
 
-  // '무료' 칩: 날짜 칩 바로 뒤 (분류 칩과 함께 쓸 수 있음)
+  // '무료' 칩: 분류 칩 바로 뒤 (분류 칩과 함께 쓸 수 있음)
   var freeChip = document.createElement("button");
   freeChip.type = "button";
   freeChip.className = "chip";
@@ -1638,13 +1630,10 @@ function renderCategoryChips() {
 function updateChipActive() {
   var selected = document.getElementById("categorySelect").value;
   var showPast = document.getElementById("showPastCheckbox").checked;
-  var dateFilter = document.getElementById("dateFilter").value;
   document
     .querySelectorAll("#categoryChips .chip")
     .forEach(function (chip) {
-      var active = chip.dataset.date
-        ? chip.dataset.date === dateFilter
-        : chip.dataset.value === "__past"
+      var active = chip.dataset.value === "__past"
           ? showPast
           : chip.dataset.value === "__free"
             ? freeOnly
@@ -1660,7 +1649,268 @@ function updateChipActive() {
     document.getElementById("categoryChipText").textContent = chipLabel(selected);
   }
   updateDistrictChip();
+  updateDateChip();
 }
+
+// 날짜 필터가 켜져 있으면(목록 날짜 줄 · 달력 · 홈 날짜 칩) 분류 칩 바로 뒤에 "📅 11월 14일 (토) ✕" — 누르면 해제
+// 날짜를 고르는 칩이 아니라 지도 탭에서도 걸린 필터를 보이고 풀 수 있게 하는 칩. 모바일 전용 (PC 는 목록 위 탭에 보임)
+function updateDateChip() {
+  var chips = document.getElementById("categoryChips");
+  var chip = document.getElementById("dateChip");
+  var title = dateFilterTitle(document.getElementById("dateFilter").value);
+  if (!title) {
+    if (chip) chip.remove();
+    return;
+  }
+  if (!chip) {
+    chip = document.createElement("button");
+    chip.type = "button";
+    chip.id = "dateChip";
+    chip.className = "chip chip-mobile-only";
+    chip.addEventListener("click", function () {
+      setDateFilter("all");
+    });
+    var categoryChip = document.getElementById("categoryChip");
+    chips.insertBefore(chip, categoryChip ? categoryChip.nextSibling : chips.firstChild);
+  }
+  chip.classList.add("active"); // 위 updateChipActive 루프가 data-value 없는 이 칩의 active 를 지우므로 매번 다시 켬
+  chip.textContent = "📅 " + title + " ✕";
+  chip.setAttribute("aria-label", title + " 날짜 필터 해제");
+}
+
+// ----- 날짜 고르기 (calendar-strip.js, 11/11 시안 CalClosed · CalOpen · PcCard) -----
+// 모바일 = 목록 탭 위 날짜 줄(오늘부터 2주, 칸마다 그날 진행 행사 수) + "달력 펼치기"(한 달, 점 = 행사 수)
+// PC = 목록 위 탭 [진행 중 N · 진행 예정 N · 달력 ▾]. 날짜를 고르면 #dateFilter 값("2026-11-14") → 목록 · 지도 · 카드 줄 모두 그날만
+var pcStatusTab = "open"; // PC 탭: "open" 진행 중 | "upcoming" 진행 예정 (날짜를 고르면 탭 대신 날짜)
+var calOpen = false; // 한 달 달력이 펼쳐져 있나
+var calShownMonth = null; // 달력에 보이는 달 { year, month }
+var lastDateBaseItems = []; // 마지막 필터의 "날짜 빼고 통과한 행사" (달력 넘기기 등 필터 없이 다시 그릴 때)
+var lastDateVisibleCount = 0;
+
+// PC 진행 탭은 날짜 · 검색어 · '찜' · 지난 행사가 없을 때만 걸림 (모바일은 탭이 없음, calendar-strip.js statusTabApplies)
+function currentStatusTab() {
+  return statusTabApplies({
+    mobile: mobileQuery.matches,
+    dateValue: document.getElementById("dateFilter").value,
+    keyword: document.getElementById("searchInput").value.trim(),
+    category: document.getElementById("categorySelect").value,
+    showPast: document.getElementById("showPastCheckbox").checked,
+  })
+    ? pcStatusTab
+    : null;
+}
+
+// 날짜 필터 바꾸기. 날짜 하나("2026-11-14")는 #dateFilter 에 없는 값이라 숨은 옵션 하나를 그 날짜로 맞춰 둠
+function setDateFilter(value) {
+  var select = document.getElementById("dateFilter");
+  var dayOption = select.querySelector("option[data-day]");
+  if (isDayValue(value)) {
+    if (!dayOption) {
+      dayOption = document.createElement("option");
+      dayOption.dataset.day = "true";
+      select.appendChild(dayOption);
+    }
+    dayOption.value = value;
+    dayOption.textContent = dayTitle(value);
+  }
+  select.value = value;
+  filterMarkers();
+}
+
+// 모바일은 목록 탭에서만 (지도 · 찜 · 홈에선 숨김), PC 는 늘
+function updateDatePanelVisibility() {
+  document.getElementById("datePanel").hidden = onFavScreen() || (mobileQuery.matches && activeTab() !== "list");
+}
+
+function renderDatePanel(baseItems, visibleCount, favScreen) {
+  lastDateBaseItems = baseItems;
+  lastDateVisibleCount = visibleCount;
+  updateDatePanelVisibility();
+  if (favScreen) return;
+
+  var dateValue = document.getElementById("dateFilter").value;
+  var events = baseItems.map(function (item) {
+    return item.event;
+  });
+  var today = koreaToday();
+  var marked = highlightedDays(dateValue);
+  var dayMode = dateValue !== "all";
+  var panel = document.getElementById("datePanel");
+  panel.classList.toggle("cal-open", calOpen);
+
+  // PC 탭: 날짜를 골랐으면 진행 탭 대신 "달력" 탭이 켜지고 고른 날짜를 보여 줌
+  // 검색어 · 찜 · 지난 행사 보기 중엔 진행 탭이 안 걸리므로 둘 다 꺼진 모양 (누르면 그 탭으로 거름)
+  var appliedTab = currentStatusTab();
+  document.querySelectorAll("#datePanel .pc-date-tab").forEach(function (tab) {
+    var on = tab.dataset.status === appliedTab;
+    tab.classList.toggle("active", on);
+    tab.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+  document.getElementById("pcOpenCount").textContent = events.filter(function (event) {
+    return matchesStatusTab(event, "open");
+  }).length;
+  document.getElementById("pcUpcomingCount").textContent = events.filter(function (event) {
+    return matchesStatusTab(event, "upcoming");
+  }).length;
+  var calBtn = document.getElementById("pcCalBtn");
+  calBtn.textContent = (dayMode ? dateFilterTitle(dateValue) : "달력") + (calOpen ? " ▴" : " ▾");
+  calBtn.classList.toggle("active", dayMode);
+  calBtn.setAttribute("aria-expanded", calOpen ? "true" : "false");
+  document.getElementById("calOpenBtn").setAttribute("aria-expanded", calOpen ? "true" : "false");
+
+  // 날짜 줄 (오늘부터 2주)
+  var days = stripDays(today, STRIP_DAYS);
+  var stripCounts = countRunDays(
+    events,
+    days.map(function (day) {
+      return day.date;
+    }),
+  );
+  document.getElementById("stripMonth").textContent = monthOf(marked[0] || today).month + "월";
+  var strip = document.getElementById("dateStrip");
+  var stripScroll = strip.scrollLeft;
+  rebuildKeepingFocus(strip, function () {
+    days.forEach(function (day) {
+      var count = stripCounts[day.date];
+      var button = dayButton("strip-day", day, marked, count);
+      button.innerHTML =
+        '<span class="strip-dow">' + day.label + "</span>" +
+        '<span class="strip-num">' + day.num + "</span>" +
+        '<span class="strip-count">' + (count ? count + "개" : "-") + "</span>";
+      strip.appendChild(button);
+    });
+  });
+  strip.scrollLeft = stripScroll;
+
+  // 한 달 달력 (펼쳤을 때만)
+  document.getElementById("calMonth").hidden = !calOpen;
+  if (calOpen) renderCalendarMonth(events, marked, today);
+
+  // 목록 위 제목: "11월 14일 (토) · 행사 9개" + 전체 날짜(해제)
+  var title = dateFilterTitle(dateValue);
+  document.getElementById("dateHeading").hidden = !title;
+  if (title) document.getElementById("dateHeadingText").textContent = title + " · 행사 " + visibleCount + "개";
+}
+
+function renderCalendarMonth(events, marked, today) {
+  if (!calShownMonth) calShownMonth = monthOf(marked[0] || today);
+  var cells = monthCells(calShownMonth.year, calShownMonth.month);
+  var dates = cells.filter(Boolean);
+  var counts = countRunDays(events, dates);
+  document.getElementById("calTitle").textContent = calShownMonth.year + "년 " + calShownMonth.month + "월";
+  var thisMonth = monthOf(today);
+  // 지난달로는 못 감 (오늘 전 날짜는 못 고름)
+  document.getElementById("calPrev").disabled =
+    calShownMonth.year * 12 + calShownMonth.month <= thisMonth.year * 12 + thisMonth.month;
+  var grid = document.getElementById("calGrid");
+  rebuildKeepingFocus(grid, function () {
+    ["일", "월", "화", "수", "목", "금", "토"].forEach(function (name, i) {
+      var head = document.createElement("span");
+      head.className = "cal-dow" + (i === 0 ? " sun" : i === 6 ? " sat" : "");
+      head.textContent = name;
+      head.setAttribute("aria-hidden", "true");
+      grid.appendChild(head);
+    });
+    cells.forEach(function (date) {
+      if (!date) {
+        grid.appendChild(document.createElement("span"));
+        return;
+      }
+      var count = counts[date];
+      var button = dayButton("cal-day", { date: date, weekday: weekdayOf(date) }, marked, count);
+      if (date === today) button.classList.add("today");
+      button.disabled = isPastDay(date);
+      button.innerHTML =
+        '<span class="cal-num">' + +date.slice(8, 10) + "</span>" +
+        '<span class="cal-dots" aria-hidden="true">' + "■".repeat(dotLevel(count)) + "</span>";
+      grid.appendChild(button);
+    });
+  });
+}
+
+// 날짜 줄 · 달력 칸 공통: 고른 날 표시 · 토 · 일 색 · 읽기 프로그램용 "11월 14일 (토) 행사 9개"
+function dayButton(className, day, marked, count) {
+  var button = document.createElement("button");
+  button.type = "button";
+  var on = marked.indexOf(day.date) !== -1;
+  button.className = className + (day.weekday === 0 ? " sun" : day.weekday === 6 ? " sat" : "") + (on ? " active" : "");
+  button.dataset.day = day.date;
+  button.setAttribute("aria-pressed", on ? "true" : "false");
+  button.setAttribute("aria-label", dayTitle(day.date) + " 행사 " + (count || 0) + "개");
+  return button;
+}
+
+// 칸을 다시 그려도 키보드로 누르던 날짜에 초점이 남게
+function rebuildKeepingFocus(container, build) {
+  var focused = container.contains(document.activeElement) ? document.activeElement.dataset.day : null;
+  container.innerHTML = "";
+  build();
+  if (focused) {
+    var again = container.querySelector('[data-day="' + focused + '"]');
+    if (again) again.focus();
+  }
+}
+
+function refreshDatePanel() {
+  renderDatePanel(lastDateBaseItems, lastDateVisibleCount, onFavScreen());
+}
+
+function openCalendar(open) {
+  calOpen = open;
+  if (open) calShownMonth = null; // 고른 날짜(없으면 오늘)의 달부터
+  refreshDatePanel();
+}
+
+function onDayClick(e) {
+  var button = e.target.closest("button[data-day]");
+  if (!button || button.disabled) return;
+  var closesCalendar = calOpen && !mobileQuery.matches; // PC 달력은 고르면 닫힘 (모바일은 펼친 채 아래 목록이 바뀜)
+  if (closesCalendar) calOpen = false;
+  setDateFilter(nextDayFilter(document.getElementById("dateFilter").value, button.dataset.day));
+  if (closesCalendar) document.getElementById("pcCalBtn").focus(); // 누른 칸이 숨겨져도 초점은 달력 버튼으로
+}
+// 달력에서 Esc = 접기, 초점은 펼친 버튼으로 (PC 달력 ▾ · 모바일 달력 펼치기)
+document.getElementById("calMonth").addEventListener("keydown", function (e) {
+  if (e.key !== "Escape") return;
+  e.preventDefault();
+  e.stopPropagation(); // 페이지 전체 Esc(상세 닫기 등)로 넘기지 않음
+  openCalendar(false);
+  document.getElementById(mobileQuery.matches ? "calOpenBtn" : "pcCalBtn").focus();
+});
+document.getElementById("dateStrip").addEventListener("click", onDayClick);
+document.getElementById("calGrid").addEventListener("click", onDayClick);
+document.getElementById("calOpenBtn").addEventListener("click", function () {
+  openCalendar(true);
+  document.getElementById("calCloseBtn").focus();
+});
+document.getElementById("calCloseBtn").addEventListener("click", function () {
+  openCalendar(false);
+  document.getElementById("calOpenBtn").focus();
+});
+document.getElementById("pcCalBtn").addEventListener("click", function () {
+  openCalendar(!calOpen);
+});
+["calPrev", "calNext"].forEach(function (id, i) {
+  document.getElementById(id).addEventListener("click", function () {
+    calShownMonth = shiftMonth(calShownMonth, i === 0 ? -1 : 1);
+    refreshDatePanel();
+  });
+});
+document.querySelectorAll("#datePanel .pc-date-tab").forEach(function (tab) {
+  tab.addEventListener("click", function () {
+    pcStatusTab = tab.dataset.status;
+    calOpen = false;
+    setDateFilter("all");
+  });
+});
+document.getElementById("dateClearBtn").addEventListener("click", function () {
+  setDateFilter("all");
+});
+// PC ↔ 모바일: 진행 탭은 PC 에만 걸리므로 목록을 다시 거름, 펼친 달력은 접음
+mobileQuery.addEventListener("change", function () {
+  calOpen = false;
+  filterMarkers();
+});
 
 // 구 필터가 켜져 있으면 칩 줄 맨 앞에 "📍 팔달구 ✕" — 누르면 구 필터 해제
 function updateDistrictChip() {
@@ -1845,6 +2095,7 @@ function updateTabBar() {
       tab.removeAttribute("aria-current");
     }
   });
+  updateDatePanelVisibility(); // 날짜 줄은 모바일 목록 탭에서만
 }
 
 function selectTab(tab) {
@@ -1968,7 +2219,7 @@ function renderHomeNow() {
   bindHomeCards(track);
 }
 
-// "전체 →": 목록 탭 + 날짜 칩 "진행 중"(값 today) (다른 필터는 풀어서 목록 수 = N)
+// "전체 →": 목록 탭 + 날짜 필터 오늘(값 today → 목록 위 날짜 줄의 '오늘' 칸이 켜짐) (다른 필터는 풀어서 목록 수 = N)
 document.getElementById("homeNowAll").addEventListener("click", function () {
   document.getElementById("searchInput").value = "";
   document.getElementById("categorySelect").value = "all";
