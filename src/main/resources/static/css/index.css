@@ -142,10 +142,11 @@ body {
   width: 18px;
   height: 18px;
 }
-.theme-toggle .icon-moon {
+/* ☾/☀ 그림: 테마에 맞춰 하나만 (PC 상단 바 · 모바일 홈 상단 단추 공통) */
+[data-theme-toggle] .icon-moon {
   display: var(--icon-moon);
 }
-.theme-toggle .icon-sun {
+[data-theme-toggle] .icon-sun {
   display: var(--icon-sun);
 }
 .theme-mode {
@@ -2061,6 +2062,11 @@ body {
     justify-content: space-between;
     height: 56px;
     padding: 0 8px 0 20px;
+  }
+  /* 오른쪽 단추 묶음: ☾/☀ 화면 모드 · 🔍 검색 */
+  .home-head-actions {
+    display: flex;
+    align-items: center;
   }
   .home-logo {
     display: flex;
