@@ -18,6 +18,8 @@
   --accent-ink: #93391f; /* D-day 배지 · 선택 칩 글자 */
   --blue-soft: #e6eef6; /* 오픈예정 배지 바탕 */
   --blue: #2d5b88; /* 오픈예정 배지 글자 */
+  --green-soft: #e7efe1; /* 축제 기본 그림 바탕 (P6 사진 없는 행사) */
+  --green: #3f5f33; /* 축제 기본 그림 글자 */
   --gray-soft: #eceae6; /* 종료 배지 바탕 */
   --gray: #6b6660; /* 종료 배지 글자 */
   --shadow-float: 0 6px 18px rgba(0, 0, 0, 0.12); /* 지도 위에 떠 있는 카드에만 */
@@ -51,6 +53,8 @@
     --accent-ink: #f0a285;
     --blue-soft: #1c2733;
     --blue: #8db4dc;
+    --green-soft: #1d2619;
+    --green: #a3c48f;
     --gray-soft: #2a2825;
     --gray: #a9a39b;
     --shadow-float: 0 6px 18px rgba(0, 0, 0, 0.5);
@@ -84,6 +88,8 @@
   --accent-ink: #f0a285;
   --blue-soft: #1c2733;
   --blue: #8db4dc;
+  --green-soft: #1d2619;
+  --green: #a3c48f;
   --gray-soft: #2a2825;
   --gray: #a9a39b;
   --shadow-float: 0 6px 18px rgba(0, 0, 0, 0.5);
