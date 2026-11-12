@@ -88,6 +88,10 @@ class SocialLoginNoPersonalDataTest {
     assertThat(loginMethodRepository.findByProviderAndProviderId("google", "소셜시험-구글")).isPresent();
     assertThat(loginMethodRepository.findByProviderAndProviderId("naver", "소셜시험-네이버")).isPresent();
     assertThat(java.util.Set.of(kakao.getId(), google.getId(), naver.getId())).hasSize(3);
+    // 닉네임(V9)은 소셜 이름을 가져오지 않음 — 로그인 직후엔 비어 있고, /api/auth/me 가 서비스의 랜덤 이름으로 채움
+    for (Member m : java.util.List.of(kakao, google, naver)) {
+      assertThat(memberRepository.findById(m.getId()).orElseThrow().getNickname()).isNull();
+    }
   }
 
   @Test

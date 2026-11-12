@@ -1,5 +1,6 @@
 package com.suwon.festival.controller;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -168,7 +169,11 @@ public class AuthController {
           .map(loginMethod -> loginMethod.getProvider())
           .toList();
       result.put("linkedProviders", linkedProviders);
-      result.put("nickname", memberService.ensureNickname(memberId)); // 없으면(가입 직후 · 옛 회원) 이때 랜덤으로 붙임
+      try {
+        result.put("nickname", memberService.ensureNickname(memberId)); // 없으면(가입 직후 · 옛 회원) 이때 랜덤으로 붙임
+      } catch (DataIntegrityViolationException sameMoment) {
+        // 다른 새 회원이 같은 순간 같은 랜덤 이름을 먼저 저장(UNIQUE) → 이번 응답엔 빼고, 다음 /me 때 다시 붙임
+      }
     }
 
     return result;
