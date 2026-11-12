@@ -1081,6 +1081,15 @@ body {
       width: calc(262px * 2 + 12px + 32px);
     }
   }
+  /* 더 좁으면(1025~1089px 화면 + 목록 칸) 바깥 화살표가 화면 밖 · 목록 칸으로 넘침 → 줄 안쪽으로 (#241 검증) */
+  @container (max-width: 640px) {
+    .strip-arrow.prev {
+      left: 4px;
+    }
+    .strip-arrow.next {
+      right: 4px;
+    }
+  }
 
   /* ----- PC 길찾기 작은 창: [길찾기] 버튼 위 300px (위치는 index.js placeRoutePop) ----- */
   .route-pop:not([hidden]) {

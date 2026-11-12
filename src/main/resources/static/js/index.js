@@ -1064,6 +1064,7 @@ document.getElementById("modalImage").addEventListener("error", function () {
 
 // ===== 상세정보 큰 팝업창 열기/닫기 =====
 function openDetailModal(event) {
+  closeRoutePop(false); // PC 길찾기 작은 창이 상세 뒤에 남아 Esc 가 그 창부터 닫지 않게 (#241 검증)
   // 사진이 없으면(인스타 행사) 기본 그림. 불러오다 실패해도 기본 그림 (위 error 처리)
   document.getElementById("modalImage").src = event.imageUrl || "";
   showModalImage(!!event.imageUrl, event);
@@ -2912,7 +2913,7 @@ function renderPreviewStrip(sortedItems) {
         pc.lines +
         '<div class="preview-actions">' +
         '<button type="button" class="preview-detail">상세 보기</button>' +
-        '<button type="button" class="preview-route" aria-expanded="false">' +
+        '<button type="button" class="preview-route">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11 21 3l-8 18-2-8-8-2z" /></svg><span class="route-label">길찾기</span></button>' +
         "</div>" +
         "</div>" +
@@ -3140,6 +3141,7 @@ var stripScrollTimer = null;
 document
   .getElementById("previewStrip")
   .addEventListener("scroll", function () {
+    if (routePopEvent) closeRoutePop(false); // 카드 줄이 밀리면 창을 연 버튼도 움직임 (#241 검증)
     clearTimeout(stripScrollTimer);
     stripScrollTimer = setTimeout(function () {
       if (previewEventId === null) return;
@@ -3356,7 +3358,7 @@ function closeRoutePop(returnFocus) {
   routePopButton = null;
   document.getElementById("routePop").hidden = true;
   if (button.isConnected) {
-    button.setAttribute("aria-expanded", "false");
+    button.removeAttribute("aria-expanded"); // 모바일(하단 시트) 버튼엔 없음 — PC 창이 열린 동안만 (#241 검증)
     button.classList.remove("open");
     button.querySelector(".route-label").textContent = "길찾기";
   }
@@ -3513,6 +3515,7 @@ function applyLayout() {
     document.body.classList.remove("sheet-full");
     setMenuOpen(false);
   }
+  updatePreviewLabel(); // PC ↔ 모바일이 바뀌면 카드 tabindex · 안내 연결도 그 화면에 맞춤 (#241 검증)
   if (map) map.relayout(); // 카카오맵은 크기가 바뀌면 다시 계산시켜야 함
 }
 
