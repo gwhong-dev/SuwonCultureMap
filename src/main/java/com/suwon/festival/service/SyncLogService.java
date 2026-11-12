@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,13 +69,21 @@ public class SyncLogService {
     }
   }
 
-  // 재단 마지막 성공 → 화면 "M/D HH:mm 갱신". 없거나 조회 실패면 모두 null (화면은 줄을 숨김)
+  // 재단 마지막 성공 → 화면 "M/D HH:mm 갱신" + 그 뒤 연속 실패 횟수(실패 알림 워크플로용)
+  // 성공이 없으면 lastSuccessAt null, 조회 실패면 모두 null (화면은 줄을 숨기고 워크플로는 판단 보류)
   public SyncStatusResponse foundationStatus() {
     try {
-      return repository.findFirstBySourceAndStatusOrderByFinishedAtDescIdDesc(SyncLog.Source.SWCF, SyncLog.Status.SUCCESS)
+      Optional<SyncLog> last = repository.findFirstBySourceAndStatusOrderByFinishedAtDescIdDesc(SyncLog.Source.SWCF,
+          SyncLog.Status.SUCCESS);
+      // 실패 행은 성공보다 나중에 저장될수록 id 가 큼 → "마지막 성공 뒤" = id 가 더 큰 실패
+      long failures = last
+          .map(s -> repository.countBySourceAndStatusAndIdGreaterThan(SyncLog.Source.SWCF, SyncLog.Status.FAIL, s.getId()))
+          .orElseGet(() -> repository.countBySourceAndStatus(SyncLog.Source.SWCF, SyncLog.Status.FAIL));
+      int consecutive = (int) Math.min(failures, Integer.MAX_VALUE);
+      return last
           .map(s -> new SyncStatusResponse(s.getFinishedAt().truncatedTo(ChronoUnit.SECONDS).format(ISO_SECONDS),
-              s.getCreatedCount(), s.getUpdatedCount()))
-          .orElseGet(SyncStatusResponse::none);
+              s.getCreatedCount(), s.getUpdatedCount(), consecutive))
+          .orElseGet(() -> new SyncStatusResponse(null, null, null, consecutive));
     } catch (RuntimeException e) {
       log.warn("동기화 이력 조회 실패 {}", e.getClass().getSimpleName());
       return SyncStatusResponse.none();

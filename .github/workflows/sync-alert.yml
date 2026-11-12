@@ -1,0 +1,37 @@
+# =====================================================
+#  동기화 실패 알림 — 1시간마다 운영 GET /api/sync-status 확인
+#  - 재단 동기화 2회 연속 실패 또는 마지막 성공이 25시간 넘게 지남(예약 2번 놓침):
+#    "sync" 라벨 Issue 자동 생성(이미 열려 있으면 안 만듦) + 이 실행은 실패(빨간불)로 표시
+#  - 다시 성공: 열린 Issue 에 복구 시각을 남기고 자동으로 닫음
+#  - 성공 이력이 없거나(막 배포) 응답이 없으면 판단 보류 (응답 없음은 uptime.yml 이 맡음)
+#  - 실제 판단 · Issue 처리는 deploy/sync-alert.js (시험: src/test/js/sync-alert.test.js)
+#  - 서버에는 GitHub 토큰을 두지 않음: 공개 API 의 횟수 · 시각만 읽고 Issue 는 여기서 처리
+# =====================================================
+name: Sync Alert
+
+on:
+  schedule:
+    - cron: "17 * * * *" # 1시간마다 (동기화 06 · 18시 한국 시간 → 늦어도 약 1시간 안에 알림)
+  workflow_dispatch: # Actions 화면에서 바로 확인
+
+permissions:
+  contents: read
+  issues: write # 동기화 Issue 생성 · 닫기
+
+concurrency:
+  group: sync-alert
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: 재단 동기화 확인
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SYNC_STATUS_URL: ${{ vars.SYNC_STATUS_URL || 'https://suwonbible.com/api/sync-status' }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: 동기화 상태 · Issue 처리
+        run: node deploy/sync-alert.js
