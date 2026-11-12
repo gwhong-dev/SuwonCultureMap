@@ -92,6 +92,7 @@ test("index.css PC 부분에 고정 색 없음 (브랜드 버튼 · 찜 별 · �
     .slice(0, indexCss.indexOf("@media (max-width: 1024px)"))
     .replace(/\/\*[\s\S]*?\*\//g, "") // 주석 빼기
     .replace(/\.login-btn\.(kakao|google|naver) \{[^}]*\}/g, "") // 소셜 로그인 버튼은 각 회사 색
+    .replace(/\.route-pop-icon\.(kakao|naver) \{[^}]*\}/g, "") // PC 길찾기 창의 지도 앱 표시도 각 회사 색
     .replace(/\.favorite-(badge|btn)[^{]*\{[^}]*\}/g, "") // 찜 별 주황 (두 테마 같은 색)
     .replace(/\.modal-close \{[^}]*\}/g, ""); // 사진 위 흰 ×
   assert.deepStrictEqual(fixedColors(pc), []);

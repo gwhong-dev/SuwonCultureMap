@@ -50,6 +50,10 @@ function createDialogFocus(options) {
       delete returnTo[name];
       if (isShown(target)) focusEl(target);
     },
+    // name 창이 닫혔지만 포커스는 그대로 둠 (사용자가 다른 곳을 눌러 닫음 — 누른 자리에 포커스가 있어야 함)
+    forget: function (name) {
+      delete returnTo[name];
+    },
   };
 }
 
