@@ -173,6 +173,7 @@ function groupByLocation(items) {
 var locationMarkers = [];
 
 function renderLocationMarkers(visibleItems) {
+  stopMarkerHop(); // 튀어오르던 마커 그림이 옛 자리에 남지 않게
   locationMarkers.forEach(function (lm) {
     lm.marker.setMap(null);
   });
@@ -224,6 +225,8 @@ function renderLocationMarkers(visibleItems) {
       marker: marker,
       normalImage: markerImage,
       selectedImage: selectedImage,
+      iconSrc: iconSrc, // 같은 장소 카드 넘김 때 튀어오르는 그림 (hopMarker)
+      bigSize: bigSize,
     };
     locationMarkers.push(locMarker);
     group.forEach(function (item) {
@@ -246,12 +249,15 @@ function compareStartDate(a, b) {
 // 좌표는 재단 API(XML)가 "화성행궁 광장 · 우화관 바깥마당" 행사에 주는 값과 같게 맞춤 → 그 장소 마커와 정확히 겹침
 // level 6 첫 화면에 정조테마공연장 · 수원전통문화관 · 미디어센터 등 성곽 안 행사가 모두 들어옴 (11/9 운영 API 확인)
 var DEFAULT_CENTER = { lat: 37.2818820191942, lng: 127.014394463798 };
+// PC 첫 화면은 한 단계 더 확대 (11/13 확정 시안 P1): 화성행궁 · 방화수류정 · 팔달문 · 지동시장이 한 화면에 들어오는 정도
+// 모바일은 그대로 6 (P3 담당)
+var PC_DEFAULT_LEVEL = 4;
 
 kakao.maps.load(function () {
   var mapContainer = document.getElementById("map");
   var mapOption = {
     center: new kakao.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng),
-    level: 6,
+    level: mobileQuery.matches ? 6 : PC_DEFAULT_LEVEL,
   };
   map = new kakao.maps.Map(mapContainer, mapOption);
 
@@ -1423,6 +1429,11 @@ function closeDetailModal() {
 // ===== ESC 키로 길찾기 · 공유 창 · 상세 모달 닫기 =====
 document.addEventListener("keydown", function (e) {
   if (e.key === "Escape") {
+    // PC 길찾기 작은 창이 열려 있으면 그것만 닫음
+    if (routePopEvent) {
+      closeRoutePop(true);
+      return;
+    }
     // 길찾기 · 공유 창이 상세 위에 열려 있으면 그것만 닫음
     if (!document.getElementById("routeSheet").hidden) {
       closeRouteSheet();
@@ -2780,8 +2791,58 @@ function distanceSq(a, b) {
   return dLat * dLat + dLng * dLng;
 }
 
+// PC 카드 기간 줄 뒤 요약: 진행일 확정이면 "총 N회" 또는 요일 요약(주말 · 매일 …), 아니면 없음 (schedule-format.js)
+function pcPeriodSummary(event) {
+  if (!hasRunDates(event) || event.startDate === event.endDate) return null;
+  if (event.dates.length <= SCHEDULE_LIST_MAX) return "총 " + event.dates.length + "회";
+  return weekdaySummary(event) || "총 " + event.dates.length + "회";
+}
+
+// PC 카드 기간 줄 · 장소 줄 (모바일은 아래 .preview-sub 한 줄 그대로 — CSS 로 서로 숨김)
+var PC_CARD_ICON_CALENDAR =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>';
+var PC_CARD_ICON_PIN =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>';
+function pcCardInfoHtml(item) {
+  var period = pcCardPeriod(item.event, koreaYear(Date.now()), pcPeriodSummary(item.event)); // pc-card.js
+  if (item.runMatch === "maybe") period += " · " + MAYBE_RUN_NOTE;
+  var place = pcCardPlace(eventPlace(item.event), eventDistrict(item.event)); // pc-card.js
+  var badges = pcCardBadges(item.event, eventStatus, ddayText) // pc-card.js
+    .map(function (b) {
+      return '<span class="pc-badge ' + b.kind + '">' + escapeHtml(b.text) + "</span>";
+    })
+    .join("");
+  return {
+    badges: badges ? '<div class="pc-badges">' + badges + "</div>" : "",
+    lines:
+      '<div class="preview-date" title="' + escapeHtml(period) + '">' + PC_CARD_ICON_CALENDAR + "<span>" + escapeHtml(period) + "</span></div>" +
+      (place
+        ? '<div class="preview-place" title="' + escapeHtml(place) + '">' + PC_CARD_ICON_PIN + "<span>" + escapeHtml(place) + "</span></div>"
+        : ""),
+  };
+}
+
+// 카드 줄을 다시 그릴 때(찜 · 필터) 카드 줄 안 포커스를 같은 카드 · 같은 버튼으로 되돌림 (Space 찜 뒤 키보드가 이어지게)
+function stripFocusSpot() {
+  var active = document.activeElement;
+  var strip = document.getElementById("previewStrip");
+  if (!active || !strip.contains(active)) return null;
+  var card = active.closest(".preview-card");
+  if (!card) return null;
+  return { id: card.dataset.eventId, part: active === card ? null : active.className.split(" ")[0] };
+}
+function restoreStripFocus(spot) {
+  if (!spot) return;
+  var card = findPreviewCard(spot.id);
+  if (!card) return;
+  var target = spot.part ? card.querySelector("." + spot.part) || card : card;
+  target.focus({ preventScroll: true });
+}
+
 function renderPreviewStrip(sortedItems) {
   var strip = document.getElementById("previewStrip");
+  var focusSpot = stripFocusSpot();
+  closeRoutePop(false); // 카드(= 창을 연 버튼)를 새로 그리면 창 자리가 사라짐
   strip.innerHTML = "";
 
   // 같은 장소 행사끼리 붙여서 배치 (같은 장소 1/3 → 2/3 → 3/3), 장소 묶음은 탭한 마커에서 가까운 순
@@ -2812,6 +2873,7 @@ function renderPreviewStrip(sortedItems) {
       var district = eventDistrict(item.event);
       if (district) sub.push(district);
 
+      var pc = pcCardInfoHtml(item); // PC 카드: 배지(진행 중 · 오픈 예정) · 기간 줄 · 장소 줄 (11/13 확정 시안 P1)
       var card = document.createElement("article");
       card.className = "preview-card";
       card.dataset.eventId = item.event.id;
@@ -2821,16 +2883,18 @@ function renderPreviewStrip(sortedItems) {
         '" alt="" loading="lazy">' +
         '<div class="preview-body">' +
         badgeRowHtml(item.event) +
+        pc.badges +
         '<div class="preview-title">' +
         escapeHtml(item.event.title) +
         "</div>" +
         '<div class="preview-sub">' +
         sub.join(" · ") +
         "</div>" +
+        pc.lines +
         '<div class="preview-actions">' +
         '<button type="button" class="preview-detail">상세 보기</button>' +
-        '<button type="button" class="preview-route">' +
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11 21 3l-8 18-2-8-8-2z" /></svg>길찾기</button>' +
+        '<button type="button" class="preview-route" aria-expanded="false">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11 21 3l-8 18-2-8-8-2z" /></svg><span class="route-label">길찾기</span></button>' +
         "</div>" +
         "</div>" +
         favButtonHtml(favoriteEventIds.has(item.event.id));
@@ -2841,7 +2905,8 @@ function renderPreviewStrip(sortedItems) {
       });
       card.querySelector(".preview-route").addEventListener("click", function (e) {
         e.stopPropagation(); // 길찾기 창만 열고 상세는 열지 않음
-        openRouteSheet(item.event);
+        if (mobileQuery.matches) openRouteSheet(item.event); // 모바일 = 하단 시트 그대로
+        else toggleRoutePop(item.event, this); // PC = 버튼 위 작은 창 (하단 시트 모양이 PC 에서 깨지던 것)
       });
       card.querySelector(".card-fav").addEventListener("click", function (e) {
         e.stopPropagation();
@@ -2852,6 +2917,7 @@ function renderPreviewStrip(sortedItems) {
     });
   });
   updatePreviewLabel();
+  restoreStripFocus(focusSpot);
 }
 
 function findPreviewCard(eventId) {
@@ -2867,15 +2933,88 @@ function updatePreviewLabel() {
   var index = cards.findIndex(function (card) {
     return Number(card.dataset.eventId) === previewEventId;
   });
+  var pc = !mobileQuery.matches;
   cards.forEach(function (card, i) {
     card.classList.toggle("current", i === index);
     if (i === index) card.setAttribute("aria-current", "true"); // 보조기기도 지금 카드를 알게 (#215 검증 ⑦)
     else card.removeAttribute("aria-current");
+    // PC: 카드 줄에 Tab 으로 한 번 들어오면 지금 카드에 포커스 → Enter 상세 · Space 찜 · ← → (11/13 확정 시안 P1)
+    if (pc) {
+      card.tabIndex = i === Math.max(index, 0) ? 0 : -1;
+      card.setAttribute("aria-describedby", "previewHint");
+    } else {
+      card.removeAttribute("tabindex");
+      card.removeAttribute("aria-describedby");
+    }
   });
   document.getElementById("previewLabel").textContent = stripLabelText(!!previewOrigin, index, cards.length); // strip-nav.js
   var arrows = stripArrowState(index, cards.length); // strip-nav.js
   document.getElementById("previewPrev").hidden = !arrows.prev;
   document.getElementById("previewNext").hidden = !arrows.next;
+  updatePlaceBand();
+}
+
+function previewItem(eventId) {
+  return markerList.find(function (it) {
+    return it.event.id === eventId;
+  });
+}
+
+// PC 카드 줄 위 띠 "이 장소 행사 1 / 6 · 장소" — 지금 카드의 장소에 행사가 여럿일 때만 (pc-card.js placeBand)
+function updatePlaceBand() {
+  var item = previewEventId === null ? null : previewItem(previewEventId);
+  var band = item ? placeBand(item.groupIndex, item.groupSize, eventPlace(item.event)) : null;
+  var el = document.getElementById("previewPlaceBand");
+  el.hidden = !band;
+  if (!band) return;
+  document.getElementById("previewPlaceBandCount").textContent = band.count;
+  document.getElementById("previewPlaceBandName").textContent = band.place ? "· " + band.place : "";
+}
+
+// 같은 장소 다음 카드로 넘기면 지도가 움직이지 않음 → 마커가 한 번 튀어오르고 고리가 퍼져 넘긴 걸 알림 (11/13 확정 시안 P1)
+// 카카오 마커는 그림이라 CSS 로 못 움직임 → 같은 그림을 같은 자리 오버레이로 잠깐 띄워 움직이고 원래 마커는 그동안 숨김
+var markerHop = null;
+function hopMarker(locMarker) {
+  stopMarkerHop();
+  var box = document.createElement("div");
+  box.className = "marker-hop";
+  box.style.width = locMarker.bigSize + "px"; // 고른 마커(크게 그린 그림)와 같은 크기
+  box.style.height = locMarker.bigSize + "px";
+  var ring = document.createElement("span");
+  ring.className = "marker-hop-ring";
+  var img = document.createElement("img");
+  img.className = "marker-hop-icon";
+  img.alt = "";
+  img.src = locMarker.iconSrc;
+  box.appendChild(ring);
+  box.appendChild(img);
+  var overlay = new kakao.maps.CustomOverlay({
+    position: locMarker.marker.getPosition(),
+    content: box,
+    xAnchor: 0.5,
+    yAnchor: 1, // 마커 그림 기준점(아래 가운데)과 같게
+    zIndex: 11,
+  });
+  overlay.setMap(map);
+  locMarker.marker.setOpacity(0);
+  markerHop = { overlay: overlay, locMarker: locMarker, timer: setTimeout(stopMarkerHop, 900) };
+}
+function stopMarkerHop() {
+  if (!markerHop) return;
+  clearTimeout(markerHop.timer);
+  markerHop.overlay.setMap(null);
+  markerHop.locMarker.marker.setOpacity(1);
+  markerHop = null;
+}
+
+// 카드를 바꿀 때 마커 강조 + (같은 장소면) 튀어오름
+function moveMarkerTo(prevId, nextId) {
+  var prev = prevId === null ? null : previewItem(prevId);
+  var next = previewItem(nextId);
+  selectMarker(nextId, true);
+  // 모바일 카드 줄은 그대로 (P3 담당) — PC 만
+  var reduce = mobileQuery.matches || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (next && shouldHopMarker(prev && prev.locMarker, next.locMarker, prevId, nextId, reduce)) hopMarker(next.locMarker); // pc-card.js
 }
 
 // 카드가 화면 가운데 오도록 가로 스크롤 (smooth = 화살표 · 휠로 넘길 때 부드럽게)
@@ -2897,10 +3036,16 @@ function stepPreview(delta) {
   var target = stripStepTarget(index, delta, cards.length); // strip-nav.js
   if (target < 0 || target === index) return;
   var focused = document.activeElement; // 화살표가 숨기 전에 기억
+  var prevId = previewEventId;
   previewEventId = Number(cards[target].dataset.eventId);
-  selectMarker(previewEventId, true);
+  closeRoutePop(false); // 창을 연 카드에서 벗어남
+  moveMarkerTo(prevId, previewEventId);
   updatePreviewLabel();
   scrollStripTo(cards[target], true);
+  // 카드에 포커스가 있었으면(키보드 ← →) 새 지금 카드로 포커스도 옮김
+  if (focused && focused.classList && focused.classList.contains("preview-card")) {
+    cards[target].focus({ preventScroll: true });
+  }
   // 끝에 닿아 누른 화살표가 숨으면 포커스가 사라지지 않게 반대쪽 화살표로 (키보드 사용자)
   var prev = document.getElementById("previewPrev");
   var next = document.getElementById("previewNext");
@@ -2991,8 +3136,10 @@ document
       if (index < 0) return;
       var id = Number(cards[index].dataset.eventId);
       if (id !== previewEventId) {
+        var prevId = previewEventId;
         previewEventId = id;
-        selectMarker(id, true);
+        closeRoutePop(false);
+        moveMarkerTo(prevId, id);
         updatePreviewLabel();
       }
     }, 120);
@@ -3005,12 +3152,32 @@ document.getElementById("previewPrev").addEventListener("click", function () {
 document.getElementById("previewNext").addEventListener("click", function () {
   stepPreview(1);
 });
-// 키보드 ← → : 하단 카드가 떠 있으면 포커스가 어디 있든 한 장씩 (상세 · 길찾기 · 공유 창 · 검색 화면이 열렸으면 그대로)
+// 키보드 ← → : 한 장씩 (상세 · 길찾기 · 공유 창 · 검색 화면이 열렸으면 그대로)
+//  - PC: 카드 줄(카드 · 카드 안 버튼 · ‹ ›)에 포커스가 있을 때만 (11/13 확정 시안 P1 — 지도 · 목록에서 화살표가 카드를 넘기지 않게)
+//  - 모바일: 지금처럼 하단 카드가 떠 있으면 포커스가 어디 있든 (P3 담당)
+// Enter = 상세 · Space = 찜 (PC, 카드 자체에 포커스가 있을 때만 — pc-card.js pcCardKeyAction)
 document.addEventListener("keydown", function (e) {
   if (previewEventId === null || !document.getElementById("previewArea").classList.contains("show")) return;
   if (document.body.classList.contains("detail-open") || searchOpen) return;
   if (!document.getElementById("routeSheet").hidden || !document.getElementById("shareSheet").hidden) return;
   var el = document.activeElement || document.body;
+  var inStrip = document.getElementById("previewArea").contains(el);
+  if (!mobileQuery.matches && !inStrip) return;
+  var onCard = !mobileQuery.matches && el.classList.contains("preview-card");
+  var action = pcCardKeyAction({
+    key: e.key,
+    onCard: onCard,
+    alt: e.altKey || e.ctrlKey || e.metaKey || e.shiftKey,
+    handled: e.defaultPrevented,
+  }); // pc-card.js
+  if (action) {
+    e.preventDefault(); // Space 가 페이지를 내리지 않게
+    var item = previewItem(Number(el.dataset.eventId));
+    if (!item) return;
+    if (action === "detail") openDetailModal(item.event);
+    else toggleFavorite(item.event.id);
+    return;
+  }
   var step = stripKeyStep({
     key: e.key,
     tag: el.tagName,
@@ -3123,6 +3290,81 @@ function closeRouteSheet() {
   nav.close("route");
   syncUrlState();
 }
+// ----- PC 길찾기 작은 창 (11/13 확정 시안 P1): 하단 카드 [길찾기] 버튼 위 300px 창 -----
+// 전엔 PC 에서도 위 하단 시트를 열었는데 시트 모양 CSS 가 모바일 구간에만 있어 글자가 지도 위에 흩어졌음
+// 모바일 하단 시트는 그대로. 주소(?route=1) 기록은 모바일만 (PC 는 지도 앱으로 넘어가지 않고 새 탭)
+var routePopEvent = null;
+var routePopButton = null;
+function toggleRoutePop(event, button) {
+  if (routePopEvent && routePopButton === button) {
+    closeRoutePop(true);
+    return;
+  }
+  closeRoutePop(false);
+  routePopEvent = event;
+  routePopButton = button;
+  var place = eventPlace(event) || event.title;
+  var address = extractAddress(event.info);
+  document.getElementById("routePopAddr").textContent = address ? address + " · " + place : place;
+  document.getElementById("routePopCopy").hidden = !address;
+  document.getElementById("routePopKakao").href = kakaoRouteUrl(place, event.latitude, event.longitude); // route-links.js
+  document.getElementById("routePopNaver").href = naverRouteUrl(place, event.latitude, event.longitude);
+  var pop = document.getElementById("routePop");
+  pop.hidden = false;
+  placeRoutePop();
+  button.setAttribute("aria-expanded", "true");
+  button.classList.add("open");
+  button.querySelector(".route-label").textContent = "길찾기 ▴";
+  dialogFocus.opened("routePop", pop);
+}
+function placeRoutePop() {
+  if (!routePopButton) return;
+  var pop = document.getElementById("routePop");
+  var rect = routePopButton.getBoundingClientRect();
+  var spot = routePopPosition(
+    { left: rect.left, top: rect.top, width: rect.width, bottom: rect.bottom },
+    { width: pop.offsetWidth, height: pop.offsetHeight },
+    { width: window.innerWidth, height: window.innerHeight },
+  ); // pc-card.js
+  pop.style.left = spot.left + "px";
+  pop.style.top = spot.top + "px";
+}
+// returnFocus = 닫은 뒤 [길찾기] 버튼으로 포커스 (× · Esc · 버튼 다시 누름). 카드를 넘기거나 다시 그려 닫을 땐 false
+function closeRoutePop(returnFocus) {
+  if (!routePopEvent) return;
+  var button = routePopButton;
+  routePopEvent = null;
+  routePopButton = null;
+  document.getElementById("routePop").hidden = true;
+  if (button.isConnected) {
+    button.setAttribute("aria-expanded", "false");
+    button.classList.remove("open");
+    button.querySelector(".route-label").textContent = "길찾기";
+  }
+  if (returnFocus) dialogFocus.closed("routePop");
+  else dialogFocus.forget("routePop");
+}
+document.getElementById("routePopClose").addEventListener("click", function () {
+  closeRoutePop(true);
+});
+document.getElementById("routePopCopy").addEventListener("click", function () {
+  if (!routePopEvent) return;
+  copyText(extractAddress(routePopEvent.info) || "").then(
+    function () {
+      showToast("주소를 복사했어요");
+    },
+    function () {
+      showToast("복사하지 못했어요. 주소를 직접 선택해 복사해 주세요");
+    },
+  );
+});
+// 창 바깥을 누르면 닫힘 (창을 연 [길찾기] 버튼은 버튼이 직접 열고 닫음)
+document.addEventListener("click", function (e) {
+  if (!routePopEvent) return;
+  if (document.getElementById("routePop").contains(e.target) || routePopButton.contains(e.target)) return;
+  closeRoutePop(false);
+});
+
 // 카카오맵 웹 링크(/link/to/)는 자동차로만 열림 → 폰에서는 앱 주소(kakaomap://route, 대중교통)를 먼저 열고,
 // 앱이 없어 화면이 그대로면 2.5초 뒤 웹 링크로 넘어감. PC 는 앱이 없으니 웹 링크 그대로(새 탭)
 var isPhone = isAppleMobile || /Android/i.test(navigator.userAgent);
@@ -3200,6 +3442,7 @@ document.addEventListener("click", function (e) {
 
 // ----- 화면 크기 변경 (회전, PC 창 크기 조절) 대응 -----
 function applyLayout() {
+  closeRoutePop(false); // 창 크기가 바뀌면 버튼 자리도 바뀜 (모바일로 넘어가면 PC 창은 없음)
   if (mobileQuery.matches) {
     setSheetState(sheetState);
   } else {

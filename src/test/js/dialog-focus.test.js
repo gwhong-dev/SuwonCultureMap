@@ -96,3 +96,17 @@ test("포커스가 없던 상태(body)에서 열면 닫을 때 옮기지 않음"
   focus.closed("route");
   assert.strictEqual(doc.activeElement, close);
 });
+
+test("forget: 바깥을 눌러 닫은 창은 포커스를 옮기지 않고, 다음에 열면 새 자리를 기억 (PC 길찾기 작은 창)", () => {
+  const firstButton = el("route-1");
+  const secondButton = el("route-2");
+  const close = el("close");
+  const focus = setup(firstButton);
+  focus.opened("routePop", box([close]));
+  focus.forget("routePop");
+  assert.strictEqual(doc.activeElement, close); // 그대로
+  doc.activeElement = secondButton;
+  focus.opened("routePop", box([close]));
+  focus.closed("routePop");
+  assert.strictEqual(doc.activeElement, secondButton);
+});

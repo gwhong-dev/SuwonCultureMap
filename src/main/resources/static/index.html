@@ -134,6 +134,10 @@
       <!-- 하단 카드 ("가까운 순 · 1 / N" + 좌우로 넘기는 카드). 모바일 = 마커를 누르면, PC = 기본으로 늘 표시 (11/11) -->
       <div id="previewArea">
         <span id="previewLabel"></span>
+        <!-- PC 전용: 같은 장소 행사가 여럿이면 카드 줄 위 띠 "이 장소 행사 1 / 6 · 장소" (11/13 확정 시안 P1, pc-card.js placeBand) -->
+        <div id="previewPlaceBand" class="place-band" hidden>
+          <span>이 장소 행사</span><strong id="previewPlaceBandCount"></strong><span id="previewPlaceBandName" class="band-place"></span>
+        </div>
         <div id="previewStripWrap">
           <div id="previewStrip"></div>
           <!-- 마우스 PC 전용 좌우 화살표 (strip-nav.js), 터치 화면에서는 숨김 -->
@@ -144,6 +148,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>
         </div>
+        <!-- PC 전용: 카드 줄 키보드 안내 (카드에 포커스가 있을 때만 동작, pc-card.js pcCardKeyAction) -->
+        <span id="previewHint" class="preview-hint">Enter 상세 · Space 찜 · ← → 넘기기</span>
       </div>
     </div>
     <!-- 모바일 전용: 홈 화면 (docs/design/mobile-design-v1.md 01). 지도 위를 덮고 페이지 전체가 스크롤 -->
@@ -276,6 +282,23 @@
         </div>
       </section>
     </div>
+    <!-- PC 전용: 길찾기 작은 창 — 하단 카드 [길찾기] 버튼 위에 뜸 (11/13 확정 시안 P1, 모바일은 위 하단 시트 그대로) -->
+    <section id="routePop" class="route-pop" role="dialog" aria-modal="false" aria-labelledby="routePopTitle" hidden>
+      <div class="route-pop-head">
+        <strong id="routePopTitle">길찾기</strong>
+        <button id="routePopClose" type="button" class="route-pop-close" aria-label="닫기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </div>
+      <div id="routePopAddr" class="route-pop-addr"></div>
+      <a id="routePopKakao" class="route-pop-link" href="#" target="_blank" rel="noopener">
+        <span class="route-pop-icon kakao" aria-hidden="true">K</span>카카오맵에서 길찾기
+      </a>
+      <a id="routePopNaver" class="route-pop-link" href="#" target="_blank" rel="noopener">
+        <span class="route-pop-icon naver" aria-hidden="true">N</span>네이버 지도에서 길찾기
+      </a>
+      <button id="routePopCopy" type="button" class="route-pop-copy">주소 복사</button>
+    </section>
     <!-- 모바일 전용: 공유 창 (카카오톡으로 보내기 · 링크 복사) -->
     <div id="shareSheet" hidden>
       <section class="route-sheet" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
@@ -403,6 +426,7 @@
     <script src="/nav-history.js"></script>
     <script src="/dialog-focus.js"></script>
     <script src="/strip-nav.js"></script>
+    <script src="/pc-card.js"></script>
     <script src="/calendar-strip.js"></script>
     <script src="/js/index.js"></script>
   </body>
