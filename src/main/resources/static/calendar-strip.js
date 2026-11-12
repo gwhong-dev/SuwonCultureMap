@@ -102,12 +102,18 @@ function dateFilterTitle(filterValue, now) {
   return null;
 }
 
-// PC 목록 위 탭: "open" 진행 중 = 오픈예정이 아닌 행사(운영중 · 날짜 없음, 지난 행사 칩을 켜면 종료도)
-// "upcoming" 진행 예정 = 오픈예정. 두 탭을 합치면 날짜 필터 없는 전체 목록과 같음. null = 탭 안 씀(모바일 · 날짜 고름)
+// PC 목록 위 탭: "open" 진행 중 = 운영중 · 날짜 없음 (종료는 안 셈), "upcoming" 진행 예정 = 오픈예정
+// 두 탭을 합치면 날짜 필터 없는 기본 목록(지난 행사 빼고)과 같음. null = 탭 안 씀
 function matchesStatusTab(event, tab, now) {
   if (!tab) return true;
-  var upcoming = calSchedule.eventStatus(event, now) === "upcoming";
-  return tab === "upcoming" ? upcoming : !upcoming;
+  var status = calSchedule.eventStatus(event, now);
+  return tab === "upcoming" ? status === "upcoming" : status !== "upcoming" && status !== "ended";
+}
+
+// PC 진행 탭을 걸지 않는 경우: 모바일 · 날짜를 고름 · 검색어 · '찜' 분류 · 지난 행사 보기
+// (검색 · 찜 · 지난 행사는 "그 행사를 찾는" 목록이라 탭 때문에 0건이 되지 않게 전부 보여 줌)
+function statusTabApplies(state) {
+  return !state.mobile && state.dateValue === "all" && !state.keyword && state.category !== "찜" && !state.showPast;
 }
 
 // 달력에서 오늘 전 날짜는 못 고름 (지난 행사는 따로 "지난 행사" 칩)
@@ -131,6 +137,7 @@ if (typeof module !== "undefined") {
     dayTitle: dayTitle,
     dateFilterTitle: dateFilterTitle,
     matchesStatusTab: matchesStatusTab,
+    statusTabApplies: statusTabApplies,
     isPastDay: isPastDay,
   };
 }

@@ -16,6 +16,7 @@ const {
   dayTitle,
   dateFilterTitle,
   matchesStatusTab,
+  statusTabApplies,
   isPastDay,
 } = require("../../main/resources/static/calendar-strip.js");
 const { filterDays, matchRunDays } = require("../../main/resources/static/schedule-format.js");
@@ -116,7 +117,7 @@ test("제목 글자: 날짜 · 오늘 · 이번 주말 · 7일 안, 필터 없�
   assert.strictEqual(dateFilterTitle("all", NOW), null);
 });
 
-test("PC 탭: 진행 중 + 진행 예정 = 전체 (날짜 없는 행사는 진행 중 쪽)", () => {
+test("PC 탭: 진행 중 + 진행 예정 = 지난 행사 뺀 전체 (날짜 없는 행사는 진행 중, 종료는 어느 탭에도 안 셈)", () => {
   const open = { startDate: "2026-11-01", endDate: "2026-11-20" };
   const upcoming = { startDate: "2026-11-20", endDate: "2026-11-22" };
   const noDate = { startDate: null, endDate: null };
@@ -126,8 +127,20 @@ test("PC 탭: 진행 중 + 진행 예정 = 전체 (날짜 없는 행사는 진�
   assert.ok(matchesStatusTab(upcoming, "upcoming", NOW));
   assert.ok(!matchesStatusTab(upcoming, "open", NOW));
   assert.ok(matchesStatusTab(noDate, "open", NOW));
-  assert.ok(matchesStatusTab(ended, "open", NOW)); // 지난 행사 칩을 켰을 때만 목록에 남음 (그 판정은 따로)
-  assert.ok(matchesStatusTab(upcoming, null, NOW)); // 탭 안 씀 = 다 통과
+  assert.ok(!matchesStatusTab(ended, "open", NOW)); // 검증 ⚠️ 반영: "진행 중" 탭에 종료 행사가 섞이지 않음
+  assert.ok(!matchesStatusTab(ended, "upcoming", NOW));
+  assert.ok(matchesStatusTab(ended, null, NOW)); // 탭 안 씀 = 다 통과
+});
+
+test("PC 진행 탭이 걸리는 때: PC · 날짜 안 고름 · 검색어 없음 · 찜 아님 · 지난 행사 끔 (검증 ⚠️ 반영)", () => {
+  const base = { mobile: false, dateValue: "all", keyword: "", category: "all", showPast: false };
+  assert.ok(statusTabApplies(base));
+  assert.ok(statusTabApplies({ ...base, category: "공연" })); // 분류는 같이 걸림
+  assert.ok(!statusTabApplies({ ...base, mobile: true }));
+  assert.ok(!statusTabApplies({ ...base, dateValue: "2026-11-14" }));
+  assert.ok(!statusTabApplies({ ...base, keyword: "합창단" })); // 오픈예정 행사 이름을 검색해도 0건이 되지 않게
+  assert.ok(!statusTabApplies({ ...base, category: "찜" }));
+  assert.ok(!statusTabApplies({ ...base, showPast: true }));
 });
 
 test("지난 날짜는 못 고름 (오늘은 고름)", () => {

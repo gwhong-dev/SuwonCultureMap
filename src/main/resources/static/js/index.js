@@ -376,6 +376,12 @@ function showEvents(events) {
     ),
   );
 
+  // 공유 링크가 오픈예정 행사면 PC 목록 탭도 "진행 예정"으로 → 지도 · 목록에서 그 행사가 보이게
+  var sharedId = Number(initialParams.get("event"));
+  events.forEach(function (event) {
+    if (event.id === sharedId && matchesStatusTab(event, "upcoming")) pcStatusTab = "upcoming";
+  });
+
   filterMarkers();
   renderHome();
   if (searchOpen) renderSearch(); // 받는 중에 검색 화면을 열었으면 행을 채움
@@ -1681,9 +1687,17 @@ var calShownMonth = null; // 달력에 보이는 달 { year, month }
 var lastDateBaseItems = []; // 마지막 필터의 "날짜 빼고 통과한 행사" (달력 넘기기 등 필터 없이 다시 그릴 때)
 var lastDateVisibleCount = 0;
 
-// PC 진행 탭은 날짜를 안 골랐을 때만 걸림 (모바일은 탭이 없음)
+// PC 진행 탭은 날짜 · 검색어 · '찜' · 지난 행사가 없을 때만 걸림 (모바일은 탭이 없음, calendar-strip.js statusTabApplies)
 function currentStatusTab() {
-  return !mobileQuery.matches && document.getElementById("dateFilter").value === "all" ? pcStatusTab : null;
+  return statusTabApplies({
+    mobile: mobileQuery.matches,
+    dateValue: document.getElementById("dateFilter").value,
+    keyword: document.getElementById("searchInput").value.trim(),
+    category: document.getElementById("categorySelect").value,
+    showPast: document.getElementById("showPastCheckbox").checked,
+  })
+    ? pcStatusTab
+    : null;
 }
 
 // 날짜 필터 바꾸기. 날짜 하나("2026-11-14")는 #dateFilter 에 없는 값이라 숨은 옵션 하나를 그 날짜로 맞춰 둠
@@ -1725,8 +1739,10 @@ function renderDatePanel(baseItems, visibleCount, favScreen) {
   panel.classList.toggle("cal-open", calOpen);
 
   // PC 탭: 날짜를 골랐으면 진행 탭 대신 "달력" 탭이 켜지고 고른 날짜를 보여 줌
+  // 검색어 · 찜 · 지난 행사 보기 중엔 진행 탭이 안 걸리므로 둘 다 꺼진 모양 (누르면 그 탭으로 거름)
+  var appliedTab = currentStatusTab();
   document.querySelectorAll("#datePanel .pc-date-tab").forEach(function (tab) {
-    var on = !dayMode && tab.dataset.status === pcStatusTab;
+    var on = tab.dataset.status === appliedTab;
     tab.classList.toggle("active", on);
     tab.setAttribute("aria-pressed", on ? "true" : "false");
   });
@@ -1848,9 +1864,19 @@ function openCalendar(open) {
 function onDayClick(e) {
   var button = e.target.closest("button[data-day]");
   if (!button || button.disabled) return;
-  if (!mobileQuery.matches) calOpen = false; // PC 달력은 고르면 닫힘 (모바일은 펼친 채 아래 목록이 바뀜)
+  var closesCalendar = calOpen && !mobileQuery.matches; // PC 달력은 고르면 닫힘 (모바일은 펼친 채 아래 목록이 바뀜)
+  if (closesCalendar) calOpen = false;
   setDateFilter(nextDayFilter(document.getElementById("dateFilter").value, button.dataset.day));
+  if (closesCalendar) document.getElementById("pcCalBtn").focus(); // 누른 칸이 숨겨져도 초점은 달력 버튼으로
 }
+// 달력에서 Esc = 접기, 초점은 펼친 버튼으로 (PC 달력 ▾ · 모바일 달력 펼치기)
+document.getElementById("calMonth").addEventListener("keydown", function (e) {
+  if (e.key !== "Escape") return;
+  e.preventDefault();
+  e.stopPropagation(); // 페이지 전체 Esc(상세 닫기 등)로 넘기지 않음
+  openCalendar(false);
+  document.getElementById(mobileQuery.matches ? "calOpenBtn" : "pcCalBtn").focus();
+});
 document.getElementById("dateStrip").addEventListener("click", onDayClick);
 document.getElementById("calGrid").addEventListener("click", onDayClick);
 document.getElementById("calOpenBtn").addEventListener("click", function () {
