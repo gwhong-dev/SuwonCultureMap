@@ -1,5 +1,6 @@
 package com.suwon.festival.controller;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -13,6 +14,7 @@ import com.suwon.festival.repository.LoginMethodRepository;
 import com.suwon.festival.repository.MemberRepository;
 import com.suwon.festival.security.OAuthStateManager;
 import com.suwon.festival.service.AuthService;
+import com.suwon.festival.service.MemberService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -35,6 +37,7 @@ public class AuthController {
   private final LoginMethodRepository loginMethodRepository;
   private final MemberRepository memberRepository;
   private final OAuthStateManager stateManager;
+  private final MemberService memberService;
 
   // ===== 소셜 로그인 설정값 (프로필별 properties에서 주입) =====
   @Value("${kakao.rest-api-key}")
@@ -166,6 +169,11 @@ public class AuthController {
           .map(loginMethod -> loginMethod.getProvider())
           .toList();
       result.put("linkedProviders", linkedProviders);
+      try {
+        result.put("nickname", memberService.ensureNickname(memberId)); // 없으면(가입 직후 · 옛 회원) 이때 랜덤으로 붙임
+      } catch (DataIntegrityViolationException sameMoment) {
+        // 다른 새 회원이 같은 순간 같은 랜덤 이름을 먼저 저장(UNIQUE) → 이번 응답엔 빼고, 다음 /me 때 다시 붙임
+      }
     }
 
     return result;

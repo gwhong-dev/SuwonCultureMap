@@ -50,11 +50,12 @@ class SocialLoginNoPersonalDataTest {
   }
 
   @Test
-  void 이메일_비밀번호_닉네임_칸이_없음() {
+  void 이메일_비밀번호_칸이_없음() {
+    // NICKNAME 은 V9 부터 있음 — 소셜이 준 이름이 아니라 서비스가 만든 랜덤 이름(회원이 수정). 소셜 이름을 안 읽는 건 아래 시험이 확인
     Integer count = jdbcTemplate.queryForObject(
         "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS"
             + " WHERE UPPER(TABLE_NAME) IN ('MEMBER', 'LOGIN_METHOD')"
-            + " AND UPPER(COLUMN_NAME) IN ('EMAIL', 'PASSWORD', 'NICKNAME')",
+            + " AND UPPER(COLUMN_NAME) IN ('EMAIL', 'PASSWORD', 'NAME', 'PHONE')",
         Integer.class);
 
     assertThat(count).isZero();
@@ -87,6 +88,10 @@ class SocialLoginNoPersonalDataTest {
     assertThat(loginMethodRepository.findByProviderAndProviderId("google", "소셜시험-구글")).isPresent();
     assertThat(loginMethodRepository.findByProviderAndProviderId("naver", "소셜시험-네이버")).isPresent();
     assertThat(java.util.Set.of(kakao.getId(), google.getId(), naver.getId())).hasSize(3);
+    // 닉네임(V9)은 소셜 이름을 가져오지 않음 — 로그인 직후엔 비어 있고, /api/auth/me 가 서비스의 랜덤 이름으로 채움
+    for (Member m : java.util.List.of(kakao, google, naver)) {
+      assertThat(memberRepository.findById(m.getId()).orElseThrow().getNickname()).isNull();
+    }
   }
 
   @Test
