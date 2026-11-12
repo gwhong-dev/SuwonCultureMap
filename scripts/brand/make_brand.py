@@ -163,12 +163,18 @@ def main():
     name_ds, name_w, name_top, name_bot = text_paths(ham800, "수원바이블", 100, tracking=-0.02, baseline=100)
     sub_size = 30
     sub_ds, sub_w, sub_top, sub_bot = text_paths(ham600, "수원 문화지도", sub_size, tracking=0.32, baseline=0)
-    # 부제는 워드마크 왼쪽 끝에 맞추고, 워드마크 아래 26 띄움
-    sub_y = name_bot + 26 - sub_top
-    sub_ds, sub_w, sub_top2, sub_bot2 = text_paths(ham600, "수원 문화지도", sub_size, tracking=0.32, baseline=sub_y, x=4)
+    sub_y = name_bot + 26 - sub_top  # 워드마크 아래 26 띄움
+    # 화면용 #tagline 심볼은 펜 시작 x=4 그대로 (화면 위치는 CSS margin-left 로 맞춤, #216)
+    tag_ds, tag_w, tag_top, tag_bot = text_paths(ham600, "수원 문화지도", sub_size, tracking=0.32, baseline=sub_y, x=4)
+    # 문서 · 공유 이미지: 부제 첫 글자 윤곽 왼쪽 끝 = 워드마크 첫 글자 '수' 윤곽의 가로 중심 (11/11 시안 d)
+    (su_x0, _, su_x1, _), _ = glyph_bounds(ham800, "수")
+    su_center = (su_x0 + su_x1) / 2 * 100 / ham800["head"].unitsPerEm
+    sub_ink0 = glyph_bounds(ham600, "수")[0][0] * sub_size / ham600["head"].unitsPerEm
+    sub_x = su_center - sub_ink0
+    sub_ds, sub_end, sub_top2, sub_bot2 = text_paths(ham600, "수원 문화지도", sub_size, tracking=0.32, baseline=sub_y, x=sub_x)
     top = name_top
-    vb_w, vb_h = max(name_w, sub_w + 4), sub_bot2 - top
-    name_d, sub_d = "".join(name_ds), "".join(sub_ds)
+    vb_w, vb_h = max(name_w, sub_end), sub_bot2 - top
+    name_d, sub_d, tag_d = "".join(name_ds), "".join(sub_ds), "".join(tag_ds)
 
     WORK.mkdir(exist_ok=True)
     # 화면용 스프라이트: <svg><use href="/brand/logo.svg#…"/></svg> 로 씀. 색은 CSS(currentColor) 로
@@ -178,7 +184,7 @@ def main():
         f'<symbol id="seal" viewBox="0 0 100 100">{seal_inner(song)}</symbol>'
         f'<symbol id="seal-sm" viewBox="0 0 100 100">{seal_sm(song)}</symbol>'  # 화면 로고(32~48px)는 작은 도장
         f'<symbol id="wordmark" viewBox="0 {fmt(top)} {fmt(name_w)} {fmt(name_bot - top)}"><path fill="currentColor" d="{name_d}"/></symbol>'
-        f'<symbol id="tagline" viewBox="4 {fmt(sub_top2)} {fmt(sub_w)} {fmt(sub_bot2 - sub_top2)}"><path fill="currentColor" d="{sub_d}"/></symbol>'
+        f'<symbol id="tagline" viewBox="4 {fmt(tag_top)} {fmt(tag_w)} {fmt(tag_bot - tag_top)}"><path fill="currentColor" d="{tag_d}"/></symbol>'
         "</svg>\n"
     )
     (BRAND / "logo.svg").write_text(sprite, encoding="utf-8")
@@ -216,6 +222,7 @@ def main():
 """
     (WORK / "og.html").write_text(og, encoding="utf-8")
     print("wordmark ratio", vb_w / vb_h, "sprite bytes", len(sprite))
+    print(f"'수' 중심 x {su_center:.2f} (= 워드마크 높이 × {su_center / (name_bot - top):.3f}), 부제 첫 글자 왼쪽 x {sub_x + sub_ink0:.2f}")
 
 
 if __name__ == "__main__":
