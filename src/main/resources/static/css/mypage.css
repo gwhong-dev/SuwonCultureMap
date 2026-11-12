@@ -54,7 +54,7 @@ body {
 
 .linked-badge {
   font-size: 0.8rem;
-  color: #03c75a;
+  color: var(--success);
   font-weight: 600;
 }
 

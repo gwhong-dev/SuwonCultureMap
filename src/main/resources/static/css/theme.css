@@ -28,6 +28,7 @@
   --seal-frame: transparent; /* 도장 뒤 칸: 밝을 땐 없음, 어두울 땐 종이색 칸 */
   --fav: #c77d00; /* 찜 표시 글자 · 아이콘 */
   --fav-soft: #fff4e0; /* 찜 표시 바탕 */
+  --success: #157a3c; /* 마이 페이지 "연동됨" 글자 (진한 초록, 흰 바탕 5.4:1) */
   --danger: #b42318; /* 오류 · 탈퇴 글자 */
   --danger-soft: #fdecec; /* 오류 안내 바탕 */
   --icon-moon: block; /* PC ☾/☀ 단추: 밝을 땐 ☾ (첫 그리기부터 맞게 css 로) */
@@ -60,6 +61,7 @@
     --seal-frame: #f6f1e7;
     --fav: #e8a64a;
     --fav-soft: #3a2e1a;
+    --success: #4cc38a;
     --danger: #f19a8f;
     --danger-soft: #3a1d1a;
     --icon-moon: none;
@@ -92,6 +94,7 @@
   --seal-frame: #f6f1e7;
   --fav: #e8a64a;
   --fav-soft: #3a2e1a;
+  --success: #4cc38a;
   --danger: #f19a8f;
   --danger-soft: #3a1d1a;
   --icon-moon: none;
