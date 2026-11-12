@@ -10,9 +10,9 @@ var PC_STATUS_LABELS = { open: "진행 중", upcoming: "오픈 예정", ended: "
 function pcCardBadges(event, statusOf, ddayOf) {
   var status = statusOf(event);
   if (!status) return [];
-  var badges = [{ kind: "status " + status, text: PC_STATUS_LABELS[status] }];
+  var badges = [{ kind: "status-badge " + status, text: PC_STATUS_LABELS[status] }];
   var dday = ddayOf(event);
-  if (dday) badges.push({ kind: "dday", text: dday });
+  if (dday) badges.push({ kind: "dday-badge", text: dday });
   return badges;
 }
 

@@ -14,12 +14,12 @@ const {
 test("배지: 진행 중 + 종료까지 D-N, 오픈 예정 + D-N (시안 글자), 날짜 없으면 없음", () => {
   const open = pcCardBadges({}, () => "open", () => "종료까지 D-37");
   assert.deepStrictEqual(open, [
-    { kind: "status open", text: "진행 중" },
-    { kind: "dday", text: "종료까지 D-37" },
+    { kind: "status-badge open", text: "진행 중" },
+    { kind: "dday-badge", text: "종료까지 D-37" },
   ]);
   const soon = pcCardBadges({}, () => "upcoming", () => "D-2");
   assert.deepStrictEqual(soon.map((b) => b.text), ["오픈 예정", "D-2"]);
-  assert.deepStrictEqual(pcCardBadges({}, () => "ended", () => null), [{ kind: "status ended", text: "종료" }]);
+  assert.deepStrictEqual(pcCardBadges({}, () => "ended", () => null), [{ kind: "status-badge ended", text: "종료" }]);
   assert.deepStrictEqual(pcCardBadges({}, () => null, () => null), []);
 });
 

@@ -397,7 +397,8 @@ class ScheduleDisplayPageTest {
     // 카드 안 '같은 장소 1/6' 은 모바일 한 줄에만 (PC 는 CSS 로 숨기고 띠로)
     assertThat(js).contains("placeBand(item.groupIndex, item.groupSize", "pcCardKeyAction(", "shouldHopMarker(");
     // PC 첫 화면은 화성행궁 중심으로 확대
-    assertThat(js).contains("level: mobileQuery.matches ? 6 : PC_DEFAULT_LEVEL");
+    // (네 곳 = 화성행궁 · 방화수류정 · 팔달문 · 지동시장을 범위로, 아래는 카드 줄만큼 비움. 모바일은 level 6 그대로)
+    assertThat(js).contains("if (!mobileQuery.matches) fitPcFirstView();", "map.setBounds(bounds, 70, 24, 270, 24);");
 
     String css = fetch("/css/index.css").replace("\r\n", "\n");
     int media = css.lastIndexOf("@media (min-width: 1025px) {", css.indexOf("#sidebar.collapsed ~ #previewArea"));

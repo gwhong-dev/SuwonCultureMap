@@ -888,7 +888,7 @@ body {
     font-weight: 700;
   }
   .band-place {
-    color: color-mix(in srgb, var(--bg) 58%, var(--text)); /* 시안 #a9a39b — 띠 바탕(--text) 위 흐린 글자, 다크에서도 같은 비율 */
+    color: color-mix(in srgb, var(--bg) 65%, var(--text)); /* 시안 #a9a39b — 띠 바탕(--text) 위 흐린 글자 (밝을 때 7.9:1 · 어두울 때 5.3:1) */
   }
   /* 카드 262px × 3 + 사이 12px × 2 + 줄 안쪽 여백(그림자 · 포커스 테두리 자리) 16px × 2 */
   #previewStripWrap {
@@ -903,6 +903,7 @@ body {
   }
   .preview-card {
     flex: 0 0 262px;
+    scroll-snap-align: start; /* 줄 폭 = 카드 3장(2장) → 시작선에 맞춰야 반쪽 카드 없이 딱 맞음 */
     height: 196px;
     display: grid;
     grid-template-columns: 60px minmax(0, 1fr);
@@ -931,7 +932,11 @@ body {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    padding-right: 26px; /* ♡ 자리 */
+    padding-right: 22px; /* ♡ 자리 (하트 그림은 버튼 가운데 18px) */
+  }
+  .pc-badges .status-badge,
+  .pc-badges .dday-badge {
+    padding: 2px 5px; /* '진행 중' + '종료까지 D-48' 이 한 줄에 들어가게 (시안 2px 5px) */
   }
   .preview-card .preview-title {
     grid-column: 2;

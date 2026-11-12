@@ -249,17 +249,32 @@ function compareStartDate(a, b) {
 // 좌표는 재단 API(XML)가 "화성행궁 광장 · 우화관 바깥마당" 행사에 주는 값과 같게 맞춤 → 그 장소 마커와 정확히 겹침
 // level 6 첫 화면에 정조테마공연장 · 수원전통문화관 · 미디어센터 등 성곽 안 행사가 모두 들어옴 (11/9 운영 API 확인)
 var DEFAULT_CENTER = { lat: 37.2818820191942, lng: 127.014394463798 };
-// PC 첫 화면은 한 단계 더 확대 (11/13 확정 시안 P1): 화성행궁 · 방화수류정 · 팔달문 · 지동시장이 한 화면에 들어오는 정도
-// 모바일은 그대로 6 (P3 담당)
-var PC_DEFAULT_LEVEL = 4;
+// PC 첫 화면은 더 확대 (11/13 확정 시안 P1): 화성행궁 · 방화수류정 · 팔달문 · 지동시장이 한 화면에 들어오는 정도
+//  - 화면 높이마다 맞는 확대 단계가 달라서(900px 높이 = 5, 1080px = 4) 네 곳을 범위로 맞춤
+//  - 아래 여백 = 하단 카드 줄(띠 · 카드 · 안내) 높이 → 팔달문이 카드에 가리지 않게, 위 여백 = 칩 줄
+//  - 모바일은 그대로 화성행궁 중심 level 6 (P3 담당)
+var PC_FIRST_VIEW = [
+  DEFAULT_CENTER, // 화성행궁
+  { lat: 37.28745, lng: 127.01795 }, // 방화수류정
+  { lat: 37.27704, lng: 127.01676 }, // 팔달문
+  { lat: 37.27951, lng: 127.01975 }, // 지동시장
+];
+function fitPcFirstView() {
+  var bounds = new kakao.maps.LatLngBounds();
+  PC_FIRST_VIEW.forEach(function (p) {
+    bounds.extend(new kakao.maps.LatLng(p.lat, p.lng));
+  });
+  map.setBounds(bounds, 70, 24, 270, 24); // 위 · 오른쪽 · 아래 · 왼쪽 여백(px)
+}
 
 kakao.maps.load(function () {
   var mapContainer = document.getElementById("map");
   var mapOption = {
     center: new kakao.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng),
-    level: mobileQuery.matches ? 6 : PC_DEFAULT_LEVEL,
+    level: 6,
   };
   map = new kakao.maps.Map(mapContainer, mapOption);
+  if (!mobileQuery.matches) fitPcFirstView();
 
   // 지도 빈 곳을 누르면 하단 카드 닫기 (모바일). PC 는 카드 줄이 기본으로 늘 떠 있어서 그대로 둠 (11/11)
   kakao.maps.event.addListener(map, "click", function () {
@@ -2809,7 +2824,7 @@ function pcCardInfoHtml(item) {
   var place = pcCardPlace(eventPlace(item.event), eventDistrict(item.event)); // pc-card.js
   var badges = pcCardBadges(item.event, eventStatus, ddayText) // pc-card.js
     .map(function (b) {
-      return '<span class="pc-badge ' + b.kind + '">' + escapeHtml(b.text) + "</span>";
+      return '<span class="' + b.kind + '">' + escapeHtml(b.text) + "</span>";
     })
     .join("");
   return {
