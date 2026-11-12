@@ -123,6 +123,16 @@ class SyncLogRecordTest {
   }
 
   @Test
+  void 이력_조회가_실패하면_연속_실패도_null_워크플로는_판단_보류() {
+    when(syncLogRepository.findFirstBySourceAndStatusOrderByFinishedAtDescIdDesc(any(), any()))
+        .thenThrow(new IllegalStateException("DB 끊김"));
+
+    assertThat(new SyncLogService(syncLogRepository, CLOCK).foundationStatus())
+        .isEqualTo(com.suwon.festival.dto.SyncStatusResponse.none());
+    assertThat(com.suwon.festival.dto.SyncStatusResponse.none().consecutiveFailures()).isNull();
+  }
+
+  @Test
   void 실패_원인이_여러_겹이어도_종류만_이어_붙임() {
     Exception e = new IllegalStateException("a", new RuntimeException("b", new java.io.IOException("c")));
     assertThat(SyncLogService.errorText(e)).isEqualTo("IllegalStateException ← RuntimeException ← IOException");

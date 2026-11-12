@@ -77,4 +77,47 @@ class SyncStatusApiTest {
         .andExpect(jsonPath("$.status").doesNotExist())
         .andExpect(jsonPath("$.errorMessage").doesNotExist());
   }
+
+  // ===== consecutiveFailures: 재단 마지막 성공 뒤 연속 실패 횟수 (동기화 실패 알림 워크플로가 읽음) =====
+
+  @Test
+  void 이력이_없으면_연속_실패_0() throws Exception {
+    mockMvc.perform(get("/api/sync-status"))
+        .andExpect(jsonPath("$.consecutiveFailures").value(0));
+  }
+
+  @Test
+  void 마지막_성공_뒤_재단_실패만_센다_인스타_실패는_무시() throws Exception {
+    save(SyncLog.Source.SWCF, SyncLog.Status.FAIL, LocalDateTime.of(2026, 11, 10, 6, 0), null, null, "A"); // 성공 전 → 안 셈
+    save(SyncLog.Source.SWCF, SyncLog.Status.SUCCESS, LocalDateTime.of(2026, 11, 10, 18, 0), 1, 1, null);
+    save(SyncLog.Source.SWCF, SyncLog.Status.FAIL, LocalDateTime.of(2026, 11, 11, 6, 0), null, null, "A");
+    save(SyncLog.Source.INSTAGRAM, SyncLog.Status.FAIL, LocalDateTime.of(2026, 11, 11, 6, 1), null, null, "B");
+    save(SyncLog.Source.SWCF, SyncLog.Status.FAIL, LocalDateTime.of(2026, 11, 11, 18, 0), null, null, "A");
+
+    mockMvc.perform(get("/api/sync-status"))
+        .andExpect(jsonPath("$.lastSuccessAt").value("2026-11-10T18:00:00"))
+        .andExpect(jsonPath("$.consecutiveFailures").value(2))
+        .andExpect(jsonPath("$.errorMessage").doesNotExist());
+  }
+
+  @Test
+  void 성공이_오면_연속_실패가_끊김() throws Exception {
+    save(SyncLog.Source.SWCF, SyncLog.Status.FAIL, LocalDateTime.of(2026, 11, 10, 6, 0), null, null, "A");
+    save(SyncLog.Source.SWCF, SyncLog.Status.FAIL, LocalDateTime.of(2026, 11, 10, 18, 0), null, null, "A");
+    save(SyncLog.Source.SWCF, SyncLog.Status.SUCCESS, LocalDateTime.of(2026, 11, 11, 6, 0), 0, 3, null);
+
+    mockMvc.perform(get("/api/sync-status"))
+        .andExpect(jsonPath("$.consecutiveFailures").value(0));
+  }
+
+  @Test
+  void 성공이_한_번도_없으면_재단_실패_전부를_센다() throws Exception {
+    save(SyncLog.Source.SWCF, SyncLog.Status.FAIL, LocalDateTime.of(2026, 11, 11, 6, 0), null, null, "A");
+    save(SyncLog.Source.SWCF, SyncLog.Status.FAIL, LocalDateTime.of(2026, 11, 11, 18, 0), null, null, "A");
+    save(SyncLog.Source.INSTAGRAM, SyncLog.Status.SUCCESS, LocalDateTime.of(2026, 11, 11, 18, 1), 1, 1, null);
+
+    mockMvc.perform(get("/api/sync-status"))
+        .andExpect(jsonPath("$.lastSuccessAt").doesNotExist())
+        .andExpect(jsonPath("$.consecutiveFailures").value(2));
+  }
 }
