@@ -138,7 +138,7 @@ class ScheduleDisplayPageTest {
 
   @Test
   void 모바일_홈_화면과_홈_탭이_있고_홈_규칙_파일을_화면_스크립트보다_먼저_불러옴() throws Exception {
-    // 이번 주 · 곧 종료 · 곧 시작 고르기(weekRange · endingSoon …)가 home-picks.js 에 있음 → index.js 보다 앞
+    // 지금 진행 중 · 곧 종료 · 곧 시작 · 달별 고르기(nowOpenCards · endingSoon · monthGroups …)가 home-picks.js 에 있음 → index.js 보다 앞
     String html = page();
     int rules = html.indexOf("<script src=\"/home-picks.js\"></script>");
     assertThat(rules).isPositive().isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
@@ -150,24 +150,28 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
-  void 홈_포스터_캐러셀이_곧_종료_탭보다_위에_있고_처음엔_숨김() throws Exception {
-    // carouselPicks 로 고른 행사가 있을 때만 index.js 가 보이게 함 (없으면 빈 칸이 남지 않게)
+  void 홈은_지금_진행_중_곧_종료_곧_시작_달별_행사_3칸_순서이고_이번_주_줄은_없음() throws Exception {
+    // 11/11 사용자 확정 시안: ① 지금 진행 중 N (가로 카드, 전체 →) ② 곧 종료 N | 곧 시작 N (7일 안) ③ 달별 행사
     String html = page();
-    int carousel = html.indexOf("<section id=\"homeCarousel\"");
-    assertThat(carousel).isPositive().isLessThan(html.indexOf("id=\"homeSoonList\""));
-    assertThat(html.substring(carousel, html.indexOf(">", carousel))).contains(" hidden");
-    assertThat(html).contains("id=\"homeCarouselTrack\"", "id=\"homeCarouselFill\"", "id=\"homeCarouselCount\"");
-  }
+    int now = html.indexOf("<section id=\"homeNow\"");
+    int soon = html.indexOf("id=\"homeSoonList\"");
+    int months = html.indexOf("<section id=\"homeMonths\"");
+    assertThat(now).isPositive().isLessThan(soon);
+    assertThat(months).isGreaterThan(soon).isLessThan(html.indexOf("<section id=\"homeNearby\""));
+    assertThat(html).contains("id=\"homeNowCount\"", "id=\"homeNowAll\"", "id=\"homeNowTrack\"");
+    assertThat(html).contains("id=\"homeEndingCount\"", "id=\"homeStartingCount\"", "7일 안</span>");
+    assertThat(html.substring(months, html.indexOf(">", months))).contains(" hidden"); // 고를 달이 있을 때만 보임
+    assertThat(html).contains("id=\"homeMonthChips\"", "id=\"homeMonthTrack\"");
+    assertThat(html).contains("<option value=\"week\">7일 안</option>"); // "7일 안" = 지도 날짜 칩과 같은 기간
+    // 옛 홈: 이번 주 줄 · 포스터 캐러셀 · 날짜 칩 · 이달의 행사 없음
+    assertThat(html).doesNotContain("이번 주 수원 행사", "id=\"homeCarousel\"", "id=\"homeDateChips\"", "id=\"homeMonth\"");
 
-  @Test
-  void 홈_날짜_칩_3개가_캐러셀과_곧_종료_사이에_있고_PC_선택상자에_7일_안() throws Exception {
-    // 칩 값은 #dateFilter 값과 같아야 지도 탭으로 넘길 때 그대로 씀
-    String html = page();
-    int chips = html.indexOf("id=\"homeDateChips\"");
-    assertThat(chips).isGreaterThan(html.indexOf("id=\"homeCarousel\"")).isLessThan(html.indexOf("id=\"homeSoonList\""));
-    assertThat(html.substring(chips, html.indexOf("</nav>", chips)))
-        .contains("data-date=\"today\"", "data-date=\"weekend\"", "data-date=\"week\"", "+7일");
-    assertThat(html).contains("<option value=\"week\">7일 안</option>");
+    String js = script();
+    assertThat(js).contains("nowOpenCards(events)", "nowOpenEvents(events).length", "monthGroups(homeEvents())");
+    assertThat(js).contains("group.label + \" · \" + group.events.length"); // 달 칩 "12월 · 14"
+    assertThat(js).doesNotContain("carouselPicks", "thisWeekEvents", "weekRange");
+    // "전체 →" = 목록 탭 + 오늘 진행 (다른 필터는 풀어서 목록 수 = N)
+    assertThat(js).contains("document.getElementById(\"dateFilter\").value = \"today\";\n  document.getElementById(\"showPastCheckbox\").checked = false;");
   }
 
   @Test
@@ -239,16 +243,6 @@ class ScheduleDisplayPageTest {
     assertThat(hidden).doesNotContain("#categoryChips");
     // PC 로 넘어갈 때 구 · 무료 필터를 풀던 코드 없음 (PC 칩 줄에서 끌 수 있음)
     assertThat(script()).doesNotContain("PC 엔 칩 줄이 없어");
-  }
-
-  @Test
-  void 홈_이달의_행사가_날짜_칩과_곧_종료_사이에_있고_처음엔_숨김() throws Exception {
-    // monthEvents 로 고른 행사가 있을 때만 index.js 가 보이게 함 (제목 "11월의 수원 행사"도 index.js 가 채움)
-    String html = page();
-    int month = html.indexOf("<section id=\"homeMonth\"");
-    assertThat(month).isGreaterThan(html.indexOf("id=\"homeDateChips\"")).isLessThan(html.indexOf("id=\"homeSoonList\""));
-    assertThat(html.substring(month, html.indexOf(">", month))).contains(" hidden");
-    assertThat(html).contains("id=\"homeMonthTitle\"", "id=\"homeMonthTrack\"");
   }
 
   @Test
