@@ -62,6 +62,20 @@ test("빈 행사(null)도 깨지지 않음", () => {
   assert.match(defaultPosterHtml(null), /default-poster dp-etc/);
 });
 
+test("분류 라벨은 확정 시안 10.5~12px 굵게", () => {
+  const label = /\.dp-label \{([^}]*)\}/.exec(posterCss)[1];
+  assert.match(label, /font-size: clamp\(10\.5px, [^,]+, 12px\);/);
+  assert.match(label, /font-weight: 700;/);
+});
+
+test("사진 없는 옛 처리(회색 칸 row-poster-text · 사진 칸 없앰 no-photo)가 다시 생기지 않음", () => {
+  const js = read("js/index.js");
+  const css = read("css/index.css");
+  for (const old of ["row-poster-text", "no-photo"]) {
+    assert.ok(!js.includes(old) && !css.includes(old), old);
+  }
+});
+
 test("행사 이름은 최대 3줄 · 넘치면 줄임표, 세리프", () => {
   const title = /\.dp-title \{([^}]*)\}/.exec(posterCss)[1];
   assert.match(title, /-webkit-line-clamp: 3;/);
