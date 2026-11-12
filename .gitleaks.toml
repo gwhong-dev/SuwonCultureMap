@@ -1,0 +1,12 @@
+# gitleaks 설정 — 기본 규칙 그대로 + 오탐만 허용 (CI secret-scan 잡)
+# 허용을 넣을 땐 "무엇을 · 왜" 를 주석으로 남기고, 경로 전체가 아니라 값 하나만 좁게 허용
+[extend]
+useDefault = true
+
+[allowlist]
+description = "시험용 가짜 값"
+regexTarget = "match"
+regexes = [
+  # BlockLogTest.java: 블록 로그 키 형식 시험용 가짜 키(0~f 반복), 실제 키 아님
+  '''0123456789abcdef0123456789abcdef''',
+]

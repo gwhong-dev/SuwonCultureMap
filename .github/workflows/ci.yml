@@ -80,7 +80,7 @@ jobs:
           ./gitleaks version
 
       - name: 전체 기록 검사
-        run: ./gitleaks git --redact --no-banner --verbose .
+        run: ./gitleaks git --config .gitleaks.toml --redact --no-banner --verbose .
 
   docker-build:
     name: Docker 이미지 빌드

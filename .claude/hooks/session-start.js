@@ -40,7 +40,7 @@ if (refs) {
   }
 }
 
-const prs = run("gh", ["pr", "list", "--state", "open", "--json", "number,title,headRefName,isDraft", "-q", '.[] | "#\\(.number) \\(.headRefName)\\(if .isDraft then " (Draft)" else "" end) — \\(.title)"']);
+const prs = run(require("./grade.js").ghBinary(), ["pr", "list", "--state", "open", "--json", "number,title,headRefName,isDraft", "-q", '.[] | "#\\(.number) \\(.headRefName)\\(if .isDraft then " (Draft)" else "" end) — \\(.title)"']);
 if (prs === null) notes.push("ℹ️ gh 로 열린 PR 을 못 읽음 (gh 설치 · 로그인 확인)");
 else if (prs) notes.push("ℹ️ 열린 PR (다른 PC 에서 하던 것일 수 있음):\n" + prs.split("\n").map((l) => "  " + l).join("\n"));
 

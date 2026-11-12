@@ -4,7 +4,7 @@
 //  - 파일 목록을 못 읽으면 → 안전하게 물음
 // 그 밖(S · M)은 아무것도 출력하지 않아 평소 권한 규칙대로 진행
 const { execFileSync } = require("node:child_process");
-const { lPaths, parseMergeCommand } = require("./grade.js");
+const { lPaths, parseMergeCommand, ghBinary } = require("./grade.js");
 
 function readStdin() {
   try {
@@ -45,8 +45,9 @@ let files;
 try {
   const args = ["pr", "view"];
   if (parsed.pr) args.push(parsed.pr);
+  if (parsed.repo) args.push("-R", parsed.repo);
   args.push("--json", "files", "-q", ".files[].path");
-  const out = execFileSync("gh", args, {
+  const out = execFileSync(ghBinary(), args, {
     cwd: input.cwd || process.cwd(),
     encoding: "utf8",
     timeout: 20000,

@@ -46,14 +46,27 @@ test("lPaths: L 경로만 골라냄", () => {
 });
 
 test("parseMergeCommand: 번호 · URL · 현재 브랜치 · --auto", () => {
-  assert.deepStrictEqual(parseMergeCommand("gh pr merge 229 --merge"), { merge: true, pr: "229", auto: false });
-  assert.deepStrictEqual(parseMergeCommand("gh pr merge --merge"), { merge: true, pr: null, auto: false });
+  assert.deepStrictEqual(parseMergeCommand("gh pr merge 229 --merge"), { merge: true, pr: "229", repo: null, auto: false });
+  assert.deepStrictEqual(parseMergeCommand("gh pr merge --merge"), { merge: true, pr: null, repo: null, auto: false });
   assert.deepStrictEqual(
     parseMergeCommand("gh pr merge https://github.com/o/r/pull/12 --merge"),
-    { merge: true, pr: "12", auto: false }
+    { merge: true, pr: "12", repo: null, auto: false }
   );
   assert.strictEqual(parseMergeCommand("gh pr merge 5 --auto --merge").auto, true);
   assert.strictEqual(parseMergeCommand("cd x && gh pr merge 7 --merge; echo ok").pr, "7");
+});
+
+test("parseMergeCommand: 따옴표 전체 경로 · -R · gh api · 옵션 값 안 숫자", () => {
+  assert.strictEqual(parseMergeCommand("& 'C:\\Program Files\\GitHub CLI\\gh.exe' pr merge 229 --merge").pr, "229");
+  assert.strictEqual(parseMergeCommand('"/c/Program Files/GitHub CLI/gh.exe" pr merge 229').pr, "229");
+  assert.deepStrictEqual(parseMergeCommand("gh pr -R o/r merge 31 --merge"), { merge: true, pr: "31", repo: "o/r", auto: false });
+  assert.strictEqual(parseMergeCommand("gh pr merge --repo o/r 31").repo, "o/r");
+  assert.deepStrictEqual(
+    parseMergeCommand("gh api -X PUT repos/o/r/pulls/44/merge -f merge_method=merge"),
+    { merge: true, pr: "44", repo: "o/r", auto: false }
+  );
+  assert.strictEqual(parseMergeCommand('gh pr merge --subject "Merge 12 fixes" 229').pr, "229");
+  assert.strictEqual(parseMergeCommand("gh pr merge -t x 229 --merge").pr, "229");
 });
 
 test("parseMergeCommand: 머지가 아닌 명령은 무시", () => {
