@@ -60,6 +60,28 @@ jobs:
           name: surefire-reports
           path: target/surefire-reports/
 
+  # 비밀값 검사: 저장소 전체 기록(모든 커밋)에서 키 · 토큰 · 비밀번호 모양을 찾음 → 있으면 실패
+  # 결과는 값을 가린(--redact) 채로만 출력. 오탐은 .gitleaks.toml 허용 목록에 이유와 함께 추가
+  secret-scan:
+    name: 비밀값 검사 (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # 전체 기록
+
+      - name: gitleaks 설치
+        env:
+          GITLEAKS_VERSION: "8.24.3"
+        run: |
+          curl -fsSL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf gitleaks.tar.gz gitleaks
+          ./gitleaks version
+
+      - name: 전체 기록 검사
+        run: ./gitleaks git --redact --no-banner --verbose .
+
   docker-build:
     name: Docker 이미지 빌드
     runs-on: ubuntu-latest
