@@ -15,6 +15,14 @@
 | 6 | `scripts\setup-dev.cmd` 실행 | 마지막에 `===== 끝 =====`, 키 목록만 보이고 값은 안 보임 | 오류 줄을 보고 그 단계만 다시 |
 | 7 | MySQL 에 `suwon_culture_map` DB | `./mvnw spring-boot:run` 뒤 http://localhost:8080 이 열림 | DB 만들기 → 다시 실행. 확인 뒤 앱 종료 |
 | 8 | Claude 데스크톱 앱 Code 탭에서 `<프로젝트 폴더>` 열기 | 새 세션 첫 화면에 **[세션 시작 점검]** 메시지 | 폴더를 다시 열고 새 세션 (훅은 세션 **시작 때만** 읽힘 — 이미 열린 세션엔 안 걸림) |
+| 9 | **USB 에만 있던 파일 4개** (GitHub 에 없음, 11/12 점검) | `<프로젝트 폴더>` 에 `.env` · `.dev\`(구글 client_secret json) · `docs\mobile-design-v1.md` · `docs\design-source.zip` 가 있고, `git status` 에 안 보임(gitignore) | USB 를 꽂고 옛 저장소 폴더(`USB:\dev\개인프로젝트\수원문화지도\dev\SuwonCultureMap`)에서 **같은 경로로 복사** — Code 에 "USB 파일 4개 복사해 줘" 라고 하면 됨. `.env` · `.dev\` 는 비밀값 → 내용 출력 · 커밋 금지 |
+
+USB 파일 4개 복사 현황 (두 PC 다 끝나야 USB 옛 저장소 폴더를 `_old_SuwonCultureMap` 으로 바꾸고 2주 뒤 삭제 — 삭제는 사용자)
+
+| PC | 상태 |
+|---|---|
+| PC A (집 게이밍 노트북) | ✅ 11/12 복사 · 원본과 같은지 확인 |
+| PC B (삼성 노트북) | ⬜ **남음** — 다음에 PC B 를 켜면 USB 꽂고 위 9번 |
 
 ## 2. 이어받기 (다른 PC 에서 하던 것)
 
