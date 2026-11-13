@@ -102,18 +102,20 @@ function pcStepId(ids, currentId, delta) {
   return ids[target];
 }
 
-// 포스터 아래 위치 점: [true(지금) / false …]. 행사가 10개 넘으면(또는 1개뿐이면) 점 없음 → 알약 "3 / 30" 만
-var PC_DOTS_MAX = 10;
-function pcPagerDots(index, count) {
-  if (count < 2 || count > PC_DOTS_MAX) return [];
-  var dots = [];
-  for (var i = 0; i < count; i++) dots.push(i === index);
-  return dots;
-}
-
-// 포스터 오른쪽 위 알약 "3 / 6" (행사가 없으면 빈 글)
+// 위치 글 "3 / 6" (행사가 없으면 빈 글)
 function pcPosText(index, count) {
   return count > 0 ? Math.max(index, 0) + 1 + " / " + count : "";
+}
+
+// 포스터 아래 ‹ 3 / 30 › 줄 (확정 시안 R1 B · R2): 처음 · 끝이면 그쪽 단추 멈춤(화살표만 흐리게), 가운데 위치 글
+// 지금 행사가 목록에 없으면(필터로 빠짐) 위치 글은 비우고, 넘기기는 첫 행사로 (pcStepId)
+function pcPagerState(ids, currentId) {
+  var index = ids.indexOf(currentId);
+  return {
+    canPrev: pcStepId(ids, currentId, -1) !== null,
+    canNext: pcStepId(ids, currentId, 1) !== null,
+    text: index < 0 ? "" : pcPosText(index, ids.length),
+  };
 }
 
 // 길찾기 작은 창 자리: [길찾기] 버튼 위 가운데, 화면 밖으로 나가지 않게. 위 자리가 모자라면 버튼 아래
@@ -138,9 +140,8 @@ if (typeof module !== "undefined") {
     pcKeyZone: pcKeyZone,
     pcKeyAction: pcKeyAction,
     pcStepId: pcStepId,
-    PC_DOTS_MAX: PC_DOTS_MAX,
-    pcPagerDots: pcPagerDots,
     pcPosText: pcPosText,
+    pcPagerState: pcPagerState,
     routePopPosition: routePopPosition,
   };
 }

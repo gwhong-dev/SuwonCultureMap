@@ -440,11 +440,19 @@ class ScheduleDisplayPageTest {
     int sidebar = html.indexOf("<aside id=\"sidebar\">");
     assertThat(map).isPositive().isLessThan(pane);
     assertThat(pane).isLessThan(sidebar);
-    // 포스터 양옆 ‹ › (aria-keyshortcuts · 키 표시 줄 연결) · 위치 알약 · 점 · 키 표시 줄 · 읽어 주는 곳 한 곳
+    // 포스터 아래 ‹ 1 / 30 › 줄 (aria-keyshortcuts · 키 표시 줄 연결) · 키 표시 줄 · 읽어 주는 곳 한 곳 (위치 점은 없앰 — R1 B)
     assertThat(html).contains(
         "id=\"pcdPrev\"", "aria-keyshortcuts=\"ArrowLeft\"", "id=\"pcdNext\"", "aria-keyshortcuts=\"ArrowRight\"",
         "id=\"pcdFav\"", "aria-keyshortcuts=\"Space\"", "aria-describedby=\"kbdHint\"",
-        "id=\"pcdPos\"", "id=\"pcdDots\"", "id=\"kbdHint\"", "id=\"pcdLive\" class=\"sr-only\" aria-live=\"polite\"");
+        "id=\"pcdPos\"", "id=\"kbdHint\"", "id=\"pcdLive\" class=\"sr-only\" aria-live=\"polite\"");
+    assertThat(html).doesNotContain("id=\"pcdDots\"");
+    // ‹ › 와 위치 글은 포스터 칸 밖, 포스터 바로 아래 줄 (‹ · 1 / 30 · ›), 툴팁은 짧은 글 "이전 [←]" · "다음 [→]" (R3 A)
+    int posterBox = html.indexOf("id=\"pcdPosterBox\"");
+    int pager = html.indexOf("<div class=\"pcd-pager\">");
+    assertThat(posterBox).isPositive().isLessThan(pager);
+    assertThat(html.indexOf("id=\"pcdPrev\"")).isGreaterThan(pager).isLessThan(html.indexOf("id=\"pcdPos\""));
+    assertThat(html.indexOf("id=\"pcdPos\"")).isLessThan(html.indexOf("id=\"pcdNext\""));
+    assertThat(html).contains("data-i18n=\"pcd.tipPrev\">이전</span> <kbd>←</kbd>", "data-i18n=\"pcd.tipNext\">다음</span> <kbd>→</kbd>");
     // PC 카드 줄 안내는 없어짐
     assertThat(html).doesNotContain("id=\"previewHint\"");
 
@@ -454,12 +462,17 @@ class ScheduleDisplayPageTest {
     assertThat(media).isPositive();
     String pc = block(css, css.indexOf("{", media));
     assertThat(rule(pc, "#app {")).contains("grid-template-columns: minmax(0, 1fr) var(--pc-detail-width) var(--sidebar-width);");
-    // 포스터가 남는 높이를 채움 (최소 240px), 잘리지 않게 contain
-    assertThat(rule(pc, ".pcd-main {")).contains("min-height: 100%;");
-    assertThat(rule(pc, ".pcd-poster-box {")).contains("flex: 1 1 auto;", "min-height: 240px;");
+    // 포스터 칸 4:3 고정 (440 − 20×2 = 400×300, R1 B) — 남는 높이 채우기는 없앰, 잘리지 않게 contain
+    assertThat(rule(pc, ".pcd-main {")).doesNotContain("min-height: 100%;");
+    assertThat(rule(pc, ".pcd-poster-box {")).contains("flex: none;", "aspect-ratio: 4 / 3;").doesNotContain("min-height: 240px;");
+    assertThat(rule(pc, ".pcd-pager {")).contains("height: 40px;", "justify-content: space-between;");
     assertThat(rule(pc, ".pcd-poster .pcd-img {")).contains("object-fit: contain;");
-    // ‹ › 44px 원 · 포커스 2겹 고리, 툴팁은 마우스 · Esc 로 닫힘
-    assertThat(rule(pc, ".pcd-arrow {")).contains("width: 44px;", "border-radius: 50%;");
+    // ‹ › 40px 원 모양 고정 (R2): 처음 · 끝은 화살표만 --line-strong, opacity 로 흐리게 하지 않음 · 포커스 2겹 고리
+    assertThat(rule(pc, ".pcd-arrow {")).contains("width: 40px;", "border-radius: 50%;", "border: 1px solid var(--line);", "background: var(--bg);", "0 1px 4px rgba(0, 0, 0, 0.18)");
+    assertThat(rule(pc, ".pcd-arrow[aria-disabled=\"true\"] {")).contains("color: var(--line-strong);").doesNotContain("opacity");
+    assertThat(rule(pc, ".pcd-arrow:not([aria-disabled=\"true\"]):hover {")).contains("background: var(--surface);", "border-color: var(--line-strong);");
+    // 툴팁 (R3 A): 밝은 바탕 · 단추 가로 가운데 · 마우스 · Esc 로 닫힘
+    assertThat(rule(pc, ".pcd-tip {")).contains("background: var(--bg);", "left: 50%;", "transform: translateX(-50%);", "bottom: calc(100% + 6px);");
     assertThat(rule(pc, ".pcd-arrow:focus-visible {")).contains("0 0 0 2px var(--bg), 0 0 0 4px var(--text)");
     assertThat(pc).contains("#pcDetail.tips-off .pcd-tip {");
     // 지도 아래 카드 줄은 PC 에서 숨김 (모바일만)
@@ -471,7 +484,8 @@ class ScheduleDisplayPageTest {
 
     String js = script();
     // 키 범위는 pc-card.js (node 시험), 길찾기 작은 창(routePopEvent)이 열려 있으면 넘기지 않음 (Q4 문서 — 전 코드 빈틈)
-    assertThat(js).contains("pcKeyZone(", "pcKeyAction(", "pcStepId(", "pcPagerDots(", "pcPosText(");
+    assertThat(js).contains("pcKeyZone(", "pcKeyAction(", "pcStepId(", "pcPagerState(");
+    assertThat(js).doesNotContain("pcPagerDots(", "pcdDots");
     assertThat(js).contains("function pcPopupOpen()", "!!routePopEvent ||");
     // PC 는 상세 창(덮개) 대신 상세 칸, 찜 토스트는 찜할 때만 1.6초
     assertThat(js).contains("pcSelect(event.id, { announce: true, pan: true, outside: true });", "var PC_FAV_TOAST_MS = 1600;");

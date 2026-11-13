@@ -199,3 +199,17 @@ test("index.html 이 그림 함수 · css 를 읽음 (event-detail.js 뒤, index
   assert.ok(at('<script src="/default-poster.js"></script>') < at('<script src="/js/index.js"></script>'));
   assert.ok(html.includes('<div id="modalPoster" hidden></div>'));
 });
+
+test("PC 상세 칸 기본 그림 (R1 B): 라벨 위 왼쪽 22px 24px → 제목 아래 20px · 위쪽 정렬 · 26px, 장소 맨 아래", () => {
+  const rule = (sel) => {
+    const at = posterCss.lastIndexOf(sel + " {"); // 맨 뒤 규칙 (라벨 · 장소 글자 크기를 묶은 규칙 다음)
+    assert.ok(at >= 0, sel);
+    return posterCss.slice(at, posterCss.indexOf("}", at));
+  };
+  assert.match(rule(".default-poster.pcd-img .dp-inner"), /padding: 22px 24px;/);
+  const title = rule(".default-poster.pcd-img .dp-title");
+  assert.match(title, /margin: 20px 0 0;/); // 세로 가운데(margin: auto 0) 대신 위쪽
+  assert.match(title, /font-size: 26px;/);
+  assert.match(title, /line-height: 1\.35;/);
+  assert.match(rule(".default-poster.pcd-img .dp-place"), /margin-top: auto;/);
+});

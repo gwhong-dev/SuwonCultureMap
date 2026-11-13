@@ -227,6 +227,8 @@
   "pcd.source": "View source",
   "pcd.hintNav": "Browse",
   "pcd.hintFav": "Save",
+  "pcd.tipPrev": "Prev", // PC 상세 칸 ‹ 툴팁 (짧게, R3 A)
+  "pcd.tipNext": "Next",
   "pcd.live": "{i} / {n} · {title}",
   "pcd.emptyTitle": "No events match",
   "pcd.emptyBody": "Try another category, date or search word",

@@ -1664,15 +1664,16 @@ body {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    scrollbar-gutter: stable; /* 스크롤 막대가 있든 없든 포스터 칸 크기 · 자리가 같게 (R1 B) */
   }
   .pcd-scroll[hidden] {
     display: none;
   }
-  /* 첫 화면 = 포스터가 정보 · 단추를 뺀 남는 높이를 다 채움 (최소 240px), 나머지 정보는 그 아래 스크롤 */
+  /* 첫 화면 = 포스터 칸 400×300(4:3) 고정 → ‹ 1 / 30 › 줄 → 배지 · 제목 · 정보 · 단추 줄, 나머지 정보는 그 아래 스크롤
+     (확정 시안 R1 B — 모니터 높이와 상관없이 정보가 늘 같은 자리) */
   .pcd-main {
     flex: none;
     box-sizing: border-box;
-    min-height: 100%; /* 칸 높이 전체 → 포스터가 남는 높이를 채우고, 아래 정보는 그 다음(스크롤) */
     display: flex;
     flex-direction: column;
     gap: 14px;
@@ -1680,8 +1681,9 @@ body {
   }
   .pcd-poster-box {
     position: relative;
-    flex: 1 1 auto;
-    min-height: 240px;
+    flex: none;
+    width: 100%;
+    aspect-ratio: 4 / 3; /* 재단 사진 530×400 은 꽉 참, 인스타 4:5 는 가운데 */
     background: var(--surface);
   }
   .pcd-poster {
@@ -1698,54 +1700,65 @@ body {
   .pcd-poster .default-poster.pcd-img {
     display: flex;
   }
+  /* 포스터 바로 아래 40px 줄: ‹ · 1 / 30 · › */
+  .pcd-pager {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 40px;
+  }
   .pcd-nav {
-    position: absolute;
-    top: 50%;
-    z-index: 1;
-    transform: translateY(-50%);
+    position: relative;
+    z-index: 1; /* 툴팁이 포스터 위로 */
   }
-  .pcd-nav.prev {
-    left: 10px;
-  }
-  .pcd-nav.next {
-    right: 10px;
-  }
+  /* ‹ › 모양 고정 (확정 시안 R2) — 처음 · 끝도 원 · 테두리 · 그림자는 그대로, 화살표 글자만 흐리게 */
   .pcd-arrow {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
-    padding: 0 0 3px;
-    border: 0;
+    box-sizing: border-box;
+    width: 40px;
+    height: 40px;
+    padding: 0 0 2px;
+    border: 1px solid var(--line);
     border-radius: 50%;
     background: var(--bg);
     color: var(--text);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
     font-family: inherit;
-    font-size: 22px;
+    font-size: 20px;
     line-height: 1;
     cursor: pointer;
   }
+  .pcd-arrow:not([aria-disabled="true"]):hover {
+    background: var(--surface);
+    border-color: var(--line-strong);
+  }
   .pcd-arrow:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); /* 2겹 고리 — 사진이 밝아도 보이게 */
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); /* 2겹 고리 */
   }
   .pcd-arrow[aria-disabled="true"] {
-    opacity: 0.4; /* 처음 · 끝 — 흐리게 (포커스는 남김) */
+    color: var(--line-strong); /* 처음 · 끝 — 화살표만 흐리게, 단추 전체 투명도는 그대로 (포커스는 남김) */
     cursor: default;
   }
-  /* 툴팁 "다음 행사 [→]": 마우스를 올리면, 툴팁 위로 옮겨도 유지 · Esc 로 닫힘 (WCAG 1.4.13) */
+  /* 툴팁 "다음 [→]" (확정 시안 R3 A): 밝고 작게, 단추 가로 가운데 위 6px
+     마우스를 올리면, 툴팁 위로 옮겨도 유지 · Esc 로 닫힘 (WCAG 1.4.13) */
   .pcd-tip {
     position: absolute;
-    bottom: calc(100% + 8px);
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
     display: none;
     align-items: center;
-    gap: 6px;
-    padding: 6px 8px;
-    border-radius: 4px;
-    background: var(--text);
-    color: var(--bg);
+    gap: 4px;
+    padding: 3px 7px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     font-size: 12px;
     white-space: nowrap;
   }
@@ -1757,12 +1770,6 @@ body {
     top: 100%;
     height: 8px; /* 단추와 툴팁 사이 틈 — 마우스를 옮기는 동안 닫히지 않게 */
   }
-  .pcd-nav.prev .pcd-tip {
-    left: 0;
-  }
-  .pcd-nav.next .pcd-tip {
-    right: 0;
-  }
   .pcd-tip kbd {
     display: inline-flex;
     align-items: center;
@@ -1771,11 +1778,11 @@ body {
     min-width: 18px;
     height: 18px;
     padding: 0 4px;
-    border: 1px solid var(--sub);
+    border: 1px solid var(--line-strong);
     border-radius: 3px;
     font-family: inherit;
     font-size: 11px;
-    color: var(--bg);
+    color: var(--sub);
   }
   @media (hover: hover) and (pointer: fine) {
     .pcd-nav:hover .pcd-tip {
@@ -1786,34 +1793,9 @@ body {
     display: none;
   }
   .pcd-pos {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    padding: 4px 10px;
-    border-radius: 12px;
-    background: color-mix(in srgb, var(--text) 72%, transparent);
-    color: var(--bg);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
-  }
-  .pcd-pos:empty,
-  .pcd-dots:empty {
-    display: none;
-  }
-  .pcd-dots {
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-  }
-  .pcd-dots span {
-    width: 6px;
-    height: 6px;
-    border-radius: 3px;
-    background: var(--line-strong);
-  }
-  .pcd-dots span.on {
-    width: 18px;
-    background: var(--accent);
+    color: var(--sub);
   }
   .pcd-badges {
     display: flex;
