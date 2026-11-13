@@ -120,3 +120,34 @@ test("로고 아치 · 부제 색은 --brand-sub (밝음 · 어두움 함께)", 
   assert.match(rule(indexCss, ".brand-sub"), /color:\s*var\(--brand-sub\)/);
   assert.match(rule(read("intro.css"), ".intro-name"), /fill:\s*var\(--brand-sub\)/);
 });
+
+// 분류 색 (PC 분류 펼침 목록 R5 A4 — docs/design/2026-11-13-pc-pending.md "② 검색 · 분류")
+const CAT_SLUGS = ["all", "event", "show", "exhibit", "festival", "etc", "fav"];
+
+test("분류 색 토큰: 7개 분류 모두 soft · ink · text 가 밝은 · 어두운 값에 있음, 밝은 값은 시안 그대로", () => {
+  for (const slug of CAT_SLUGS) {
+    for (const part of ["soft", "ink", "text"]) {
+      const name = "--cat-" + slug + "-" + part;
+      assert.ok(light[name], name + " 밝은 값 없음");
+      assert.ok(darkMedia[name], name + " 어두운 값 없음");
+    }
+  }
+  assert.strictEqual(light["--cat-event-soft"], "#e4eef9");
+  assert.strictEqual(light["--cat-event-ink"], "#2f6aa8");
+  assert.strictEqual(light["--cat-show-ink"], "#b23a36");
+  assert.strictEqual(light["--cat-show-text"], "#8f2c29"); // 시안: 공연 고른 글자는 더 진하게
+  assert.strictEqual(light["--cat-exhibit-soft"], "#f1e6f6");
+  assert.strictEqual(light["--cat-fav-soft"], light["--fav-soft"]);
+});
+
+test("분류 색 명암: 아이콘(ink)은 옅은 바탕 · 흰 칸 위 3:1, 고른 줄 글자(text)는 옅은 바탕 위 4.5:1 (두 테마)", () => {
+  for (const [label, t] of [["밝은", light], ["어두운", darkMedia]]) {
+    for (const slug of CAT_SLUGS) {
+      const soft = t["--cat-" + slug + "-soft"];
+      assert.ok(contrast(t["--cat-" + slug + "-ink"], soft) >= 3, label + " " + slug + " 아이콘 / 옅은 바탕");
+      assert.ok(contrast(t["--cat-" + slug + "-ink"], t["--bg"]) >= 3, label + " " + slug + " 아이콘 / 고른 줄 흰 칸");
+      assert.ok(contrast(t["--cat-" + slug + "-text"], soft) >= 4.5, label + " " + slug + " 고른 글자 / 옅은 바탕");
+      assert.ok(contrast(t["--sub"], soft) >= 4.5, label + " " + slug + " 개수(--sub) / 옅은 바탕");
+    }
+  }
+});

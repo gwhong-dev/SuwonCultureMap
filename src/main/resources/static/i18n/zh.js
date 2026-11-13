@@ -65,6 +65,8 @@
   "chip.category": "分类",
   "chip.fav": "♥ 收藏",
   "chip.favPlain": "收藏",
+  "chip.favOnly": "仅看收藏", // PC 분류 펼침 목록 마지막 줄 (R5 A4)
+  "chip.categoryList": "选择分类", // PC 분류 펼침 목록 이름
   "chip.free": "💸 免费",
   "chip.clearDate": "取消日期筛选：{title}",
   "chip.clearFilter": "取消筛选：{name}",
@@ -284,6 +286,7 @@
   "search.open": "搜索活动",
   "search.close": "关闭搜索",
   "search.clear": "清除搜索词",
+  "search.pcResults": "“{q}”的搜索结果 {n} 个", // PC 목록 맨 위 검색 구분 제목 (R4 A)
   "search.placeholder": "搜索活动名称・地点",
   "search.placeholderPc": "搜索活动名称",
   "search.hint": "请按活动名称或地点搜索",

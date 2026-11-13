@@ -152,6 +152,15 @@
           <button type="button" class="fav-tab active" data-view="fav" id="favTabFav" role="tab" aria-selected="true" aria-controls="list"><span data-i18n="fav.label">찜</span> <span id="favTabFavCount">0</span></button>
           <button type="button" class="fav-tab" data-view="recent" id="favTabRecent" role="tab" aria-selected="false" aria-controls="list" tabindex="-1"><span data-i18n="recent.label">최근 본</span> <span id="favTabRecentCount">0</span></button>
         </div>
+        <!-- PC 목록 칸 맨 위 검색 띠 (11/13 확정 시안 R4 A — docs/design/2026-11-13-pc-pending.md). 모바일은 숨김(상단 #searchInput · 검색 화면 그대로)
+             친 글자는 상단 바 #searchInput 값으로 옮겨 필터 하나로 씀 (index.js syncPcSearch). 300ms 쉬면 지도가 결과로 이동 (pc-search.js) -->
+        <div id="pcSearchBand" class="pc-search-band" role="search">
+          <div class="pc-search-field">
+            <svg class="pc-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+            <input type="search" id="pcSearchInput" class="pc-search-input" placeholder="행사 이름 검색" aria-label="행사 이름 검색" data-i18n-attr="placeholder:search.placeholderPc;aria-label:search.placeholderPc" enterkeyhint="search" autocomplete="off" />
+            <button type="button" id="pcSearchClear" class="pc-search-clear" aria-label="검색어 지우기" data-i18n-attr="aria-label:search.clear" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" /></svg></button>
+          </div>
+        </div>
         <!-- 날짜 고르기 (calendar-strip.js, 11/11 시안 CalClosed · CalOpen · PcCard). 고른 날짜는 #dateFilter 값으로
              목록 위 탭 [진행 중 · 진행 예정 · 달력 ▾] — PC · 모바일 목록 화면 같음 (P3, 모바일 2주 날짜 줄 · 달력 펼치기는 CSS 로 숨김) -->
         <div id="datePanel" class="date-panel" hidden>
@@ -517,6 +526,7 @@
     <script src="/dialog-focus.js"></script>
     <script src="/strip-nav.js"></script>
     <script src="/pc-card.js"></script>
+    <script src="/pc-search.js"></script>
     <script src="/calendar-strip.js"></script>
     <script src="/lang-picker.js"></script>
     <script src="/js/index.js"></script>

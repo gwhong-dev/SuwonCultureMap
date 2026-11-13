@@ -65,6 +65,8 @@
   "chip.category": "分類",
   "chip.fav": "♥ お気に入り",
   "chip.favPlain": "お気に入り",
+  "chip.favOnly": "お気に入りのみ", // PC 분류 펼침 목록 마지막 줄 (R5 A4)
+  "chip.categoryList": "分類を選ぶ", // PC 분류 펼침 목록 이름
   "chip.free": "💸 無料",
   "chip.clearDate": "日付フィルター「{title}」を解除",
   "chip.clearFilter": "フィルター「{name}」を解除",
@@ -284,6 +286,7 @@
   "search.open": "イベント検索",
   "search.close": "検索を閉じる",
   "search.clear": "検索語を消す",
+  "search.pcResults": "「{q}」の検索結果 {n}件", // PC 목록 맨 위 검색 구분 제목 (R4 A)
   "search.placeholder": "イベント名・会場で検索",
   "search.placeholderPc": "イベント名で検索",
   "search.hint": "イベント名や会場で探してみてください",
