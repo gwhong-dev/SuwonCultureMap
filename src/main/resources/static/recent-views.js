@@ -106,12 +106,15 @@ function createRecentStore(storage, key) {
   };
 }
 
+// 화면 언어 (i18n.js, node 시험 = 한국어)
+var recentI18n = typeof I18n !== "undefined" ? I18n : require("./i18n.js").I18n;
+
 // "최근 본" 이 비었을 때 안내 (action: "browse" = 전체 행사로)
 function recentEmptyState() {
   return {
-    title: "아직 본 행사가 없어요",
-    body: "행사 상세를 열면 여기에 최근 순으로 모여요",
-    actionLabel: "행사 둘러보기",
+    title: recentI18n.t("recent.emptyTitle"),
+    body: recentI18n.t("recent.emptyBody"),
+    actionLabel: recentI18n.t("fav.browse"),
     action: "browse",
   };
 }

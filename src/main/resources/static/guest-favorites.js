@@ -110,19 +110,22 @@ function createGuestFavoriteStore(storage, key) {
   };
 }
 
+// 화면 언어 (i18n.js, node 시험 = 한국어)
+var guestI18n = typeof I18n !== "undefined" ? I18n : require("./i18n.js").I18n;
+
 // 비회원 찜 토스트: 담으면 "보기"(→ 찜 탭), 가득 차면 로그인 안내
 function guestFavoriteToast(added) {
   if (added === null) {
-    return { text: "이 기기엔 " + GUEST_FAVORITE_MAX + "개까지 찜할 수 있어요", actionLabel: "로그인" };
+    return { text: guestI18n.t("fav.guestFull", { n: GUEST_FAVORITE_MAX }), actionLabel: guestI18n.t("nav.login") };
   }
   return added
-    ? { text: "이 기기에 찜했어요 · 로그인하면 계정에 합쳐져요", actionLabel: "보기" }
-    : { text: "찜을 해제했어요", actionLabel: null };
+    ? { text: guestI18n.t("fav.guestAdded"), actionLabel: guestI18n.t("fav.view") }
+    : { text: guestI18n.t("fav.removed"), actionLabel: null };
 }
 
 // 로그인 뒤 합친 결과 토스트 (더한 게 없으면 null → 토스트 없음)
 function guestMergeToastText(added) {
-  return added > 0 ? "이 기기에서 찜한 행사 " + added + "개를 계정에 합쳤어요" : null;
+  return added > 0 ? guestI18n.t("fav.merged", { n: added }) : null;
 }
 
 if (typeof module !== "undefined") {

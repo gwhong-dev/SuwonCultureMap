@@ -111,7 +111,9 @@ test("index.js: 찜 구분 제목에 정렬 단추 묶음 (role=group · aria-pr
     path.join(__dirname, "../../main/resources/static/js/index.js"),
     "utf8",
   );
-  assert.match(js, /role="group" aria-label="찜한 행사 정렬"/);
+  // 묶음 이름은 화면 언어 글 (i18n/ko.js "favSort.label" = "찜한 행사 정렬")
+  assert.match(js, /role="group" aria-label="' \+ escapeHtml\(I18n\.t\("favSort\.label"\)\)/);
+  assert.strictEqual(require("../../main/resources/static/i18n/ko.js")["favSort.label"], "찜한 행사 정렬");
   assert.match(js, /aria-pressed="/);
   assert.match(js, /"suwonbible\.favSort"/);
   assert.doesNotMatch(js, /\(이름순\)/, "옛 고정 제목 '(이름순)' 이 남아 있음");

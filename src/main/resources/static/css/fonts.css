@@ -24,4 +24,27 @@
 }
 :root {
   --font-brand: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  /* 일본어 · 중국어: 그 언어 글꼴을 Pretendard 앞에 (Pretendard 부분 글꼴(KS X 1001)에도 가나 · 한자가 있어 먼저 잡히면 글자 사이가 넓게 보임)
+     그 글꼴에 없는 한글(행사 제목 · 장소 원문)은 다음 Pretendard 로 */
+  --font-ja: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", "Pretendard", "Malgun Gothic", system-ui, sans-serif;
+  --font-zh: "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", "Pretendard", "Malgun Gothic", system-ui, sans-serif;
+}
+/* 화면 언어 (i18n.js 가 <html lang> 을 바꿈): 일본어 · 중국어 화면은 가나 · 한자를 그 언어 글꼴로 */
+:root:lang(ja) {
+  --font-brand: var(--font-ja);
+}
+:root:lang(zh) {
+  --font-brand: var(--font-zh);
+}
+/* 한국어 화면 안의 일본어 · 중국어 글 (언어 목록 이름 · 첫 방문 안내 줄) */
+:root:lang(ko) :lang(ja) {
+  font-family: var(--font-ja);
+}
+:root:lang(ko) :lang(zh),
+:root:lang(en) :lang(zh) {
+  font-family: var(--font-zh);
+}
+:root:lang(en) :lang(ja),
+:root:lang(zh) :lang(ja) {
+  font-family: var(--font-ja);
 }
