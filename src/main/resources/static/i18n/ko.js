@@ -97,7 +97,10 @@
   "load.renderError": "행사를 화면에 표시하지 못했어요.<br>잠시 뒤 다시 시도해 주세요.",
 
   // ===== 목록 · 시트 =====
-  "list.favSection": "★ 찜한 행사 {n}개 (이름순)",
+  "list.favSection": "★ 찜한 행사 {n}개",
+  "favSort.label": "찜한 행사 정렬",
+  "favSort.date": "날짜순",
+  "favSort.name": "이름순",
   "list.allSection": "전체 행사 (날짜순)",
   "list.countEvents": "행사 {n}개",
   "list.countFav": "찜 {n}개",

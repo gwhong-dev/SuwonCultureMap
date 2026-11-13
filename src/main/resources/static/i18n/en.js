@@ -94,7 +94,10 @@
   "load.renderError": "Couldn't show events on screen.<br>Please try again in a moment.",
 
   // ===== 목록 · 시트 =====
-  "list.favSection": "★ Saved events: {n} (by name)",
+  "list.favSection": "★ Saved events: {n}",
+  "favSort.label": "Sort saved events",
+  "favSort.date": "By date",
+  "favSort.name": "By name",
   "list.allSection": "All events (by date)",
   "list.countEvents": "{n} events",
   "list.countFav": "{n} saved",

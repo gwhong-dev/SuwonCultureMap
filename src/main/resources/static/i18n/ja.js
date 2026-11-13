@@ -94,7 +94,10 @@
   "load.renderError": "イベントを表示できませんでした。<br>しばらくしてから、もう一度お試しください。",
 
   // ===== 목록 · 시트 =====
-  "list.favSection": "★ お気に入り {n}件（名前順）",
+  "list.favSection": "★ お気に入り {n}件",
+  "favSort.label": "お気に入りの並べ替え",
+  "favSort.date": "日付順",
+  "favSort.name": "名前順",
   "list.allSection": "すべてのイベント（日付順）",
   "list.countEvents": "イベント {n}件",
   "list.countFav": "お気に入り {n}件",

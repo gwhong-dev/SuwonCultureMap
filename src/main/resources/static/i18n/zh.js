@@ -94,7 +94,10 @@
   "load.renderError": "无法显示活动。<br>请稍后重试。",
 
   // ===== 목록 · 시트 =====
-  "list.favSection": "★ 收藏的活动 {n}个（按名称）",
+  "list.favSection": "★ 收藏的活动 {n}个",
+  "favSort.label": "收藏排序",
+  "favSort.date": "按日期",
+  "favSort.name": "按名称",
   "list.allSection": "全部活动（按日期）",
   "list.countEvents": "活动 {n}个",
   "list.countFav": "收藏 {n}个",
