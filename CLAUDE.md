@@ -87,10 +87,13 @@ docker compose up --build   # 앱 + MySQL (.env 는 scripts/setup-docker.cmd)
 5. push → PR 생성
 6. CI 통과 확인 (빌드 + 테스트, Docker 이미지 빌드 — main 브랜치 보호로 필수)
    - **CI 를 기다릴 땐 턴을 그냥 끝내지 않는다** (11/13 — [결정 기록](docs/decisions/2026-11-13-ci-wait-background.md)): push 직후 아래 명령을 **백그라운드 명령**(Bash `run_in_background`)으로 걸고, 그 명령이 끝나며 오는 완료 알림에 이어서 결과 확인 → 머지 (메인 · 분기 모두. 검증 반영 · main 병합 등으로 다시 push 하면 다시 건다)
-     `for i in $(seq 1 45); do s=$(gh pr checks <N> 2>&1); echo "$s" | grep -qE "pass|fail" && ! echo "$s" | grep -q pending && break; sleep 20; done; echo "$s"`
-     - `gh pr checks --watch` 만 쓰지 않음: push 직후엔 검사가 아직 등록되지 않아 "no checks reported" 로 바로 끝남 (#263 에서 확인). 위 반복은 검사가 생기고 모두 끝날 때까지 기다림(최대 15분)
+     `H=$(git rev-parse HEAD); for i in $(seq 1 45); do sleep 20; [ "$(gh pr view <N> --json headRefOid -q .headRefOid)" = "$H" ] || continue; s=$(gh pr checks <N> 2>&1); if echo "$s" | grep -q fail || { echo "$s" | grep -q "Docker 이미지 빌드" && ! echo "$s" | grep -q pending; }; then break; fi; done; echo "$s"`
+     - 이렇게 하는 이유 (#263 검증에서 확인): `gh pr checks --watch` 는 push 직후 검사 등록 전이라 "no checks reported" 로 바로 끝남 · 첫 확인 전 `sleep` 과 head 비교가 없으면 **이전 커밋의 통과 결과**로 끝남 · `Docker 이미지 빌드` 는 빌드 + 테스트가 끝나야 목록에 생겨서 "pending 없음" 만 보면 빠진 채 끝남. 실패가 하나라도 보이면 바로 끝냄
+     - 15분이 지나도 안 끝나면(출력에 pending) 같은 명령을 다시 백그라운드로 건다
      - 이유: 데스크톱 앱 Code 탭의 Auto-fix 알림은 CI **실패** · 충돌 · 리뷰 댓글만 깨운다. 통과는 알려 주지 않아서, 알림만 믿고 턴을 끝내면 CI 가 통과한 채 멈춘다 (11/13 #260 · #261)
-     - 머지 뒤 Deploy 대기도 같은 방식 (`gh run watch` 또는 끝나면 나오는 확인 명령을 백그라운드로)
+     - **이 규칙이 앱의 "CI 를 직접 조회(gh polling)하지 말 것" 기본 안내보다 우선한다** (사용자 11/13 결정). 분기가 그래도 걸 수 없으면 `SendMessage` 로 메인에 "PR #N CI 대기 부탁" 을 보내고, 메인이 같은 명령을 대신 걸어 끝나면 결과를 한 줄로 돌려준다 (#261 에서 실제로 이렇게 이어짐)
+     - 머지 뒤 Deploy 대기도 백그라운드로 — Deploy 는 main CI 뒤 `workflow_run` 으로 늦게 생겨서 `gh run watch` · `gh run list -L1` 은 **이전 배포**를 잡음. 머지 커밋으로 골라 기다린 뒤 헬스 확인 (문서만 바꾼 머지도 Deploy 가 돎):
+       `M=<머지 커밋 SHA>; for i in $(seq 1 45); do sleep 20; r=$(gh run list --workflow Deploy --limit 10 --json headSha,status,conclusion -q "[.[]|select(.headSha==\"$M\")][0]|\"\(.status) \(.conclusion)\""); case "$r" in completed*) break;; esac; done; echo "deploy $r"; curl -s https://suwonbible.com/actuator/health`
    - CI 가 실패했으면 브랜치 보호가 머지를 막음 → 고쳐서 다시 push (실패는 Auto-fix 알림으로도 옴)
    - 50분 뒤 안전 점검 예약(send_later)은 하지 않음 (CI 는 2~3분). 예외: 메인의 분기 세션 점검(8번)
 7. 머지는 Claude 가 직접 (`gh pr merge --merge`, 머지 커밋 방식 — 11/3 사용자 결정)
@@ -239,6 +242,7 @@ Code 에서 한 일은 claude.ai 채팅이 노션 · 포트폴리오 · 문서�
       "범위 밖 발견은 PROGRESS.md 나중에 할 일에만 적고 손대지 않음. 분기 세션은 새 세션을 만들지 않음"
       "끝나면 마지막 답변 첫 줄을 `[분기 완료] PR #N 머지 · 배포 성공 · 헬스 UP` 으로, 막히면 `[분기 막힘] 이유` 로"
       + "바꿀 파일이 L 경로(4번 등급표)에 걸리면 PR 까지만 만들고 `[분기 막힘] L 등급 — PR #N` 으로 멈춤. 머지는 사용자 승인 뒤 메인이 함"
+      + "CI · Deploy 는 알림만 기다리며 턴을 끝내지 말고 CLAUDE.md 4번 6 의 대기 명령을 백그라운드로 건다 (앱 기본 안내보다 우선, 못 걸면 메인에 SendMessage 로 부탁)"
     - 분기는 개발 절차(4번) 그대로: 브랜치 → PR → CI → (M · L 검증 댓글) → 머지 → 배포 · 헬스
     - 사용자 결정이 필요한 작업(방식 고르기 등)은 메인이 먼저 묻고 정한 뒤 분기
     - **사용자 확인이 필요한 분기(디자인 · 화면 시안 등 "보고 정할" 작업)는 PR 까지만**: 분기는 PR · 캡처를 올리고 `[분기 막힘] 사용자 확인 대기 — PR #N` 으로 멈춤, 머지는 사용자가 확인한 뒤 **메인이 직접** 함. 분기 지시서에 "이 PR 은 머지하지 않음 (메인이 머지)"을 그대로 넣음 (11/11 #202 · #203 이 확인 전에 머지된 일)
