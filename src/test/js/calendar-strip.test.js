@@ -138,15 +138,14 @@ test("PC 탭: 진행 중 + 진행 예정 = 지난 행사 뺀 전체 (날짜 없�
   assert.ok(matchesStatusTab(ended, null, NOW)); // 탭 안 씀 = 다 통과
 });
 
-test("PC 진행 탭이 걸리는 때: PC · 날짜 안 고름 · 검색어 없음 · 찜 아님 · 지난 행사 끔 (검증 ⚠️ 반영)", () => {
-  const base = { mobile: false, dateValue: "all", keyword: "", category: "all", showPast: false };
+test("PC 진행 탭이 걸리는 때: PC · 날짜 안 고름 · 검색어 없음 · 찜 아님 (검증 ⚠️ 반영)", () => {
+  const base = { mobile: false, dateValue: "all", keyword: "", category: "all" };
   assert.ok(statusTabApplies(base));
   assert.ok(statusTabApplies({ ...base, category: "공연" })); // 분류는 같이 걸림
   assert.ok(!statusTabApplies({ ...base, mobile: true }));
   assert.ok(!statusTabApplies({ ...base, dateValue: "2026-11-14" }));
   assert.ok(!statusTabApplies({ ...base, keyword: "합창단" })); // 오픈예정 행사 이름을 검색해도 0건이 되지 않게
   assert.ok(!statusTabApplies({ ...base, category: "찜" }));
-  assert.ok(!statusTabApplies({ ...base, showPast: true }));
 });
 
 test("지난 날짜 판별: 어제는 지난 날, 오늘은 아님 (11/13 P2: 지난 날도 고를 수 있음)", () => {
@@ -162,17 +161,16 @@ test("하루 필터: 날짜 · 오늘만 하루, 주말 · 7일 · 전체는 하
   assert.strictEqual(singleDay("all", NOW), null);
 });
 
-test("지난 날을 고르면 종료 행사도 보임, 그 밖엔 종료 행사 숨김 (지난 행사 보기 체크면 늘 보임)", () => {
+test("지난 날을 고르면 종료 행사도 보임, 그 밖엔 종료 행사 숨김 (11/13: 지난 행사 보기 체크박스 삭제)", () => {
   assert.strictEqual(pastSelectedDay("2026-11-08", NOW), "2026-11-08");
   assert.strictEqual(pastSelectedDay("2026-11-11", NOW), null); // 오늘
   assert.strictEqual(pastSelectedDay("today", NOW), null);
   assert.strictEqual(pastSelectedDay("weekend", NOW), null);
-  assert.ok(!hidesEndedEvents("2026-11-08", false, NOW));
-  assert.ok(hidesEndedEvents("2026-11-11", false, NOW));
-  assert.ok(hidesEndedEvents("today", false, NOW));
-  assert.ok(hidesEndedEvents("weekend", false, NOW));
-  assert.ok(hidesEndedEvents("all", false, NOW));
-  assert.ok(!hidesEndedEvents("all", true, NOW));
+  assert.ok(!hidesEndedEvents("2026-11-08", NOW));
+  assert.ok(hidesEndedEvents("2026-11-11", NOW));
+  assert.ok(hidesEndedEvents("today", NOW));
+  assert.ok(hidesEndedEvents("weekend", NOW));
+  assert.ok(hidesEndedEvents("all", NOW));
 });
 
 test("지난 날 고름 = 그날 열린 행사만 (matchRunDays 그대로: 종료 행사도 그날 열렸으면 보임)", () => {

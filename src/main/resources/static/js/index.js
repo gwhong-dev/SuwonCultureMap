@@ -479,14 +479,14 @@ function setDistrictFilter(district) {
   filterMarkers();
 }
 
-// ===== 필터링 (검색어 + 카테고리 + 진행 날짜 + 구 + 지난 행사 여부, '찜'은 즐겨찾기 목록으로 필터) =====
+// ===== 필터링 (검색어 + 카테고리 + 진행 날짜 + 구, '찜'은 즐겨찾기 목록으로 필터) =====
 function filterMarkers() {
   if (!eventsLoaded) return; // 아직 받는 중(스켈레톤) 또는 실패 안내 표시 중 — 로그인 확인 등이 지우지 않게
   var keyword = document.getElementById("searchInput").value.trim();
   var selectedCategory = document.getElementById("categorySelect").value;
   var dateValue = document.getElementById("dateFilter").value;
   // 종료 행사는 기본으로 숨김. 지난 날짜를 고르면 그날 열린 행사(종료 포함)를 보여 줌 (calendar-strip.js, 11/13 P2)
-  var hideEnded = hidesEndedEvents(dateValue, document.getElementById("showPastCheckbox").checked);
+  var hideEnded = hidesEndedEvents(dateValue);
   var runDays = filterDays(dateValue); // 한국 시간 기준, 필터 없으면 null
   var statusTab = currentStatusTab(); // 목록 위 탭 (진행 중 · 진행 예정), 날짜를 골랐으면 null
 
@@ -918,9 +918,6 @@ document
   .addEventListener("input", filterMarkers);
 document
   .getElementById("categorySelect")
-  .addEventListener("change", filterMarkers);
-document
-  .getElementById("showPastCheckbox")
   .addEventListener("change", filterMarkers);
 document
   .getElementById("dateFilter")
@@ -1842,14 +1839,13 @@ var calPickerYear = null; // 빠른 고르기에 보이는 해
 var lastDateBaseItems = []; // 마지막 필터의 "날짜 빼고 통과한 행사" (달력 넘기기 등 필터 없이 다시 그릴 때)
 var lastDateVisibleCount = 0;
 
-// PC 진행 탭은 날짜 · 검색어 · '찜' · 지난 행사가 없을 때만 걸림 (calendar-strip.js statusTabApplies, PC · 모바일 같음)
+// PC 진행 탭은 날짜 · 검색어 · '찜' 이 없을 때만 걸림 (calendar-strip.js statusTabApplies, PC · 모바일 같음)
 // 모바일 목록 화면도 같은 탭 줄 [진행 중 N · 진행 예정 N · 달력 ▾] (P3 확정 시안 MobileList) → mobile 값은 넘기지 않음
 function currentStatusTab() {
   return statusTabApplies({
     dateValue: document.getElementById("dateFilter").value,
     keyword: document.getElementById("searchInput").value.trim(),
     category: document.getElementById("categorySelect").value,
-    showPast: document.getElementById("showPastCheckbox").checked,
   })
     ? pcStatusTab
     : null;
@@ -1895,7 +1891,7 @@ function renderDatePanel(baseItems, visibleCount, favScreen) {
   if (!calOpen && calPickerOpen) setCalPicker(false); // 달력이 닫히면 빠른 고르기도 (PC 날짜 · 탭을 키보드로 누른 경우 등)
 
   // PC 탭: 날짜를 골랐으면 진행 탭 대신 "달력" 탭이 켜지고 고른 날짜를 보여 줌
-  // 검색어 · 찜 · 지난 행사 보기 중엔 진행 탭이 안 걸리므로 둘 다 꺼진 모양 (누르면 그 탭으로 거름)
+  // 검색어 · 찜 중엔 진행 탭이 안 걸리므로 둘 다 꺼진 모양 (누르면 그 탭으로 거름)
   var appliedTab = currentStatusTab();
   document.querySelectorAll("#datePanel .pc-date-tab").forEach(function (tab) {
     var on = tab.dataset.status === appliedTab;
@@ -2527,7 +2523,6 @@ function showNowEvents(tab) {
   document.getElementById("searchInput").value = "";
   document.getElementById("categorySelect").value = "all";
   document.getElementById("dateFilter").value = "today";
-  document.getElementById("showPastCheckbox").checked = false;
   freeOnly = false;
   districtFilter = null;
   pcStatusTab = null;
@@ -2870,7 +2865,6 @@ function showDistrictOnMap(district, events) {
   document.getElementById("searchInput").value = "";
   document.getElementById("categorySelect").value = "all";
   document.getElementById("dateFilter").value = "all";
-  document.getElementById("showPastCheckbox").checked = false;
   freeOnly = false;
   districtFilter = district; // selectTab 이 filterMarkers 로 지도 · 목록 · 칩을 다시 그림
   selectTab("map");
