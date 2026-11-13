@@ -4103,7 +4103,8 @@ function drawPcDetail() {
   var time = findInfo(lines, ["시간", "요일"]) || fallbackTime(event);
   if (time) rows.push([I18n.t("detail.time"), time]);
   var place = pcCardPlace(eventPlace(event), eventDistrict(event)); // pc-card.js
-  if (place) rows.push([I18n.t("detail.place"), place, "place"]); // 누르면 주소 복사 (확정 시안 PC A)
+  // 누르면 주소 복사 (확정 시안 PC A) — 복사할 값이 없으면(구 이름만 있는 행사) 그냥 글자 (#268 검증 ⚠️)
+  if (place) rows.push([I18n.t("detail.place"), place, pcCopyAddress(event) ? "place" : ""]);
   var fee = fields.fee || findInfo(lines, ["이용료", "요금", "입장료", "관람료", "참가비"], ["주차"]);
   if (fee) rows.push([I18n.t("detail.fee"), fee]);
   var sourceText = sourceLabel(event); // 인스타 · 수원문화DB 출처 줄 (수원문화DB 는 출처 표기 필수, docs/decisions/2026-11-13-swdb-crawling.md)
@@ -4199,9 +4200,10 @@ var pcCopiedTimer = null;
 document.getElementById("pcdRows").addEventListener("click", function (e) {
   var btn = e.target.closest(".pcd-place-copy");
   var item = btn && pcItem(pcDetailId);
-  if (!item) return;
+  var address = item ? pcCopyAddress(item.event) : "";
+  if (!address) return;
   var badge = btn.parentNode.querySelector(".pcd-copied");
-  copyText(pcCopyAddress(item.event)).then(
+  copyText(address).then(
     function () {
       if (!badge || !badge.isConnected) return; // 그 사이 다른 행사로 넘김
       clearTimeout(pcCopiedTimer);

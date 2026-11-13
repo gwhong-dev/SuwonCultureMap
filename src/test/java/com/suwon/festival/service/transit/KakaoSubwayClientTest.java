@@ -65,6 +65,23 @@ class KakaoSubwayClientTest {
   }
 
   @Test
+  void 본문에_documents_가_없으면_빈_목록이_아니라_실패() {
+    server.expect(requestTo(Matchers.startsWith(KakaoSubwayClient.URL)))
+        .andRespond(withSuccess("{\"meta\":{}}", MediaType.APPLICATION_JSON));
+
+    assertThatThrownBy(() -> client.findAround(37.28188, 127.01439))
+        .isInstanceOf(KakaoSubwayClient.SubwayLookupException.class);
+  }
+
+  @Test
+  void 빈_documents_는_역_없음() {
+    server.expect(requestTo(Matchers.startsWith(KakaoSubwayClient.URL)))
+        .andRespond(withSuccess("{\"documents\":[],\"meta\":{\"is_end\":true}}", MediaType.APPLICATION_JSON));
+
+    assertThat(client.findAround(37.28188, 127.01439)).isEmpty();
+  }
+
+  @Test
   void 키가_없으면_부르지_않음() {
     KakaoSubwayClient noKey = new KakaoSubwayClient(restTemplate, "");
     assertThat(noKey.isConfigured()).isFalse();

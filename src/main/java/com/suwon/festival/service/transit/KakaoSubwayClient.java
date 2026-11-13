@@ -76,8 +76,9 @@ public class KakaoSubwayClient {
     } catch (RestClientException e) {
       throw new SubwayLookupException("카카오 역 검색 실패: " + e.getClass().getSimpleName());
     }
+    // 본문 · documents 가 없으면 '역 없음' 이 아니라 실패 (#268 검증 ⚠️ — 빈 목록이면 화면이 "근처 지하철역 없음" 으로 잘못 보임)
+    if (body == null || body.documents == null) throw new SubwayLookupException("카카오 역 검색 실패: 응답 본문 없음");
     List<SubwayPlace> result = new ArrayList<>();
-    if (body == null || body.documents == null) return result;
     for (Document d : body.documents) {
       if (d.place_name == null || d.place_name.isBlank()) continue;
       result.add(new SubwayPlace(d.place_name.strip(), parseDistance(d.distance)));
