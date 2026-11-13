@@ -225,7 +225,9 @@ function renderLocationMarkers(visibleItems) {
     });
 
     kakao.maps.event.addListener(marker, "click", function () {
-      showPreview(groupByDate[0].event.id); // PC · 모바일 모두 하단 카드 (같은 장소면 첫 번째부터)
+      // 모바일 = 하단 카드, PC = 가운데 상세 칸 (11/13 Q4 D안). 같은 장소면 첫 번째부터
+      if (mobileQuery.matches) showPreview(groupByDate[0].event.id);
+      else pcSelect(groupByDate[0].event.id, { announce: true });
     });
 
     var locMarker = {
@@ -263,7 +265,7 @@ function fitPcFirstView() {
   PC_FIRST_VIEW.forEach(function (p) {
     bounds.extend(new kakao.maps.LatLng(p.lat, p.lng));
   });
-  map.setBounds(bounds, 70, 24, 270, 24); // 위 · 오른쪽 · 아래 · 왼쪽 여백(px)
+  map.setBounds(bounds, 70, 24, 24, 24); // 위(분류 칩 줄) · 오른쪽 · 아래 · 왼쪽 여백(px). 지도 아래 카드 줄은 없어짐 (11/13 Q4 — 전엔 아래 270)
 }
 
 kakao.maps.load(function () {
@@ -349,6 +351,8 @@ function loadEvents() {
   document.getElementById("resultCount").textContent = I18n.t("load.loading");
   updateSheetHeaderLabel(); // 다시 시도 때 "불러오지 못했어요" 라벨이 남지 않게
   renderHomeLoading();
+  pcDetailId = null;
+  renderPcDetail(); // PC 상세 칸: 불러오는 중 (다시 시도 포함)
   fetch("/api/events")
     .then(function (response) {
       if (!response.ok) throw new Error("HTTP " + response.status);
@@ -369,6 +373,8 @@ function failLoad(kind, err) {
   renderHomeError();
   eventsLoadFailed = true;
   if (searchOpen) renderSearch();
+  pcDetailId = null;
+  renderPcDetail(); // PC 상세 칸: 불러오지 못했어요
 }
 
 function showEvents(events) {
@@ -842,6 +848,7 @@ function renderSidebar(items) {
   var sorted = favorites.concat(others);
 
   var list = document.getElementById("list");
+  var focusRowId = pcFocusedRowId(); // PC: 목록 줄에서 Space 찜 → 다시 그려도 같은 줄에 포커스 (키보드가 이어지게)
   list.innerHTML = "";
   list.removeAttribute("aria-busy"); // 스켈레톤 끝
   if (recent) {
@@ -901,12 +908,14 @@ function renderSidebar(items) {
 
     var imgSrc = cardImageUrl(item.event); // 사진이 없으면(인스타 행사 등) null → 기본 그림 (P6)
     div.className = "event-item";
+    div.dataset.eventId = item.event.id;
     var infoText = item.event.info
       ? extractSummaryInfo(item.event.info, item.event.fee) // 사이드바엔 요금/장소/시간만
       : cardFallbackInfo(item.event); // info 원문이 없으면 장소 · 시간 칸
     var isFavorited = favoriteEventIds.has(item.event.id); // 찜 여부 확인
 
     div.innerHTML =
+      '<span class="row-pick" aria-hidden="true">‹</span>' + // PC: 고른 줄 왼쪽 벽돌색 ‹ (11/13 Q4)
       (imgSrc
         ? '<img class="event-thumb" src="' + escapeHtml(imgSrc) + '" loading="lazy">'
         : defaultPosterHtml(item.event, "event-thumb")) +
@@ -916,10 +925,12 @@ function renderSidebar(items) {
       '<div class="date">' +
       escapeHtml(dateText) +
       "</div>" +
-      placeLineHtml(item.event, "place") + // 모바일 목록 줄 (P3): 장소 · 구 (PC 는 CSS 로 숨김 — 요약 줄에 장소가 있음)
+      placeLineHtml(item.event, "place") + // 모바일 목록 줄 (P3): 장소 · 구 (PC 는 CSS 로 숨김)
+      pcBadgesHtml(item.event, "row-pc-badges") + // PC 목록 줄 (11/13 Q4 시안 PcSplitD): 배지 → 제목 → 기간 (모바일은 CSS 로 숨김)
       '<div class="title">' +
       escapeHtml(item.event.title) +
       "</div>" +
+      '<div class="row-pc-period">' + escapeHtml(pcPeriodText(item)) + "</div>" +
       badgeRowHtml(item.event) + // 모바일: 상태 · D-day (CSS order 로 제목 위에 놓임)
       '<div class="info">' +
       escapeHtml(infoText) +
@@ -928,14 +939,15 @@ function renderSidebar(items) {
     posterOnError(div.querySelector("img.event-thumb"), item.event); // 사진을 못 불러오면 기본 그림 (P6)
 
     div.addEventListener("click", function () {
+      // PC: 가운데 상세 칸에 그 행사 (11/13 Q4 D안 — 지도는 핀이 화면 밖일 때만 옮김)
+      if (!mobileQuery.matches) {
+        pcSelect(item.event.id, { announce: true, pan: true });
+        return;
+      }
       map.setCenter(
         new kakao.maps.LatLng(item.event.latitude, item.event.longitude),
       );
       map.setLevel(5);
-
-      // PC: 지도 하단 카드도 그 행사로 (상세를 닫으면 카드로 이어서 둘러봄). 모바일은 상세가 전체 화면 · 목록이 지도를 덮어 띄우지 않음
-      if (!mobileQuery.matches) showPreview(item.event.id);
-
       openDetailModal(item.event);
     });
 
@@ -953,6 +965,10 @@ function renderSidebar(items) {
     I18n.t(recent ? "list.countRecent" : onFavScreen() ? "list.countFav" : "list.countEvents", { n: "<strong>" + sorted.length + "</strong>" }); // P3 시안 "행사 32개"
   updateSheetHeaderLabel();
   lastSortedItems = sorted;
+  if (!mobileQuery.matches) {
+    pcSyncList(focusRowId); // PC: 지도 아래 카드 줄 대신 가운데 상세 칸 (11/13 Q4 D안)
+    return;
+  }
   renderPreviewStrip(sorted);
   if (previewEventId !== null) {
     var previewCard = findPreviewCard(previewEventId);
@@ -1121,6 +1137,11 @@ document.getElementById("modalImage").addEventListener("error", function () {
 // ===== 상세정보 큰 팝업창 열기/닫기 =====
 // pager = 모바일 카드 줄에서 열었을 때 앞뒤 행사 { ids, index, scope } (P3, stripDetailPager). 그 밖에서 열면 없음
 function openDetailModal(event, pager) {
+  // PC 는 상세 창(덮개)을 열지 않고 가운데 상세 칸에 보임 (11/13 Q4 D안 — 공유 링크 ?event= · 홈 · 검색 결과도 같은 길)
+  if (!mobileQuery.matches) {
+    pcSelect(event.id, { announce: true, pan: true, outside: true });
+    return;
+  }
   closeRoutePop(false); // PC 길찾기 작은 창이 상세 뒤에 남아 Esc 가 그 창부터 닫지 않게 (#241 검증)
   detailPager = pager || null;
   // 사진이 없으면(인스타 행사) 기본 그림. 불러오다 실패해도 기본 그림 (위 error 처리)
@@ -1630,6 +1651,7 @@ document.addEventListener("keydown", function (e) {
 
 // ===== 즐겨찾기 버튼 상태/토글 =====
 function updateFavoriteButton(eventId) {
+  updatePcFav(); // PC 상세 칸 [♡ 찜] (11/13 Q4)
   // 상세창 위쪽 '★ 찜한 행사' 표시
   document.getElementById("modalFavBadge").hidden = !favoriteEventIds.has(eventId);
   var btn = document.getElementById("modalFavoriteBtn");
@@ -1665,7 +1687,8 @@ function toggleFavorite(eventId) {
     favoriteEventIds = new Set(guestFavorites.list());
     updateFavoriteButton(eventId);
     filterMarkers();
-    showToast(guestToast.text, guestToast.actionLabel, showFavoriteList);
+    if (!mobileQuery.matches) pcFavToast(added);
+    else showToast(guestToast.text, guestToast.actionLabel, showFavoriteList);
     return;
   }
 
@@ -1694,6 +1717,10 @@ function toggleFavorite(eventId) {
       }
       updateFavoriteButton(eventId);
       filterMarkers(); // ← 여기로 옮김 (진짜로 상태 바뀐 다음에 다시 그림)
+      if (!mobileQuery.matches) {
+        pcFavToast(!isFavorited);
+        return;
+      }
       var toast = favoriteToast(!isFavorited);
       showToast(toast.text, toast.actionLabel, showFavoriteList);
     })
@@ -3159,28 +3186,20 @@ function pcPeriodSummary(event) {
   return weekdaySummary(event) || I18n.t("sched.times", { n: event.dates.length });
 }
 
-// PC 카드 기간 줄 · 장소 줄 (아이콘 + PC 글 "08.01 – 12.19 · 주말"). 모바일은 P3 의 .preview-date · .preview-place — CSS 로 서로 숨김
-var PC_CARD_ICON_CALENDAR =
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>';
-var PC_CARD_ICON_PIN =
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>';
-function pcCardInfoHtml(item) {
-  var period = pcCardPeriod(item.event, koreaYear(Date.now()), pcPeriodSummary(item.event)); // pc-card.js
-  if (item.runMatch === "maybe") period += " · " + MAYBE_RUN_NOTE;
-  var place = pcCardPlace(eventPlace(item.event), eventDistrict(item.event)); // pc-card.js
-  var badges = pcCardBadges(item.event, eventStatus, ddayText) // pc-card.js
+// PC 배지(진행 중 · 오픈 예정 + D-day) — 상세 칸 · 목록 줄 (11/13 Q4, pc-card.js pcCardBadges)
+function pcBadgesHtml(event, className) {
+  var badges = pcCardBadges(event, eventStatus, ddayText) // pc-card.js
     .map(function (b) {
       return '<span class="' + b.kind + '">' + escapeHtml(b.text) + "</span>";
     })
     .join("");
-  return {
-    badges: badges ? '<div class="pc-badges">' + badges + "</div>" : "",
-    lines:
-      '<div class="pc-card-date" title="' + escapeHtml(period) + '">' + PC_CARD_ICON_CALENDAR + "<span>" + escapeHtml(period) + "</span></div>" +
-      (place
-        ? '<div class="pc-card-place" title="' + escapeHtml(place) + '">' + PC_CARD_ICON_PIN + "<span>" + escapeHtml(place) + "</span></div>"
-        : ""),
-  };
+  return '<div class="' + className + '">' + badges + "</div>";
+}
+// PC 기간 줄 "08.01 – 12.19 · 주말" (날짜 필터 중 '일정 확인' 이면 뒤에 붙임)
+function pcPeriodText(item) {
+  var period = pcCardPeriod(item.event, koreaYear(Date.now()), pcPeriodSummary(item.event)); // pc-card.js
+  if (item.runMatch === "maybe") period += " · " + MAYBE_RUN_NOTE;
+  return period;
 }
 
 // 카드 줄을 다시 그릴 때(찜 · 필터) 카드 줄 안 포커스를 같은 카드 · 같은 버튼으로 되돌림 (Space 찜 뒤 키보드가 이어지게)
@@ -3223,7 +3242,6 @@ function renderPreviewStrip(sortedItems) {
 
   groups.forEach(function (group) {
     group.forEach(function (item) {
-      var pc = pcCardInfoHtml(item); // PC 카드: 배지(진행 중 · 오픈 예정) · 기간 줄 · 장소 줄 (11/13 확정 시안 P1, 모바일 줄은 CSS 로 숨김)
       var card = document.createElement("article");
       card.className = "preview-card";
       card.dataset.eventId = item.event.id;
@@ -3237,7 +3255,6 @@ function renderPreviewStrip(sortedItems) {
           : defaultPosterHtml(item.event, "preview-poster")) + // 사진이 없으면 기본 그림 (P6)
         '<div class="preview-body">' +
         badgeRowHtml(item.event) +
-        pc.badges +
         '<div class="preview-title">' +
         escapeHtml(item.event.title) +
         "</div>" +
@@ -3245,7 +3262,6 @@ function renderPreviewStrip(sortedItems) {
         escapeHtml(cardDateText(item)) +
         "</div>" +
         placeLineHtml(item.event, "preview-place") +
-        pc.lines +
         '<div class="preview-actions">' +
         '<button type="button" class="preview-detail">' + escapeHtml(I18n.t("card.detail")) + "</button>" +
         '<button type="button" class="preview-route">' +
@@ -3299,19 +3315,11 @@ function updatePreviewLabel() {
   var index = cards.findIndex(function (card) {
     return Number(card.dataset.eventId) === previewEventId;
   });
-  var pc = !mobileQuery.matches;
   cards.forEach(function (card, i) {
     card.classList.toggle("current", i === index);
     if (i === index) card.setAttribute("aria-current", "true"); // 보조기기도 지금 카드를 알게 (#215 검증 ⑦)
     else card.removeAttribute("aria-current");
-    // PC: 카드 줄에 Tab 으로 한 번 들어오면 지금 카드에 포커스 → Enter 상세 · Space 찜 · ← → (11/13 확정 시안 P1)
-    if (pc) {
-      card.tabIndex = i === Math.max(index, 0) ? 0 : -1;
-      card.setAttribute("aria-describedby", "previewHint");
-    } else {
-      card.tabIndex = 0; // 모바일은 카드마다 Enter 로 상세 (#240 P3)
-      card.removeAttribute("aria-describedby");
-    }
+    card.tabIndex = 0; // 모바일은 카드마다 Enter 로 상세 (#240 P3). 카드 줄은 모바일만 (11/13 Q4)
   });
   document.getElementById("previewLabel").textContent = stripLabelText(!!previewOrigin, index, cards.length, mobileQuery.matches); // strip-nav.js
   var current = cards[index];
@@ -3520,31 +3528,13 @@ document.getElementById("previewNext").addEventListener("click", function () {
   stepPreview(1);
 });
 // 키보드 ← → : 한 장씩 (상세 · 길찾기 · 공유 창 · 검색 화면이 열렸으면 그대로)
-//  - PC: 카드 줄(카드 · 카드 안 버튼 · ‹ ›)에 포커스가 있을 때만 (11/13 확정 시안 P1 — 지도 · 목록에서 화살표가 카드를 넘기지 않게)
-//  - 모바일: 지금처럼 하단 카드가 떠 있으면 포커스가 어디 있든 (P3 담당)
-// Enter = 상세 · Space = 찜 (PC, 카드 자체에 포커스가 있을 때만 — pc-card.js pcCardKeyAction)
+//  - 모바일 하단 카드가 떠 있으면 포커스가 어디 있든 (P3 담당). PC 는 카드 줄이 없음 → 상세 칸 키 처리(pcKeyAction, 11/13 Q4)
 document.addEventListener("keydown", function (e) {
+  if (!mobileQuery.matches) return;
   if (previewEventId === null || !document.getElementById("previewArea").classList.contains("show")) return;
   if (document.body.classList.contains("detail-open") || searchOpen) return;
   if (!document.getElementById("routeSheet").hidden || !document.getElementById("shareSheet").hidden) return;
   var el = document.activeElement || document.body;
-  var inStrip = document.getElementById("previewArea").contains(el);
-  if (!mobileQuery.matches && !inStrip) return;
-  var onCard = !mobileQuery.matches && el.classList.contains("preview-card");
-  var action = pcCardKeyAction({
-    key: e.key,
-    onCard: onCard,
-    alt: e.altKey || e.ctrlKey || e.metaKey || e.shiftKey,
-    handled: e.defaultPrevented,
-  }); // pc-card.js
-  if (action) {
-    e.preventDefault(); // Space 가 페이지를 내리지 않게
-    var item = previewItem(Number(el.dataset.eventId));
-    if (!item) return;
-    if (action === "detail") openDetailModal(item.event);
-    else toggleFavorite(item.event.id);
-    return;
-  }
   var step = stripKeyStep({
     key: e.key,
     tag: el.tagName,
@@ -3573,9 +3563,366 @@ document.getElementById("previewStrip").addEventListener(
   { passive: false },
 );
 
+// ===== PC 상세 칸 (11/13 확정 시안 Q4 PcNavD1 — docs/design/2026-11-13-todo-additions.md "Q4") =====
+// 지도 | 상세 440px(늘 열림) | 목록 340px. 처음엔 목록 첫 행사, 넘기는 순서 = 오른쪽 목록 순서 (탭 · 분류 · 찜 정렬 그대로)
+// 넘기면: 목록 고른 줄 표시 + 보이게 스크롤, 지도 핀은 크게 + 화면 밖이면 지도 이동. 키보드 포커스는 있던 자리 그대로
+// 키가 먹는 범위는 pc-card.js pcKeyZone · pcKeyAction (시안 문서 표 그대로, node 시험)
+var pcDetailId = null; // 상세 칸에 보이는 행사 id (목록이 비면 null)
+var pcOutsideId = null; // 공유 링크 · 검색처럼 목록 밖(종료 등)에서 고른 행사 — 다른 행사로 넘기기 전까지 칸에 둠
+var pcRenderedId = null; // 포스터 · 아래 정보를 마지막으로 그린 행사 (찜 · 필터로 다시 그릴 때 사진이 깜빡이지 않게)
+var pcSettleTimer = null;
+var PC_SETTLE_MS = 600; // 넘기다 멈추면 정류장 · 역을 불러오고 '최근 본' 에 기록 (← → 를 연달아 눌러도 요청이 몰리지 않게)
+var PC_FAV_TOAST_MS = 1600; // 시안: 찜할 때만 "♥ 찜했어요" 1.6초
+var pcTransitTicket = 0;
+
+function pcOrderIds() {
+  return lastSortedItems.map(function (item) {
+    return item.event.id;
+  });
+}
+function pcItem(id) {
+  return (
+    lastSortedItems.find(function (item) {
+      return item.event.id === id;
+    }) || previewItem(id)
+  );
+}
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+// 목록을 다시 그린 뒤(필터 · 찜 · 정렬): 보던 행사가 목록에 남아 있으면 그대로, 빠졌으면 목록 첫 행사 (지도는 옮기지 않음)
+function pcSyncList(focusRowId) {
+  var ids = pcOrderIds();
+  var keep = pcDetailId !== null && (ids.indexOf(pcDetailId) >= 0 || (pcDetailId === pcOutsideId && previewItem(pcDetailId)));
+  if (!keep) {
+    pcDetailId = ids.length ? ids[0] : null;
+    pcOutsideId = null;
+  }
+  renderPcDetail();
+  pcMarkRows(false);
+  selectMarker(pcDetailId, false);
+  if (focusRowId !== null) {
+    var row = pcRow(focusRowId);
+    if (row) row.focus({ preventScroll: true });
+  }
+}
+
+// 행사 고르기 (목록 줄 · 마커 · ‹ › · 키보드). opts = { announce(보조기기에 "3 / 6 · 제목"), pan(핀이 화면 밖이면 지도 이동),
+//   focusRow(목록 줄에 있던 포커스를 새 줄로 — ↑ ↓ · ← →), outside(목록 밖 행사도 칸에 둠) }
+function pcSelect(id, opts) {
+  opts = opts || {};
+  var item = pcItem(id);
+  if (!item) return;
+  var prevId = pcDetailId;
+  pcDetailId = id;
+  pcOutsideId = opts.outside && pcOrderIds().indexOf(id) < 0 ? id : null;
+  if (prevId !== id) closeRoutePop(false); // 창을 연 [길찾기] 는 그대로지만 행사가 바뀜
+  renderPcDetail();
+  pcMarkRows(prevId !== id, opts.focusRow);
+  pcShowMarker(prevId, id, opts.pan !== false);
+  if (opts.announce) pcAnnounce();
+}
+
+// ‹ › · 키보드 넘기기 (처음 · 끝에서 멈춤 — pc-card.js pcStepId)
+function pcStep(delta, opts) {
+  var id = pcStepId(pcOrderIds(), pcDetailId, delta); // pc-card.js
+  if (id === null) return;
+  pcSelect(id, { announce: true, pan: true, focusRow: opts && opts.focusRow });
+}
+
+// 넘길 때 aria-live 한 곳에서만 "3 / 6 · 제목" (토스트와 겹치지 않게)
+function pcAnnounce() {
+  var item = pcItem(pcDetailId);
+  if (!item) return;
+  var ids = pcOrderIds();
+  var index = ids.indexOf(pcDetailId);
+  var live = document.getElementById("pcdLive");
+  live.textContent =
+    index < 0
+      ? item.event.title
+      : I18n.t("pcd.live", { i: index + 1, n: ids.length, title: item.event.title });
+}
+
+// 마커: 고른 행사 핀을 크게, 화면 밖이면 지도를 옮김. 같은 장소의 다음 행사면 핀이 한 번 튀어오름 (P1 그대로)
+function pcShowMarker(prevId, id, pan) {
+  selectMarker(id, false);
+  var next = pcItem(id);
+  if (!next || !next.locMarker || !map) return;
+  var reduce = prefersReducedMotion();
+  if (pan) {
+    var position = next.locMarker.marker.getPosition();
+    if (!map.getBounds().contain(position)) {
+      if (reduce) map.setCenter(position);
+      else map.panTo(position);
+    }
+  }
+  var prev = prevId === null ? null : pcItem(prevId);
+  if (shouldHopMarker(prev && prev.locMarker, next.locMarker, prevId, id, reduce)) hopMarker(next.locMarker); // pc-card.js
+}
+
+// 오른쪽 목록 줄: 고른 줄 표시(바탕 · ‹ · aria-current) + 롤링 포커스(목록에 Tab 으로 한 번만 들어가고 안에서는 ↑ ↓)
+function pcRow(id) {
+  return document.querySelector('#list .event-item[data-event-id="' + id + '"]');
+}
+function pcMarkRows(scroll, focusRow) {
+  var rows = document.querySelectorAll("#list .event-item");
+  var selected = null;
+  rows.forEach(function (row) {
+    var on = Number(row.dataset.eventId) === pcDetailId;
+    row.classList.toggle("selected", on);
+    if (on) {
+      row.setAttribute("aria-current", "true");
+      selected = row;
+    } else {
+      row.removeAttribute("aria-current");
+    }
+    row.tabIndex = -1;
+    row.setAttribute("aria-describedby", "kbdHint");
+  });
+  var entry = selected || rows[0];
+  if (entry) entry.tabIndex = 0;
+  if (selected && scroll) selected.scrollIntoView({ block: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  if (selected && focusRow) selected.focus({ preventScroll: true });
+}
+function pcFocusedRowId() {
+  var el = document.activeElement;
+  if (mobileQuery.matches || !el || !el.classList || !el.classList.contains("event-item")) return null;
+  return document.getElementById("list").contains(el) ? Number(el.dataset.eventId) : null;
+}
+
+// 상세 칸 그리기. 같은 행사를 다시 그릴 땐(찜 · 필터) 포스터 · 아래 정보 · 스크롤 자리는 그대로
+function renderPcDetail() {
+  var item = pcDetailId === null ? null : pcItem(pcDetailId);
+  var scroll = document.getElementById("pcdScroll");
+  var empty = document.getElementById("pcdEmpty");
+  var hint = document.getElementById("kbdHint");
+  if (!item) {
+    pcDetailId = null;
+    pcRenderedId = null;
+    scroll.hidden = true;
+    hint.hidden = true;
+    empty.hidden = false;
+    empty.innerHTML = eventsLoaded
+      ? "<strong>" + escapeHtml(I18n.t("pcd.emptyTitle")) + "</strong><p>" + escapeHtml(I18n.t("pcd.emptyBody")) + "</p>"
+      : "<p>" + escapeHtml(I18n.t(eventsLoadFailed ? "load.failedShort" : "load.loading")) + "</p>";
+    return;
+  }
+  var event = item.event;
+  scroll.hidden = false;
+  hint.hidden = false;
+  empty.hidden = true;
+  var ids = pcOrderIds();
+  var index = ids.indexOf(event.id);
+
+  if (pcRenderedId !== event.id) {
+    pcRenderedId = event.id;
+    var poster = document.getElementById("pcdPoster");
+    var img = cardImageUrl(event);
+    poster.innerHTML = img
+      ? '<img class="pcd-img" src="' + escapeHtml(img) + '" alt="">'
+      : defaultPosterHtml(event, "pcd-img"); // 사진이 없으면 기본 그림 (P6)
+    posterOnError(poster.querySelector("img.pcd-img"), event);
+    renderPcMore(event);
+    scroll.scrollTop = 0;
+    clearTimeout(pcSettleTimer);
+    pcSettleTimer = setTimeout(function () {
+      if (pcDetailId !== event.id) return;
+      loadPcTransit(event);
+      rememberRecentView(event.id); // 찜 탭 "최근 본" — 넘기다 멈춘 행사만
+    }, PC_SETTLE_MS);
+  }
+
+  // 위치 알약 · 점 · ‹ › (처음 · 끝이면 그쪽 단추 흐리게 — 포커스는 남김)
+  document.getElementById("pcdPos").textContent = index < 0 ? "" : pcPosText(index, ids.length); // pc-card.js
+  document.getElementById("pcdDots").innerHTML = pcPagerDots(index, ids.length) // pc-card.js
+    .map(function (on) {
+      return on ? '<span class="on"></span>' : "<span></span>";
+    })
+    .join("");
+  var canPrev = pcStepId(ids, event.id, -1) !== null;
+  var canNext = pcStepId(ids, event.id, 1) !== null;
+  document.getElementById("pcdPrev").setAttribute("aria-disabled", canPrev ? "false" : "true");
+  document.getElementById("pcdNext").setAttribute("aria-disabled", canNext ? "false" : "true");
+
+  // 배지 → 제목 → 기간 · 시간 · 장소 · 요금 (값이 있는 줄만)
+  document.getElementById("pcdBadges").outerHTML = pcBadgesHtml(event, "pcd-badges").replace('<div class="pcd-badges">', '<div id="pcdBadges" class="pcd-badges">');
+  document.getElementById("pcdTitle").textContent = event.title;
+  var lines = infoLines(event.info);
+  var fields = detailFields(event);
+  var rows = [];
+  rows.push([I18n.t("detail.period"), pcPeriodText(item)]);
+  var time = findInfo(lines, ["시간", "요일"]) || fallbackTime(event);
+  if (time) rows.push([I18n.t("detail.time"), time]);
+  var place = pcCardPlace(eventPlace(event), eventDistrict(event)); // pc-card.js
+  if (place) rows.push([I18n.t("detail.place"), place]);
+  var fee = fields.fee || findInfo(lines, ["이용료", "요금", "입장료", "관람료", "참가비"], ["주차"]);
+  if (fee) rows.push([I18n.t("detail.fee"), fee]);
+  document.getElementById("pcdRows").innerHTML = rows
+    .map(function (row) {
+      return "<dt>" + escapeHtml(row[0]) + "</dt><dd>" + escapeHtml(row[1]) + "</dd>";
+    })
+    .join("");
+
+  // [♡ 찜] [길찾기] [원문 보기]
+  updatePcFav();
+  var source = document.getElementById("pcdSource");
+  var link = safeLink(event.link);
+  source.hidden = !link;
+  if (link) {
+    source.href = link;
+    source.textContent = I18n.t(isInstagramEvent(event) ? "detail.instagram" : "pcd.source");
+  }
+}
+
+function updatePcFav() {
+  var btn = document.getElementById("pcdFav");
+  if (!btn || pcDetailId === null) return;
+  var on = favoriteEventIds.has(pcDetailId);
+  btn.textContent = I18n.t(on ? "pcd.faved" : "pcd.fav");
+  btn.classList.toggle("active", on);
+  btn.setAttribute("aria-pressed", on ? "true" : "false");
+  btn.title = I18n.t(on ? "fav.unfav" : "fav.fav") + " (Space)";
+}
+
+// 찜 토스트 (PC): 찜할 때만 "♥ 찜했어요" 1.6초, 해제 · 넘기기는 토스트 없음 (시안 PcNavD1)
+function pcFavToast(added) {
+  if (added) showToast(I18n.t("pcd.favToast"), null, null, PC_FAV_TOAST_MS);
+  else hideToast();
+}
+
+// 단추 아래 나머지 정보: 소개 · 위치(주소 복사 · 가까운 정류장 · 역) · 캘린더 — 칸 안에서 스크롤
+function renderPcMore(event) {
+  var more = document.getElementById("pcdMore");
+  var html = "";
+  if (event.info) {
+    html += '<section class="pcd-sec"><h3>' + escapeHtml(I18n.t("detail.intro")) + '</h3><p class="pcd-intro">' + escapeHtml(event.info) + "</p></section>";
+  }
+  var address = extractAddress(event.info) || eventPlace(event) || "";
+  html +=
+    '<section class="pcd-sec"><h3>' + escapeHtml(I18n.t("detail.location")) + '</h3><div class="pcd-addr"><span>' +
+    escapeHtml(address || I18n.t("detail.noLocation")) + "</span>" +
+    (address ? '<button type="button" class="pcd-copy">' + escapeHtml(I18n.t("route.copy")) + "</button>" : "") +
+    '</div><div id="pcdTransit" class="pcd-transit" hidden></div></section>';
+  if (event.startDate) {
+    // 구글 캘린더 "일정 추가" (진행 날짜를 고르는 행사는 기본 날짜 하루 — 전 PC 상세 창과 같은 주소)
+    var choices = calendarDateChoices(event);
+    var query = choices ? "?date=" + encodeURIComponent(choices.selected) : "";
+    html +=
+      '<a class="pcd-cal" href="/api/events/' + encodeURIComponent(event.id) + "/calendar/google" + query +
+      '" target="_blank" rel="noopener">' + escapeHtml(I18n.t("detail.calendar")) + "</a>";
+  }
+  more.innerHTML = html;
+  var copy = more.querySelector(".pcd-copy");
+  if (copy) {
+    copy.addEventListener("click", function () {
+      copyText(address).then(
+        function () {
+          showToast(I18n.t("toast.addrCopied"));
+        },
+        function () {
+          showToast(I18n.t("toast.copyFailedSelect"));
+        },
+      );
+    });
+  }
+}
+
+// 가까운 정류장 · 역 (transit-nearby.js) — 넘기다 멈춘 행사만 불러옴 (경기도 API 하루 한도 아낌), 비거나 실패면 숨김
+function loadPcTransit(event) {
+  var box = document.getElementById("pcdTransit");
+  var ticket = ++pcTransitTicket;
+  if (!box || !event.latitude || !event.longitude) return;
+  fetch("/api/events/" + event.id + "/transit")
+    .then(function (res) {
+      return res.ok ? res.json() : null;
+    })
+    .then(function (data) {
+      var target = document.getElementById("pcdTransit");
+      if (ticket !== pcTransitTicket || pcDetailId !== event.id || !target) return;
+      var html = transitNearbyHtml(data);
+      if (!html) return;
+      target.innerHTML = html;
+      target.hidden = false;
+    })
+    .catch(function () {});
+}
+document.getElementById("pcdMore").addEventListener("click", function (e) {
+  var more = e.target.closest(".transit-more");
+  if (more) expandTransitRoutes(more);
+});
+
+// ‹ › (처음 · 끝은 aria-disabled — 눌러도 그대로, 포커스는 남김)
+document.getElementById("pcdPrev").addEventListener("click", function () {
+  pcStep(-1);
+});
+document.getElementById("pcdNext").addEventListener("click", function () {
+  pcStep(1);
+});
+document.getElementById("pcdFav").addEventListener("click", function () {
+  if (pcDetailId !== null) toggleFavorite(pcDetailId);
+});
+document.getElementById("pcdRoute").addEventListener("click", function () {
+  var item = pcItem(pcDetailId);
+  if (item) toggleRoutePop(item.event, this); // 단추 위 작은 창 (P1 그대로)
+});
+// 툴팁: Esc 로 닫고, 마우스가 단추에 새로 올라오면 다시 보임 (WCAG 1.4.13)
+document.querySelectorAll("#pcDetail .pcd-nav").forEach(function (nav) {
+  nav.addEventListener("mouseenter", function () {
+    document.getElementById("pcDetail").classList.remove("tips-off");
+  });
+});
+
+// 작은 창 · 공유 창 · ☰ 메뉴 · 언어 목록 · 달력이 열려 있나 → 열려 있으면 ← → · Space 로 넘기거나 찜하지 않음
+function pcPopupOpen() {
+  return (
+    !!routePopEvent ||
+    !document.getElementById("routeSheet").hidden ||
+    !document.getElementById("shareSheet").hidden ||
+    document.getElementById("topbar").classList.contains("menu-open") ||
+    !document.getElementById("langPop").hidden ||
+    document.body.classList.contains("lang-sheet-open") ||
+    calOpen ||
+    calPickerOpen
+  );
+}
+
+// PC 키보드: ← → 넘기기 · Space 찜 · 목록 줄 ↑ ↓ · Enter 상세 칸으로 (범위 = pc-card.js pcKeyAction)
+document.addEventListener("keydown", function (e) {
+  if (mobileQuery.matches) return;
+  if (e.key === "Escape") {
+    document.getElementById("pcDetail").classList.add("tips-off");
+    return;
+  }
+  if (pcDetailId === null) return;
+  var el = document.activeElement || document.body;
+  var pane = document.getElementById("pcDetail");
+  var zone = pcKeyZone({
+    tag: el.tagName,
+    editable: el.isContentEditable,
+    role: el.getAttribute ? el.getAttribute("role") : null,
+    row: !!(el.classList && el.classList.contains("event-item") && document.getElementById("list").contains(el)),
+    pane: el === pane,
+  }); // pc-card.js
+  var action = pcKeyAction({
+    key: e.key,
+    zone: zone,
+    popup: pcPopupOpen(),
+    mods: e.altKey || e.ctrlKey || e.metaKey || e.shiftKey,
+    handled: e.defaultPrevented,
+    composing: e.isComposing || e.keyCode === 229,
+  }); // pc-card.js
+  if (!action) return;
+  e.preventDefault(); // Space 가 칸을 내리지 않게, ↑ ↓ 가 목록을 스크롤하지 않게
+  if (action === "fav") toggleFavorite(zone === "row" ? Number(el.dataset.eventId) : pcDetailId);
+  else if (action === "focusPane") pane.focus();
+  else pcStep(action === "next" ? 1 : -1, { focusRow: zone === "row" });
+});
+
 // ----- 토스트 (찜 · 주소 복사 · 링크 복사 안내, 2.5초 뒤 자동으로 사라짐) -----
 var toastTimer = null;
-function showToast(message, actionLabel, onAction) {
+// duration = 사라질 때까지 ms (없으면 버튼 있는 토스트 4초 · 글만 2.5초)
+function showToast(message, actionLabel, onAction, duration) {
   var toast = document.getElementById("toast");
   var action = document.getElementById("toastAction");
   document.getElementById("toastText").textContent = message;
@@ -3587,31 +3934,25 @@ function showToast(message, actionLabel, onAction) {
   };
   toast.hidden = false;
   placeToast(toast);
-  toastDuration = actionLabel ? 4000 : 2500; // 버튼 있는 토스트는 누를 시간을 더 줌
+  toastDuration = duration || (actionLabel ? 4000 : 2500); // 버튼 있는 토스트는 누를 시간을 더 줌
   clearTimeout(toastTimer);
   toastTimer = setTimeout(hideToast, toastDuration);
 }
 var toastDuration = 2500;
-// PC: 지도 하단 카드 줄이 떠 있으면 토스트를 줄 위로 (pcToastBottom, strip-nav.js). 모바일은 CSS 자리(하단 탭 · 상세 바 위) 그대로
-//  - 상세창(덮개)이 열려 있으면 카드 줄은 덮개 아래라 기본 자리 (위로 올리면 상세 카드를 가림)
-//  - 줄 위치는 transform 을 뺀 자리(offsetTop)로 셈 → 줄이 올라오는 중(0.3초)에 떠도 최종 자리 기준
-//  - 카드의 길찾기 작은 창(#routePop)이 열려 있으면 창 위쪽까지 피함 — 창은 줄보다 위로 솟아 있음 (#249 검증 ③)
+// PC: 토스트는 가운데 상세 칸 가운데, 칸 바닥에서 64px 위 = 키 표시 줄 위 (11/13 Q4 시안 PcNavD1). 모바일은 CSS 자리(하단 탭 · 상세 바 위) 그대로
+var PC_TOAST_BOTTOM = 64;
 function placeToast(toast) {
-  if (mobileQuery.matches) {
+  var pane = mobileQuery.matches ? null : document.getElementById("pcDetail").getBoundingClientRect();
+  if (!pane || !pane.width) {
+    toast.style.left = "";
     toast.style.bottom = "";
     return;
   }
-  var area = document.getElementById("previewArea");
-  var coverTop = null;
-  if (area.classList.contains("show") && !document.body.classList.contains("detail-open") && area.offsetParent) {
-    coverTop = area.offsetParent.getBoundingClientRect().top + area.offsetTop;
-    var pop = document.getElementById("routePop");
-    if (!pop.hidden) coverTop = Math.min(coverTop, pop.getBoundingClientRect().top);
-  }
-  toast.style.bottom = pcToastBottom(window.innerHeight, coverTop) + "px";
+  toast.style.left = Math.round(pane.left + pane.width / 2) + "px";
+  toast.style.bottom = Math.round(window.innerHeight - pane.bottom + PC_TOAST_BOTTOM) + "px";
 }
-// 토스트가 떠 있는 동안 카드 줄 · 상세창 · 화면 폭이 바뀌면 자리를 다시 맞춤 (#249 검증 ② ④ — 띠가 생기거나 상세가 열려도 안 덮게,
-// PC → 모바일로 줄이면 PC 용 bottom 이 모바일 자리를 덮어쓰지 않게)
+// 토스트가 떠 있는 동안 카드 줄 · 상세창 · 화면 폭이 바뀌면 자리를 다시 맞춤 (#249 검증 ② ④ —
+// PC → 모바일로 줄이면 PC 용 left · bottom 이 모바일 자리를 덮어쓰지 않게)
 function refreshToastPlace() {
   var toast = document.getElementById("toast");
   if (!toast.hidden) placeToast(toast);
@@ -3871,15 +4212,19 @@ function applyLayout() {
   if (mobileQuery.matches !== menuLayoutMobile) {
     menuLayoutMobile = mobileQuery.matches;
     setMenuOpen(false);
+    // 모바일 상세 창을 연 채 PC 로 넓히면 그 행사를 상세 칸에 (11/13 Q4 — PC 는 상세 창이 없음)
+    var openEvent = !mobileQuery.matches && detailEvent ? detailEvent : null;
+    if (openEvent) {
+      closeDetailModal();
+      pcDetailId = openEvent.id;
+    }
+    if (!mobileQuery.matches) hidePreview(); // 카드 줄은 모바일만
+    filterMarkers(); // 목록 줄(PC 롤링 포커스) · 카드 줄 · 상세 칸을 그 화면에 맞게 다시
   }
   if (mobileQuery.matches) {
     setSheetState(sheetState);
   } else {
-    // PC로 돌아가면 모바일용 위치·상태를 모두 원래대로
-    // 하단 카드 줄은 PC 에서 늘 떠 있음 → 보던 카드는 폭이 바뀌었으니 다시 가운데로, 없으면 기본 카드 줄 (11/11)
-    var previewCard = previewEventId === null ? null : findPreviewCard(previewEventId);
-    if (previewCard) scrollStripTo(previewCard);
-    else showDefaultPreview();
+    // PC로 돌아가면 모바일용 위치·상태를 모두 원래대로 (하단 카드 줄은 모바일만 — PC 는 상세 칸, 11/13 Q4)
     var sidebar = document.getElementById("sidebar");
     sidebar.style.transform = "";
     sidebar.style.transition = "";
@@ -3887,7 +4232,6 @@ function applyLayout() {
     document.body.classList.remove("sheet-full");
     setMenuOpen(false);
   }
-  updatePreviewLabel(); // PC ↔ 모바일이 바뀌면 카드 tabindex · 안내 연결도 그 화면에 맞춤 (#241 검증)
   if (map) map.relayout(); // 카카오맵은 크기가 바뀌면 다시 계산시켜야 함
 }
 
@@ -3903,3 +4247,4 @@ renderHomeLoading();
 nav.start(!!initialParams.get("event"));
 if (mobileQuery.matches && !initialParams.get("event")) showHome();
 applyLayout();
+renderPcDetail(); // PC 상세 칸: 행사를 받기 전엔 불러오는 중
