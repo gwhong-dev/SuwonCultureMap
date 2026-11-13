@@ -5,7 +5,7 @@
 //   c = 장안문 → 0.5초 방화수류정 → 1초 로고 → 지도
 // 공통: 1.5초 뒤 0.3초 동안 사라짐, 화면을 누르거나 아무 키나 누르면 바로 건너뜀, 움직임 줄이기(prefers-reduced-motion)면 재생 안 함
 // body 맨 앞에서 동기로 읽어 지도보다 먼저 덮고, 지도는 그 아래에서 평소대로 불러옴 (모양 · 시간표는 css/intro.css)
-// CSP 가 style 속성을 막아서 그림은 클래스 + SVG 속성으로만 그림 (style="" 금지 — src/test/js/intro.test.js 가 확인)
+// CSP 가 style 속성을 막아서 그림은 클래스 + SVG 속성으로만 그림 (style 속성 금지 — src/test/js/intro.test.js · StaticStylePolicyTest 가 확인)
 
 var INTRO_VARIANTS = ["a", "b", "c"];
 var INTRO_TOTAL_MS = 1500; // 그림이 움직이는 시간 (css/intro.css 의 animation 시간과 같음)
