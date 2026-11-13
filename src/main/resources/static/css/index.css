@@ -655,7 +655,8 @@ body {
   cursor: pointer;
 }
 
-/* PC 토스트: 화면 아래 가운데 (모바일은 아래 미디어 쿼리에서 하단 탭 위로) */
+/* PC 토스트: 화면 아래 가운데 (모바일은 아래 미디어 쿼리에서 하단 탭 위로)
+   지도 하단 카드 줄이 떠 있으면 JS 가 bottom 을 줄 위로 덮어씀 (placeToast · pcToastBottom — 카드 줄을 가리지 않게) */
 @media (min-width: 1025px) {
   #toast {
     position: fixed;

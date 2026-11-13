@@ -1156,6 +1156,7 @@ function openDetailModal(event, pager) {
   if (!document.body.classList.contains("detail-open")) detailReturnScrollY = window.scrollY;
   document.getElementById("detailModal").style.display = "flex";
   document.body.classList.add("detail-open");
+  refreshToastPlace(); // 줄 위로 올라가 있던 토스트가 상세 카드를 덮지 않게 기본 자리로
   var card = document.querySelector("#detailModal .modal-card");
   card.scrollTop = 0;
   if (mobileQuery.matches) window.scrollTo(0, 0);
@@ -1542,6 +1543,7 @@ function closeDetailModal() {
   var wasOpen = document.body.classList.contains("detail-open");
   document.getElementById("detailModal").style.display = "none";
   document.body.classList.remove("detail-open");
+  refreshToastPlace();
   if (wasOpen && mobileQuery.matches) window.scrollTo(0, detailReturnScrollY); // 보던 목록 위치로
   if (wasOpen && homeOpen) drawNearbyMap(); // 상세가 덮은 동안 화면이 돌았으면 작은 지도 크기 다시 맞춤
   detailEvent = null;
@@ -3370,6 +3372,7 @@ function showPreview(eventId) {
   if (!card) return;
   if (mobileQuery.matches && sheetState !== "peek") setSheetState("peek"); // 목록이 올라와 있으면 내려서 카드가 보이게 (모바일)
   document.getElementById("previewArea").classList.add("show");
+  refreshToastPlace(); // 같은 장소 띠가 새로 생기면 줄 맨 위가 올라감
   scrollStripTo(card);
   selectMarker(eventId, true);
 }
@@ -3388,6 +3391,7 @@ function showDefaultPreview() {
   previewEventId = Number(first.dataset.eventId);
   updatePreviewLabel();
   document.getElementById("previewArea").classList.add("show");
+  refreshToastPlace();
   scrollStripTo(first);
   selectMarker(previewEventId, mobileQuery.matches);
 }
@@ -3397,6 +3401,7 @@ function hidePreview() {
   previewEventId = null;
   previewOrigin = null;
   document.getElementById("previewArea").classList.remove("show");
+  refreshToastPlace();
   selectMarker(null);
 }
 
@@ -3525,11 +3530,37 @@ function showToast(message, actionLabel, onAction) {
     if (onAction) onAction();
   };
   toast.hidden = false;
+  placeToast(toast);
   toastDuration = actionLabel ? 4000 : 2500; // 버튼 있는 토스트는 누를 시간을 더 줌
   clearTimeout(toastTimer);
   toastTimer = setTimeout(hideToast, toastDuration);
 }
 var toastDuration = 2500;
+// PC: 지도 하단 카드 줄이 떠 있으면 토스트를 줄 위로 (pcToastBottom, strip-nav.js). 모바일은 CSS 자리(하단 탭 · 상세 바 위) 그대로
+//  - 상세창(덮개)이 열려 있으면 카드 줄은 덮개 아래라 기본 자리 (위로 올리면 상세 카드를 가림)
+//  - 줄 위치는 transform 을 뺀 자리(offsetTop)로 셈 → 줄이 올라오는 중(0.3초)에 떠도 최종 자리 기준
+//  - 카드의 길찾기 작은 창(#routePop)이 열려 있으면 창 위쪽까지 피함 — 창은 줄보다 위로 솟아 있음 (#249 검증 ③)
+function placeToast(toast) {
+  if (mobileQuery.matches) {
+    toast.style.bottom = "";
+    return;
+  }
+  var area = document.getElementById("previewArea");
+  var coverTop = null;
+  if (area.classList.contains("show") && !document.body.classList.contains("detail-open") && area.offsetParent) {
+    coverTop = area.offsetParent.getBoundingClientRect().top + area.offsetTop;
+    var pop = document.getElementById("routePop");
+    if (!pop.hidden) coverTop = Math.min(coverTop, pop.getBoundingClientRect().top);
+  }
+  toast.style.bottom = pcToastBottom(window.innerHeight, coverTop) + "px";
+}
+// 토스트가 떠 있는 동안 카드 줄 · 상세창 · 화면 폭이 바뀌면 자리를 다시 맞춤 (#249 검증 ② ④ — 띠가 생기거나 상세가 열려도 안 덮게,
+// PC → 모바일로 줄이면 PC 용 bottom 이 모바일 자리를 덮어쓰지 않게)
+function refreshToastPlace() {
+  var toast = document.getElementById("toast");
+  if (!toast.hidden) placeToast(toast);
+}
+mobileQuery.addEventListener("change", refreshToastPlace);
 // 마우스를 올리거나 키보드로 버튼에 가 있는 동안은 사라지지 않게
 function pauseToast() {
   clearTimeout(toastTimer);
