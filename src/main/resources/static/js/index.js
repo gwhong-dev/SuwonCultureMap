@@ -1061,6 +1061,12 @@ function checkAuth() {
       );
       pcFavoritesReady = true; // PC 첫 진입 중심 = 찜 첫 행사 (B1)
       filterMarkers(); // ← 즐겨찾기 목록 다 받아온 뒤, 화면도 한 번 더 새로 그림
+    })
+    .catch(function (err) {
+      // 로그인 확인 · 찜 목록 받기 실패(배포 중 502 등): 첫 진입 중심 맞추기는 끝냄 — 안 그러면 분류 · 탭을 바꿀 때마다 지도가 첫 행사로 옮겨짐 (#262 검증 ⚠️)
+      console.error("로그인 · 찜 목록 확인 실패", err);
+      pcFavoritesReady = true;
+      if (eventsLoaded) pcAutoCenter = false;
     });
 }
 
@@ -3743,6 +3749,8 @@ function pcMoveBack() {
 }
 function pcMoveDone() {
   var again = pcMove.target !== pcMove.panned ? pcMove.target : null; // 확대하는 사이 다른 행사를 고름
+  // 안전망: 앞 panTo 의 idle 을 축소 끝으로 받는 등 명령이 무시돼 고른 핀이 화면 밖에 남았으면 한 번에 옮김 (#262 검증 ⚠️)
+  if (!again && !map.getBounds().contain(pcMove.target)) map.setCenter(pcMove.target);
   pcMoveCancel();
   if (again) pcMoveMap(again, prefersReducedMotion());
 }
