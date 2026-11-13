@@ -252,6 +252,57 @@ function searchTyping(events, keyword) {
   });
 }
 
+// 치는 중 규칙을 쓸지 — 모바일 검색 화면(입력 중) · PC 목록 검색 공통 (11/13)
+//  composing = 마지막 글자를 아직 IME 로 조합하는 중 (input 이벤트 isComposing) → 늘 넓힘:
+//    "광복"을 치는 중 "과" 는 다음 키로 광 · 괄 … 이 되므로, 그대로 맞는 행사(치킨'과')가 있어도 광복을 빼지 않음
+//    순서는 searchEvents(묶음마다) · searchLooseLast(PC 목록) 가 그대로 맞는 행사를 위에 둠 ("미" → 미술 먼저, 시민은 아래)
+//  조합이 끝난 글자는 예전처럼 그대로 찾아 하나도 없을 때만 넓힘 (조합 이벤트를 안 내는 키보드 대비)
+function searchTypingMode(events, keyword, composing) {
+  if (composing) return !!searchPattern(keyword, false);
+  return searchTyping(events, keyword);
+}
+
+// 검색칸 조합 상태 감시 (한글 IME): 조합 중 입력은 치는 중 규칙으로, 조합이 끝나면(스페이스 · 다른 칸 · 엔터) 그대로 규칙으로 다시 거름
+//  input = 검색 입력칸, setComposing = 조합 상태를 적을 곳, rerender = 조합이 끝난 뒤 다시 거를 함수
+//  Chrome: input(isComposing) → compositionend → 여기서 다시 거름 / Safari: compositionend → input(isComposing false) 이 거름
+//  같은 키로 바로 다음 글자 조합이 시작되면(광 → 광ㅂ: end → start) 다시 거르지 않음 (다음 input 이 거름)
+//  schedule = 나중에 부를 함수 (기본 setTimeout 0, 시험에서 바꿈)
+function watchSearchComposition(input, setComposing, rerender, schedule) {
+  var later =
+    schedule ||
+    function (fn) {
+      setTimeout(fn, 0);
+    };
+  var composing = false;
+  input.addEventListener("compositionstart", function () {
+    composing = true;
+    setComposing(true);
+  });
+  input.addEventListener("compositionend", function () {
+    composing = false;
+    setComposing(false);
+    later(function () {
+      if (!composing) rerender();
+    });
+  });
+}
+
+// 넓혀서만 맞는 것(그대로는 안 맞음)인지 — typing 이 아니면 늘 false
+function searchLooseOnly(event, keyword, typing) {
+  return !!typing && !matchesSearch(event, keyword, false);
+}
+
+// 이미 정렬한 목록에서 넓혀서만 맞는 것을 아래로 (나머지 순서는 그대로). getEvent = 줄 → 행사 (없으면 줄 그대로)
+function searchLooseLast(items, keyword, typing, getEvent) {
+  if (!typing) return items;
+  var strict = [];
+  var loose = [];
+  items.forEach(function (item) {
+    (searchLooseOnly(getEvent ? getEvent(item) : item, keyword, typing) ? loose : strict).push(item);
+  });
+  return strict.concat(loose);
+}
+
 // 묶음: 운영중 · 오픈예정 0 → 날짜 없음 1 → 종료 2
 function searchGroup(event, now) {
   var status = homeSchedule.eventStatus(event, now);
@@ -260,6 +311,7 @@ function searchGroup(event, now) {
 }
 
 // 맞는 행사: 운영중 · 오픈예정(종료 임박순) → 날짜 없음(제목 순) → 종료(최근에 끝난 순). 검색어가 비면 []
+//  typing(치는 중 규칙)이면 묶음마다 그대로 맞는 행사 → 넓혀서만 맞는 행사
 function searchEvents(events, keyword, now, typing) {
   if (!searchNormalize(keyword)) return [];
   var endOf = function (event) {
@@ -273,6 +325,10 @@ function searchEvents(events, keyword, now, typing) {
       var ga = searchGroup(a, now);
       var gb = searchGroup(b, now);
       if (ga !== gb) return ga - gb;
+      // 같은 묶음 안에서 그대로 맞는 행사 먼저 (진행 중 행사는 넓혀서 맞아도 종료 행사보다 위 → 입력 중 20줄 안에 듦)
+      var la = searchLooseOnly(a, keyword, typing);
+      var lb = searchLooseOnly(b, keyword, typing);
+      if (la !== lb) return la ? 1 : -1;
       var diff = ga === 2 ? endOf(b).localeCompare(endOf(a)) : endOf(a).localeCompare(endOf(b));
       return diff !== 0 ? diff : (a.title || "").localeCompare(b.title || "");
     });
@@ -312,6 +368,10 @@ if (typeof module !== "undefined") {
     SEARCH_SUGGEST_MAX: SEARCH_SUGGEST_MAX,
     matchesSearch: matchesSearch,
     searchTyping: searchTyping,
+    searchTypingMode: searchTypingMode,
+    searchLooseOnly: searchLooseOnly,
+    searchLooseLast: searchLooseLast,
+    watchSearchComposition: watchSearchComposition,
     searchEvents: searchEvents,
     searchHighlight: searchHighlight,
     searchDistrict: searchDistrict,
