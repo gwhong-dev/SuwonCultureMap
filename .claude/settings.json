@@ -1,4 +1,5 @@
 {
+  "language": "korean",
   "permissions": {
     "allow": [
       "mcp__Notion__notion-search",
@@ -29,6 +30,27 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-l-merge.js\"",
             "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__ccd_turn__wrap_up",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/lang-check.js\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/lang-check.js\"",
+            "timeout": 10
           }
         ]
       }

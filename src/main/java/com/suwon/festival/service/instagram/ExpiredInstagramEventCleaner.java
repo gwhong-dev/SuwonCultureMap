@@ -2,7 +2,10 @@ package com.suwon.festival.service.instagram;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -18,6 +21,7 @@ import com.suwon.festival.repository.EventDateRepository;
 import com.suwon.festival.repository.EventRepository;
 import com.suwon.festival.repository.FavoriteRepository;
 import com.suwon.festival.repository.InstagramBlockRepository;
+import com.suwon.festival.service.caption.NonTouristFilter;
 
 // 종료 7일 지난 인스타 행사 삭제 (InstagramExpiry). 인스타 동기화 끝(잠금 안)에서 사진 정리 전에 실행 → 사진도 같은 실행에서 지워짐
 // 재단 행사는 건드리지 않음. 순서 (FK):
@@ -86,5 +90,40 @@ public class ExpiredInstagramEventCleaner {
     log.info("지난 인스타 행사 삭제: 행사 {}건 (기준 {} 이하) · 찜 삭제 {} · 대표로 옮김 {} · 블록 {}",
         expired.size(), cutoff, favoritesDeleted, favoritesMoved, blocks.size());
     return expired.size();
+  }
+
+  // 관광 대상 아닌 인스타 행사 삭제 (NonTouristFilter, 11/13 사용자 결정)
+  // 동기화가 다시 처리하는 건 계정마다 최근 글 몇 개뿐 → 그 밖의 오래된 글로 이미 올라간 행사도 여기서 내림
+  // 찜이 걸린 행사는 남김 (찜을 잃지 않음). 블록은 SKIPPED + 이유로 바꾸고 행사 연결을 끊음 → 다시 처리돼도 행사를 안 만듦
+  // 순서 (FK)는 clean() 과 같음: 숨김 해제 → 진행 날짜 → 블록 끊기 → 행사 삭제. 한 트랜잭션
+  @Transactional
+  public int cleanNonTourist() {
+    Map<Long, String> reasons = new HashMap<>();
+    List<Event> targets = new ArrayList<>();
+    for (Event event : eventRepository.findBySource(Event.SOURCE_INSTAGRAM)) {
+      String reason = NonTouristFilter.reason(event.getTitle(), event.getPlace());
+      if (reason == null) continue;
+      if (!favoriteRepository.findByEventId(event.getId()).isEmpty()) {
+        log.warn("관광 대상 아니지만 찜이 걸려 있어 남김 eventId={}", event.getId());
+        continue;
+      }
+      reasons.put(event.getId(), reason);
+      targets.add(event);
+    }
+    if (targets.isEmpty()) return 0;
+    Set<Long> ids = reasons.keySet();
+    LocalDateTime now = LocalDateTime.now(InstagramPostProcessor.KST);
+
+    eventRepository.findByMergedIntoIdIn(ids).forEach(hidden -> hidden.mergeInto(null));
+    targets.forEach(e -> e.mergeInto(null));
+    eventDateRepository.deleteAll(eventDateRepository.findByEventIdInOrderByRunDate(ids));
+    List<InstagramBlock> blocks = blockRepository.findByEventIdIn(ids);
+    blocks.forEach(b -> b.update(InstagramBlock.Status.SKIPPED, reasons.get(b.getEvent().getId()), null, now));
+    eventRepository.flush();
+    eventRepository.deleteAll(targets);
+    eventRepository.flush();
+
+    log.info("관광 대상 아닌 인스타 행사 삭제: 행사 {}건 · 블록 {}", targets.size(), blocks.size());
+    return targets.size();
   }
 }
