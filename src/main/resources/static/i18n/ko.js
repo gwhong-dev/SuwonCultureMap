@@ -249,6 +249,14 @@
   "transit.moreBus": "버스 {n}개 더 보기",
   "transit.note": "거리 · 도보 분은 직선거리 기준 추정",
   "transit.source": "버스 정보: 경기도 버스정보(공공데이터포털)",
+  "transit.routeBtn": "길찾기 (대중교통)",
+  "transit.pcTitle": "오시는 길",
+  "transit.stopLabel": "정류장",
+  "transit.noStation": "근처 지하철역 없음",
+  "transit.withinKm": "{n}km 안",
+  "pcd.copyHint": "누르면 주소 복사",
+  "pcd.copied": "복사됨",
+  "pcd.copyAria": "주소 복사: {text}",
 
   // ===== 길찾기 · 공유 · 토스트 =====
   "route.title": "길찾기",

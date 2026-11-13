@@ -34,6 +34,8 @@ import lombok.extern.slf4j.Slf4j;
 //   버스 = 성공 24시간 (경기도 개발계정 하루 1,000회 한도), 역 = 1시간 (카카오 결과 저장 허용 문구 확인 전, 설계 6번)
 //   실패(키 오류 · 시간 초과)는 10분만 기억해 같은 장소를 계속 다시 부르지 않음
 // - 키가 없거나 외부 호출이 실패하면 그 칸만 빈 목록 → 화면이 조용히 숨김
+// - subwayChecked: 역 검색이 실제로 끝났는가 (true + 빈 목록 = 1.5km 안에 정말 역이 없음 → 화면이 "근처 지하철역 없음" 줄)
+//   실패(키 없음 · 오류 · 시간 초과)는 false → 화면이 역 칸을 숨김 (docs/design/2026-11-13-transit-next.md ③)
 @Slf4j
 @Service
 public class NearbyTransitService {
@@ -64,15 +66,20 @@ public class NearbyTransitService {
   public record Subway(String name, List<String> lines, int distanceMeters) {
   }
 
-  public record NearbyTransit(List<BusStop> busStops, List<Subway> subways) {
-    public static final NearbyTransit EMPTY = new NearbyTransit(List.of(), List.of());
+  public record NearbyTransit(List<BusStop> busStops, List<Subway> subways, boolean subwayChecked) {
+    public static final NearbyTransit EMPTY = new NearbyTransit(List.of(), List.of(), false);
+  }
+
+  // 역 검색 결과 + 검색이 끝났는지 (실패면 checked = false)
+  record SubwayLookup(List<Subway> subways, boolean checked) {
+    static final SubwayLookup FAILED = new SubwayLookup(List.of(), false);
   }
 
   private final GbisStationClient gbis;
   private final KakaoSubwayClient kakao;
   private final Clock clock;
   private final TtlCache<List<BusStop>> busCache = new TtlCache<>();
-  private final TtlCache<List<Subway>> subwayCache = new TtlCache<>();
+  private final TtlCache<SubwayLookup> subwayCache = new TtlCache<>();
   private final int dailyCallLimit;
   private LocalDate budgetDay;  // budget* 는 reserveCalls 안에서만 (synchronized)
   private int budgetUsed;
@@ -109,8 +116,8 @@ public class NearbyTransitService {
     if (!Double.isFinite(latitude) || !Double.isFinite(longitude)) return NearbyTransit.EMPTY;
     String key = cacheKey(latitude, longitude);
     List<BusStop> stops = busCache.get(key, clock.instant(), () -> loadBusStops(latitude, longitude));
-    List<Subway> subways = subwayCache.get(key, clock.instant(), () -> loadSubways(latitude, longitude));
-    return new NearbyTransit(stops, subways);
+    SubwayLookup subways = subwayCache.get(key, clock.instant(), () -> loadSubways(latitude, longitude));
+    return new NearbyTransit(stops, subways.subways(), subways.checked());
   }
 
   // 좌표 소수 4자리(위도 약 11m · 경도 약 9m) 반올림
@@ -203,13 +210,13 @@ public class NearbyTransitService {
 
   // ----- 역 -----
 
-  private Cached<List<Subway>> loadSubways(double latitude, double longitude) {
-    if (!kakao.isConfigured()) return new Cached<>(List.of(), FAIL_TTL);
+  private Cached<SubwayLookup> loadSubways(double latitude, double longitude) {
+    if (!kakao.isConfigured()) return new Cached<>(SubwayLookup.FAILED, FAIL_TTL);
     try {
-      return new Cached<>(groupSubways(kakao.findAround(latitude, longitude)), SUBWAY_TTL);
+      return new Cached<>(new SubwayLookup(groupSubways(kakao.findAround(latitude, longitude)), true), SUBWAY_TTL);
     } catch (RuntimeException e) {
       log.warn("오시는 길 역 정보 실패 ({}): {}", cacheKey(latitude, longitude), e.getMessage());
-      return new Cached<>(List.of(), FAIL_TTL);
+      return new Cached<>(SubwayLookup.FAILED, FAIL_TTL);
     }
   }
 
