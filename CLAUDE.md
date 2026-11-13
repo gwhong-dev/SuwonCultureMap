@@ -86,8 +86,11 @@ docker compose up --build   # 앱 + MySQL (.env 는 scripts/setup-docker.cmd)
    - 화면 파일(static 의 HTML · JS · CSS)만 바꿨으면 `node --test` + 화면 시험 + `mvn test -Dtest=ScheduleDisplayPageTest` 만
 5. push → PR 생성
 6. CI 통과 확인 (빌드 + 테스트, Docker 이미지 빌드 — main 브랜치 보호로 필수)
-   - CI 끝 알림이 오면 결과를 다시 조회하지 않고 바로 머지 (CI 가 실패했으면 브랜치 보호가 머지를 막음)
-   - 50분 뒤 안전 점검 예약(send_later)은 하지 않음 (CI 는 2~3분, 결과는 알림으로 옴). 예외: 메인의 분기 세션 점검(8번)
+   - **CI 를 기다릴 땐 턴을 그냥 끝내지 않는다** (11/13 — [결정 기록](docs/decisions/2026-11-13-ci-wait-background.md)): push 직후 `gh pr checks <N> --watch` 를 **백그라운드 명령**(Bash `run_in_background`)으로 걸고, 그 명령이 끝나며 오는 완료 알림에 이어서 결과 확인 → 머지 (메인 · 분기 모두. 검증 반영 등으로 다시 push 하면 다시 건다)
+     - 이유: 데스크톱 앱 Code 탭의 Auto-fix 알림은 CI **실패** · 충돌 · 리뷰 댓글만 깨운다. 통과는 알려 주지 않아서, 알림만 믿고 턴을 끝내면 CI 가 통과한 채 멈춘다 (11/13 #260 · #261)
+     - 머지 뒤 Deploy 대기도 같은 방식 (`gh run watch` 또는 끝나면 나오는 확인 명령을 백그라운드로)
+   - CI 가 실패했으면 브랜치 보호가 머지를 막음 → 고쳐서 다시 push (실패는 Auto-fix 알림으로도 옴)
+   - 50분 뒤 안전 점검 예약(send_later)은 하지 않음 (CI 는 2~3분). 예외: 메인의 분기 세션 점검(8번)
 7. 머지는 Claude 가 직접 (`gh pr merge --merge`, 머지 커밋 방식 — 11/3 사용자 결정)
    - `gh pr merge` 가 권한 등으로 막히면 멈추고 사용자에게 허용 방법을 단계별로 안내
    - 조건: CI 전부 통과 + 충돌 없음. M · L 등급은 검증 댓글(판정)까지 끝난 뒤
