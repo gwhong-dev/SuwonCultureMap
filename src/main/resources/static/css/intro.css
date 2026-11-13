@@ -1,7 +1,8 @@
-/* ===== 첫 진입 애니메이션 3안 (확정 시안 P7, 그리는 쪽은 intro.js) =====
+/* ===== 첫 진입 애니메이션 — B안 계절 꽃잎 → 로고 (11/13 확정, 그리는 쪽 · 재생 조건은 intro.js) =====
    시간표: 그림이 움직이는 시간 1.5초(= intro.js INTRO_TOTAL_MS) → 0.3초 동안 사라짐(= INTRO_FADE_MS)
-   키프레임 % = 시각 ÷ 1.5초 (0.5초 = 33%, 0.7초 = 47%, 1초 = 67%)
-   색은 theme.css 토큰만 → 밝은 · 어두운 테마 모두 맞음. 꽃잎 색만 이 파일에서 정함 */
+   키프레임 % = 시각 ÷ 1.5초 (0.7초 = 47%, 0.75초 = 50%, 1.05초 = 70%)
+   색은 theme.css 토큰만 → 밝은 · 어두운 테마 모두 맞음. 꽃잎 색만 이 파일에서 정함
+   버린 A안(성문) · C안(장안문 → 방화수류정)은 docs/decisions/2026-11-13-intro-animation-b.md 에서 되살리는 법 */
 
 .intro {
   position: fixed;
@@ -19,59 +20,26 @@
 .intro.intro-out {
   opacity: 0;
 }
-/* 그림 · 로고를 같은 칸에 겹쳐 가운데 둠 */
+/* 꽃잎 · 로고를 같은 칸에 겹쳐 가운데 둠 */
 .intro > * {
   grid-area: 1 / 1;
 }
 .intro-scene {
-  width: min(78vw, 400px);
+  width: min(100vw, 560px);
   height: auto;
   overflow: visible;
 }
 
-/* ----- 공통 그림 부품 ----- */
-.ix-stone {
-  fill: var(--gray-soft);
-  stroke: var(--sub);
-  stroke-width: 1.2;
-  stroke-linejoin: round;
-}
-.ix-wood {
-  fill: var(--accent);
-  stroke: var(--accent-ink);
-  stroke-width: 1;
-}
-.ix-roof {
-  fill: var(--text);
-}
-.ix-hole {
-  fill: var(--bg); /* 문 안: 덮개 바탕(--bar)과 다른 칸 — 어두운 테마에서 --surface 는 --bar 와 같은 색이라 안 보임 */
-  stroke: var(--sub);
-  stroke-width: 1.2;
-}
-.ix-door {
-  fill: var(--accent);
-  stroke: var(--accent-ink);
-  stroke-width: 1.2;
-}
-.ix-stud {
-  fill: none;
-  stroke: var(--accent-soft);
-  stroke-width: 1.4;
-  stroke-linecap: round;
-}
-.ix-water {
-  fill: none;
-  stroke: var(--blue);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-}
-
-/* ----- 로고 (2안 · 3안 끝): W4 워드마크 32px / 부제 14px, 가운데 맞춤. 비율 · 색은 index.css .brand-words 와 같음 ----- */
+/* ----- 로고: W4 워드마크 32px / 부제 14px, 가운데 맞춤. 비율 · 색은 index.css .brand-words 와 같음 ----- */
 .intro-logo {
   display: flex;
   align-items: center;
   opacity: 0;
+  animation: intro-logo 1.5s ease-out both;
+}
+@keyframes intro-logo {
+  0%, 50% { opacity: 0; transform: scale(0.92); }
+  70%, 100% { opacity: 1; transform: scale(1); }
 }
 .intro-words {
   display: flex;
@@ -94,51 +62,7 @@
   color: var(--brand-sub);
 }
 
-/* ===== 1안 a: 닫힌 성문 → 0.7초 문 열림 + 도장 → 1.5초 문 안으로 확대 ===== */
-.ia-door {
-  transform-box: fill-box;
-  animation: 1.5s ease-in-out both;
-}
-.ia-door-l {
-  transform-origin: left center;
-  animation-name: ia-door-l;
-}
-.ia-door-r {
-  transform-origin: right center;
-  animation-name: ia-door-r;
-}
-@keyframes ia-door-l {
-  0%, 13% { transform: scaleX(1); }
-  47%, 100% { transform: scaleX(0.12); }
-}
-@keyframes ia-door-r {
-  0%, 13% { transform: scaleX(1); }
-  47%, 100% { transform: scaleX(0.12); }
-}
-.ia-seal {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: ia-seal 1.5s ease-out both;
-}
-@keyframes ia-seal {
-  0%, 30% { opacity: 0; transform: scale(2.4) rotate(-8deg); }
-  42% { opacity: 1; transform: scale(0.9) rotate(0); }
-  47%, 100% { opacity: 1; transform: scale(1); }
-}
-.ia-zoom {
-  transform-origin: 100px 124px; /* 문 가운데 */
-  animation: ia-zoom 1.5s ease-in both;
-}
-@keyframes ia-zoom {
-  0%, 47% { transform: scale(1); opacity: 1; }
-  80% { opacity: 1; }
-  100% { transform: scale(7); opacity: 0; }
-}
-
-/* ===== 2안 b: 꽃잎이 흩날림 → 0.7초부터 가운데로 모여 로고 ===== */
-.intro-b .intro-scene {
-  width: min(100vw, 560px);
-}
+/* ----- 꽃잎: 흩날림 → 0.7초부터 가운데로 모여 사라지고 로고가 나타남 ----- */
 .ib-spring .ib-petal {
   fill: #f4b6c2; /* 벚꽃 */
   stroke: #d98a9c;
@@ -170,44 +94,6 @@
 .ib-p10 { --x0: 215px; --y0: 110px; --x1: 150px; --y1: 160px; --r0: -40deg; --r1: -220deg; }
 .ib-p11 { --x0: 40px; --y0: -35px; --x1: 20px; --y1: 140px; --r0: 90deg; --r1: 300deg; }
 .ib-p12 { --x0: 170px; --y0: -35px; --x1: 185px; --y1: 150px; --r0: -60deg; --r1: -240deg; }
-.intro-b .intro-logo {
-  animation: intro-logo-b 1.5s ease-out both;
-}
-@keyframes intro-logo-b {
-  0%, 50% { opacity: 0; transform: scale(0.92); }
-  70%, 100% { opacity: 1; transform: scale(1); }
-}
-
-/* ===== 3안 c: 장안문(0~0.5초) → 방화수류정(0.5~1초) → 로고(1~1.5초) ===== */
-.ic-gate,
-.ic-pavilion {
-  transform-origin: 100px 110px;
-}
-.ic-gate {
-  animation: ic-gate 1.5s ease-out both;
-}
-@keyframes ic-gate {
-  0% { opacity: 0; transform: scale(0.96); }
-  8% { opacity: 1; }
-  28% { opacity: 1; transform: scale(1.02); }
-  38%, 100% { opacity: 0; transform: scale(1.04); }
-}
-.ic-pavilion {
-  animation: ic-pavilion 1.5s ease-out both;
-}
-@keyframes ic-pavilion {
-  0%, 28% { opacity: 0; transform: scale(0.96); }
-  38% { opacity: 1; }
-  62% { opacity: 1; transform: scale(1.02); }
-  70%, 100% { opacity: 0; transform: scale(1.04); }
-}
-.intro-c .intro-logo {
-  animation: intro-logo-c 1.5s ease-out both;
-}
-@keyframes intro-logo-c {
-  0%, 62% { opacity: 0; transform: scale(0.92); }
-  76%, 100% { opacity: 1; transform: scale(1); }
-}
 
 /* 움직임 줄이기 설정이면 덮개를 아예 안 보임 (intro.js 도 재생하지 않음 — 두 겹 안전) */
 @media (prefers-reduced-motion: reduce) {
