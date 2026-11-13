@@ -68,6 +68,8 @@
   "chip.category": "분류",
   "chip.fav": "♥ 찜",
   "chip.favPlain": "찜",
+  "chip.favOnly": "찜한 행사만", // PC 분류 펼침 목록 마지막 줄 (R5 A4)
+  "chip.categoryList": "분류 고르기", // PC 분류 펼침 목록 이름
   "chip.free": "💸 무료",
   "chip.clearDate": "{title} 날짜 필터 해제",
   "chip.clearFilter": "{name} 필터 해제",
@@ -292,6 +294,7 @@
   "search.open": "행사 검색",
   "search.close": "검색 닫기",
   "search.clear": "검색어 지우기",
+  "search.pcResults": "‘{q}’ 검색 결과 {n}개", // PC 목록 맨 위 검색 구분 제목 (R4 A)
   "search.placeholder": "행사 이름 · 장소 검색",
   "search.placeholderPc": "행사 이름 검색",
   "search.hint": "행사 이름이나 장소로 찾아보세요",
