@@ -1,5 +1,6 @@
 # gitleaks 설정 — 기본 규칙 그대로 + 오탐만 허용 (CI secret-scan 잡)
 # 허용을 넣을 땐 "무엇을 · 왜" 를 주석으로 남기고, 경로 전체가 아니라 값 하나만 좁게 허용
+# 이미 커밋된 오탐 한 건은 .gitleaksignore 에 지문(커밋:파일:규칙:줄)으로 제외
 [extend]
 useDefault = true
 

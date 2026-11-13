@@ -26,9 +26,19 @@ function eventPlace(event) {
   return event.place || extractPlaceName(event.info);
 }
 
+// 수원문화DB 행사: info 칸에는 원문이 아니라 "장소가 여러 곳 · 원문 확인" 안내만 들어 있음 (소개글은 가져오지 않음)
+function isSwdbEvent(event) {
+  return event.source === "SWDB";
+}
+
+// info 칸이 재단 원문인지 (인스타 = 없음, 수원문화DB = 안내 글)
+function hasOriginalInfo(event) {
+  return !!event.info && !isSwdbEvent(event);
+}
+
 // 시간: info 원문이 없을 때만 timeText 칸 (있으면 원문에서 찾은 값을 씀 → null)
 function fallbackTime(event) {
-  if (event.info) return null;
+  if (hasOriginalInfo(event)) return null;
   return event.timeText || null;
 }
 
@@ -48,8 +58,9 @@ function isInstagramEvent(event) {
 // 화면 언어 (i18n.js, node 시험 = 한국어)
 var detailI18n = typeof I18n !== "undefined" ? I18n : require("./i18n.js").I18n;
 
-// 출처 한 줄: 인스타 행사만 ("인스타그램 @계정"). 재단 행사는 null → 표시 안 함
+// 출처 한 줄: 인스타 행사 ("인스타그램 @계정") · 수원문화DB 행사. 재단 행사는 null → 표시 안 함
 function sourceLabel(event) {
+  if (isSwdbEvent(event)) return detailI18n.t("detail.swdb");
   if (!isInstagramEvent(event)) return null;
   return event.sourceAccount ? detailI18n.t("detail.instagram") + " @" + event.sourceAccount : detailI18n.t("detail.instagram");
 }
@@ -65,10 +76,11 @@ function linkButtonText(event) {
   return detailI18n.t(isInstagramEvent(event) ? "detail.viewInstagram" : "detail.viewSource");
 }
 
-// PC 상세 본문: info 원문, 없으면 장소 · 시간 · 출처 줄 (셋 다 없으면 "")
+// PC 상세 본문: info 원문, 없으면 장소 · 시간 · 출처 줄 (셋 다 없으면 ""). 수원문화DB 안내 글은 그 줄들 위에
 function detailInfoText(event) {
-  if (event.info) return event.info;
+  if (hasOriginalInfo(event)) return event.info;
   var lines = [];
+  if (event.info) lines.push(event.info, "");
   if (event.place) lines.push(detailI18n.t("detail.place") + ": " + event.place);
   if (event.timeText) lines.push(detailI18n.t("detail.time") + ": " + event.timeText);
   var source = sourceLabel(event);
@@ -83,7 +95,7 @@ function cardImageUrl(event) {
 
 // 목록 카드 요약 (info 원문이 없을 때): 장소 · 시간 줄. info 가 있으면 "" (기존 이용료/장소/시간 요약을 씀)
 function cardFallbackInfo(event) {
-  if (event.info) return "";
+  if (hasOriginalInfo(event)) return "";
   var lines = [];
   if (event.place) lines.push(detailI18n.t("detail.place") + ": " + event.place);
   if (event.timeText) lines.push(detailI18n.t("detail.time") + ": " + event.timeText);
@@ -129,6 +141,7 @@ if (typeof module !== "undefined") {
     detailInfoText: detailInfoText,
     cardImageUrl: cardImageUrl,
     cardFallbackInfo: cardFallbackInfo,
+    hasOriginalInfo: hasOriginalInfo,
     eventFeeText: eventFeeText,
     isFreeEvent: isFreeEvent,
   };
