@@ -7,7 +7,9 @@ var calSchedule =
     ? require("./schedule-format.js")
     : { koreaToday: koreaToday, addDays: addDays, filterDays: filterDays, matchRunDays: matchRunDays, eventStatus: eventStatus };
 
-var CAL_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+// 화면 언어 (i18n.js): 요일 · "오늘" · 날짜 글자 (node 시험 = 한국어)
+var calI18n = typeof I18n !== "undefined" ? I18n : require("./i18n.js").I18n;
+var CAL_WEEKDAYS = calI18n.list("date.weekdays");
 var STRIP_DAYS = 14; // 날짜 줄 칸 수 (오늘 포함 2주, 가로로 넘김)
 
 function isDayValue(value) {
@@ -25,7 +27,7 @@ function stripDays(today, count) {
   for (var i = 0; i < count; i++) {
     var date = calSchedule.addDays(today, i);
     var weekday = weekdayOf(date);
-    days.push({ date: date, label: i === 0 ? "오늘" : CAL_WEEKDAYS[weekday], num: +date.slice(8, 10), weekday: weekday });
+    days.push({ date: date, label: i === 0 ? calI18n.t("cal.today") : CAL_WEEKDAYS[weekday], num: +date.slice(8, 10), weekday: weekday });
   }
   return days;
 }
@@ -86,19 +88,19 @@ function nextDayFilter(filterValue, day, now) {
   return current.length === 1 && current[0] === day ? "all" : day;
 }
 
-// "11월 14일 (토)"
+// "11월 14일 (토)" · "Sat, Nov 14" (i18n.js dayTitle)
 function dayTitle(isoDate) {
-  return +isoDate.slice(5, 7) + "월 " + +isoDate.slice(8, 10) + "일 (" + CAL_WEEKDAYS[weekdayOf(isoDate)] + ")";
+  return calI18n.dayTitle(isoDate);
 }
 
 // 목록 위 제목 · 지도 칩 · PC 달력 탭 글자. 필터 없음 = null
 function dateFilterTitle(filterValue, now) {
   if (isDayValue(filterValue)) {
-    return filterValue === calSchedule.koreaToday(now) ? "오늘 " + dayTitle(filterValue) : dayTitle(filterValue);
+    return filterValue === calSchedule.koreaToday(now) ? calI18n.t("cal.todayTitle", { day: dayTitle(filterValue) }) : dayTitle(filterValue);
   }
-  if (filterValue === "today") return "오늘 " + dayTitle(calSchedule.koreaToday(now));
-  if (filterValue === "weekend") return "이번 주말";
-  if (filterValue === "week") return "7일 안";
+  if (filterValue === "today") return calI18n.t("cal.todayTitle", { day: dayTitle(calSchedule.koreaToday(now)) });
+  if (filterValue === "weekend") return calI18n.t("filter.weekend");
+  if (filterValue === "week") return calI18n.t("filter.week");
   return null;
 }
 
@@ -146,13 +148,13 @@ function shortDayTitle(isoDate) {
 
 // 지난 날을 골랐을 때 아래 안내
 function pastDayNote(isoDate) {
-  return "지난 행사 · " + dayTitle(isoDate) + " 에 열린 행사만 지도와 목록에 표시";
+  return calI18n.t("cal.pastNote", { day: dayTitle(isoDate) });
 }
 
 // 달 이동 버튼 글자: 앞 = "‹ 10월", 뒤 = "12월 ›"
 function monthStepLabel(ym, delta) {
   var month = shiftMonth(ym, delta).month;
-  return delta < 0 ? "‹ " + month + "월" : month + "월 ›";
+  return delta < 0 ? "‹ " + calI18n.month(month) : calI18n.month(month) + " ›";
 }
 
 if (typeof module !== "undefined") {

@@ -3,7 +3,9 @@
 //  - 모바일 하단 카드는 그대로 (P3 담당) — 여기 함수는 PC 카드만 씀
 // 시험: node --test src/test/js/ (CI 에서 실행)
 
-var PC_STATUS_LABELS = { open: "진행 중", upcoming: "오픈 예정", ended: "종료" };
+// 화면 언어 (i18n.js, node 시험 = 한국어)
+var pcI18n = typeof I18n !== "undefined" ? I18n : require("./i18n.js").I18n;
+var PC_STATUS_LABELS = { open: pcI18n.t("status.pcOpen"), upcoming: pcI18n.t("status.pcUpcoming"), ended: pcI18n.t("status.ended") };
 
 // 배지 2개: 상태(진행 중 · 오픈 예정 · 종료) + D-day(종료까지 D-37 · D-2). 날짜 없는 행사는 빈 배열
 // statusOf · ddayOf = schedule-format.js eventStatus · ddayText (시험에서 바꿔 넣을 수 있게 인자로 받음)
@@ -24,7 +26,7 @@ function pcDotDate(isoDate, withYear) {
 // 기간 줄: "08.01 – 12.19 · 주말". 올해가 아닌 날짜가 끼면 연도까지. summary = 요일 요약 · 총 N회 (없으면 null)
 //  - "토 · 일" 은 "주말" 로 줄임 (카드 한 줄 폭)
 function pcCardPeriod(event, thisYear, summary) {
-  if (!event.startDate) return "기간 정보 없음";
+  if (!event.startDate) return pcI18n.t("sched.noPeriod");
   var end = event.endDate || event.startDate;
   var withYear = event.startDate.slice(0, 4) !== thisYear || end.slice(0, 4) !== thisYear;
   var range =
@@ -32,7 +34,8 @@ function pcCardPeriod(event, thisYear, summary) {
       ? pcDotDate(event.startDate, withYear)
       : pcDotDate(event.startDate, withYear) + " – " + pcDotDate(end, withYear);
   if (!summary) return range;
-  return range + " · " + (summary === "토 · 일" ? "주말" : summary);
+  var weekend = pcI18n.weekday(6) + " · " + pcI18n.weekday(0);
+  return range + " · " + (summary === weekend ? pcI18n.t("sched.weekend") : summary);
 }
 
 // 장소 줄: "정조테마공연장 · 팔달구" (둘 다 없으면 null → 줄 숨김)

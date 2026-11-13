@@ -1,20 +1,23 @@
+// 화면 언어 (i18n.js): HTML 고정 글을 먼저 그 언어로
+I18n.apply(document);
+
 // ===== 3개 소셜 제공자 정보 (로그인 시작 주소 — 실제 인증 URL은 서버가 만듦) =====
 var PROVIDERS = [
   {
     key: "kakao",
-    label: "카카오",
+    label: I18n.t("provider.kakao"),
     authUrl:
       "/api/auth/kakao/login",
   },
   {
     key: "google",
-    label: "구글",
+    label: I18n.t("provider.google"),
     authUrl:
       "/api/auth/google/login",
   },
   {
     key: "naver",
-    label: "네이버",
+    label: I18n.t("provider.naver"),
     authUrl:
       "/api/auth/naver/login",
   },
@@ -30,7 +33,7 @@ fetch("/api/auth/me")
       return;
     }
 
-    document.getElementById("memberIdText").textContent = "회원 #" + data.memberId;
+    document.getElementById("memberIdText").textContent = I18n.t("member.number", { n: data.memberId });
     showNickname(data.nickname || "");
 
     var linkedProviders = data.linkedProviders || [];
@@ -45,12 +48,12 @@ fetch("/api/auth/me")
       row.innerHTML =
         '<span class="provider-name">' + provider.label + "</span>" +
         (isLinked
-          ? '<span class="linked-badge">✓ 연동됨</span>'
+          ? '<span class="linked-badge">' + I18n.t("mypage.linkedBadge") + "</span>"
           : '<a class="link-btn ' +
             provider.key +
             '" href="' +
             provider.authUrl +
-            '">연동하기</a>');
+            '">' + I18n.t("mypage.link") + "</a>");
 
       list.appendChild(row);
     });
@@ -62,7 +65,7 @@ var savedNickname = "";
 
 function showNickname(nickname) {
   savedNickname = nickname;
-  document.getElementById("profileNickname").textContent = nickname || "닉네임 없음";
+  document.getElementById("profileNickname").textContent = nickname || I18n.t("mypage.noNickname");
   document.getElementById("profileInitial").textContent = nickname ? nickname.charAt(0) : "";
   document.getElementById("nicknameInput").value = nickname;
 }
@@ -83,10 +86,10 @@ document.getElementById("nicknameReroll").addEventListener("click", function () 
     })
     .then(function (data) {
       document.getElementById("nicknameInput").value = data.nickname;
-      setNicknameStatus("새 이름을 뽑았어요. 저장을 눌러야 바뀌어요.", "");
+      setNicknameStatus(I18n.t("mypage.rerolled"), "");
     })
     .catch(function () {
-      setNicknameStatus("이름을 뽑지 못했어요. 잠시 뒤 다시 시도해 주세요.", "error");
+      setNicknameStatus(I18n.t("mypage.rerollFailed"), "error");
     })
     .finally(function () {
       btn.disabled = false;
@@ -98,7 +101,7 @@ document.getElementById("nicknameForm").addEventListener("submit", function (e) 
   var input = document.getElementById("nicknameInput");
   var save = document.getElementById("nicknameSave");
   if (input.value.trim() === savedNickname) {
-    setNicknameStatus("지금 쓰는 닉네임이에요.", "");
+    setNicknameStatus(I18n.t("mypage.sameNickname"), "");
     return;
   }
   save.disabled = true;
@@ -115,10 +118,10 @@ document.getElementById("nicknameForm").addEventListener("submit", function (e) 
     })
     .then(function (data) {
       showNickname(data.nickname);
-      setNicknameStatus("닉네임을 저장했어요.", "ok");
+      setNicknameStatus(I18n.t("mypage.saved"), "ok");
     })
     .catch(function (err) {
-      setNicknameStatus(err.message || "저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.", "error");
+      setNicknameStatus(err.message || I18n.t("mypage.saveFailed"), "error");
     })
     .finally(function () {
       save.disabled = false;
@@ -135,17 +138,13 @@ document.getElementById("logoutBtn").addEventListener("click", function () {
     })
     .catch(function () {
       btn.disabled = false;
-      alert("로그아웃하지 못했어요. 잠시 뒤 다시 시도해 주세요.");
+      alert(I18n.t("mypage.logoutFailed"));
     });
 });
 
 // ===== 회원 탈퇴: 되돌릴 수 없으므로 한 번 더 확인 =====
 document.getElementById("withdrawBtn").addEventListener("click", function () {
-  var ok = confirm(
-    "탈퇴하면 찜 목록과 연동된 소셜 계정 정보가 모두 삭제되고 되돌릴 수 없어요.\n" +
-      "카카오 연결은 자동으로 해제돼요. 구글 · 네이버 앱 연결은 각 계정 설정에서 직접 해제할 수 있어요.\n\n" +
-      "탈퇴할까요?"
-  );
+  var ok = confirm(I18n.t("mypage.withdrawConfirm"));
   if (!ok) return;
   var btn = document.getElementById("withdrawBtn");
   btn.disabled = true; // 요청 중 다시 눌러 실패 안내가 뜨지 않게
@@ -159,15 +158,15 @@ document.getElementById("withdrawBtn").addEventListener("click", function () {
     })
     .catch(function (e) {
       btn.disabled = false;
-      alert(e.message || "탈퇴하지 못했어요. 잠시 뒤 다시 시도해 주세요.");
+      alert(e.message || I18n.t("mypage.withdrawFailed"));
     });
 });
 
 // 계정 연결 실패 안내 (서버가 /mypage.html?error=... 로 보냈을 때)
 (function () {
   var messages = {
-    state: "보안 확인에 실패해서 계정을 연결하지 못했어요. 다시 시도해 주세요.",
-    cancelled: "계정 연결이 취소됐어요.",
+    state: I18n.t("mypage.linkErrorState"),
+    cancelled: I18n.t("mypage.linkErrorCancelled"),
   };
   var params = new URLSearchParams(location.search);
   var code = params.get("error");

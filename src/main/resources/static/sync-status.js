@@ -4,6 +4,9 @@
 // 자리: 마이 페이지(mypage.html) 맨 아래 정보 칸 — data-sync-status 가 붙은 칸 전부 (11/11 사용자 결정: 목록 줄에는 안 넣음)
 // 시험: node --test src/test/js/ (CI 에서 실행)
 
+// 화면 언어 (i18n.js, node 시험 = 한국어)
+var syncI18n = typeof I18n !== "undefined" ? I18n : require("./i18n.js").I18n;
+
 // "2026-11-11T06:00:12" → "행사 정보 마지막 갱신 · 11/11 06:00" (M/D HH:mm). 틀린 값이면 null
 function syncStatusText(lastSuccessAt) {
   if (typeof lastSuccessAt !== "string") return null;
@@ -12,7 +15,7 @@ function syncStatusText(lastSuccessAt) {
   var month = Number(m[2]);
   var day = Number(m[3]);
   if (month < 1 || month > 12 || day < 1 || day > 31 || Number(m[4]) > 23 || Number(m[5]) > 59) return null;
-  return "행사 정보 마지막 갱신 · " + month + "/" + day + " " + m[4] + ":" + m[5];
+  return syncI18n.t("sync.updated") + " · " + month + "/" + day + " " + m[4] + ":" + m[5];
 }
 
 // 칸마다 글을 넣고 보이거나(text 있음) 숨김(null)

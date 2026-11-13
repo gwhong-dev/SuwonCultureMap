@@ -13,7 +13,8 @@ function posterKind(category) {
 // 위 라벨: 분류 이름 그대로, 비어 있으면 "행사"
 function posterLabel(category) {
   var key = String(category == null ? "" : category).trim();
-  return key || "행사";
+  var posterI18n = typeof I18n !== "undefined" ? I18n : require("./i18n.js").I18n;
+  return posterI18n.name("cat", key || "행사"); // 아는 분류는 화면 언어로, 모르는 이름은 원문
 }
 
 // 아래 장소: place 칸, 없으면 원문(info)의 장소 줄 (event-detail.js 의 eventPlace 와 같은 규칙), 둘 다 없으면 ""

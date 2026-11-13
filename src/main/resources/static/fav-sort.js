@@ -3,9 +3,11 @@
 // 화면(단추 · 목록)은 index.js, 여기는 비교 · 정렬 · 저장소만 다룸. 시험: node --test src/test/js/ (CI 에서 실행)
 
 var FAV_SORT_DEFAULT = "date";
+// 단추 글은 화면 언어로 (i18n.js, node 시험 = 한국어)
+var favSortI18n = typeof I18n !== "undefined" ? I18n : require("./i18n.js").I18n;
 var FAV_SORT_OPTIONS = [
-  { value: "date", label: "날짜순" },
-  { value: "name", label: "이름순" },
+  { value: "date", label: favSortI18n.t("favSort.date") },
+  { value: "name", label: favSortI18n.t("favSort.name") },
 ];
 
 // 시작일 오름차순 비교 (날짜 없는 행사는 뒤로) — "전체 행사 (날짜순)" · 같은 장소 카드 번호와 같은 규칙

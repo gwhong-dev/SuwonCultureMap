@@ -46,7 +46,7 @@ class FavoriteTabPageTest {
     assertThat(js).contains("if (favoriteEventIds.has(item.event.id)) visibleItems.push(item);");
     // 찜 · 최근 본 모두 칩을 흐리게 (조건이 안 걸림)
     assertThat(js).contains("document.body.classList.toggle(\"fav-screen\", visible);");
-    assertThat(js).contains("onFavScreen() ? \"찜 \" : \"행사 \""); // P3 시안 "행사 32개"
+    assertThat(js).contains("onFavScreen() ? \"list.countFav\" : \"list.countEvents\""); // P3 시안 "행사 32개" (글은 i18n/ko.js)
   }
 
   @Test
