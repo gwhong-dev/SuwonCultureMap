@@ -95,12 +95,6 @@ body {
 #authStatus[hidden] {
   display: none;
 }
-.past-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  white-space: nowrap;
-}
 .login-btn {
   padding: 0.375rem 0.75rem;
   border-radius: 6px;
@@ -1709,15 +1703,14 @@ body {
   outline-offset: -2px;
 }
 
-/* PC: 칩 줄을 지도 왼쪽 위에 띄움 (상단 바의 분류 · 날짜 드롭다운 · 지난 행사 체크박스 대신, 값은 그 숨긴 칸에 그대로 저장) */
+/* PC: 칩 줄을 지도 왼쪽 위에 띄움 (상단 바의 분류 · 날짜 드롭다운 대신, 값은 그 숨긴 칸에 그대로 저장) */
 @media (min-width: 1025px) {
   #topbar {
     position: relative;
     z-index: 30; /* 아래 지도 위로 칩 줄이 겹치게 */
   }
   #categorySelect,
-  #dateFilter,
-  .past-toggle {
+  #dateFilter {
     display: none;
   }
   #categoryChips {
@@ -1792,11 +1785,10 @@ body {
   body.sheet-full #topbar {
     display: none;
   }
-  /* 드롭다운·체크박스는 아래 칩 버튼으로 대체 */
+  /* 드롭다운은 아래 칩 버튼으로 대체 */
   #topbar .topbar-brand,
   #topbar #categorySelect,
-  #topbar #dateFilter,
-  #topbar .past-toggle {
+  #topbar #dateFilter {
     display: none;
   }
   #topbar #searchInput {
