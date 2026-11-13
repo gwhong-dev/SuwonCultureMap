@@ -63,7 +63,7 @@ class ScheduleDisplayPageTest {
     String html = page();
     String js = script();
 
-    assertThat(html).contains("<select id=\"dateFilter\"", "<option value=\"today\">", "<option value=\"weekend\">");
+    assertThat(html).contains("<select id=\"dateFilter\"", "<option value=\"today\" ", "<option value=\"weekend\" ");
     assertThat(js).contains("filterDays(document.getElementById(\"dateFilter\").value)");
     assertThat(js).contains("matchRunDays(item.event, runDays)");
   }
@@ -173,7 +173,7 @@ class ScheduleDisplayPageTest {
     assertThat(html).contains("id=\"homeEndingCount\"", "id=\"homeStartingCount\"", "7일 안</span>");
     assertThat(html.substring(months, html.indexOf(">", months))).contains(" hidden"); // 고를 달이 있을 때만 보임
     assertThat(html).contains("id=\"homeMonthChips\"", "id=\"homeMonthTrack\"");
-    assertThat(html).contains("<option value=\"week\">7일 안</option>"); // "7일 안" = 지도 날짜 칩과 같은 기간
+    assertThat(html).contains("<option value=\"week\" data-i18n=\"filter.week\">7일 안</option>"); // "7일 안" = 지도 날짜 칩과 같은 기간 (글은 화면 언어 i18n.js)
     // 옛 홈: 이번 주 줄 · 포스터 캐러셀 · 날짜 칩 · 이달의 행사 없음
     assertThat(html).doesNotContain("이번 주 수원 행사", "id=\"homeCarousel\"", "id=\"homeDateChips\"", "id=\"homeMonth\"");
 
@@ -205,7 +205,7 @@ class ScheduleDisplayPageTest {
     int rules = html.indexOf("<script src=\"/calendar-strip.js\"></script>");
     assertThat(rules).isGreaterThan(html.indexOf("<script src=\"/schedule-format.js\"></script>"));
     assertThat(rules).isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
-    assertThat(html).contains("<option value=\"today\">진행 중</option>", "<option value=\"week\">7일 안</option>"); // 홈 날짜 칩 값
+    assertThat(html).contains("<option value=\"today\" data-i18n=\"filter.today\">진행 중</option>", "<option value=\"week\" data-i18n=\"filter.week\">7일 안</option>"); // 홈 날짜 칩 값
 
     // 모바일 목록 화면도 PC 와 같은 탭 줄 (P3) → 모바일 = 2주 날짜 줄 숨김, PC = 날짜 줄 · 해제 칩 숨김
     String css = fetch("/css/index.css");
@@ -219,7 +219,7 @@ class ScheduleDisplayPageTest {
     // 11/13 P2: '지난 행사' 칩 삭제('무료' 칩은 유지), 지난 날을 고르면 그날 열린 행사(종료 포함)
     String js = script();
     assertThat(js).doesNotContain("🕘 지난 행사", "\"__past\"", "button.disabled = isPastDay(date);");
-    assertThat(js).contains("freeChip.textContent = \"💸 무료\";");
+    assertThat(js).contains("freeChip.textContent = I18n.t(\"chip.free\");"); // "💸 무료" (i18n/ko.js)
     assertThat(js).contains("hidesEndedEvents(dateValue);", "matchesOthers && matchesPast && matchesDate");
     assertThat(js).contains("addDays(day, i === 0 ? -1 : 1)", "monthStepLabel(calShownMonth, nav[1])");
 
@@ -393,6 +393,23 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
+  void 화면_언어_글_묶음과_i18n_js를_head_에서_먼저_읽고_언어_고르기는_화면_스크립트_앞() throws Exception {
+    // 11/13 확정 시안 Q3: 글 묶음 4개 → i18n.js → theme.js (첫 그리기 전에 <html lang>), lang-picker.js 는 index.js 앞
+    String html = page();
+    int ko = html.indexOf("<script src=\"/i18n/ko.js\"></script>");
+    int i18n = html.indexOf("<script src=\"/i18n.js\"></script>");
+    assertThat(ko).isPositive().isLessThan(i18n);
+    assertThat(i18n).isLessThan(html.indexOf("<script src=\"/theme.js\"></script>"));
+    assertThat(html.indexOf("<script src=\"/lang-picker.js\"></script>")).isPositive().isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
+    assertThat(html).contains("id=\"langBtn\"", "id=\"langPop\"", "id=\"homeLangBtn\"", "id=\"menuLangBtn\"");
+
+    MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+    for (String path : new String[] {"/i18n.js", "/lang-picker.js", "/i18n/ko.js", "/i18n/en.js", "/i18n/ja.js", "/i18n/zh.js"}) {
+      assertThat(mockMvc.perform(get(path)).andReturn().getResponse().getStatus()).as(path).isEqualTo(200);
+    }
+  }
+
+  @Test
   void 데이터_갱신_시각은_마이_페이지_맨_아래에만_있음() throws Exception {
     // 11/11 사용자 결정: 목록 결과 줄(모바일 · PC)에는 안 넣고, 마이 페이지를 열었을 때만
     String index = page();
@@ -403,7 +420,7 @@ class ScheduleDisplayPageTest {
     String mypage = fetch("/mypage.html");
     int info = mypage.indexOf("<div class=\"data-info\">");
     int sync = mypage.indexOf("<p class=\"data-info-line\" data-sync-status hidden></p>");
-    int source = mypage.indexOf("<p class=\"data-info-line\">출처 · 수원문화재단 공공데이터 · 수원문화DB, 공식 인스타그램 계정</p>");
+    int source = mypage.indexOf("<p class=\"data-info-line\" data-i18n=\"mypage.dataSource\">출처 · 수원문화재단 공공데이터 · 수원문화DB, 공식 인스타그램 계정</p>");
     assertThat(info).isGreaterThan(mypage.indexOf("← 지도로 돌아가기"));
     assertThat(sync).isGreaterThan(info).isLessThan(source);
     assertThat(mypage.indexOf("<script src=\"/sync-status.js\"></script>")).isPositive();

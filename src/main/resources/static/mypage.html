@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>마이페이지 - 수원바이블 · 수원 문화지도</title>
+    <title data-i18n="mypage.pageTitle">마이페이지 - 수원바이블 · 수원 문화지도</title>
     <meta name="description" content="수원바이블 · 수원 문화지도 — 수원의 공연 · 전시 · 축제를 지도에서 한눈에" />
     <meta name="theme-color" content="#b4472a" />
     <!-- 브랜드 아이콘 (static/brand). 크롬 · 엣지 = svg, 사파리 · 옛 브라우저 = png · ico -->
@@ -11,6 +11,12 @@
     <link rel="icon" href="/brand/favicon-32.png" sizes="32x32" type="image/png" />
     <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
     <link rel="manifest" href="/brand/manifest.json" />
+    <!-- 화면 언어 (i18n.js): 지도 화면에서 고른 언어를 이 페이지도 따름. theme.js 보다 먼저 -->
+    <script src="/i18n/ko.js"></script>
+    <script src="/i18n/en.js"></script>
+    <script src="/i18n/ja.js"></script>
+    <script src="/i18n/zh.js"></script>
+    <script src="/i18n.js"></script>
     <!-- 화면 모드: css 보다 먼저 동기로 읽어 첫 그리기 전에 <html data-theme> 설정 (깜빡임 방지) -->
     <script src="/theme.js"></script>
     <link rel="stylesheet" href="/css/fonts.css" />
@@ -19,48 +25,48 @@
   </head>
   <body>
     <div class="page-card">
-      <h1>마이페이지</h1>
+      <h1 data-i18n="nav.mypage">마이페이지</h1>
 
       <!-- 닉네임 (11/13 확정 시안 P5): 첫 글자 동그라미 + 닉네임 + 회원 번호, 아래 수정 칸 -->
       <section class="profile">
         <div class="profile-head">
           <div class="profile-initial" id="profileInitial" aria-hidden="true"></div>
           <div class="profile-names">
-            <strong class="profile-nickname" id="profileNickname">불러오는 중...</strong>
+            <strong class="profile-nickname" id="profileNickname" data-i18n="mypage.loading">불러오는 중...</strong>
             <span class="member-id" id="memberIdText"></span>
           </div>
         </div>
         <form class="nickname-form" id="nicknameForm" novalidate>
-          <label class="nickname-label" for="nicknameInput">닉네임</label>
+          <label class="nickname-label" for="nicknameInput" data-i18n="mypage.nickname">닉네임</label>
           <div class="nickname-row">
             <input type="text" id="nicknameInput" maxlength="12" autocomplete="off" aria-describedby="nicknameHelp nicknameStatus" />
-            <button type="button" class="nickname-reroll" id="nicknameReroll" aria-label="랜덤 이름 다시 뽑기" title="랜덤 이름 다시 뽑기">
+            <button type="button" class="nickname-reroll" id="nicknameReroll" aria-label="랜덤 이름 다시 뽑기" title="랜덤 이름 다시 뽑기" data-i18n-attr="aria-label:mypage.reroll;title:mypage.reroll">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"></path></svg>
             </button>
           </div>
           <p class="nickname-status" id="nicknameStatus" role="status" aria-live="polite"></p>
-          <p class="nickname-help" id="nicknameHelp">2~12자 · 한글 · 영문 · 숫자 · 띄어쓰기 · 다른 회원과 겹치면 안 돼요</p>
-          <button type="submit" class="nickname-save" id="nicknameSave">닉네임 저장</button>
+          <p class="nickname-help" id="nicknameHelp" data-i18n="mypage.nicknameHelp">2~12자 · 한글 · 영문 · 숫자 · 띄어쓰기 · 다른 회원과 겹치면 안 돼요</p>
+          <button type="submit" class="nickname-save" id="nicknameSave" data-i18n="mypage.save">닉네임 저장</button>
         </form>
       </section>
 
-      <div class="section-title">연동된 소셜 계정</div>
+      <div class="section-title" data-i18n="mypage.linked">연동된 소셜 계정</div>
       <div id="providerList"></div>
 
-      <button type="button" class="logout-btn" id="logoutBtn">로그아웃</button>
+      <button type="button" class="logout-btn" id="logoutBtn" data-i18n="menu.logout">로그아웃</button>
 
       <div class="page-links">
-        <a class="back-link" href="about.html">서비스 안내</a>
-        <a class="back-link" href="privacy.html">개인정보 처리방침</a>
-        <button type="button" class="withdraw-btn" id="withdrawBtn">회원 탈퇴</button>
+        <a class="back-link" href="about.html" data-i18n="menu.about">서비스 안내</a>
+        <a class="back-link" href="privacy.html" data-i18n="menu.privacy">개인정보 처리방침</a>
+        <button type="button" class="withdraw-btn" id="withdrawBtn" data-i18n="mypage.withdraw">회원 탈퇴</button>
       </div>
-      <a class="back-link" href="index.html">← 지도로 돌아가기</a>
+      <a class="back-link" href="index.html" data-i18n="page.backToMap">← 지도로 돌아가기</a>
 
       <!-- 데이터 정보 (11/11 사용자 결정: 목록 줄이 아니라 마이 페이지 맨 아래에만)
            1줄 = 행사 정보 마지막 갱신 시각(sync-status.js) — 값 없음 · API 실패면 이 줄만 숨김 / 2줄 = 출처(고정) -->
       <div class="data-info">
         <p class="data-info-line" data-sync-status hidden></p>
-        <p class="data-info-line">출처 · 수원문화재단 공공데이터 · 수원문화DB, 공식 인스타그램 계정</p>
+        <p class="data-info-line" data-i18n="mypage.dataSource">출처 · 수원문화재단 공공데이터 · 수원문화DB, 공식 인스타그램 계정</p>
       </div>
     </div>
 

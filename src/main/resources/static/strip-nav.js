@@ -4,6 +4,8 @@
 //  - 휠은 세로가 더 클 때만 한 장 (가로가 크면 트랙패드 좌우라 기본 스크롤), 한 번 굴림에 여러 장 넘어가지 않게 잠깐 쉼
 // 시험: node --test src/test/js/ (CI 에서 실행)
 
+// 화면 언어 (i18n.js, node 시험 = 한국어)
+var stripI18n = typeof I18n !== "undefined" ? I18n : require("./i18n.js").I18n;
 var WHEEL_GAP_MS = 350;
 
 // 지금 카드(current)에서 delta 만큼 옮긴 카드 번호 (처음 · 끝을 넘지 않음, 카드가 없으면 -1)
@@ -53,7 +55,7 @@ function stripSettleIndex(current, cards, viewLeft, viewWidth) {
 //  - 고른 카드가 없으면(index < 0) 0 이 아니라 1 부터 셈 → "· 0 / N" 이 보이지 않게
 function stripLabelText(nearOrder, index, count, mobile) {
   if (count <= 0) return "";
-  var head = mobile ? "밀어서 다음 행사" : nearOrder ? "가까운 순" : "목록 순";
+  var head = stripI18n.t(mobile ? "strip.swipe" : nearOrder ? "strip.near" : "strip.listOrder");
   return head + " · " + (Math.max(index, 0) + 1) + " / " + count;
 }
 
@@ -75,14 +77,14 @@ function placeBandCount(groupIndex, groupSize) {
 //  - dateValue "today" = 홈 "전체 →" · 홈 끝 넘김이 켜는 '진행 중' (홈 수 N 과 같은 판정)
 //  - statusTab = 목록 위 탭 (open 진행 중 · upcoming 진행 예정)
 function listScopeName(dateValue, statusTab) {
-  if (dateValue === "today" || statusTab === "open") return "진행 중";
-  if (statusTab === "upcoming") return "진행 예정";
+  if (dateValue === "today" || statusTab === "open") return stripI18n.t("filter.today");
+  if (statusTab === "upcoming") return stripI18n.t("filter.upcoming");
   return "";
 }
 
 // 상세 위 넘기기 줄 글: "상세 · 진행 중 2 / 9" (거른 이름이 없으면 "상세 · 2 / 9")
 function detailPagerLabel(scopeName, index, count) {
-  return "상세 · " + (scopeName ? scopeName + " " : "") + (index + 1) + " / " + count;
+  return stripI18n.t("strip.detail") + " · " + (scopeName ? scopeName + " " : "") + (index + 1) + " / " + count;
 }
 
 // 상세를 좌우로 밀기 → 옮길 행사 수 (1 다음 · -1 이전 · 0 그대로). dx · dy = 손가락이 움직인 거리 (끝 - 시작)

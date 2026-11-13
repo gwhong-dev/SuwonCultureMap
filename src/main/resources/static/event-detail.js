@@ -55,11 +55,14 @@ function isInstagramEvent(event) {
   return event.source === "INSTAGRAM";
 }
 
+// 화면 언어 (i18n.js, node 시험 = 한국어)
+var detailI18n = typeof I18n !== "undefined" ? I18n : require("./i18n.js").I18n;
+
 // 출처 한 줄: 인스타 행사 ("인스타그램 @계정") · 수원문화DB 행사. 재단 행사는 null → 표시 안 함
 function sourceLabel(event) {
-  if (isSwdbEvent(event)) return "수원문화DB(수원문화재단)";
+  if (isSwdbEvent(event)) return detailI18n.t("detail.swdb");
   if (!isInstagramEvent(event)) return null;
-  return event.sourceAccount ? "인스타그램 @" + event.sourceAccount : "인스타그램";
+  return event.sourceAccount ? detailI18n.t("detail.instagram") + " @" + event.sourceAccount : detailI18n.t("detail.instagram");
 }
 
 // 원문 링크는 http · https 주소만 href 로 씀 (다른 형식은 버튼을 숨김)
@@ -70,7 +73,7 @@ function safeLink(url) {
 }
 
 function linkButtonText(event) {
-  return isInstagramEvent(event) ? "인스타그램에서 보기 →" : "원문 보기 →";
+  return detailI18n.t(isInstagramEvent(event) ? "detail.viewInstagram" : "detail.viewSource");
 }
 
 // PC 상세 본문: info 원문, 없으면 장소 · 시간 · 출처 줄 (셋 다 없으면 ""). 수원문화DB 안내 글은 그 줄들 위에
@@ -78,10 +81,10 @@ function detailInfoText(event) {
   if (hasOriginalInfo(event)) return event.info;
   var lines = [];
   if (event.info) lines.push(event.info, "");
-  if (event.place) lines.push("장소: " + event.place);
-  if (event.timeText) lines.push("시간: " + event.timeText);
+  if (event.place) lines.push(detailI18n.t("detail.place") + ": " + event.place);
+  if (event.timeText) lines.push(detailI18n.t("detail.time") + ": " + event.timeText);
   var source = sourceLabel(event);
-  if (source) lines.push("출처: " + source);
+  if (source) lines.push(detailI18n.t("detail.source") + ": " + source);
   return lines.join("\n");
 }
 
@@ -94,8 +97,8 @@ function cardImageUrl(event) {
 function cardFallbackInfo(event) {
   if (hasOriginalInfo(event)) return "";
   var lines = [];
-  if (event.place) lines.push("장소: " + event.place);
-  if (event.timeText) lines.push("시간: " + event.timeText);
+  if (event.place) lines.push(detailI18n.t("detail.place") + ": " + event.place);
+  if (event.timeText) lines.push(detailI18n.t("detail.time") + ": " + event.timeText);
   return lines.join("\n");
 }
 

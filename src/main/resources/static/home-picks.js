@@ -127,7 +127,7 @@ function monthGroups(events, now) {
           return event.startDate;
         }),
       );
-    if (picks.length) groups.push({ key: key, label: m + "월", events: picks });
+    if (picks.length) groups.push({ key: key, label: (typeof I18n !== "undefined" ? I18n : require("./i18n.js").I18n).month(m), events: picks });
   }
   return groups;
 }
