@@ -12,6 +12,7 @@ const {
   cardImageUrl,
   cardFallbackInfo,
   detailFields,
+  hasOriginalInfo,
 } = require("../../main/resources/static/event-detail.js");
 
 const instagram = {
@@ -136,4 +137,35 @@ test("무료 판정: 요금 칸이 비면(동기화 전) 원문의 이용료 · 
 test("무료 판정: 요금 정보가 없으면(인스타 행사 등) 무료 아님", () => {
   assert.strictEqual(isFreeEvent({ source: "INSTAGRAM", info: null, fee: null }), false);
   assert.strictEqual(isFreeEvent({}), false);
+});
+
+// 수원문화DB 행사: info 칸 = "여러 장소 · 원문 확인" 안내 (원문 아님) → 시간 · 출처 줄을 그대로 보여 줌
+const swdbMulti = {
+  info: "⚠ 장소가 여러 곳이에요. 날짜마다 장소가 다를 수 있어 원문에서 꼭 확인하세요.\n장소 전체: 가상홀, 나홀, 다홀",
+  place: "여러 장소 · 가상홀 외 2곳",
+  timeText: "10:30~20:30",
+  source: "SWDB",
+  link: "https://www.swcf.or.kr/swdb/?p=15_view&reqIdx=1&page=1",
+};
+const swdbSingle = { info: null, place: "수원시 팔달구 가상로 1", timeText: null, source: "SWDB" };
+
+test("수원문화DB 출처 줄", () => {
+  assert.strictEqual(sourceLabel(swdbMulti), "수원문화DB(수원문화재단)");
+  assert.strictEqual(sourceLabel(swdbSingle), "수원문화DB(수원문화재단)");
+});
+
+test("수원문화DB 안내 글은 원문이 아니라 시간 · 카드 요약을 막지 않음", () => {
+  assert.strictEqual(hasOriginalInfo(swdbMulti), false);
+  assert.strictEqual(hasOriginalInfo(foundation), true);
+  assert.strictEqual(fallbackTime(swdbMulti), "10:30~20:30");
+  assert.strictEqual(cardFallbackInfo(swdbMulti), "장소: 여러 장소 · 가상홀 외 2곳\n시간: 10:30~20:30");
+});
+
+test("수원문화DB PC 상세 본문: 안내 글 → 장소 · 시간 · 출처", () => {
+  assert.strictEqual(
+    detailInfoText(swdbMulti),
+    swdbMulti.info + "\n\n장소: 여러 장소 · 가상홀 외 2곳\n시간: 10:30~20:30\n출처: 수원문화DB(수원문화재단)"
+  );
+  assert.strictEqual(detailInfoText(swdbSingle), "장소: 수원시 팔달구 가상로 1\n출처: 수원문화DB(수원문화재단)");
+  assert.strictEqual(linkButtonText(swdbMulti), "원문 보기 →");
 });

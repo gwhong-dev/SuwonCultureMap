@@ -1,0 +1,4 @@
+# gitleaks 오탐 지문 (한 건씩, 이유를 적음). 규칙 · 값 허용은 .gitleaks.toml
+# PR #254 첫 커밋의 dev 견본 자리표시 값("여기에_…" 글자, 실제 키 아님 — 11/13 실제 키와 값 비교로 다름 확인).
+# 파일은 "여기에_키" 로 고쳤고 브랜치 기록도 정리했지만, PR 기록(refs/pull)에 남을 수 있어 그 한 건만 지문으로 제외 (11/13 사용자 허용)
+ac882fd80ae38401e2af07e08442dacfcdcd3d57:src/main/resources/application-dev.properties.example:generic-api-key:21
