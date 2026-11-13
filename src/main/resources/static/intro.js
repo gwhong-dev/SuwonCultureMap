@@ -22,7 +22,7 @@ function introParam(search, name) {
   }
 }
 
-// 미리 보기: ?intro=b 일 때만 (옛 ?intro=a · ?intro=c 는 이제 아무 일 없음)
+// 미리 보기: ?intro=b 일 때만 (옛 ?intro=a · ?intro=c 는 그냥 주소와 같음 — 처음 방문이면 1회 재생)
 function isIntroPreview(search) {
   return introParam(search, "intro") === "b";
 }
