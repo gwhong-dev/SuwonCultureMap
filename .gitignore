@@ -39,3 +39,8 @@ application-dev.properties
 # USB 옛 저장소에서 옮긴 로컬 전용 디자인 자료 (PC 마다 복사, docs/pc-setup.md 1번 9)
 docs/mobile-design-v1.md
 docs/design-source.zip
+
+### 브라우저 화면 시험 (Playwright, docs/e2e-test.md) ###
+node_modules/
+test-results/
+playwright-report/

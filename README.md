@@ -180,7 +180,7 @@ erDiagram
 
 > 프로필을 따로 정하지 않으면 자동으로 `dev` 로 실행됩니다.
 
-시험: `./mvnw test` (test 프로필, H2 — MySQL 불필요) · `node --test "src/test/js/*.test.js"` (화면 표시 규칙 · 길찾기 링크)
+시험: `./mvnw test` (test 프로필, H2 — MySQL 불필요) · `node --test "src/test/js/*.test.js"` (화면 표시 규칙 · 길찾기 링크) · `npm run test:e2e` (브라우저로 누르고 키 쳐 보는 화면 시험 — [docs/e2e-test.md](docs/e2e-test.md))
 
 ### Docker로 실행 (MySQL 설치 없이)
 
