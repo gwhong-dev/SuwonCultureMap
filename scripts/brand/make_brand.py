@@ -168,15 +168,18 @@ def seal_inner(song, white="#fff", frame=2.2, weight=1.1):
     )
 
 
-CREDIT = (
-    "<!-- 수원바이블 로고. 글자 윤곽: Playfair Display · Inter · Pretendard · Song Myung"
-    " (SIL Open Font License 1.1), 만든 방법 scripts/brand -->"
-)
+def credit(fonts):
+    """SVG 주석: 그 파일에 실제로 쓴 글꼴만 적음"""
+    return f"<!-- 수원바이블 로고. 글자 윤곽: {fonts} (SIL Open Font License 1.1), 만든 방법 scripts/brand -->"
+
+
+SPRITE_CREDIT = credit("Playfair Display · Pretendard · Song Myung")  # logo.svg: 워드마크 · 부제 · 도장
+ICON_CREDIT = credit("Inter")  # B2 아이콘 (favicon.svg · 앱 아이콘)
 
 
 def svg(viewbox, body, w=None, h=None):
     size = f' width="{w}" height="{h}"' if w else ""
-    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{viewbox}"{size}>{CREDIT}{body}</svg>\n'
+    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{viewbox}"{size}>{ICON_CREDIT}{body}</svg>\n'
 
 
 def vb(box):
@@ -198,7 +201,7 @@ def main():
     # 화면용 스프라이트: <svg><use href="/brand/logo.svg#…"/></svg>
     #   #wordmark: 글자 = CSS color(currentColor), 아치 = fill 속성을 비워 CSS fill 을 물려받음 (밝음 · 어두움 따로)
     sprite = (
-        f'<svg xmlns="http://www.w3.org/2000/svg">{CREDIT}'
+        f'<svg xmlns="http://www.w3.org/2000/svg">{SPRITE_CREDIT}'
         f'<symbol id="wordmark" viewBox="{vb(word_box)}"><path fill="currentColor" d="{word_d}"/><path d="{arch_d}"/></symbol>'
         f'<symbol id="tagline" viewBox="{vb(tag_box)}"><path fill="currentColor" d="{tag_d}"/></symbol>'
         f'<symbol id="seal" viewBox="0 0 100 100">{seal_inner(song)}</symbol>'
