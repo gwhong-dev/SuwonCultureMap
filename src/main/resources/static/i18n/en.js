@@ -246,6 +246,14 @@
   "transit.moreBus": "Show {n} more buses",
   "transit.note": "Distance and walking time are estimates based on straight-line distance",
   "transit.source": "Bus info: Gyeonggi-do Bus Information (Public Data Portal)",
+  "transit.routeBtn": "Directions (public transit)",
+  "transit.pcTitle": "Getting here",
+  "transit.stopLabel": "Bus stop",
+  "transit.noStation": "No subway station nearby",
+  "transit.withinKm": "Within {n}km",
+  "pcd.copyHint": "Click to copy address",
+  "pcd.copied": "Copied",
+  "pcd.copyAria": "Copy address: {text}",
 
   // ===== 길찾기 · 공유 · 토스트 =====
   "route.title": "Directions",

@@ -246,6 +246,14 @@
   "transit.moreBus": "再显示{n}条公交线路",
   "transit.note": "距离和步行时间按直线距离估算",
   "transit.source": "公交信息：京畿道公交信息（公共数据门户）",
+  "transit.routeBtn": "路线（公共交通）",
+  "transit.pcTitle": "交通指南",
+  "transit.stopLabel": "公交站",
+  "transit.noStation": "附近没有地铁站",
+  "transit.withinKm": "{n}公里内",
+  "pcd.copyHint": "点击复制地址",
+  "pcd.copied": "已复制",
+  "pcd.copyAria": "复制地址：{text}",
 
   // ===== 길찾기 · 공유 · 토스트 =====
   "route.title": "路线",

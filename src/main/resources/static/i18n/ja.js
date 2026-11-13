@@ -246,6 +246,14 @@
   "transit.moreBus": "バスをあと{n}件表示",
   "transit.note": "距離・徒歩時間は直線距離による目安です",
   "transit.source": "バス情報：京畿道バス情報（公共データポータル）",
+  "transit.routeBtn": "ルート検索（公共交通）",
+  "transit.pcTitle": "アクセス",
+  "transit.stopLabel": "バス停",
+  "transit.noStation": "近くに地下鉄駅なし",
+  "transit.withinKm": "{n}km 以内",
+  "pcd.copyHint": "クリックで住所をコピー",
+  "pcd.copied": "コピーしました",
+  "pcd.copyAria": "住所をコピー：{text}",
 
   // ===== 길찾기 · 공유 · 토스트 =====
   "route.title": "経路案内",
