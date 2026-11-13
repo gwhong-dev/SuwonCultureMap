@@ -1,0 +1,11 @@
+{
+  "name": "suwon-culture-map-e2e",
+  "private": true,
+  "description": "브라우저 화면 시험(Playwright) 전용 — 앱 빌드에는 쓰지 않음",
+  "scripts": {
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
+  }
+}
