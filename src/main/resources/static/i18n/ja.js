@@ -229,6 +229,8 @@
   "pcd.source": "元ページを見る",
   "pcd.hintNav": "めくる",
   "pcd.hintFav": "お気に入り",
+  "pcd.tipPrev": "前へ", // PC 상세 칸 ‹ 툴팁 (짧게, R3 A)
+  "pcd.tipNext": "次へ",
   "pcd.live": "{i} / {n} · {title}",
   "pcd.emptyTitle": "条件に合うイベントがありません",
   "pcd.emptyBody": "カテゴリー・日付・検索語を変えてみてください",

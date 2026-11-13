@@ -229,6 +229,8 @@
   "pcd.source": "查看原文",
   "pcd.hintNav": "翻页",
   "pcd.hintFav": "收藏",
+  "pcd.tipPrev": "上一个", // PC 상세 칸 ‹ 툴팁 (짧게, R3 A)
+  "pcd.tipNext": "下一个",
   "pcd.live": "{i} / {n} · {title}",
   "pcd.emptyTitle": "没有符合条件的活动",
   "pcd.emptyBody": "请更换分类、日期或搜索词",
