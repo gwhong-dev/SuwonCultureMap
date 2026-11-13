@@ -110,10 +110,10 @@ function matchesStatusTab(event, tab, now) {
   return tab === "upcoming" ? status === "upcoming" : status !== "upcoming" && status !== "ended";
 }
 
-// PC 진행 탭을 걸지 않는 경우: 모바일 · 날짜를 고름 · 검색어 · '찜' 분류 · 지난 행사 보기(숨은 체크박스, 칩은 11/13 삭제)
-// (검색 · 찜 · 지난 행사는 "그 행사를 찾는" 목록이라 탭 때문에 0건이 되지 않게 전부 보여 줌)
+// PC 진행 탭을 걸지 않는 경우: 모바일 · 날짜를 고름 · 검색어 · '찜' 분류
+// (검색 · 찜은 "그 행사를 찾는" 목록이라 탭 때문에 0건이 되지 않게 전부 보여 줌)
 function statusTabApplies(state) {
-  return !state.mobile && state.dateValue === "all" && !state.keyword && state.category !== "찜" && !state.showPast;
+  return !state.mobile && state.dateValue === "all" && !state.keyword && state.category !== "찜";
 }
 
 // 오늘 전 날짜 (11/13 P2: 지난 날도 고를 수 있음 — 달력 칸은 회색 바탕, 고르면 그날 열린 행사만)
@@ -134,9 +134,9 @@ function pastSelectedDay(filterValue, now) {
   return day && isPastDay(day, now) ? day : null;
 }
 
-// 종료 행사를 목록 · 지도에서 뺄까: 기본은 뺌, 지난 날짜를 골랐거나(그날 열린 행사) 지난 행사 보기면 안 뺌
-function hidesEndedEvents(filterValue, showPast, now) {
-  return !showPast && !pastSelectedDay(filterValue, now);
+// 종료 행사를 목록 · 지도에서 뺄까: 기본은 뺌, 지난 날짜를 골랐으면(그날 열린 행사) 안 뺌
+function hidesEndedEvents(filterValue, now) {
+  return !pastSelectedDay(filterValue, now);
 }
 
 // 하루 이동 칸 글자: 넓으면 "11월 8일 (일)", 좁으면 "11.8 (일)" (375px 에서도 한 줄 — 11/13 사용자 지적)

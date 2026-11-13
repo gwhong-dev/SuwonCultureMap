@@ -171,7 +171,8 @@ class ScheduleDisplayPageTest {
     assertThat(js).contains("group.label + \" · \" + group.events.length"); // 달 칩 "12월 · 14"
     assertThat(js).doesNotContain("carouselPicks", "thisWeekEvents", "weekRange");
     // "전체 →" = 목록 탭 + 오늘 진행 (다른 필터는 풀어서 목록 수 = N)
-    assertThat(js).contains("document.getElementById(\"dateFilter\").value = \"today\";\n  document.getElementById(\"showPastCheckbox\").checked = false;");
+    assertThat(js).contains("document.getElementById(\"dateFilter\").value = \"today\";\n  freeOnly = false;");
+    assertThat(js).doesNotContain("showPastCheckbox", "showPast:"); // 11/13: 숨은 '지난 행사 보기' 체크박스 삭제
   }
 
   @Test
@@ -208,7 +209,7 @@ class ScheduleDisplayPageTest {
     String js = script();
     assertThat(js).doesNotContain("🕘 지난 행사", "\"__past\"", "button.disabled = isPastDay(date);");
     assertThat(js).contains("freeChip.textContent = \"💸 무료\";");
-    assertThat(js).contains("hidesEndedEvents(dateValue,", "matchesOthers && matchesPast && matchesDate");
+    assertThat(js).contains("hidesEndedEvents(dateValue);", "matchesOthers && matchesPast && matchesDate");
     assertThat(js).contains("addDays(day, i === 0 ? -1 : 1)", "monthStepLabel(calShownMonth, nav[1])");
 
     String html = page();
@@ -283,7 +284,8 @@ class ScheduleDisplayPageTest {
     int pcChips = css.indexOf("/* PC: 칩 줄을 지도 왼쪽 위에 띄움");
     assertThat(pcChips).isPositive();
     String pc = css.substring(pcChips, css.indexOf("/* ====", pcChips));
-    assertThat(pc).contains("@media (min-width: 1025px)", "#categorySelect,", "#dateFilter,", ".past-toggle {", "#categoryChips {");
+    assertThat(pc).contains("@media (min-width: 1025px)", "#categorySelect,", "#dateFilter {", "#categoryChips {");
+    assertThat(css).doesNotContain(".past-toggle");
     // PC 숨김 목록(모바일 전용 요소)에서 칩 줄이 빠짐
     String hidden = css.substring(css.indexOf("/* ===== 모바일 전용 요소: PC에서는 숨김"), css.indexOf("display: none;", css.indexOf("/* ===== 모바일 전용 요소")));
     assertThat(hidden).doesNotContain("#categoryChips");

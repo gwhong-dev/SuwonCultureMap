@@ -73,7 +73,7 @@ function formatEventDates(event, now) {
   if (!hasRunDates(event) || event.startDate === event.endDate) return formatDateRange(event);
   var dates = event.dates;
   var thisYear = koreaYear(now === undefined ? Date.now() : now);
-  // 올해가 아니면 연도까지 (지난 행사 보기에서 작년 행사가 올해처럼 보이지 않게)
+  // 올해가 아니면 연도까지 (지난 날짜를 골랐을 때 작년 행사가 올해처럼 보이지 않게)
   var sameYear = event.startDate.slice(0, 4) === thisYear && event.endDate.slice(0, 4) === thisYear;
   var range = sameYear ? shortDate(event.startDate) + " ~ " + shortDate(event.endDate) : formatDateRange(event);
   var text;
