@@ -86,7 +86,9 @@ docker compose up --build   # 앱 + MySQL (.env 는 scripts/setup-docker.cmd)
    - 화면 파일(static 의 HTML · JS · CSS)만 바꿨으면 `node --test` + 화면 시험 + `mvn test -Dtest=ScheduleDisplayPageTest` 만
 5. push → PR 생성
 6. CI 통과 확인 (빌드 + 테스트, Docker 이미지 빌드 — main 브랜치 보호로 필수)
-   - **CI 를 기다릴 땐 턴을 그냥 끝내지 않는다** (11/13 — [결정 기록](docs/decisions/2026-11-13-ci-wait-background.md)): push 직후 `gh pr checks <N> --watch` 를 **백그라운드 명령**(Bash `run_in_background`)으로 걸고, 그 명령이 끝나며 오는 완료 알림에 이어서 결과 확인 → 머지 (메인 · 분기 모두. 검증 반영 등으로 다시 push 하면 다시 건다)
+   - **CI 를 기다릴 땐 턴을 그냥 끝내지 않는다** (11/13 — [결정 기록](docs/decisions/2026-11-13-ci-wait-background.md)): push 직후 아래 명령을 **백그라운드 명령**(Bash `run_in_background`)으로 걸고, 그 명령이 끝나며 오는 완료 알림에 이어서 결과 확인 → 머지 (메인 · 분기 모두. 검증 반영 · main 병합 등으로 다시 push 하면 다시 건다)
+     `for i in $(seq 1 45); do s=$(gh pr checks <N> 2>&1); echo "$s" | grep -qE "pass|fail" && ! echo "$s" | grep -q pending && break; sleep 20; done; echo "$s"`
+     - `gh pr checks --watch` 만 쓰지 않음: push 직후엔 검사가 아직 등록되지 않아 "no checks reported" 로 바로 끝남 (#263 에서 확인). 위 반복은 검사가 생기고 모두 끝날 때까지 기다림(최대 15분)
      - 이유: 데스크톱 앱 Code 탭의 Auto-fix 알림은 CI **실패** · 충돌 · 리뷰 댓글만 깨운다. 통과는 알려 주지 않아서, 알림만 믿고 턴을 끝내면 CI 가 통과한 채 멈춘다 (11/13 #260 · #261)
      - 머지 뒤 Deploy 대기도 같은 방식 (`gh run watch` 또는 끝나면 나오는 확인 명령을 백그라운드로)
    - CI 가 실패했으면 브랜치 보호가 머지를 막음 → 고쳐서 다시 push (실패는 Auto-fix 알림으로도 옴)
