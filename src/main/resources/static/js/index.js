@@ -3574,6 +3574,7 @@ var pcSettleTimer = null;
 var PC_SETTLE_MS = 600; // 넘기다 멈추면 정류장 · 역을 불러오고 '최근 본' 에 기록 (← → 를 연달아 눌러도 요청이 몰리지 않게)
 var PC_FAV_TOAST_MS = 1600; // 시안: 찜할 때만 "♥ 찜했어요" 1.6초
 var pcTransitTicket = 0;
+var pcUserPicked = false; // 사용자가 고른 행사인가 (목록 · 마커 · ‹ › · 키보드 · 공유 링크) — 자동 선택(첫 로드 · 필터 뒤 첫 행사)은 '최근 본' 에 넣지 않음 (#256 검증 ⚠️)
 
 function pcOrderIds() {
   return lastSortedItems.map(function (item) {
@@ -3598,13 +3599,17 @@ function pcSyncList(focusRowId) {
   if (!keep) {
     pcDetailId = ids.length ? ids[0] : null;
     pcOutsideId = null;
+    pcUserPicked = false;
   }
   renderPcDetail();
   pcMarkRows(false);
   selectMarker(pcDetailId, false);
   if (focusRowId !== null) {
     var row = pcRow(focusRowId);
-    if (row) row.focus({ preventScroll: true });
+    if (row) {
+      row.focus({ preventScroll: true });
+      row.scrollIntoView({ block: "nearest" }); // Space 찜 → 맨 위 찜 묶음으로 옮겨 가도 포커스 줄이 보이게 (#256 검증 ⚠️)
+    }
   }
 }
 
@@ -3617,6 +3622,7 @@ function pcSelect(id, opts) {
   var prevId = pcDetailId;
   pcDetailId = id;
   pcOutsideId = opts.outside && pcOrderIds().indexOf(id) < 0 ? id : null;
+  pcUserPicked = true;
   if (prevId !== id) closeRoutePop(false); // 창을 연 [길찾기] 는 그대로지만 행사가 바뀜
   renderPcDetail();
   pcMarkRows(prevId !== id, opts.focusRow);
@@ -3693,6 +3699,16 @@ function pcFocusedRowId() {
 
 // 상세 칸 그리기. 같은 행사를 다시 그릴 땐(찜 · 필터) 포스터 · 아래 정보 · 스크롤 자리는 그대로
 function renderPcDetail() {
+  var pane = document.getElementById("pcDetail");
+  var focusInPane = pane.contains(document.activeElement) && document.activeElement !== pane;
+  drawPcDetail();
+  // 상세 칸 아래쪽([주소 복사] · 캘린더 · 버스 +N)이나 숨겨진 [원문 보기]에 있던 포커스가 사라지면 칸 자체로 (#256 검증 ⚠️ — 포커스는 그 자리)
+  var active = document.activeElement;
+  if (focusInPane && (!active || active === document.body || !pane.contains(active) || active.offsetParent === null)) {
+    pane.focus({ preventScroll: true });
+  }
+}
+function drawPcDetail() {
   var item = pcDetailId === null ? null : pcItem(pcDetailId);
   var scroll = document.getElementById("pcdScroll");
   var empty = document.getElementById("pcdEmpty");
@@ -3726,10 +3742,11 @@ function renderPcDetail() {
     renderPcMore(event);
     scroll.scrollTop = 0;
     clearTimeout(pcSettleTimer);
+    var picked = pcUserPicked;
     pcSettleTimer = setTimeout(function () {
       if (pcDetailId !== event.id) return;
       loadPcTransit(event);
-      rememberRecentView(event.id); // 찜 탭 "최근 본" — 넘기다 멈춘 행사만
+      if (picked) rememberRecentView(event.id); // 찜 탭 "최근 본" — 사용자가 고르거나 넘기다 멈춘 행사만
     }, PC_SETTLE_MS);
   }
 
@@ -3865,6 +3882,10 @@ document.getElementById("pcdFav").addEventListener("click", function () {
 document.getElementById("pcdRoute").addEventListener("click", function () {
   var item = pcItem(pcDetailId);
   if (item) toggleRoutePop(item.event, this); // 단추 위 작은 창 (P1 그대로)
+});
+// 상세 칸을 스크롤하면 [길찾기] 단추가 움직임 → 단추 위 작은 창은 닫음 (#256 검증 ⚠️, 카드 줄 때와 같은 규칙)
+document.getElementById("pcdScroll").addEventListener("scroll", function () {
+  if (routePopEvent) closeRoutePop(false);
 });
 // 툴팁: Esc 로 닫고, 마우스가 단추에 새로 올라오면 다시 보임 (WCAG 1.4.13)
 document.querySelectorAll("#pcDetail .pcd-nav").forEach(function (nav) {
