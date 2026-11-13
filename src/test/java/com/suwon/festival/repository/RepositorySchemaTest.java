@@ -20,6 +20,7 @@ import com.suwon.festival.entity.Event;
 import com.suwon.festival.entity.Favorite;
 import com.suwon.festival.entity.InstagramBlock;
 import com.suwon.festival.entity.InstagramMedia;
+import com.suwon.festival.entity.Landmark;
 import com.suwon.festival.entity.LoginMethod;
 import com.suwon.festival.entity.Member;
 
@@ -36,13 +37,14 @@ class RepositorySchemaTest {
   @Autowired private FavoriteRepository favoriteRepository;
   @Autowired private InstagramMediaRepository instagramMediaRepository;
   @Autowired private InstagramBlockRepository instagramBlockRepository;
+  @Autowired private LandmarkRepository landmarkRepository;
   @Autowired private Flyway flyway;
   @Autowired private EntityManager em;
 
   @Test
   void Flyway가_마지막_버전까지_적용함() {
     assertThat(flyway.info().current()).isNotNull();
-    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("9"); // V9 = member.nickname (닉네임)
+    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("10"); // V10 = landmark (명소)
     assertThat(flyway.info().pending()).isEmpty();
   }
 
@@ -155,6 +157,29 @@ class RepositorySchemaTest {
     Event hidden = eventRepository.saveAndFlush(instagramEvent("m4#숨김"));
     hidden.mergeInto(-1L);
     assertThatThrownBy(() -> em.flush()).hasRootCauseInstanceOf(java.sql.SQLIntegrityConstraintViolationException.class);
+  }
+
+  @Test
+  void 명소를_좌표_없이도_저장하고_같은_출처_번호는_두_번_안_됨() {
+    LocalDateTime now = LocalDateTime.of(2026, 11, 13, 6, 0);
+    Landmark.Content content = new Landmark.Content("가상문(假想門)", "수원화성", "1794년 창건", true,
+        "https://www.swcf.or.kr/a.jpg", "http://www.swcf.or.kr/?p=59", "가".repeat(8000),
+        LocalDateTime.of(2020, 6, 1, 0, 0));
+    Landmark saved = landmarkRepository.saveAndFlush(Landmark.create(Landmark.SOURCE_FORTRESS, "9901", content, now));
+    em.clear();
+
+    Landmark read = landmarkRepository.findById(saved.getId()).orElseThrow();
+    assertThat(read.getLatitude()).isNull();
+    assertThat(read.isNonPublic()).isTrue();
+    assertThat(read.getDescription()).hasSize(8000);
+    assertThat(read.getLastSeenAt()).isEqualTo(now);
+    assertThat(landmarkRepository.findBySourceAndSourceKey(Landmark.SOURCE_FORTRESS, "9901")).isPresent();
+
+    // 다른 출처의 같은 번호는 따로 저장됨
+    landmarkRepository.saveAndFlush(Landmark.create(Landmark.SOURCE_PALACE, "9901", content, now));
+    assertThatThrownBy(() -> landmarkRepository.saveAndFlush(
+        Landmark.create(Landmark.SOURCE_FORTRESS, "9901", content, now)))
+        .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   private static Event instagramEvent(String sourceKey) {
