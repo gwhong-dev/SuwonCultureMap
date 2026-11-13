@@ -127,8 +127,10 @@
               <button id="pcdRoute" type="button" class="pcd-route"><span class="route-label" data-i18n="route.title">길찾기</span></button>
               <a id="pcdSource" class="pcd-source" href="#" target="_blank" rel="noopener"></a>
             </div>
+            <!-- 오시는 길 (확정 시안 PC A — docs/design/2026-11-13-transit-next.md ②): 단추 줄 아래 늘 펼침, 실패 · 비면 숨김 (transit-nearby.js transitPcHtml) -->
+            <section id="pcdTransit" class="pcd-transit" hidden></section>
           </div>
-          <!-- 나머지 정보 (소개 · 위치 · 가까운 정류장 · 역 · 캘린더) — 상세 칸 안에서 스크롤 -->
+          <!-- 나머지 정보 (소개 · 위치 · 캘린더) — 상세 칸 안에서 스크롤 -->
           <div id="pcdMore" class="pcd-more"></div>
         </div>
         <div id="pcdEmpty" class="pcd-empty" hidden></div>
@@ -497,6 +499,8 @@
             </div>
             <!-- 오시는 길: 가까운 정류장(버스 번호) · 역 — /api/events/{id}/transit, 비면 숨김 (transit-nearby.js) -->
             <div id="detailTransit" hidden></div>
+            <!-- 탭 맨 아래 길찾기 (확정 시안 모바일 A — docs/design/2026-11-13-transit-next.md ①): 하단 바 [길찾기] 와 같은 창을 엶, 정류장 칸이 숨어도 보임 -->
+            <button id="detailTransitRoute" type="button" class="transit-route-btn" data-i18n="transit.routeBtn">길찾기 (대중교통)</button>
           </section>
         </div>
         <!-- 모바일 전용 하단 고정: ♡ + 길찾기 -->

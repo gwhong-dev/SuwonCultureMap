@@ -158,6 +158,7 @@ class NearbyTransitServiceTest {
     NearbyTransit result = service.find(LAT, LNG);
     assertThat(result.busStops()).isEmpty();
     assertThat(result.subways()).extracting(Subway::name).containsExactly("수원역");
+    assertThat(result.subwayChecked()).isTrue();
 
     service.find(LAT, LNG); // 실패도 잠시 기억 → 다시 안 부름
     verify(gbis, times(1)).findAround(anyDouble(), anyDouble());
@@ -203,6 +204,30 @@ class NearbyTransitServiceTest {
 
     assertThat(result.busStops()).hasSize(1);
     assertThat(result.subways()).isEmpty();
+    assertThat(result.subwayChecked()).isFalse(); // 실패 → 화면은 역 칸을 숨김 ("없음" 줄 아님)
+  }
+
+  @Test
+  void 역_검색이_끝났는데_비면_정말_없음으로_표시() {
+    when(gbis.findAround(anyDouble(), anyDouble())).thenReturn(List.of());
+    when(kakao.findAround(anyDouble(), anyDouble())).thenReturn(List.of());
+
+    NearbyTransit result = service.find(LAT, LNG);
+
+    assertThat(result.subways()).isEmpty();
+    assertThat(result.subwayChecked()).isTrue(); // 1.5km 안에 역 없음 → 화면에 "근처 지하철역 없음"
+    service.find(LAT, LNG); // 캐시에서도 같은 표시
+    assertThat(service.find(LAT, LNG).subwayChecked()).isTrue();
+    verify(kakao, times(1)).findAround(anyDouble(), anyDouble());
+  }
+
+  @Test
+  void 역_키가_없으면_검색_안_함으로_표시() {
+    when(kakao.isConfigured()).thenReturn(false);
+    when(gbis.findAround(anyDouble(), anyDouble())).thenReturn(List.of());
+
+    assertThat(service.find(LAT, LNG).subwayChecked()).isFalse();
+    verify(kakao, never()).findAround(anyDouble(), anyDouble());
   }
 
   @Test

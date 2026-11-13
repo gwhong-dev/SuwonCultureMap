@@ -2222,14 +2222,119 @@ body {
     font-size: 13px;
     cursor: pointer;
   }
+  /* 오시는 길 (확정 시안 PC A — docs/design/2026-11-13-transit-next.md ②): 단추 줄 아래 늘 펼침 */
   .pcd-transit {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    margin-top: 12px;
+    gap: 10px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
   }
   .pcd-transit[hidden] {
     display: none;
+  }
+  .pcd-transit-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  /* 정류장 2칸 격자 (1곳이면 1칸만) */
+  .pcd-stops {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .pcd-stop {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  .pcd-stop-label,
+  .pcd-stop-dist {
+    font-size: 12px;
+    color: var(--sub);
+  }
+  .pcd-stop-name {
+    font-size: 14px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+  .pcd-stop .transit-routes {
+    gap: 4px;
+    margin-top: 0;
+  }
+  .pcd-stop .transit-chip,
+  .pcd-stop .transit-more {
+    height: auto;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--bg);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .pcd-stop .transit-more {
+    border-color: transparent;
+    background: var(--surface);
+  }
+  /* 역 한 줄: 왼쪽 역 이름 + 호선, 오른쪽 직선거리 */
+  .pcd-station {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 6px;
+    background: var(--surface);
+  }
+  /* 정보 표 "장소" = 누르면 주소 복사 (점선 밑줄 + 복사 아이콘, 누른 뒤 "복사됨" 1.5초) */
+  .pcd-place-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    border-bottom: 1px dashed var(--line-strong);
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: copy;
+  }
+  .pcd-place-copy svg {
+    flex: none;
+    color: var(--sub);
+  }
+  .pcd-place-copy:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .pcd-copied {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--text);
+    color: var(--bg);
+    font-size: 11px;
+    vertical-align: 1px;
+  }
+  .pcd-copied:empty {
+    display: none;
+  }
+  .pcd-transit button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
   .pcd-cal {
     align-self: flex-start;
@@ -2438,6 +2543,45 @@ body {
   margin: 0;
   font-size: 12px;
   color: var(--sub);
+}
+/* 1.5km 안에 역이 없음 (역 검색이 끝났을 때만 — 실패면 칸을 숨김): 점선 상자, 글자 모두 보조색 */
+.transit-none {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  color: var(--sub);
+  font-size: 14px;
+}
+.transit-none span + span {
+  flex: none;
+  font-size: 13px;
+}
+.pcd-transit .transit-none {
+  margin-top: 0;
+}
+/* 모바일 주변 탭 맨 아래 "길찾기 (대중교통)" — 하단 바의 채운 [길찾기] 와 구분되게 테두리형 (확정 시안 모바일 A) */
+.transit-route-btn {
+  box-sizing: border-box;
+  width: 100%;
+  height: 48px;
+  margin-top: 8px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.transit-route-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* =====================================================
