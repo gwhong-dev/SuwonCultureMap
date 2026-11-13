@@ -51,8 +51,8 @@ test("상단 바 · 로고 토큰 (확정 시안 B: 종이색 바)", () => {
   assert.strictEqual(darkMedia["--bar-line"], "#35322e");
   assert.strictEqual(light["--brand-sub"], "#b4472a");
   assert.strictEqual(darkMedia["--brand-sub"], "#e07a57");
-  assert.strictEqual(light["--seal-frame"], "transparent");
-  assert.strictEqual(darkMedia["--seal-frame"], "#f6f1e7");
+  // 도장 뒤 칸(--seal-frame)은 새 로고(11/13 B안)에서 도장을 빼며 없앰
+  assert.strictEqual(light["--seal-frame"], undefined);
 });
 
 // WCAG 명암비 (#rrggbb 두 색)

@@ -1,4 +1,4 @@
-"""favicon.ico = 16px(단순화한 "수" + 핀) + 32px(도장). render.js 다음에 실행"""
+"""favicon.ico = B2 아이콘 16px + 32px. render.js 다음에 실행"""
 from pathlib import Path
 from PIL import Image
 

@@ -1,17 +1,22 @@
-"""수원바이블 브랜드 SVG 만들기 (낙관(도장) + 핀, 11/11)
+"""수원바이블 브랜드 SVG 만들기 (새 로고 B안, 11/13 — docs/design/2026-11-13-todo-additions.md "Q2")
 
-글자는 글꼴 윤곽(path)으로 바꿔 넣는다 → 화면은 글꼴 파일 없이 그려짐.
-  - 도장 "수 / 원": Song Myung (SIL OFL 1.1)
-  - 워드마크 "수원바이블": Hahmlet 800, 부제 "수원 문화지도": Hahmlet 600 (SIL OFL 1.1)
-  라이선스 · 출처: scripts/brand/README.md, scripts/brand/licenses/
+  - 헤더 로고 = W4 워드마크 "SUWON ∩ BIBLE": Playfair Display SemiBold(600), 자간 .04em, 두 단어 사이 아치
+  - 부제 "수원 문화지도": Pretendard Medium(500), 자간 .3em (화면 10px · 자간 3px)
+  - 파비콘 · 앱 아이콘 = B2 메인 아이콘: 벽돌 원 + 성곽선 + "SUWON / BIBLE" Inter ExtraBold(800)
+  - 도장 "수 / 원"(옛 로고)은 웹 로고에서 뺐고, 인트로 1안 성문 장식(#seal)에만 남김: Song Myung
+글자는 글꼴 윤곽(path)으로 바꿔 넣는다 → 화면은 글꼴 파일 없이 그려짐 (CSP 그대로).
+글자 배치(커닝)는 HarfBuzz 로 브라우저와 같게 맞춤. 라이선스 · 출처: scripts/brand/README.md, scripts/brand/licenses/
 
-사용: pip install fonttools
-      python3 scripts/brand/make_brand.py <SongMyung-Regular.ttf> <Hahmlet[wght].ttf>
-      node scripts/brand/render.js            # PNG (아이콘 · 공유 이미지 · ico)
+사용: pip install fonttools brotli uharfbuzz
+      python3 scripts/brand/make_brand.py <SongMyung-Regular.ttf> <PlayfairDisplay[wght].ttf> <Inter[opsz,wght].ttf>
+      node scripts/brand/render.js            # PNG (아이콘 · 공유 이미지)
+      python3 scripts/brand/make_ico.py       # favicon.ico
 """
+import io
 import sys
 from pathlib import Path
 
+import uharfbuzz as hb
 from fontTools.pens.boundsPen import BoundsPen
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
@@ -29,7 +34,8 @@ PAPER = "#f6f1e7"
 
 def fmt(v):
     s = f"{v:.1f}"
-    return s[:-2] if s.endswith(".0") else s
+    s = s[:-2] if s.endswith(".0") else s
+    return "0" if s == "-0" else s
 
 
 class RoundPen(SVGPathPen):
@@ -39,59 +45,101 @@ class RoundPen(SVGPathPen):
         super().__init__(glyphset, ntos=fmt)
 
 
-def glyph_path(font, ch, sx, sy, dx, dy):
-    """글자 하나를 (x' = sx*x + dx, y' = -sy*y + dy) 로 옮긴 SVG path d"""
-    gs = font.getGlyphSet()
-    name = font.getBestCmap()[ord(ch)]
-    pen = RoundPen(gs)
-    gs[name].draw(TransformPen(pen, (sx, 0, 0, -sy, dx, dy)))
-    return pen.getCommands()
+class Face:
+    """고정 굵기 글꼴 하나 (fontTools = 윤곽, HarfBuzz = 배치)"""
+
+    def __init__(self, ttfont):
+        self.tt = ttfont
+        ttfont.flavor = None  # woff2 → 일반 sfnt 로 (HarfBuzz 는 woff2 를 못 읽음)
+        buf = io.BytesIO()
+        ttfont.save(buf)
+        self.hb = hb.Font(hb.Face(buf.getvalue()))
+        self.upem = ttfont["head"].unitsPerEm
+        self.gs = ttfont.getGlyphSet()
+        self.order = ttfont.getGlyphOrder()
+
+    def glyph_path(self, name, k, dx, dy):
+        pen = RoundPen(self.gs)
+        self.gs[name].draw(TransformPen(pen, (k, 0, 0, -k, dx, dy)))
+        return pen.getCommands()
+
+    def glyph_bounds(self, name):
+        bp = BoundsPen(self.gs)
+        self.gs[name].draw(bp)
+        return bp.bounds
 
 
-def glyph_bounds(font, ch):
-    gs = font.getGlyphSet()
-    name = font.getBestCmap()[ord(ch)]
-    bp = BoundsPen(gs)
-    gs[name].draw(bp)
-    return bp.bounds, gs[name].width
+def text_paths(face, text, size, tracking=0.0, x=0.0, baseline=0.0):
+    """글자줄을 path 로 (브라우저처럼: 커닝 + 글자마다 뒤에 자간). 반환: (d, 윤곽 x0, x1, 위, 아래, 펜 끝 x)
+    tracking = em 단위 자간"""
+    buf = hb.Buffer()
+    buf.add_str(text)
+    buf.guess_segment_properties()
+    hb.shape(face.hb, buf, {"kern": True, "liga": False})
+    k = size / face.upem
+    ds, x0, x1, top, bottom = [], 1e9, -1e9, 1e9, -1e9
+    for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
+        name = face.order[info.codepoint]
+        gx, gy = x + pos.x_offset * k, baseline - pos.y_offset * k
+        b = face.glyph_bounds(name)
+        if b:
+            xmin, ymin, xmax, ymax = b
+            ds.append(face.glyph_path(name, k, gx, gy))
+            x0, x1 = min(x0, gx + xmin * k), max(x1, gx + xmax * k)
+            top, bottom = min(top, gy - ymax * k), max(bottom, gy - ymin * k)
+        x += pos.x_advance * k + tracking * size
+    return "".join(ds), x0, x1, top, bottom, x
 
 
-def fit(font, ch, box):
-    """글자의 실제 윤곽을 box(x0, y0, x1, y1) 에 꽉 맞춤 (가로 · 세로 따로 늘림 = 도장 새김처럼)"""
-    (xmin, ymin, xmax, ymax), _ = glyph_bounds(font, ch)
-    x0, y0, x1, y1 = box
-    sx = (x1 - x0) / (xmax - xmin)
-    sy = (y1 - y0) / (ymax - ymin)
-    return glyph_path(font, ch, sx, sy, x0 - xmin * sx, y0 + ymax * sy)
+# ---------- W4 워드마크 (font-size 100 단위) ----------
+# 아치: viewBox 0 0 30 36 의 반원 지붕 + 직선 기둥 = 폭 .30em · 높이 .36em → font-size 100 에서 그대로 1배
+ARCH = "M0 36V15A15 15 0 0 1 30 15V36Z"
+ARCH_MARGIN = 0.32  # 아치 좌우 여백 (em)
+TRACK = 0.04  # 자간 (em)
 
 
-def text_paths(font, text, size, tracking=0.0, x=0.0, baseline=0.0):
-    """글자줄을 path 로. 반환: (d 목록, 끝 x, 윤곽 위 · 아래)"""
-    upem = font["head"].unitsPerEm
-    k = size / upem
-    ds, top, bottom = [], 1e9, -1e9
-    for ch in text:
-        if ch == " ":  # 띄어쓰기 = 자간에 .28em 더함 (넓은 자간에서도 낱말이 나뉘어 보이게)
-            x += 0.28 * size
-            continue
-        (xmin, ymin, xmax, ymax), adv = glyph_bounds(font, ch)
-        ds.append(glyph_path(font, ch, k, k, x, baseline))
-        top, bottom = min(top, baseline - ymax * k), max(bottom, baseline - ymin * k)
-        x += adv * k + tracking * size
-    return ds, x - tracking * size, top, bottom
+def wordmark(pf):
+    """반환: (글자 d, 아치 d, viewBox(x, y, w, h)) — 아치 아래 = 글자 기준선 0"""
+    d1, a0, a1, t1, b1, end1 = text_paths(pf, "SUWON", 100, TRACK)
+    arch_x = end1 + ARCH_MARGIN * 100  # 마지막 글자 뒤 자간 + 여백
+    d2, c0, c1, t2, b2, _ = text_paths(pf, "BIBLE", 100, TRACK, x=arch_x + 30 + ARCH_MARGIN * 100)
+    arch = f"M{fmt(arch_x)} 0V-21A15 15 0 0 1 {fmt(arch_x + 30)} -21V0Z"
+    x0, x1 = min(a0, c0), max(a1, c1)
+    top, bot = min(t1, t2, -36), max(b1, b2, 0)
+    return d1 + d2, arch, (x0, top, x1 - x0, bot - top)
 
 
-# ---------- 도장 (viewBox 0 0 100 100) ----------
-# 바깥: 모서리 · 변이 아주 조금 고르지 않음 (손으로 찍은 도장 느낌, 값은 고정 → 매번 같은 모양)
+# ---------- B2 메인 아이콘 (viewBox 0 0 200 200) ----------
+CASTLE = "M28 78H44V52H60V78H76V52H92V78H108V52H124V78H140V52H156V78H172"
+
+
+def b2_inner(inter, color=PAPER):
+    """원 안 내용: 성곽선 + SUWON(기준선 128) · BIBLE(160), 27px · 자간 5 · 윤곽 가운데"""
+    out = f'<path fill="none" stroke="{color}" stroke-width="9" d="{CASTLE}"/>'
+    for word, y in (("SUWON", 128), ("BIBLE", 160)):
+        _, x0, x1, *_ = text_paths(inter, word, 27, 5 / 27, baseline=y)
+        d, *_ = text_paths(inter, word, 27, 5 / 27, x=100 - (x0 + x1) / 2, baseline=y)
+        out += f'<path fill="{color}" d="{d}"/>'
+    return out
+
+
+def b2_icon(inter):
+    return f'<circle cx="100" cy="100" r="100" fill="{BRICK}"/>' + b2_inner(inter)
+
+
+def b2_app_icon(inter):
+    """앱 아이콘: 바탕을 꽉 채운 벽돌색(가장자리를 잘라도 됨, maskable) + 원 안 내용을 .9배로 안전 영역(반지름 80%) 안에"""
+    return f'<rect width="200" height="200" fill="{BRICK}"/><g transform="translate(10 10) scale(.9)">{b2_inner(inter)}</g>'
+
+
+# ---------- 도장 (viewBox 0 0 100 100) — 인트로 1안 성문 장식(#seal)에만 씀 ----------
 SEAL_OUTER = (
     "M4.6 3.1C30 2.4 70 3.6 95.8 2.7C97.2 2.7 97.5 3.4 97.4 4.6"
     "C96.8 30 97.6 70 97.1 95.5C97.1 96.9 96.4 97.4 95.2 97.3"
     "C70 96.6 30 97.5 4.3 96.9C3.1 96.9 2.6 96.2 2.7 95"
     "C3.3 70 2.5 30 3 4.5C3 3.4 3.5 3.1 4.6 3.1Z"
 )
-# 안쪽 흰 테두리 선: 오른쪽 아래 모서리는 비워 핀이 들어감 (지도에 찍은 위치 표시처럼)
 SEAL_FRAME = "M91.4 67V8.6H8.6V91.4H73"
-# 핀 (머리 원 + 구멍, 끝이 아래). 머리 중심 (84, 80)
 PIN = (
     "M84 93.6C81.2 89.4 77.6 86.2 77.6 81.4A6.4 6.4 0 1 1 90.4 81.4"
     "C90.4 86.2 86.8 89.4 84 93.6ZM84 78.7A2.7 2.7 0 1 0 84 84.1A2.7 2.7 0 1 0 84 78.7Z"
@@ -99,8 +147,18 @@ PIN = (
 SEAL_GLYPH_BOX = {"수": (18, 15, 70, 48.5), "원": (18, 52.5, 70, 86.5)}
 
 
+def fit(face, ch, box):
+    """글자의 실제 윤곽을 box(x0, y0, x1, y1) 에 꽉 맞춤 (가로 · 세로 따로 늘림 = 도장 새김처럼)"""
+    name = face.tt.getBestCmap()[ord(ch)]
+    xmin, ymin, xmax, ymax = face.glyph_bounds(name)
+    x0, y0, x1, y1 = box
+    sx, sy = (x1 - x0) / (xmax - xmin), (y1 - y0) / (ymax - ymin)
+    pen = RoundPen(face.gs)
+    face.gs[name].draw(TransformPen(pen, (sx, 0, 0, -sy, x0 - xmin * sx, y0 + ymax * sy)))
+    return pen.getCommands()
+
+
 def seal_inner(song, white="#fff", frame=2.2, weight=1.1):
-    """weight = 글자 윤곽에 더하는 흰 선 굵기 (Song Myung 이 가늘어 새김처럼 조금 두껍게)"""
     d = "".join(fit(song, ch, box) for ch, box in SEAL_GLYPH_BOX.items())
     return (
         f'<path fill="{BRICK}" d="{SEAL_OUTER}"/>'
@@ -110,119 +168,77 @@ def seal_inner(song, white="#fff", frame=2.2, weight=1.1):
     )
 
 
-# 작은 도장(48px 이하: 화면 로고 · 파비콘 32): 안쪽 테두리 없이 글자를 크고 굵게, 핀도 조금 크게
-SMALL_GLYPH_BOX = {"수": (15, 11, 71, 47), "원": (15, 52.5, 71, 89)}
-PIN_SMALL = (
-    "M85.5 95C82 89.8 77.5 86 77.5 80A8 8 0 1 1 93.5 80"
-    "C93.5 86 89 89.8 85.5 95ZM85.5 76.6A3.4 3.4 0 1 0 85.5 83.4A3.4 3.4 0 1 0 85.5 76.6Z"
+CREDIT = (
+    "<!-- 수원바이블 로고. 글자 윤곽: Playfair Display · Inter · Pretendard · Song Myung"
+    " (SIL Open Font License 1.1), 만든 방법 scripts/brand -->"
 )
 
 
-def seal_sm(song, white="#fff", weight=2.8):
-    d = "".join(fit(song, ch, box) for ch, box in SMALL_GLYPH_BOX.items())
-    return (
-        f'<path fill="{BRICK}" d="{SEAL_OUTER}"/>'
-        f'<path fill="{white}" stroke="{white}" stroke-width="{weight}" stroke-linejoin="round" d="{d}"/>'
-        f'<path fill="{white}" fill-rule="evenodd" d="{PIN_SMALL}"/>'
-    )
-
-
-def seal_small(song):
-    """16px 파비콘: "수" 한 글자 + 핀 점. 테두리 선 없음 (16px 에선 뭉개짐)"""
-    d = fit(song, "수", (12, 12, 70, 88))
-    return (
-        f'<rect width="100" height="100" rx="6" fill="{BRICK}"/>'
-        f'<path fill="#fff" stroke="#fff" stroke-width="5" stroke-linejoin="round" d="{d}"/>'
-        f'<path fill="#fff" d="M84 94C80 88 75 84 75 77.5A9 9 0 1 1 93 77.5C93 84 88 88 84 94Z"/>'
-    )
-
-
-def seal_icon(song):
-    """앱 아이콘: 바탕을 꽉 채운 벽돌색(가장자리를 잘라도 됨) + 안쪽 도장. 중앙 80% 안에 글자 · 핀"""
-    return (
-        f'<rect width="100" height="100" fill="{BRICK}"/>'
-        f'<g transform="translate(12 12) scale(.76)">{seal_inner(song)}</g>'
-    )
-
-
-CREDIT = "<!-- 수원바이블 로고. 글자 윤곽: Song Myung · Hahmlet (SIL Open Font License 1.1), 만든 방법 scripts/brand -->"
-
-
-def svg(viewbox, body, w=None, h=None, extra=""):
+def svg(viewbox, body, w=None, h=None):
     size = f' width="{w}" height="{h}"' if w else ""
-    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{viewbox}"{size}{extra}>{CREDIT}{body}</svg>\n'
+    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{viewbox}"{size}>{CREDIT}{body}</svg>\n'
+
+
+def vb(box):
+    return " ".join(fmt(v) for v in box)
 
 
 def main():
-    song = TTFont(sys.argv[1])
-    var = TTFont(sys.argv[2])
-    ham800 = instancer.instantiateVariableFont(TTFont(sys.argv[2]), {"wght": 800})
-    ham600 = instancer.instantiateVariableFont(var, {"wght": 600})
+    song = Face(TTFont(sys.argv[1]))
+    pf = Face(instancer.instantiateVariableFont(TTFont(sys.argv[2]), {"wght": 600}))
+    inter = Face(instancer.instantiateVariableFont(TTFont(sys.argv[3]), {"wght": 800, "opsz": 27}))
+    pre_med = Face(TTFont(BRAND / "fonts/Pretendard-Medium.subset.woff2"))
 
-    # ---------- 워드마크: "수원바이블" 위 줄, 부제 아래 줄 (자간 .32em) ----------
-    name_ds, name_w, name_top, name_bot = text_paths(ham800, "수원바이블", 100, tracking=-0.02, baseline=100)
-    sub_size = 30
-    sub_ds, sub_w, sub_top, sub_bot = text_paths(ham600, "수원 문화지도", sub_size, tracking=0.32, baseline=0)
-    sub_y = name_bot + 26 - sub_top  # 워드마크 아래 26 띄움
-    # 화면용 #tagline 심볼은 펜 시작 x=4 그대로 (화면 위치는 CSS margin-left 로 맞춤, #216)
-    tag_ds, tag_w, tag_top, tag_bot = text_paths(ham600, "수원 문화지도", sub_size, tracking=0.32, baseline=sub_y, x=4)
-    # 문서 · 공유 이미지: 부제 첫 글자 윤곽 왼쪽 끝 = 워드마크 첫 글자 '수' 윤곽의 가로 중심 (11/11 시안 d)
-    (su_x0, _, su_x1, _), _ = glyph_bounds(ham800, "수")
-    su_center = (su_x0 + su_x1) / 2 * 100 / ham800["head"].unitsPerEm
-    sub_ink0 = glyph_bounds(ham600, "수")[0][0] * sub_size / ham600["head"].unitsPerEm
-    sub_x = su_center - sub_ink0
-    sub_ds, sub_end, sub_top2, sub_bot2 = text_paths(ham600, "수원 문화지도", sub_size, tracking=0.32, baseline=sub_y, x=sub_x)
-    top = name_top
-    vb_w, vb_h = max(name_w, sub_end), sub_bot2 - top
-    name_d, sub_d, tag_d = "".join(name_ds), "".join(sub_ds), "".join(tag_ds)
+    word_d, arch_d, word_box = wordmark(pf)
+    # 부제: 화면 10px · 자간 3px = .3em. 윤곽 상자로 자름 → 워드마크와 윤곽끼리 가운데 맞춤 (CSS align-items: center)
+    tag_d, t0, t1, ttop, tbot, _ = text_paths(pre_med, "수원 문화지도", 100, 0.3)
+    tag_box = (t0, ttop, t1 - t0, tbot - ttop)
 
     WORK.mkdir(exist_ok=True)
-    # 화면용 스프라이트: <svg><use href="/brand/logo.svg#…"/></svg> 로 씀. 색은 CSS(currentColor) 로
-    word_vb = f"0 {fmt(top)} {fmt(vb_w)} {fmt(vb_h)}"
+    # 화면용 스프라이트: <svg><use href="/brand/logo.svg#…"/></svg>
+    #   #wordmark: 글자 = CSS color(currentColor), 아치 = fill 속성을 비워 CSS fill 을 물려받음 (밝음 · 어두움 따로)
     sprite = (
         f'<svg xmlns="http://www.w3.org/2000/svg">{CREDIT}'
+        f'<symbol id="wordmark" viewBox="{vb(word_box)}"><path fill="currentColor" d="{word_d}"/><path d="{arch_d}"/></symbol>'
+        f'<symbol id="tagline" viewBox="{vb(tag_box)}"><path fill="currentColor" d="{tag_d}"/></symbol>'
         f'<symbol id="seal" viewBox="0 0 100 100">{seal_inner(song)}</symbol>'
-        f'<symbol id="seal-sm" viewBox="0 0 100 100">{seal_sm(song)}</symbol>'  # 화면 로고(32~48px)는 작은 도장
-        f'<symbol id="wordmark" viewBox="0 {fmt(top)} {fmt(name_w)} {fmt(name_bot - top)}"><path fill="currentColor" d="{name_d}"/></symbol>'
-        f'<symbol id="tagline" viewBox="4 {fmt(tag_top)} {fmt(tag_w)} {fmt(tag_bot - tag_top)}"><path fill="currentColor" d="{tag_d}"/></symbol>'
         "</svg>\n"
     )
     (BRAND / "logo.svg").write_text(sprite, encoding="utf-8")
-    (BRAND / "logo-mark.svg").write_text(svg("0 0 100 100", seal_inner(song), 32, 32), encoding="utf-8")
-    (BRAND / "favicon.svg").write_text(svg("0 0 100 100", seal_sm(song), 32, 32), encoding="utf-8")
-    (WORK / "favicon-16.svg").write_text(svg("0 0 100 100", seal_small(song), 16, 16), encoding="utf-8")
-    (WORK / "icon.svg").write_text(svg("0 0 100 100", seal_icon(song), 512, 512), encoding="utf-8")
-    (WORK / "wordmark.svg").write_text(
-        svg(word_vb, f'<path fill="{INK}" d="{name_d}"/><path fill="{BRICK}" d="{sub_d}"/>')
-    )
-    # 문서 · 공유용 가로 로고 (도장 + 워드마크)
-    gap = 0.18 * vb_h
-    lock_w = vb_h + gap + vb_w
-    lock = (
-        f'<g transform="scale({fmt(vb_h / 100)})">{seal_inner(song)}</g>'
-        f'<g transform="translate({fmt(vb_h + gap)} {fmt(-top)})"><path fill="{INK}" d="{name_d}"/><path fill="{BRICK}" d="{sub_d}"/></g>'
-    )
-    (BRAND / "logo-lockup.svg").write_text(svg(f"0 0 {fmt(lock_w)} {fmt(vb_h)}", lock), encoding="utf-8")
+    (BRAND / "favicon.svg").write_text(svg("0 0 200 200", b2_icon(inter), 32, 32), encoding="utf-8")
+    (WORK / "icon.svg").write_text(svg("0 0 200 200", b2_app_icon(inter), 512, 512), encoding="utf-8")
+    (WORK / "favicon-16.svg").write_text(svg("0 0 200 200", b2_icon(inter), 16, 16), encoding="utf-8")
 
-    # 공유 이미지 1200x630 (render.js 가 찍음). 종이 바탕 · 왼쪽 정렬 · 비대칭:
-    #   왼쪽 = 워드마크 · 부제 · 설명 (글 덩어리), 오른쪽 위 = 크게 찍은 도장 (살짝 기울임). 가운데 정렬 · 아래 색 띠 없음
-    word_h_px = 150
-    word_w_px = word_h_px * vb_w / vb_h
-    font = (BRAND / "fonts/Pretendard-Medium.subset.woff2").as_uri()
-    og = f"""<!doctype html><meta charset="utf-8"><style>@font-face{{font-family:Pretendard;font-weight:500;src:url({font})}}body{{margin:0}}</style><body>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-<rect width="1200" height="630" fill="{PAPER}"/>
-<path d="M88 0V630" stroke="{BRICK}" stroke-opacity=".22"/>
-<svg x="120" y="196" width="{fmt(word_w_px)}" height="{word_h_px}" viewBox="{word_vb}"><path fill="{INK}" d="{name_d}"/><path fill="{BRICK}" d="{sub_d}"/></svg>
-<path d="M122 420H232" stroke="{INK}" stroke-width="2"/>
-<text x="120" y="472" font-family="Pretendard" font-size="32" font-weight="500" fill="#4a4540">수원의 공연 · 전시 · 축제를 지도에서 한눈에</text>
-<text x="120" y="522" font-family="Pretendard" font-size="22" font-weight="500" fill="#8a8178" letter-spacing="1">suwonbible.com</text>
-<g transform="translate(846 92) rotate(-4 120 120) scale(2.4)">{seal_inner(song)}</g>
-</svg></body>
+    # 공유 이미지 1200x630 (render.js 가 찍음) — 문서 Q2 "공유 미리보기 배너"
+    word_px = 80 / 100  # 워드마크 글자 80px
+    ww, wh = word_box[2] * word_px, word_box[3] * word_px
+    fonts = "".join(
+        f"@font-face{{font-family:Pretendard;font-weight:{w};src:url({(BRAND / f'fonts/Pretendard-{n}.subset.woff2').as_uri()})}}"
+        for w, n in ((500, "Medium"), (700, "Bold"))
+    )
+    og = f"""<!doctype html><meta charset="utf-8"><style>{fonts}
+body{{margin:0}}.og{{position:relative;width:1200px;height:630px;background:{PAPER};overflow:hidden;font-family:Pretendard}}
+.og>*{{position:absolute;margin:0;line-height:1;white-space:nowrap}}
+</style><body><div class="og">
+<div style="left:88px;top:0;width:2px;height:630px;background:#e4dccd"></div>
+<svg style="left:120px;top:196px" width="{fmt(ww)}" height="{fmt(wh)}" viewBox="{vb(word_box)}"><path fill="{INK}" d="{word_d}"/><path fill="{BRICK}" d="{arch_d}"/></svg>
+<p style="left:120px;top:{fmt(196 + wh + 22)}px;font-size:26px;font-weight:700;letter-spacing:10px;color:{BRICK}">수원 문화지도</p>
+<div style="left:120px;top:418px;width:110px;height:2px;background:{INK}"></div>
+<p style="left:120px;top:440px;font-size:30px;font-weight:500;color:#4a4540">수원의 공연 · 전시 · 축제를 지도에서 한눈에</p>
+<p style="left:120px;top:498px;font-size:22px;font-weight:500;color:#8a8178">suwonbible.com</p>
+<svg style="left:860px;top:120px" width="230" height="230" viewBox="0 0 200 200">{b2_icon(inter)}</svg>
+</div></body>
 """
     (WORK / "og.html").write_text(og, encoding="utf-8")
-    print("wordmark ratio", vb_w / vb_h, "sprite bytes", len(sprite))
-    print(f"'수' 중심 x {su_center:.2f} (= 워드마크 높이 × {su_center / (name_bot - top):.3f}), 부제 첫 글자 왼쪽 x {sub_x + sub_ink0:.2f}")
+
+    # CSS 에 넣을 크기 (글자 크기 px → 윤곽 상자 px)
+    print(f"sprite bytes {len(sprite)}")
+    print(f"wordmark box(em) w {word_box[2] / 100:.4f} h {word_box[3] / 100:.4f} (가로/세로 {word_box[2] / word_box[3]:.3f})")
+    print(f"tagline  box(em) w {tag_box[2] / 100:.4f} h {tag_box[3] / 100:.4f} (가로/세로 {tag_box[2] / tag_box[3]:.3f})")
+    for fs in (24, 21, 32):
+        print(f"  워드마크 {fs}px → {word_box[2] * fs / 100:.1f} x {word_box[3] * fs / 100:.1f}")
+    for fs in (10, 14):
+        print(f"  부제 {fs}px → {tag_box[2] * fs / 100:.1f} x {tag_box[3] * fs / 100:.1f}")
 
 
 if __name__ == "__main__":
