@@ -36,49 +36,42 @@ body {
   background: var(--bg);
   color: var(--text);
 }
-/* PC 상단 바 왼쪽 로고: 낙관(도장) + 워드마크 / 아래 줄 부제 (static/brand/logo.svg 의 symbol)
-   글자 비율: 워드마크 가로 = 높이 × 5.05, 부제 가로 = 높이 × 8.44
-   부제 왼쪽 끝 = 워드마크 첫 글자 '수'의 가로 중심 → 부제 margin-left = 워드마크 높이 × 0.5
-   ('수' 윤곽 x 1.5~91.7 / 높이 90.5 → 중심 0.515, 부제 첫 글자 안쪽 여백 약 0.25px 를 뺌) */
+/* 로고 (11/13 B안, docs/design/2026-11-13-todo-additions.md "Q2"): W4 워드마크 / 아래 줄 부제, 가운데 맞춤 · 간격 5px
+   static/brand/logo.svg 의 symbol 은 글자 윤곽 상자로 잘려 있음 (scripts/brand 가 찍는 값):
+     워드마크 = 글자 크기 × 7.767 (가로) · × 0.736 (세로), 부제 = 글자 크기 × 7.166 · × 0.875 (자간 .3em 포함)
+   색: 글자 = color(--text), 아치 = fill 을 물려받음(--brand-sub), 부제 = color(--brand-sub)
+     종이색 바 위 벽돌 #b4472a (4.8:1) · 어두운 바 위 #e07a57 (5.7:1) */
 .topbar-brand {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
   margin-right: 0.75rem;
   color: inherit;
   text-decoration: none;
 }
-.brand-seal {
-  flex: none;
-  width: 32px;
-  height: 32px;
-}
-/* 도장 뒤 칸: 밝은 종이색 바에선 없음, 어두운 테마에선 종이색 칸에 얹어 바탕과 떼어 놓음 (벽돌 · 어두운 바탕 대비가 약해서) */
-.topbar-brand .brand-seal {
-  box-sizing: content-box;
-  padding: 2px;
-  border-radius: 3px;
-  background: var(--seal-frame);
-}
 .brand-words {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 5px;
 }
 .brand-words svg {
   display: block;
 }
-.topbar-brand .brand-name {
-  width: 91px;
-  height: 18px;
+.brand-name {
   color: var(--text);
+  fill: var(--brand-sub);
+}
+.brand-sub {
+  color: var(--brand-sub);
+}
+/* PC 상단 바: 워드마크 24px · 부제 10px */
+.topbar-brand .brand-name {
+  width: 186.4px;
+  height: 17.7px;
 }
 .topbar-brand .brand-sub {
-  width: 80px;
-  height: 9.5px;
-  margin-left: 9px; /* 워드마크 높이 18px × 0.5 */
-  color: var(--brand-sub); /* 종이색 바 위 벽돌 #b4472a (4.8:1) · 어두운 바 위 #e07a57 (5.7:1) */
+  width: 71.7px;
+  height: 8.8px;
 }
 /* 로그인 상태 + 버튼 묶음 (PC: 상단바 오른쪽 / 모바일: ☰ 메뉴 안) */
 #topbarActions {
@@ -2714,30 +2707,18 @@ body {
     display: flex;
     align-items: center;
   }
+  /* 모바일 홈 머리 로고: 워드마크 21px · 부제 10px (비율 · 색은 위 .brand-words) */
   .home-logo {
     display: flex;
     align-items: center;
-    gap: 10px;
-    color: var(--text);
-  }
-  .home-logo .brand-seal {
-    box-sizing: content-box;
-    width: 44px;
-    height: 44px;
-    padding: 2px;
-    margin: -2px; /* 칸 여백만큼 당겨 밝은 테마 자리를 그대로 */
-    border-radius: 3px;
-    background: var(--seal-frame); /* 어두운 테마에서만 종이색 칸 (PC 상단 바와 같음) */
   }
   .home-logo .brand-name {
-    width: 101px;
-    height: 20px;
+    width: 163.1px;
+    height: 15.5px;
   }
   .home-logo .brand-sub {
-    width: 84px;
-    height: 10px;
-    margin-left: 10px; /* 워드마크 높이 20px × 0.5 */
-    color: var(--brand-sub);
+    width: 71.7px;
+    height: 8.8px;
   }
   /* 홈 3칸 (11/11 시안): 칸 제목 18px 굵게 + 수는 벽돌색, 오른쪽 "전체 →" */
   .home-section-head {
