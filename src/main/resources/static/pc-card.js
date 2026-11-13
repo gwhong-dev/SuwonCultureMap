@@ -56,6 +56,9 @@ function shouldHopMarker(prevMarker, nextMarker, prevId, nextId, reduceMotion) {
 // ===== PC 3분할 D안 (11/13 확정 시안 Q4 PcNavD1 — docs/design/2026-11-13-todo-additions.md "Q4") =====
 // 지도 | 상세 칸(늘 열림) | 목록. 상세 칸 포스터 양옆 ‹ › · 키보드 ← → 로 오른쪽 목록 순서대로 넘김
 
+// Space 를 가로채지 않는 단추 역할 (단추 · 링크 · 고르기 줄 — 그 요소 기본 동작)
+var PC_CONTROL_ROLES = ["button", "link", "menuitem", "option", "checkbox", "radio", "switch", "slider", "combobox", "listbox"];
+
 // 포커스 자리 → 키 범위 구역 (Q4 "키가 먹는 범위" 표의 줄)
 // el = { tag, editable(contenteditable), role, row(오른쪽 목록 줄), pane(상세 칸 자체) }
 function pcKeyZone(el) {
@@ -63,8 +66,8 @@ function pcKeyZone(el) {
   if (el.role === "tab") return "tab";
   if (el.row) return "row";
   if (el.pane) return "pane";
-  if (el.tag === "BUTTON" || el.tag === "A" || el.role === "button" || el.role === "link") return "control";
-  return "other"; // 지도 · 빈 곳 · 상세 칸 본문
+  if (el.tag === "BUTTON" || el.tag === "A" || el.tag === "SUMMARY" || PC_CONTROL_ROLES.indexOf(el.role) >= 0) return "control";
+  return "other"; // 지도 · 목록 스크롤 영역 · 빈 곳 · 상세 칸 본문
 }
 
 // 키 하나 → 할 일. k = { key, zone(pcKeyZone), popup(길찾기 작은 창 · 공유 창 · ☰ 메뉴 · 언어 목록 · 달력이 열림),
@@ -72,8 +75,10 @@ function pcKeyZone(el) {
 // 돌려줌: "prev" · "next" 넘기기 / "fav" 찜 / "focusPane" 상세 칸으로 포커스 / null = 가로채지 않음(기본 동작)
 //  - 입력칸 · 조합 중 · select · contenteditable, 탭 줄(role=tab) → 기본
 //  - 작은 창 · 메뉴 · 달력이 열림, 조합키, 이미 처리됨 → 넘기지 않음 (그 창 · 브라우저 기본)
-//  - 목록 줄: ← → ↑ ↓ 넘기기 · Space 찜 · Enter 상세 칸으로
-//  - 상세 칸 자체: ← → 넘기기 · Space 찜 / 단추 · 링크 · 지도 · 빈 곳: ← → 만 (Space 는 단추 기본 동작 · 스크롤)
+//  - 목록 줄: ← → ↑ ↓ 넘기기 · Space 찜(그 줄 = 상세 행사) · Enter 상세 칸으로
+//  - 상세 칸 자체 · 상세 칸 본문 · 지도 · 목록 스크롤 영역 · 빈 곳: ← → 넘기기 · Space 상세 행사 찜
+//    (11/13 확정 B3 — docs/design/2026-11-13-pc-pending.md "③ 지도 · 키", 전엔 Space 가 스크롤 · 안 먹음)
+//  - 단추 · 링크: ← → 만 (Space 는 단추 기본 동작)
 function pcKeyAction(k) {
   if (k.handled || k.mods || k.composing || k.popup) return null;
   if (k.zone === "input" || k.zone === "tab") return null;
@@ -88,8 +93,35 @@ function pcKeyAction(k) {
     if (key === "Enter") return "focusPane";
     return null;
   }
-  if (space && k.zone === "pane") return "fav";
+  if (space && (k.zone === "pane" || k.zone === "other")) return "fav";
   return null;
+}
+
+// ===== 지도 이동 (11/13 확정 R7 · B2 — docs/design/2026-11-13-pc-pending.md "③ 지도 · 키") =====
+var PC_MAP_LEVEL = 5; // PC 첫 화면 축척 250m (B2). 모바일은 그대로
+var PC_MOVE_OUT = 2; // 먼 행사로 갈 때 잠깐 넓힐 레벨 (250m → 1km 정도)
+var PC_MOVE_MS = { out: 300, back: 300 }; // 축소 · 확대 움직임 시간 (가운데 panTo 는 카카오 기본 속도)
+var PC_ZOOM_MIN = 1; // 카카오 지도 레벨 범위 (1 = 가장 크게, 14 = 가장 작게)
+var PC_ZOOM_MAX = 14;
+
+// 고른 행사 자리 → 지도 움직임. view = 지금 화면 { south, west, north, east }, point = { lat, lng }
+//  - "inside": 화면 안 → 옮기지 않음 / "near": 화면 밖이지만 한 칸 안쪽(바로 옆) → panTo 만
+//  - "far": 화면 한 칸(가로 · 세로 크기)보다 더 떨어짐 → 축소 → 이동 → 확대
+function pcMoveKind(view, point) {
+  var height = view.north - view.south;
+  var width = view.east - view.west;
+  if (point.lat >= view.south && point.lat <= view.north && point.lng >= view.west && point.lng <= view.east) return "inside";
+  var far =
+    point.lat < view.south - height ||
+    point.lat > view.north + height ||
+    point.lng < view.west - width ||
+    point.lng > view.east + width;
+  return far ? "far" : "near";
+}
+
+// + / − 단추 상태: 가장 크게(레벨 min) · 가장 작게(레벨 max) 면 그 단추를 끔
+function pcZoomState(level, min, max) {
+  return { zoomIn: level > min, zoomOut: level < max };
 }
 
 // 넘길 행사 id: ids = 오른쪽 목록 순서, 처음 · 끝에서는 멈춤(null). 지금 행사가 목록에 없으면 첫 행사
@@ -139,6 +171,13 @@ if (typeof module !== "undefined") {
     shouldHopMarker: shouldHopMarker,
     pcKeyZone: pcKeyZone,
     pcKeyAction: pcKeyAction,
+    PC_MAP_LEVEL: PC_MAP_LEVEL,
+    PC_MOVE_OUT: PC_MOVE_OUT,
+    PC_MOVE_MS: PC_MOVE_MS,
+    PC_ZOOM_MIN: PC_ZOOM_MIN,
+    PC_ZOOM_MAX: PC_ZOOM_MAX,
+    pcMoveKind: pcMoveKind,
+    pcZoomState: pcZoomState,
     pcStepId: pcStepId,
     pcPosText: pcPosText,
     pcPagerState: pcPagerState,

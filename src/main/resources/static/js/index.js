@@ -250,32 +250,18 @@ function renderLocationMarkers(visibleItems) {
 // 좌표는 재단 API(XML)가 "화성행궁 광장 · 우화관 바깥마당" 행사에 주는 값과 같게 맞춤 → 그 장소 마커와 정확히 겹침
 // level 6 첫 화면에 정조테마공연장 · 수원전통문화관 · 미디어센터 등 성곽 안 행사가 모두 들어옴 (11/9 운영 API 확인)
 var DEFAULT_CENTER = { lat: 37.2818820191942, lng: 127.014394463798 };
-// PC 첫 화면은 더 확대 (11/13 확정 시안 P1): 화성행궁 · 방화수류정 · 팔달문 · 지동시장이 한 화면에 들어오는 정도
-//  - 화면 높이마다 맞는 확대 단계가 달라서(900px 높이 = 5, 1080px = 4) 네 곳을 범위로 맞춤
-//  - 아래 여백 = 하단 카드 줄(띠 · 카드 · 안내) 높이 → 팔달문이 카드에 가리지 않게, 위 여백 = 칩 줄
+// PC 첫 화면 (11/13 확정 B1 · B2 — docs/design/2026-11-13-pc-pending.md "③ 지도 · 키"):
+//  - 축척 250m(레벨 5, pc-card.js PC_MAP_LEVEL). 전엔 네 곳(행궁 · 방화수류정 · 팔달문 · 지동시장) 범위로 맞춰 100m 로 좁았음
+//  - 중심은 행사를 받은 뒤 상세 칸 첫 행사로 옮김 (pcAutoCenter). 받기 전 · 0건이면 화성행궁
 //  - 모바일은 그대로 화성행궁 중심 level 6 (P3 담당)
-var PC_FIRST_VIEW = [
-  DEFAULT_CENTER, // 화성행궁
-  { lat: 37.28745, lng: 127.01795 }, // 방화수류정
-  { lat: 37.27704, lng: 127.01676 }, // 팔달문
-  { lat: 37.27951, lng: 127.01975 }, // 지동시장
-];
-function fitPcFirstView() {
-  var bounds = new kakao.maps.LatLngBounds();
-  PC_FIRST_VIEW.forEach(function (p) {
-    bounds.extend(new kakao.maps.LatLng(p.lat, p.lng));
-  });
-  map.setBounds(bounds, 70, 24, 24, 24); // 위(분류 칩 줄) · 오른쪽 · 아래 · 왼쪽 여백(px). 지도 아래 카드 줄은 없어짐 (11/13 Q4 — 전엔 아래 270)
-}
-
 kakao.maps.load(function () {
   var mapContainer = document.getElementById("map");
   var mapOption = {
     center: new kakao.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng),
-    level: 6,
+    level: mobileQuery.matches ? 6 : PC_MAP_LEVEL, // pc-card.js
   };
   map = new kakao.maps.Map(mapContainer, mapOption);
-  if (!mobileQuery.matches) fitPcFirstView();
+  setupPcZoom();
 
   // 지도 빈 곳을 눌러도 하단 카드 줄은 그대로 (PC 11/11 · 모바일 P3 — 지도 탭이면 카드 줄이 늘 떠 있음)
   guardMapDragFromTopbar();
@@ -1073,7 +1059,14 @@ function checkAuth() {
           return e.id;
         }),
       );
+      pcFavoritesReady = true; // PC 첫 진입 중심 = 찜 첫 행사 (B1)
       filterMarkers(); // ← 즐겨찾기 목록 다 받아온 뒤, 화면도 한 번 더 새로 그림
+    })
+    .catch(function (err) {
+      // 로그인 확인 · 찜 목록 받기 실패(배포 중 502 등): 첫 진입 중심 맞추기는 끝냄 — 안 그러면 분류 · 탭을 바꿀 때마다 지도가 첫 행사로 옮겨짐 (#262 검증 ⚠️)
+      console.error("로그인 · 찜 목록 확인 실패", err);
+      pcFavoritesReady = true;
+      if (eventsLoaded) pcAutoCenter = false;
     });
 }
 
@@ -3604,6 +3597,7 @@ function pcSyncList(focusRowId) {
   renderPcDetail();
   pcMarkRows(false);
   selectMarker(pcDetailId, false);
+  pcCenterFirst();
   if (focusRowId !== null) {
     var row = pcRow(focusRowId);
     if (row) {
@@ -3623,6 +3617,7 @@ function pcSelect(id, opts) {
   pcDetailId = id;
   pcOutsideId = opts.outside && pcOrderIds().indexOf(id) < 0 ? id : null;
   pcUserPicked = true;
+  pcAutoCenter = false; // 사용자가 고르면 첫 진입 중심 맞추기는 끝
   if (prevId !== id) closeRoutePop(false); // 창을 연 [길찾기] 는 그대로지만 행사가 바뀜
   renderPcDetail();
   pcMarkRows(prevId !== id, opts.focusRow);
@@ -3656,15 +3651,141 @@ function pcShowMarker(prevId, id, pan) {
   var next = pcItem(id);
   if (!next || !next.locMarker || !map) return;
   var reduce = prefersReducedMotion();
-  if (pan) {
-    var position = next.locMarker.marker.getPosition();
-    if (!map.getBounds().contain(position)) {
-      if (reduce) map.setCenter(position);
-      else map.panTo(position);
-    }
-  }
+  if (pan) pcMoveMap(next.locMarker.marker.getPosition(), reduce);
   var prev = prevId === null ? null : pcItem(prevId);
   if (shouldHopMarker(prev && prev.locMarker, next.locMarker, prevId, id, reduce)) hopMarker(next.locMarker); // pc-card.js
+}
+
+// ===== PC 지도 이동 · 확대 단추 (11/13 확정 R6 · R7 · B1 — docs/design/2026-11-13-pc-pending.md "③ 지도 · 키") =====
+
+// B1: 첫 진입 때 지도 중심 = 상세 칸 첫 행사 (찜한 사람은 찜 첫 행사 — 찜 목록이 늦게 오면 그때 한 번 더)
+//  - 사용자가 행사를 고르거나 지도를 만지면(끌기 · 휠 · + / −) 끝. 공유 링크(?event=)로 들어오면 그 행사가 중심이라 안 함
+var pcAutoCenter = !initialParams.get("event");
+var pcFavoritesReady = false; // 로그인 확인 · 찜 목록 받기가 끝났나 (끝난 뒤 한 번 맞추면 자동 중심도 끝)
+function pcCenterFirst() {
+  if (!pcAutoCenter || pcUserPicked || pcDetailId === null || !map || mobileQuery.matches) return;
+  var item = pcItem(pcDetailId);
+  if (item && item.event.latitude && item.event.longitude) {
+    map.setCenter(new kakao.maps.LatLng(item.event.latitude, item.event.longitude));
+  }
+  if (eventsLoaded && pcFavoritesReady) pcAutoCenter = false;
+}
+
+// R7: 고른 행사로 지도 이동 — 화면 안이면 그대로 · 바로 옆이면 panTo · 한 칸 넘게 멀면 축소(0.3초) → panTo → 원래 레벨로(0.3초)
+//  - 카카오 지도는 확대 · 축소 움직임 도중에 들어온 setLevel · panTo 를 무시함 (11/13 화면 시험) → 정해 둔 시간이 아니라
+//    움직임이 다 멈췄다는 이벤트(idle)를 받고 다음 단계로. 이벤트가 안 오면 PC_MOVE_WAIT 뒤 넘어감
+//    (zoom_changed 는 idle 보다 먼저 와서, 그때 panTo 를 하면 바로 뒤 축소의 idle 을 panTo 끝으로 잘못 받음)
+//  - 움직이는 도중 다른 행사를 고르면 목적지만 바꿈 → 남은 단계가 새 행사로 감 (돌아갈 레벨은 처음 레벨 그대로)
+//  - 움직임 줄이기 설정이면 setCenter 로 한 번에
+var PC_MOVE_WAIT = 2500;
+var pcMove = { active: false, base: null, target: null, panned: null, stop: null };
+function pcMoveCancel() {
+  if (pcMove.stop) pcMove.stop();
+  pcMove.stop = null;
+  pcMove.active = false;
+}
+// 지도가 멈출 때(idle) 한 번 기다리기 (안 오면 PC_MOVE_WAIT 뒤 그냥 다음 단계). 다음 명령은 이벤트 처리가 끝난 뒤에
+function pcMoveAfter(next) {
+  var eventName = "idle";
+  var done = false;
+  function go() {
+    if (done) return;
+    done = true;
+    kakao.maps.event.removeListener(map, eventName, go);
+    clearTimeout(timer);
+    pcMove.stop = null;
+    setTimeout(next, 0);
+  }
+  var timer = setTimeout(go, PC_MOVE_WAIT);
+  kakao.maps.event.addListener(map, eventName, go);
+  pcMove.stop = function () {
+    done = true;
+    kakao.maps.event.removeListener(map, eventName, go);
+    clearTimeout(timer);
+  };
+}
+function pcMoveMap(position, reduce) {
+  if (reduce) {
+    var base = pcMove.active ? pcMove.base : null;
+    pcMoveCancel();
+    if (base !== null) map.setLevel(base);
+    if (base !== null || !map.getBounds().contain(position)) map.setCenter(position);
+    return;
+  }
+  if (pcMove.active) {
+    pcMove.target = position; // 남은 단계가 새 행사로
+    return;
+  }
+  var b = map.getBounds();
+  var kind = pcMoveKind(
+    { south: b.getSouthWest().getLat(), west: b.getSouthWest().getLng(), north: b.getNorthEast().getLat(), east: b.getNorthEast().getLng() },
+    { lat: position.getLat(), lng: position.getLng() },
+  ); // pc-card.js
+  if (kind === "inside") return;
+  if (kind === "near") {
+    map.panTo(position);
+    return;
+  }
+  pcMove.active = true;
+  pcMove.base = map.getLevel();
+  pcMove.target = position;
+  var out = Math.min(pcMove.base + PC_MOVE_OUT, PC_ZOOM_MAX);
+  if (out === pcMove.base) pcMovePan();
+  else {
+    pcMoveAfter(pcMovePan);
+    map.setLevel(out, { animate: { duration: PC_MOVE_MS.out } });
+  }
+}
+function pcMovePan() {
+  pcMove.panned = pcMove.target;
+  pcMoveAfter(pcMoveBack);
+  map.panTo(pcMove.target);
+}
+function pcMoveBack() {
+  if (pcMove.target !== pcMove.panned) return pcMovePan(); // 옮기는 사이 다른 행사를 고름 → 그쪽으로 다시
+  if (map.getLevel() === pcMove.base) return pcMoveDone();
+  pcMoveAfter(pcMoveDone);
+  map.setLevel(pcMove.base, { animate: { duration: PC_MOVE_MS.back } });
+}
+function pcMoveDone() {
+  var again = pcMove.target !== pcMove.panned ? pcMove.target : null; // 확대하는 사이 다른 행사를 고름
+  // 안전망: 앞 panTo 의 idle 을 축소 끝으로 받는 등 명령이 무시돼 고른 핀이 화면 밖에 남았으면 한 번에 옮김 (#262 검증 ⚠️)
+  if (!again && !map.getBounds().contain(pcMove.target)) map.setCenter(pcMove.target);
+  pcMoveCancel();
+  if (again) pcMoveMap(again, prefersReducedMotion());
+}
+
+// R6: 지도 오른쪽 아래 + / − (PC 만 보임). 가장 크게 · 작게면 그 단추 aria-disabled
+//  - 레벨 범위 PC_ZOOM_MIN · PC_ZOOM_MAX 는 pc-card.js (kakao.maps.load 가 이 파일 실행 중에 바로 불릴 수 있어 먼저 읽히는 파일에 둠)
+function setupPcZoom() {
+  var zoomIn = document.getElementById("mapZoomIn");
+  var zoomOut = document.getElementById("mapZoomOut");
+  function stopAutoCenter() {
+    pcAutoCenter = false;
+  }
+  function refresh() {
+    var state = pcZoomState(map.getLevel(), PC_ZOOM_MIN, PC_ZOOM_MAX); // pc-card.js
+    zoomIn.setAttribute("aria-disabled", String(!state.zoomIn));
+    zoomOut.setAttribute("aria-disabled", String(!state.zoomOut));
+  }
+  function zoomBy(delta) {
+    stopAutoCenter();
+    var level = map.getLevel() + delta;
+    if (level < PC_ZOOM_MIN || level > PC_ZOOM_MAX) return;
+    map.setLevel(level, { animate: true });
+    refresh(); // zoom_changed 는 움직임이 끝난 뒤라 단추 상태를 바로 맞춤
+  }
+  zoomIn.addEventListener("click", function () {
+    zoomBy(-1);
+  });
+  zoomOut.addEventListener("click", function () {
+    zoomBy(1);
+  });
+  kakao.maps.event.addListener(map, "zoom_changed", refresh);
+  refresh();
+  var box = document.getElementById("map");
+  box.addEventListener("pointerdown", stopAutoCenter, true);
+  box.addEventListener("wheel", stopAutoCenter, { capture: true, passive: true });
 }
 
 // 오른쪽 목록 줄: 고른 줄 표시(바탕 · ‹ · aria-current) + 롤링 포커스(목록에 Tab 으로 한 번만 들어가고 안에서는 ↑ ↓)
@@ -3904,6 +4025,7 @@ function pcPopupOpen() {
 }
 
 // PC 키보드: ← → 넘기기 · Space 찜 · 목록 줄 ↑ ↓ · Enter 상세 칸으로 (범위 = pc-card.js pcKeyAction)
+//  - Space 는 지도 · 목록 스크롤 영역 · 빈 곳 · 상세 칸 본문에서도 상세 행사 찜 (11/13 확정 B3). 입력칸 · 단추 · 열린 창은 그대로
 document.addEventListener("keydown", function (e) {
   if (mobileQuery.matches) return;
   if (e.key === "Escape") {
