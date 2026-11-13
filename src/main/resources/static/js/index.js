@@ -1018,23 +1018,7 @@ function renderSidebar(items) {
   if (previewEventId === null) showDefaultPreview(); // 카드 줄은 늘 떠 있게 (PC · 모바일 지도 탭)
 }
 
-// 검색칸 조합 상태 (한글 IME): 조합 중 입력은 치는 중 규칙으로, 조합이 끝나면(스페이스 · 다른 칸 · 엔터) 그대로 규칙으로 다시 거름
-//  setComposing = 조합 상태를 적을 곳, rerender = 조합이 끝난 뒤 다시 거를 함수
-//  같은 키로 바로 다음 글자 조합이 시작되면(광 → 광ㅂ) 다시 거르지 않음 (다음 input 이 거름)
-function watchSearchComposition(input, setComposing, rerender) {
-  var composing = false;
-  input.addEventListener("compositionstart", function () {
-    composing = true;
-    setComposing(true);
-  });
-  input.addEventListener("compositionend", function () {
-    composing = false;
-    setComposing(false);
-    setTimeout(function () {
-      if (!composing) rerender();
-    }, 0);
-  });
-}
+// 검색칸 조합 상태 (한글 IME) → home-picks.js watchSearchComposition
 function setMapSearchComposing(on) {
   mapSearchComposing = on;
 }

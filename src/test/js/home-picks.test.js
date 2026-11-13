@@ -21,6 +21,7 @@ const {
   searchTypingMode,
   searchLooseOnly,
   searchLooseLast,
+  watchSearchComposition,
   SEARCH_SUGGEST_MAX,
 } = require("../../main/resources/static/home-picks.js");
 
@@ -376,6 +377,63 @@ test("조합 중 순서: 묶음(운영중 → 날짜 없음 → 종료)이 먼�
   ];
   assert.deepStrictEqual(ids(searchEvents(events, "기", WED, true)), [3, 2, 1]);
   assert.deepStrictEqual(ids(searchEvents(events, "기", WED, false)), [3, 1]); // 조합이 끝난 '기' 는 그대로
+});
+
+// 가짜 입력칸: 브라우저처럼 조합 · input 이벤트를 순서대로 냄. 다시 거르기는 run() 으로 (setTimeout 0 대신)
+function fakeSearchInput() {
+  const input = new EventTarget();
+  const queue = [];
+  const log = [];
+  let composing = false;
+  const fire = (type) => input.dispatchEvent(new Event(type));
+  watchSearchComposition(
+    input,
+    (on) => {
+      composing = on;
+    },
+    () => log.push("rerender:" + composing),
+    (fn) => queue.push(fn),
+  );
+  // input 이벤트 = index.js 처럼 isComposing 을 상태에 적고 거름
+  const typed = (isComposing) => {
+    composing = isComposing;
+    log.push("input:" + composing);
+  };
+  const run = () => queue.splice(0).forEach((fn) => fn());
+  return { fire, typed, run, log, isComposing: () => composing };
+}
+
+test("조합 감시: Chrome 순서(input 조합 중 → compositionend) → 끝나면 그대로 규칙으로 한 번 다시 거름", () => {
+  const t = fakeSearchInput();
+  t.fire("compositionstart");
+  t.typed(true); // "과"
+  t.fire("compositionend"); // 스페이스 · 다른 칸
+  assert.strictEqual(t.isComposing(), false);
+  t.run();
+  assert.deepStrictEqual(t.log, ["input:true", "rerender:false"]);
+});
+
+test("조합 감시: Safari 순서(compositionend → input 조합 아님) → input 이 그대로 규칙으로 거름", () => {
+  const t = fakeSearchInput();
+  t.fire("compositionstart");
+  t.typed(true);
+  t.fire("compositionend");
+  t.typed(false); // 확정된 글자의 input
+  t.run();
+  assert.strictEqual(t.isComposing(), false);
+  assert.deepStrictEqual(t.log, ["input:true", "input:false", "rerender:false"]); // 다시 거르기는 같은 결과(그대로 규칙)
+});
+
+test("조합 감시: 이어지는 조합(광 → 광ㅂ: end 바로 뒤 start)은 다시 거르지 않고 조합 중 상태 유지", () => {
+  const t = fakeSearchInput();
+  t.fire("compositionstart");
+  t.typed(true); // "광"
+  t.fire("compositionend");
+  t.fire("compositionstart"); // 같은 키로 다음 글자
+  t.typed(true); // "광ㅂ"
+  t.run();
+  assert.strictEqual(t.isComposing(), true);
+  assert.deepStrictEqual(t.log, ["input:true", "input:true"]);
 });
 
 test("searchLooseLast: 정렬한 순서는 두고 넓혀서만 맞는 줄을 아래로 (PC 목록 줄 { event } 도)", () => {

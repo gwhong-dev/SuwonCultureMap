@@ -262,6 +262,31 @@ function searchTypingMode(events, keyword, composing) {
   return searchTyping(events, keyword);
 }
 
+// 검색칸 조합 상태 감시 (한글 IME): 조합 중 입력은 치는 중 규칙으로, 조합이 끝나면(스페이스 · 다른 칸 · 엔터) 그대로 규칙으로 다시 거름
+//  input = 검색 입력칸, setComposing = 조합 상태를 적을 곳, rerender = 조합이 끝난 뒤 다시 거를 함수
+//  Chrome: input(isComposing) → compositionend → 여기서 다시 거름 / Safari: compositionend → input(isComposing false) 이 거름
+//  같은 키로 바로 다음 글자 조합이 시작되면(광 → 광ㅂ: end → start) 다시 거르지 않음 (다음 input 이 거름)
+//  schedule = 나중에 부를 함수 (기본 setTimeout 0, 시험에서 바꿈)
+function watchSearchComposition(input, setComposing, rerender, schedule) {
+  var later =
+    schedule ||
+    function (fn) {
+      setTimeout(fn, 0);
+    };
+  var composing = false;
+  input.addEventListener("compositionstart", function () {
+    composing = true;
+    setComposing(true);
+  });
+  input.addEventListener("compositionend", function () {
+    composing = false;
+    setComposing(false);
+    later(function () {
+      if (!composing) rerender();
+    });
+  });
+}
+
 // 넓혀서만 맞는 것(그대로는 안 맞음)인지 — typing 이 아니면 늘 false
 function searchLooseOnly(event, keyword, typing) {
   return !!typing && !matchesSearch(event, keyword, false);
@@ -346,6 +371,7 @@ if (typeof module !== "undefined") {
     searchTypingMode: searchTypingMode,
     searchLooseOnly: searchLooseOnly,
     searchLooseLast: searchLooseLast,
+    watchSearchComposition: watchSearchComposition,
     searchEvents: searchEvents,
     searchHighlight: searchHighlight,
     searchDistrict: searchDistrict,
