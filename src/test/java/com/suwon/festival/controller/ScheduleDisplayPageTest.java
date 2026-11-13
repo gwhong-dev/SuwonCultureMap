@@ -383,9 +383,9 @@ class ScheduleDisplayPageTest {
 
     String js = script();
     assertThat(js).contains("stripArrowState(", "stripStepTarget(", "wheelStep(", "stripKeyStep(", "stripLabelText(");
-    // PC 는 지도를 열면 카드 줄을 기본으로 띄움 (11/11) — 마커를 누르지 않아도
+    // 모바일 지도 탭은 카드 줄을 기본으로 띄움 (P3) — 마커를 누르지 않아도. PC 는 11/13 Q4 부터 상세 칸
     assertThat(js).contains("function showDefaultPreview(", "showDefaultPreview();");
-    // PC 도 모바일과 같은 하단 카드 (예전 PC 말풍선 InfoWindow 는 없앰)
+    // 예전 PC 말풍선 InfoWindow 는 없앰
     assertThat(js).doesNotContain("kakao.maps.InfoWindow");
 
     MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
@@ -432,55 +432,74 @@ class ScheduleDisplayPageTest {
   }
 
   @Test
-  void PC_카드_줄_띠의_빈_곳은_지도가_클릭과_끌기를_받음() throws Exception {
-    // PC 카드 줄은 늘 떠 있음 → 띠(지도 전체 폭)가 다 받으면 첫 · 끝 카드일 때 빈 절반의 마커 클릭 · 끌기가 막힘 (#215 검증 ⑥)
-    // PC 구간: 띠는 통과(none), 라벨 · 카드 · 화살표만 받음(auto). 모바일(공통 규칙)은 띠 전체가 받음 그대로
+  void PC_는_지도_상세_목록_3칸이고_지도_아래_카드_줄은_없음() throws Exception {
+    // 11/13 확정 시안 Q4 PcNavD1 (docs/design/2026-11-13-todo-additions.md "Q4"): 지도 1fr | 상세 440px(늘 열림) | 목록 340px
+    String html = page();
+    int map = html.indexOf("<div id=\"map\"></div>");
+    int pane = html.indexOf("<section id=\"pcDetail\"");
+    int sidebar = html.indexOf("<aside id=\"sidebar\">");
+    assertThat(map).isPositive().isLessThan(pane);
+    assertThat(pane).isLessThan(sidebar);
+    // 포스터 양옆 ‹ › (aria-keyshortcuts · 키 표시 줄 연결) · 위치 알약 · 점 · 키 표시 줄 · 읽어 주는 곳 한 곳
+    assertThat(html).contains(
+        "id=\"pcdPrev\"", "aria-keyshortcuts=\"ArrowLeft\"", "id=\"pcdNext\"", "aria-keyshortcuts=\"ArrowRight\"",
+        "id=\"pcdFav\"", "aria-keyshortcuts=\"Space\"", "aria-describedby=\"kbdHint\"",
+        "id=\"pcdPos\"", "id=\"pcdDots\"", "id=\"kbdHint\"", "id=\"pcdLive\" class=\"sr-only\" aria-live=\"polite\"");
+    // PC 카드 줄 안내는 없어짐
+    assertThat(html).doesNotContain("id=\"previewHint\"");
+
     String css = fetch("/css/index.css").replace("\r\n", "\n");
-    int start = css.indexOf("#sidebar.collapsed ~ #previewArea");
-    int media = css.lastIndexOf("@media (min-width: 1025px) {", start);
+    assertThat(css).contains("--sidebar-width: 340px;", "--pc-detail-width: 440px;");
+    int media = css.indexOf("@media (min-width: 1025px) {\n  #app {");
     assertThat(media).isPositive();
     String pc = block(css, css.indexOf("{", media));
+    assertThat(rule(pc, "#app {")).contains("grid-template-columns: minmax(0, 1fr) var(--pc-detail-width) var(--sidebar-width);");
+    // 포스터가 남는 높이를 채움 (최소 240px), 잘리지 않게 contain
+    assertThat(rule(pc, ".pcd-main {")).contains("min-height: 100%;");
+    assertThat(rule(pc, ".pcd-poster-box {")).contains("flex: 1 1 auto;", "min-height: 240px;");
+    assertThat(rule(pc, ".pcd-poster .pcd-img {")).contains("object-fit: contain;");
+    // ‹ › 44px 원 · 포커스 2겹 고리, 툴팁은 마우스 · Esc 로 닫힘
+    assertThat(rule(pc, ".pcd-arrow {")).contains("width: 44px;", "border-radius: 50%;");
+    assertThat(rule(pc, ".pcd-arrow:focus-visible {")).contains("0 0 0 2px var(--bg), 0 0 0 4px var(--text)");
+    assertThat(pc).contains("#pcDetail.tips-off .pcd-tip {");
+    // 지도 아래 카드 줄은 PC 에서 숨김 (모바일만)
+    int pcStrip = css.indexOf("  /* 지도 하단 카드 줄은 모바일만");
+    assertThat(pcStrip).isPositive();
+    assertThat(rule(css.substring(pcStrip), "#previewArea {")).contains("display: none;");
+    // 모바일은 상세 칸 숨김 (공통 규칙)
+    assertThat(css).contains("#pcDetail,\n.row-pick,");
 
-    assertThat(rule(pc, "#previewArea.show {")).contains("pointer-events: none;");
-    assertThat(pc).contains("#previewArea.show #previewLabel,", "#previewArea.show .preview-card,", "#previewArea.show .strip-arrow {");
-    assertThat(rule(pc, "#previewArea.show .strip-arrow {")).contains("pointer-events: auto;");
-    // 공통(모바일) 규칙은 그대로 띠 전체가 받음
-    assertThat(rule(css, "\n#previewArea.show {")).contains("pointer-events: auto;");
-
-    // 지금 카드는 보조기기에도 알림, 카드는 흐리게 하지 않음 (글자 대비 유지, #215 검증 ⑦)
-    // 11/13 확정 시안 P1: 카드 3장이 같이 보이므로 양옆 포스터 흐림도 없앰 — 고른 카드는 2px 테두리로만
-    assertThat(script()).contains("card.setAttribute(\"aria-current\", \"true\")", "card.removeAttribute(\"aria-current\")");
-    assertThat(rule(pc, ".preview-card {")).doesNotContain("opacity");
-    assertThat(rule(pc, ".preview-card .preview-poster {")).doesNotContain("opacity");
+    String js = script();
+    // 키 범위는 pc-card.js (node 시험), 길찾기 작은 창(routePopEvent)이 열려 있으면 넘기지 않음 (Q4 문서 — 전 코드 빈틈)
+    assertThat(js).contains("pcKeyZone(", "pcKeyAction(", "pcStepId(", "pcPagerDots(", "pcPosText(");
+    assertThat(js).contains("function pcPopupOpen()", "!!routePopEvent ||");
+    // PC 는 상세 창(덮개) 대신 상세 칸, 찜 토스트는 찜할 때만 1.6초
+    assertThat(js).contains("pcSelect(event.id, { announce: true, pan: true, outside: true });", "var PC_FAV_TOAST_MS = 1600;");
+    assertThat(js).doesNotContain("pcCardKeyAction(", "pcToastBottom(");
+    // PC 첫 화면은 화성행궁 중심으로 확대 (아래 카드 줄이 없어져 아래 여백 24px)
+    assertThat(js).contains("if (!mobileQuery.matches) fitPcFirstView();", "map.setBounds(bounds, 70, 24, 24, 24);");
   }
 
   @Test
-  void PC_하단_카드는_확정_시안_P1_모양이고_길찾기는_버튼_위_작은_창() throws Exception {
-    // docs/design/2026-11-13-improvement-drafts.md P1 — 규칙은 pc-card.js (index.js 보다 앞)
+  void PC_길찾기는_버튼_위_작은_창이고_모바일_하단_카드는_그대로() throws Exception {
+    // 11/13 확정 시안 P1 의 PC 길찾기 작은 창은 상세 칸 [길찾기] 에서 그대로, 모바일 하단 카드 · 띠는 P3 그대로
     String html = page();
     int rules = html.indexOf("<script src=\"/pc-card.js\"></script>");
     assertThat(rules).isPositive().isLessThan(html.indexOf("<script src=\"/js/index.js\"></script>"));
-    // 같은 장소는 카드 밖 띠, 카드 줄 아래 키보드 안내, PC 길찾기 작은 창
-    assertThat(html).contains("id=\"previewPlaceBand\"", "id=\"previewHint\"", "Enter 상세 · Space 찜 · ← → 넘기기");
-    assertThat(html).contains("id=\"routePop\"", "카카오맵에서 길찾기", "네이버 지도에서 길찾기", "id=\"routePopCopy\"");
+    assertThat(html).contains("id=\"previewPlaceBand\"", "id=\"routePop\"", "카카오맵에서 길찾기", "네이버 지도에서 길찾기", "id=\"routePopCopy\"");
 
     String js = script();
-    // PC [길찾기] = 버튼 위 작은 창 (하단 시트 모양 CSS 가 모바일 구간에만 있어 PC 에서 깨지던 것), 모바일 = 하단 시트 그대로
-    assertThat(js).contains("if (mobileQuery.matches) openRouteSheet(item.event);", "else toggleRoutePop(item.event, this);");
+    assertThat(js).contains("if (mobileQuery.matches) openRouteSheet(item.event);", "toggleRoutePop(item.event, this);");
     assertThat(js).contains("dialogFocus.opened(\"routePop\"", "dialogFocus.closed(\"routePop\")");
-    // 카드 안 '같은 장소 1/6' 은 모바일 한 줄에만 (PC 는 CSS 로 숨기고 띠로)
-    assertThat(js).contains("pcCardKeyAction(", "shouldHopMarker(");
-    // PC 첫 화면은 화성행궁 중심으로 확대
-    // (네 곳 = 화성행궁 · 방화수류정 · 팔달문 · 지동시장을 범위로, 아래는 카드 줄만큼 비움. 모바일은 level 6 그대로)
-    assertThat(js).contains("if (!mobileQuery.matches) fitPcFirstView();", "map.setBounds(bounds, 70, 24, 270, 24);");
+    // 같은 장소 다음 행사로 넘기면 마커가 튀어오름 (움직임 줄이기 설정이면 생략)
+    assertThat(js).contains("shouldHopMarker(");
+    // 모바일 지금 카드는 보조기기에도 알림 (#215 검증 ⑦)
+    assertThat(js).contains("card.setAttribute(\"aria-current\", \"true\")", "card.removeAttribute(\"aria-current\")");
 
     String css = fetch("/css/index.css").replace("\r\n", "\n");
-    int media = css.lastIndexOf("@media (min-width: 1025px) {", css.indexOf("#sidebar.collapsed ~ #previewArea"));
-    String pc = block(css, css.indexOf("{", media));
-    assertThat(rule(pc, ".preview-card {")).contains("flex: 0 0 262px;", "height: 196px;");
-    assertThat(pc).contains(".preview-card .preview-place {", ".route-pop:not([hidden]) {", "@container (max-width: 960px)");
-    assertThat(rule(pc, "\n  .strip-arrow {")).contains("border-radius: 50%;", "width: 40px;");
-    // 마커 튀어오름은 움직임 줄이기 설정이면 생략
+    assertThat(css).contains(".route-pop:not([hidden]) {");
+    // 공통(모바일) 카드 줄 규칙은 그대로 띠 전체가 받음
+    assertThat(rule(css, "\n#previewArea.show {")).contains("pointer-events: auto;");
     int reduce = css.indexOf("@media (prefers-reduced-motion: reduce)");
     assertThat(block(css, css.indexOf("{", reduce))).contains(".marker-hop-icon,", ".marker-hop-ring,");
 

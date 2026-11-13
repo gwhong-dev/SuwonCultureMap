@@ -219,6 +219,18 @@
   "detail.intro": "紹介",
   "detail.location": "場所",
 
+  // ===== PC 상세 칸 (11/13 Q4 D안 — 지도 | 상세 | 목록) =====
+  "pcd.label": "イベント詳細",
+  "pcd.fav": "♡ お気に入り",
+  "pcd.faved": "♥ お気に入り済み",
+  "pcd.favToast": "♥ お気に入りに追加しました",
+  "pcd.source": "元ページを見る",
+  "pcd.hintNav": "めくる",
+  "pcd.hintFav": "お気に入り",
+  "pcd.live": "{i} / {n} · {title}",
+  "pcd.emptyTitle": "条件に合うイベントがありません",
+  "pcd.emptyBody": "カテゴリー・日付・検索語を変えてみてください",
+
   // ===== 오시는 길 =====
   "transit.stops": "近くのバス停",
   "transit.stations": "近くの駅",

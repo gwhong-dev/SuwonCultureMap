@@ -219,6 +219,18 @@
   "detail.intro": "介绍",
   "detail.location": "位置",
 
+  // ===== PC 상세 칸 (11/13 Q4 D안 — 지도 | 상세 | 목록) =====
+  "pcd.label": "活动详情",
+  "pcd.fav": "♡ 收藏",
+  "pcd.faved": "♥ 已收藏",
+  "pcd.favToast": "♥ 已收藏",
+  "pcd.source": "查看原文",
+  "pcd.hintNav": "翻页",
+  "pcd.hintFav": "收藏",
+  "pcd.live": "{i} / {n} · {title}",
+  "pcd.emptyTitle": "没有符合条件的活动",
+  "pcd.emptyBody": "请更换分类、日期或搜索词",
+
   // ===== 오시는 길 =====
   "transit.stops": "附近公交站",
   "transit.stations": "附近地铁站",
