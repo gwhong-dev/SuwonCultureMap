@@ -103,6 +103,19 @@ function stripKeyStep(k) {
   return 0;
 }
 
+// PC 토스트 아래 여백(px) — 지도 하단 카드 줄이 떠 있으면 줄 위로 (#206 검증 ⚠️: 기본 32px 자리가 카드 줄을 덮음)
+//  - stripTop = 카드 줄 맨 위의 화면 y (줄이 숨었거나 상세창이 덮고 있으면 null → 기본 자리)
+//  - 화면이 아주 낮아도 토스트(44px)가 위로 넘치지 않게 위쪽 16px 은 남김
+var TOAST_BASE_BOTTOM = 32;
+var TOAST_STRIP_GAP = 12;
+var TOAST_HEIGHT = 44;
+function pcToastBottom(viewportHeight, stripTop) {
+  if (stripTop === null || stripTop === undefined) return TOAST_BASE_BOTTOM;
+  var above = Math.round(viewportHeight - stripTop + TOAST_STRIP_GAP);
+  var maxBottom = viewportHeight - TOAST_HEIGHT - 16;
+  return Math.max(TOAST_BASE_BOTTOM, Math.min(above, maxBottom));
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     WHEEL_GAP_MS: WHEEL_GAP_MS,
@@ -118,5 +131,7 @@ if (typeof module !== "undefined") {
     detailPagerLabel: detailPagerLabel,
     SWIPE_MIN_PX: SWIPE_MIN_PX,
     swipeStep: swipeStep,
+    TOAST_BASE_BOTTOM: TOAST_BASE_BOTTOM,
+    pcToastBottom: pcToastBottom,
   };
 }

@@ -3531,11 +3531,27 @@ function showToast(message, actionLabel, onAction) {
     if (onAction) onAction();
   };
   toast.hidden = false;
+  placeToast(toast);
   toastDuration = actionLabel ? 4000 : 2500; // 버튼 있는 토스트는 누를 시간을 더 줌
   clearTimeout(toastTimer);
   toastTimer = setTimeout(hideToast, toastDuration);
 }
 var toastDuration = 2500;
+// PC: 지도 하단 카드 줄이 떠 있으면 토스트를 줄 위로 (pcToastBottom, strip-nav.js). 모바일은 CSS 자리(하단 탭 · 상세 바 위) 그대로
+//  - 상세창(덮개)이 열려 있으면 카드 줄은 덮개 아래라 기본 자리 (위로 올리면 상세 카드를 가림)
+//  - 줄 위치는 transform 을 뺀 자리(offsetTop)로 셈 → 줄이 올라오는 중(0.3초)에 떠도 최종 자리 기준
+function placeToast(toast) {
+  if (mobileQuery.matches) {
+    toast.style.bottom = "";
+    return;
+  }
+  var area = document.getElementById("previewArea");
+  var stripTop = null;
+  if (area.classList.contains("show") && !document.body.classList.contains("detail-open") && area.offsetParent) {
+    stripTop = area.offsetParent.getBoundingClientRect().top + area.offsetTop;
+  }
+  toast.style.bottom = pcToastBottom(window.innerHeight, stripTop) + "px";
+}
 // 마우스를 올리거나 키보드로 버튼에 가 있는 동안은 사라지지 않게
 function pauseToast() {
   clearTimeout(toastTimer);
