@@ -53,9 +53,19 @@ test("차단 기준을 넘으면 새 세션 카드 전까지 턴을 못 끝냄",
   assert.match(out.reason, /\[분기 막힘\] 대화 길이 초과/);
 });
 
-test("차단 기준을 넘은 뒤 start_session · hand_off_to_session 을 부르면 통과", () => {
+test("차단 기준을 넘은 뒤 start_session 을 부르면 통과", () => {
   assert.strictEqual(decide(stop(), log(reply(BLOCK), toolCall("mcp__ccd_session__start_session"), reply(BLOCK + 3000))), null);
-  assert.strictEqual(decide(stop(), log(reply(BLOCK), toolCall("mcp__ccd_session__hand_off_to_session"))), null);
+});
+
+test("hand_off_to_session 은 작업만 떼어 내 메인이 그대로 길어서 넘기기로 치지 않음", () => {
+  assert.strictEqual(decide(stop(), log(reply(BLOCK), toolCall("mcp__ccd_session__hand_off_to_session"))).decision, "block");
+});
+
+test("분기 세션: 이번 답변에 '[분기 막힘] 대화 길이 초과'를 쓰면 통과, 이후 턴도 다시 막지 않음", () => {
+  const mark = "[분기 막힘] 대화 길이 초과";
+  assert.strictEqual(decide(stop({ last_assistant_message: `${mark}\nPR #9 까지 만듦` }), log(reply(BLOCK))), null);
+  const branchReply = JSON.stringify({ type: "assistant", message: { content: [{ type: "text", text: `${mark} — 메인에 맡김` }] } });
+  assert.strictEqual(decide(stop({ last_assistant_message: "CI 통과" }), log(reply(BLOCK), branchReply, user, reply(BLOCK + 9000))), null);
 });
 
 test("차단 기준을 넘기 전에 만든 카드(분기 시작 등)는 인정하지 않음", () => {
