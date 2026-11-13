@@ -40,7 +40,7 @@ class BrandAssetsTest {
     for (String page : PAGES) {
       String html = body(page);
       assertThat(html).as(page)
-          .containsPattern("<title>[^<]*수원바이블 · 수원 문화지도</title>")
+          .containsPattern("<title[^>]*>[^<]*수원바이블 · 수원 문화지도</title>") // 화면 언어 표시(data-i18n)가 붙을 수 있음
           .contains("<meta name=\"theme-color\" content=\"#b4472a\" />")
           .contains("href=\"/brand/favicon.svg\"", "href=\"/brand/apple-touch-icon.png\"", "href=\"/brand/manifest.json\"")
           .contains("href=\"/css/fonts.css\"")
