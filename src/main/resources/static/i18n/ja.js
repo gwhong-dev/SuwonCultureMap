@@ -230,6 +230,9 @@
   "pcd.live": "{i} / {n} · {title}",
   "pcd.emptyTitle": "条件に合うイベントがありません",
   "pcd.emptyBody": "カテゴリー・日付・検索語を変えてみてください",
+  "map.zoomIn": "地図を拡大",
+  "map.zoomOut": "地図を縮小",
+  "map.zoomGroup": "地図の拡大・縮小",
 
   // ===== 오시는 길 =====
   "transit.stops": "近くのバス停",
