@@ -30,6 +30,9 @@
   --brand-sub: #b4472a; /* 로고 아치 · 부제 (벽돌) */
   --fav: #c77d00; /* 찜 표시 글자 · 아이콘 */
   --fav-soft: #fff4e0; /* 찜 표시 바탕 */
+  /* 첫 진입 애니메이션 꽃잎 (intro.css B안): 벚꽃 · 은행잎 면과 테두리 */
+  --petal-spring: #f4b6c2; --petal-spring-line: #d98a9c; /* 벚꽃 */
+  --petal-autumn: #e8b83a; --petal-autumn-line: #c08f1a; /* 은행잎 */
   /* 분류 색 (PC 분류 펼침 목록 R5 A4 — docs/design/2026-11-13-pc-pending.md): soft = 옅은 바탕, ink = 선 아이콘(3:1), text = 고른 줄 글자(4.5:1) */
   --cat-all-soft: #f4f2ef; --cat-all-ink: #5f5a54; --cat-all-text: #5f5a54; /* 전체 분류 */
   --cat-event-soft: #e4eef9; --cat-event-ink: #2f6aa8; --cat-event-text: #2f6aa8; /* 행사 (핀 #4A90D9) */
@@ -73,6 +76,8 @@
     --brand-sub: #e07a57;
     --fav: #e8a64a;
     --fav-soft: #3a2e1a;
+    --petal-spring: #c98a98; --petal-spring-line: #e9b3bf;
+    --petal-autumn: #c9982f; --petal-autumn-line: #e8b84a;
     --cat-all-soft: #2a2825; --cat-all-ink: #d6d0c8; --cat-all-text: #d6d0c8;
     --cat-event-soft: #1c2733; --cat-event-ink: #8db4dc; --cat-event-text: #8db4dc;
     --cat-show-soft: #3a1f1e; --cat-show-ink: #f0928d; --cat-show-text: #f0928d;
@@ -115,6 +120,8 @@
   --brand-sub: #e07a57;
   --fav: #e8a64a;
   --fav-soft: #3a2e1a;
+  --petal-spring: #c98a98; --petal-spring-line: #e9b3bf;
+  --petal-autumn: #c9982f; --petal-autumn-line: #e8b84a;
   --cat-all-soft: #2a2825; --cat-all-ink: #d6d0c8; --cat-all-text: #d6d0c8;
   --cat-event-soft: #1c2733; --cat-event-ink: #8db4dc; --cat-event-text: #8db4dc;
   --cat-show-soft: #3a1f1e; --cat-show-ink: #f0928d; --cat-show-text: #f0928d;
