@@ -280,7 +280,7 @@
   "search.loading": "행사를 불러오는 중이에요",
   "search.loadFailed": "행사를 불러오지 못했어요. 닫은 뒤 다시 시도해 주세요",
   "search.districtRow": "{name} · 지도에서 행사 {n}개",
-  "search.resultCount": "검색 결과 {n}개",
+  "search.resultCount": "검색 결과 {n}", // {n} = 굵은 "N개" (cal.count)
   "search.sort": "종료 임박순",
   "search.noResult": "‘{q}’ 검색 결과가 없어요",
   "search.noResultTip": "띄어쓰기 없이 짧게 쓰거나, 장소 이름(예: 아트리움 · 행궁)으로 찾아보세요",

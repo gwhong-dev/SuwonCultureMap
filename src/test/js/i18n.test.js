@@ -61,14 +61,14 @@ test("코드 · HTML 이 쓰는 키가 글 묶음에 모두 있음", () => {
     .readdirSync(STATIC)
     .filter((f) => /\.(js|html)$/.test(f))
     .concat(fs.readdirSync(path.join(STATIC, "js")).map((f) => "js/" + f));
+  const prefixes = new Set(Object.keys(messages.ko).map((k) => k.split(".")[0]));
   const used = new Set();
   for (const file of files) {
     const src = fs.readFileSync(path.join(STATIC, file), "utf8");
-    // I18n.t("키") · calI18n.t("키") · tIn(lang, "키") · list("키") · 삼항식 안의 "a.b"
-    for (const m of src.matchAll(/\b\w*I18n\w*\.(?:t|list)\(\s*"([\w.]+)"/g)) used.add(m[1]);
-    for (const m of src.matchAll(/\btIn\([^,]+,\s*"([\w.]+)"/g)) used.add(m[1]);
-    for (const m of src.matchAll(/\bt\([^()]*\?\s*"([\w.]+)"\s*:\s*(?:[^()"]*\?\s*"([\w.]+)"\s*:\s*)?"([\w.]+)"/g)) {
-      [m[1], m[2], m[3]].filter(Boolean).forEach((k) => used.add(k));
+    // 글 묶음 키와 접두어가 같은 "접두어.이름" 문자열 전부 (I18n.t · i18nApi.t · 삼항 · STATUS_KEYS 같은 표 · tIn · themeText)
+    // 받는 이름 · 호출 모양과 상관없이 잡음 → 키 오타가 나면 여기서 걸림 (#252 검증 ⚠️)
+    for (const m of src.matchAll(/"([a-z][a-zA-Z]*)\.([a-zA-Z][\w]*)"/g)) {
+      if (prefixes.has(m[1])) used.add(m[1] + "." + m[2]);
     }
     for (const m of src.matchAll(/data-i18n="([\w.]+)"/g)) used.add(m[1]);
     for (const m of src.matchAll(/data-i18n-attr="([^"]+)"/g)) {
@@ -76,9 +76,12 @@ test("코드 · HTML 이 쓰는 키가 글 묶음에 모두 있음", () => {
     }
     for (const m of src.matchAll(/themeText\("([\w.]+)"/g)) used.add(m[1]);
   }
-  const missing = [...used].filter((k) => k.includes(".") && !(k in messages.ko)); // 주석 속 예시("키") 는 빼고
+  // 주석 속 예시(data-i18n="키") · 파일 이름("login.html") 은 키가 아님
+  const missing = [...used].filter((k) => k.includes(".") && !/\.(html|js|css|json|png|svg)$/.test(k) && !(k in messages.ko));
   assert.deepStrictEqual(missing, []);
-  assert.ok(used.size > 150, "찾은 키가 너무 적음 (정규식 확인): " + used.size);
+  assert.ok(used.size > 200, "찾은 키가 너무 적음 (정규식 확인): " + used.size);
+  // 전에 놓치던 모양도 잡히는지 (소문자 받는 이름 · 괄호 든 삼항 · 3단 삼항 첫 키 · 변수 표)
+  for (const k of ["sched.daily", "detail.viewInstagram", "list.countFav", "strip.swipe", "status.open"]) assert.ok(used.has(k), k);
 });
 
 test("브라우저 언어: navigator.languages 에서 처음 맞는 언어, 번체 zh-TW 도 zh", () => {
@@ -99,6 +102,19 @@ test("첫 방문 안내 줄: 아직 안 골랐고 브라우저 언어가 en · j
   assert.strictEqual(offerLang(null, ["fr"]), null);
   assert.strictEqual(offerLang("ko", ["ja"]), null); // 한 번 고르면(한국어 그대로 · × 포함) 다시 안 뜸
   assert.strictEqual(offerLang("en", ["en"]), null);
+});
+
+test("저장소가 막힌 브라우저: 주소 ?lang= 으로 그 페이지 언어를 정함", () => {
+  const { urlLang, urlWithLang } = require(path.join(STATIC, "i18n.js"));
+  assert.strictEqual(urlLang("?lang=ja"), "ja");
+  assert.strictEqual(urlLang("?event=3&lang=zh"), "zh");
+  assert.strictEqual(urlLang("?lang=fr"), null);
+  assert.strictEqual(urlLang("?slang=en"), null);
+  assert.strictEqual(urlLang(""), null);
+  assert.strictEqual(urlWithLang("https://a.com/", "en"), "https://a.com/?lang=en");
+  assert.strictEqual(urlWithLang("https://a.com/?event=3", "ja"), "https://a.com/?event=3&lang=ja");
+  assert.strictEqual(urlWithLang("https://a.com/?lang=ja&event=3#x", "zh"), "https://a.com/?event=3&lang=zh#x");
+  assert.strictEqual(urlWithLang("https://a.com/?event=3&lang=ja", "en"), "https://a.com/?event=3&lang=en");
 });
 
 test("저장 · 읽기: 모르는 값은 null, 저장소가 막혀도 멈추지 않음", () => {

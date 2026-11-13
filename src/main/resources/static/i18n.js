@@ -37,9 +37,26 @@ function saveLang(storage, lang) {
   try {
     if (storage) storage.setItem(I18N_KEY, l);
   } catch (e) {
-    // 저장 못 해도 이번 화면에는 적용됨
+    // 저장소가 막힌 브라우저(쿠키 전체 차단 등) — 저장됐는지는 readLang 으로 다시 확인 (I18n.set)
   }
   return l;
+}
+
+// 주소의 ?lang= (저장소가 막혀 저장이 안 될 때만 붙임). 모르는 값 · 없음 = null
+function urlLang(search) {
+  var m = /[?&]lang=([a-z]{2})(?:&|$)/.exec(search || "");
+  return m ? normalizeLang(m[1]) : null;
+}
+
+// 저장이 안 됐을 때 새로고침할 주소: 지금 주소에 ?lang= 을 붙이거나 바꿈 (다른 값은 그대로)
+function urlWithLang(href, lang) {
+  var hashAt = href.indexOf("#");
+  var hash = hashAt >= 0 ? href.slice(hashAt) : "";
+  var base = hashAt >= 0 ? href.slice(0, hashAt) : href;
+  var cleaned = base.replace(/([?&])lang=[^&]*(&|$)/, function (all, before, after) {
+    return after ? before : "";
+  });
+  return cleaned + (cleaned.indexOf("?") >= 0 ? "&" : "?") + "lang=" + lang + hash;
 }
 
 // 브라우저 언어 목록(navigator.languages)에서 처음으로 맞는 언어. "zh-TW" 같은 번체도 简体中文 으로 봄 (번체 묶음은 없음)
@@ -192,6 +209,8 @@ if (typeof module !== "undefined") {
     normalizeLang: normalizeLang,
     readLang: readLang,
     saveLang: saveLang,
+    urlLang: urlLang,
+    urlWithLang: urlWithLang,
     browserLang: browserLang,
     offerLang: offerLang,
     formatMessage: formatMessage,
@@ -209,19 +228,24 @@ var I18n = (function () {
   } catch (e) {
     storage = null;
   }
-  var api = createI18n(loadMessages(), readLang(storage));
+  // 주소 ?lang= 이 있으면(저장소가 막힌 브라우저) 그 언어가 먼저
+  var fromUrl = typeof location !== "undefined" ? urlLang(location.search) : null;
+  var api = createI18n(loadMessages(), fromUrl || readLang(storage));
   var applied = false;
   api.saved = function () {
-    return readLang(storage);
+    return fromUrl || readLang(storage);
   };
   // 고른 언어 저장. reload = true 면 새로고침해 JS 가 그린 글까지 바꿈
+  // 저장이 안 되면(저장소 막힘) 주소에 ?lang= 을 붙여 새로고침 → 적어도 이 페이지는 고른 언어로
   api.set = function (lang, reload) {
-    saveLang(storage, lang);
-    if (reload && typeof location !== "undefined") location.reload();
+    var l = saveLang(storage, lang);
+    if (!reload || typeof location === "undefined") return;
+    if (readLang(storage) === l && !fromUrl) location.reload();
+    else location.replace(urlWithLang(location.href, l));
   };
   // 첫 방문 안내 줄을 띄울 언어 (없으면 null)
   api.offer = function () {
-    return offerLang(readLang(storage), typeof navigator !== "undefined" ? navigator.languages || [navigator.language] : []);
+    return offerLang(api.saved(), typeof navigator !== "undefined" ? navigator.languages || [navigator.language] : []);
   };
   api.apply = function (root) {
     if (typeof document === "undefined") return;

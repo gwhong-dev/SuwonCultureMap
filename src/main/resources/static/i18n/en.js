@@ -277,7 +277,7 @@
   "search.loading": "Loading events",
   "search.loadFailed": "Couldn't load events. Close and try again",
   "search.districtRow": "{name} · {n} events on the map",
-  "search.resultCount": "{n} results",
+  "search.resultCount": "{n} results", // {n} = 굵은 "N" (cal.count)
   "search.sort": "Ending soonest",
   "search.noResult": "No results for ‘{q}’",
   "search.noResultTip": "Event titles are in Korean. Try a shorter word or a place name (e.g. 아트리움 · 행궁)",

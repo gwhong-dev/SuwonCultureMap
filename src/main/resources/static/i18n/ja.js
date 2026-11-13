@@ -277,7 +277,7 @@
   "search.loading": "イベントを読み込み中です",
   "search.loadFailed": "イベントを読み込めませんでした。閉じてからもう一度お試しください",
   "search.districtRow": "{name}・地図でイベント {n}件",
-  "search.resultCount": "検索結果 {n}件",
+  "search.resultCount": "検索結果 {n}", // {n} = 굵은 "N개" (cal.count)
   "search.sort": "終了が近い順",
   "search.noResult": "「{q}」の検索結果はありません",
   "search.noResultTip": "イベント名は韓国語です。短い言葉や会場名（例：아트리움・행궁）で探してみてください",

@@ -47,7 +47,11 @@ var initialParams = new URLSearchParams(location.search); // 처음 들어온 �
 // 열린 창을 주소에 기록 (?event=번호[&route=1]) → 지도 앱 · 카카오톡에 갔다 와서 페이지가 다시 열려도 복원
 function currentQuery() {
   var id = detailEvent ? detailEvent.id : routeEvent ? routeEvent.id : null;
-  return id ? "?event=" + id + (routeEvent ? "&route=1" : "") : "";
+  var query = id ? "?event=" + id + (routeEvent ? "&route=1" : "") : "";
+  // ?lang= 은 저장소가 막힌 브라우저에서만 붙음 (i18n.js) → 창을 여닫아도 지우지 않고 이어 붙임
+  var lang = initialParams.get("lang");
+  if (lang && I18n.LANGS.indexOf(lang) >= 0) query += (query ? "&" : "?") + "lang=" + lang;
+  return query;
 }
 
 // 뒤로 가기 기록 (nav-history.js): 홈 → 지도 · 목록 · 찜, 검색 화면, 상세, 길찾기 · 공유 창이 열리면 칸을 쌓고
@@ -3053,7 +3057,7 @@ function renderSearch() {
   if (results) {
     // 결과: 맞는 행사 전부 (입력 중 행과 같은 규칙이라 종료 행사도 맨 아래에 나옴)
     html +=
-      '<div class="result-head"><span>' + I18n.t("search.resultCount", { n: "<strong>" + picks.length + "</strong>" }) + "</span>" +
+      '<div class="result-head"><span>' + I18n.t("search.resultCount", { n: "<strong>" + I18n.t("cal.count", { n: picks.length }) + "</strong>" }) + "</span>" +
       '<span class="result-sort">' + escapeHtml(I18n.t("search.sort")) + "</span></div>";
     html += picks.length
       ? picks.map(searchResultRowHtml).join("")

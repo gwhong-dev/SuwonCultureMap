@@ -277,7 +277,7 @@
   "search.loading": "正在加载活动",
   "search.loadFailed": "无法加载活动。请关闭后重试",
   "search.districtRow": "{name}・地图上的活动 {n}个",
-  "search.resultCount": "搜索结果 {n}个",
+  "search.resultCount": "搜索结果 {n}", // {n} = 굵은 "N개" (cal.count)
   "search.sort": "按即将结束排序",
   "search.noResult": "没有“{q}”的搜索结果",
   "search.noResultTip": "活动名称为韩语。请尝试较短的词或地点名称（例：아트리움・행궁）",

@@ -3,7 +3,7 @@
 //  - 모바일: 홈 머리 [지구 KO] 알약 · ☰ 메뉴 "언어 Language" 줄 → 아래에서 올라오는 판
 //  - 첫 방문 안내 줄: 아직 안 골랐고 브라우저 언어가 en · ja · zh 면 한 번 (PC = 상단 바 아래, 모바일 = 홈 맨 위)
 // 언어 이름 · 저장은 i18n.js. 고르면 저장 뒤 새로고침 (JS 가 그린 글까지 그 언어로)
-// 시험: node --test src/test/js/lang-picker.test.js (CI 에서 실행)
+// 시험: node --test src/test/js/i18n.test.js (CI 에서 실행)
 
 // 펼침 목록 · 판에서 위아래 화살표로 옮길 줄 번호 (끝에서 멈춤, 처음 · 끝 키 지원). 다른 키면 null
 function langStep(index, key, count) {
