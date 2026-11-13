@@ -15,12 +15,16 @@ function dayTab(now = new Date()) {
   return `${mm}/${dd} (${WEEK[kst.getUTCDay()]})`;
 }
 
+// git 다음에 -C 경로 · -c 설정이 와도 잡음: "git -C ../wt checkout -b feat/x"
+const GIT = String.raw`\bgit(?:\s+-[Cc]\s+(?:"[^"]*"|'[^']*'|\S+))*\s+`;
+const MAIN_ONLY = "(메인 세션만 — 분기 세션이면 무시)";
+
 // "git checkout -b feat/x" · "git switch -c feat/x" · "git worktree add ... -b feat/x" → "feat/x"
 function newBranch(command) {
   for (const part of String(command || "").split(/;|&&|\|\||\||\n/)) {
     const m =
-      part.match(/\bgit\s+checkout\b(?:\s+-[^\sbB]\S*)*\s+-[bB]\s+["']?([^\s"']+)/) ||
-      part.match(/\bgit\s+switch\b(?:\s+-[^\scC]\S*)*\s+-[cC]\s+["']?([^\s"']+)/) ||
+      part.match(new RegExp(GIT + String.raw`checkout\b(?:\s+-[^\sbB]\S*)*\s+-[bB]\s+["']?([^\s"']+)`)) ||
+      part.match(new RegExp(GIT + String.raw`switch\b(?:\s+-[^\scC-]\S*)*\s+(?:-[cC]|--create|--force-create)\s+["']?([^\s"']+)`)) ||
       part.match(/\bgit\s+worktree\s+add\b.*?\s-[bB]\s+["']?([^\s"']+)/);
     if (m) return m[1];
   }
@@ -37,7 +41,7 @@ function isPrCreate(command) {
 function isSessionStart(toolName, toolInput) {
   const name = String(toolName || "");
   const input = toolInput || {};
-  if (/(?:^|__)(start_session|hand_off_to_session)$/.test(name)) return true;
+  if (/(?:^|__)start_session$/.test(name)) return true; // 메인 교체에도 쓰이지만 알림 문구가 '분기일 때만'
   if (/(?:^|__)create_session$/.test(name)) return !input.fileKey && !!(input.source_url || input.prompt);
   return false;
 }
@@ -52,14 +56,14 @@ function message(input, now = new Date()) {
     const cmd = ti.command || "";
     const branch = newBranch(cmd);
     if (branch) {
-      return `[통합문서 4-4 ①] 새 브랜치 \`${branch}\` 로 개발을 시작했으면, 이 답변 안에서 ${DOC} '해야할일' 의 해당 행(새 메모 · 원문 메모 포함)을 지우고 '진행 중' 표로 옮기세요. 해야할일에 없던 작업이면 '진행 중' 에 새 줄. 사용자에게 묻지 않음.`;
+      return `[통합문서 4-4 ①] ${MAIN_ONLY} 새 브랜치 \`${branch}\` 로 개발을 시작했으면, 이 답변 안에서 ${DOC} '해야할일' 의 해당 행(새 메모 · 원문 메모 포함)을 지우고 '진행 중' 표로 옮기세요. 해야할일에 없던 작업이면 '진행 중' 에 새 줄. 사용자에게 묻지 않음.`;
     }
     if (isPrCreate(cmd)) {
-      return `[통합문서 4-4 ①] PR 을 만들었으면 통합문서 '진행 중' 행의 PR 칸을 #번호 로 채우세요.`;
+      return `[통합문서 4-4 ①] ${MAIN_ONLY} PR 을 만들었으면 통합문서 '진행 중' 행의 PR 칸을 #번호 로 채우세요.`;
     }
     const merge = parseMergeCommand(cmd);
     if (merge.merge && !merge.auto) {
-      return `[통합문서 4-4 ②] 머지했으면 Deploy 성공 · 헬스 UP 을 확인한 그 답변 안에서 통합문서 '진행 중' 의 ${merge.pr ? "#" + merge.pr + " " : ""}행을 지우고 '작업기록 > ${tab}' 탭 표 맨 아래로 옮기세요 (탭이 없으면 만듦).`;
+      return `[통합문서 4-4 ②] ${MAIN_ONLY} 머지했으면 Deploy 성공 · 헬스 UP 을 확인한 그 답변 안에서 통합문서 '진행 중' 의 ${merge.pr ? "#" + merge.pr + " " : ""}행을 지우고 '작업기록 > ${tab}' 탭 표 맨 아래로 옮기세요 (탭이 없으면 만듦).`;
     }
     return null;
   }

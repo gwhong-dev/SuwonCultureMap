@@ -46,7 +46,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Bash|PowerShell|.*start_session|.*create_session|.*hand_off_to_session|.*archive_session",
+        "matcher": "Bash|PowerShell|.*start_session|.*create_session|.*archive_session",
         "hooks": [
           {
             "type": "command",

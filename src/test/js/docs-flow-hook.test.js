@@ -19,11 +19,14 @@ test("개발 시작(새 브랜치) → '진행 중' 으로 옮기라는 알림",
   assert.strictEqual(newBranch("git switch -c fix/toast"), "fix/toast");
   assert.strictEqual(newBranch("git checkout -q -b chore/docs-todo-flow origin/main"), "chore/docs-todo-flow");
   assert.strictEqual(newBranch("git worktree add ../wt -b feat/x origin/main"), "feat/x");
+  assert.strictEqual(newBranch("git -C ../wt checkout -b feat/c"), "feat/c");
+  assert.strictEqual(newBranch('git -C "C:/dev/a b" switch --create fix/d'), "fix/d");
   assert.strictEqual(newBranch("git checkout main && git pull"), null);
   const text = message(bash("git checkout -b feat/landmark-page origin/main"), NOW);
   assert.match(text, /4-4 ①/);
   assert.match(text, /진행 중/);
   assert.match(text, /feat\/landmark-page/);
+  assert.match(text, /메인 세션만 — 분기 세션이면 무시/); // 분기 세션은 통합문서를 옮기지 않음
 });
 
 test("PR 생성 → PR 칸 채우기 알림", () => {
@@ -46,6 +49,7 @@ test("분기 시작 · 보관 도구 → 알림, Figma create_session 은 무시
   assert.ok(isSessionStart("mcp__ccd_session__start_session", { title: "명소 ②" }));
   assert.ok(isSessionStart("mcp__x__create_session", { source_url: "https://github.com/o/r", prompt: "작업 지시서" }));
   assert.ok(!isSessionStart("mcp__figma__create_session", { fileKey: "abc", task: "x" }));
+  assert.ok(!isSessionStart("mcp__ccd_session__hand_off_to_session", { title: "x" })); // 이미 진행 중인 일을 옮기는 도구
   assert.match(message({ tool_name: "mcp__ccd_session__start_session", tool_input: {} }, NOW), /분기 이름/);
   assert.match(message({ tool_name: "mcp__ccd_session_mgmt__archive_session", tool_input: {} }, NOW), /분기 완료/);
 });
