@@ -159,7 +159,7 @@ test("‹ › 줄 (R1 B · R2): 처음은 ‹ 만 · 끝은 › 만 멈춤, 가�
   assert.deepStrictEqual(pcPagerState([], 42), { canPrev: false, canNext: false, text: "" });
 });
 
-test("위치 알약: '3 / 6', 행사가 없으면 빈 글", () => {
+test("위치 글: '3 / 6', 행사가 없으면 빈 글", () => {
   assert.strictEqual(pcPosText(2, 6), "3 / 6");
   assert.strictEqual(pcPosText(29, 30), "30 / 30");
   assert.strictEqual(pcPosText(-1, 4), "1 / 4");
