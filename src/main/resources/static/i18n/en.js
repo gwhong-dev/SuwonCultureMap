@@ -232,6 +232,9 @@
   "pcd.live": "{i} / {n} · {title}",
   "pcd.emptyTitle": "No events match",
   "pcd.emptyBody": "Try another category, date or search word",
+  "map.zoomIn": "Zoom in map",
+  "map.zoomOut": "Zoom out map",
+  "map.zoomGroup": "Map zoom",
 
   // ===== 오시는 길 =====
   "transit.stops": "Nearby bus stops",

@@ -9,6 +9,13 @@ const {
   pcKeyZone,
   pcKeyAction,
   pcStepId,
+  PC_MAP_LEVEL,
+  PC_MOVE_OUT,
+  PC_MOVE_MS,
+  PC_ZOOM_MIN,
+  PC_ZOOM_MAX,
+  pcMoveKind,
+  pcZoomState,
   PC_DOTS_MAX,
   pcPagerDots,
   pcPosText,
@@ -78,7 +85,12 @@ test("키 범위 구역: 입력칸 · select · contenteditable / 탭 / 목록 �
   assert.strictEqual(pcKeyZone({ tag: "A" }), "control");
   assert.strictEqual(pcKeyZone({ tag: "DIV", role: "button" }), "control");
   assert.strictEqual(pcKeyZone({ tag: "BODY" }), "other");
-  assert.strictEqual(pcKeyZone({ tag: "DIV" }), "other"); // 지도 · 상세 칸 본문
+  assert.strictEqual(pcKeyZone({ tag: "DIV" }), "other"); // 지도 · 목록 스크롤 영역 · 상세 칸 본문
+  // 고르기 줄 · 접기 단추도 단추 (Space = 그 요소 기본 동작, 11/13 B3)
+  for (const role of ["menuitem", "option", "checkbox", "radio", "switch", "slider", "combobox", "listbox"]) {
+    assert.strictEqual(pcKeyZone({ tag: "DIV", role }), "control", role);
+  }
+  assert.strictEqual(pcKeyZone({ tag: "SUMMARY" }), "control");
 });
 
 test("키 범위: 입력칸 · 한글 조합 중 · 탭 줄은 모든 키가 기본", () => {
@@ -125,16 +137,86 @@ test("키 범위: 상세 칸 자체 = ← → 넘기기 · Space 찜, ↑ ↓ ·
   assert.strictEqual(act("pane", "Enter"), null);
 });
 
-test("키 범위: 단추 · 링크(‹ › · 찜 · 길찾기 · 원문)와 지도 · 빈 곳 = ← → 만, Space · Enter 는 단추 기본 동작 · 스크롤", () => {
-  for (const zone of ["control", "other"]) {
+test("키 범위: 단추 · 링크(‹ › · 찜 · 길찾기 · 원문 · + / −) = ← → 만, Space · Enter 는 단추 기본 동작", () => {
+  assert.strictEqual(act("control", "ArrowLeft"), "prev");
+  assert.strictEqual(act("control", "ArrowRight"), "next");
+  assert.strictEqual(act("control", " "), null);
+  assert.strictEqual(act("control", "Spacebar"), null);
+  assert.strictEqual(act("control", "Enter"), null);
+  assert.strictEqual(act("control", "ArrowUp"), null);
+  assert.strictEqual(act("control", "ArrowDown"), null);
+  assert.strictEqual(act("control", "?"), null); // ? 단축키 창 없음
+});
+
+// 11/13 확정 B3 — docs/design/2026-11-13-pc-pending.md "③ 지도 · 키" Space 표
+test("키 범위 B3: 지도 · 목록 스크롤 영역 · 빈 곳 · 상세 칸 본문에서도 Space = 상세 행사 찜, ← → 넘기기", () => {
+  // 지도(누르고 있거나 포커스) · 목록 칸 스크롤 영역(DIV) · 빈 곳(BODY) · 상세 칸 본문(DIV) = 모두 "other"
+  for (const el of [{ tag: "BODY" }, { tag: "DIV" }]) {
+    const zone = pcKeyZone(el);
+    assert.strictEqual(zone, "other");
+    assert.strictEqual(act(zone, " "), "fav", el.tag + " Space");
+    assert.strictEqual(act(zone, "Spacebar"), "fav", el.tag + " 옛 Space");
     assert.strictEqual(act(zone, "ArrowLeft"), "prev");
     assert.strictEqual(act(zone, "ArrowRight"), "next");
-    assert.strictEqual(act(zone, " "), null);
     assert.strictEqual(act(zone, "Enter"), null);
-    assert.strictEqual(act(zone, "ArrowUp"), null);
+    assert.strictEqual(act(zone, "ArrowUp"), null); // ↑ ↓ 는 스크롤 그대로
     assert.strictEqual(act(zone, "ArrowDown"), null);
-    assert.strictEqual(act(zone, "?"), null); // ? 단축키 창 없음
+    assert.strictEqual(act(zone, "?"), null);
   }
+  assert.strictEqual(act("pane", " "), "fav"); // 상세 칸 자체
+  assert.strictEqual(act("row", " "), "fav"); // 목록 줄 = 그 줄(= 상세 행사)
+});
+
+test("키 범위 B3: 입력칸 · 한글 조합 · select · contenteditable · 단추 · 링크 · 열린 창이면 Space 는 그대로", () => {
+  for (const el of [{ tag: "INPUT" }, { tag: "TEXTAREA" }, { tag: "SELECT" }, { tag: "DIV", editable: true }]) {
+    assert.strictEqual(act(pcKeyZone(el), " "), null, el.tag);
+  }
+  assert.strictEqual(act("other", " ", { composing: true }), null);
+  for (const el of [{ tag: "BUTTON" }, { tag: "A" }, { tag: "DIV", role: "button" }, { tag: "DIV", role: "option" }]) {
+    assert.strictEqual(act(pcKeyZone(el), " "), null, el.tag + " " + (el.role || ""));
+  }
+  // 길찾기 작은 창 · 공유 창 · ☰ 메뉴 · 언어 · 분류 펼침 목록 · 달력이 열림 → 막음
+  for (const zone of ["other", "pane", "row"]) assert.strictEqual(act(zone, " ", { popup: true }), null, zone);
+  assert.strictEqual(act("other", " ", { mods: true }), null); // Shift+Space 등
+  assert.strictEqual(act("other", " ", { handled: true }), null);
+});
+
+// ===== 11/13 확정 R7 · B2 · R6 — 지도 이동 · 확대 단추 =====
+const VIEW = { south: 37.27, west: 127.0, north: 37.29, east: 127.03 }; // 세로 0.02 · 가로 0.03
+
+test("지도 이동 판정: 화면 안 → inside (옮기지 않음)", () => {
+  assert.strictEqual(pcMoveKind(VIEW, { lat: 37.28, lng: 127.015 }), "inside");
+  assert.strictEqual(pcMoveKind(VIEW, { lat: 37.27, lng: 127.0 }), "inside"); // 가장자리
+  assert.strictEqual(pcMoveKind(VIEW, { lat: 37.29, lng: 127.03 }), "inside");
+});
+
+test("지도 이동 판정: 화면 밖이지만 한 칸 안쪽(바로 옆) → near (panTo 만)", () => {
+  assert.strictEqual(pcMoveKind(VIEW, { lat: 37.295, lng: 127.015 }), "near"); // 위로 조금
+  assert.strictEqual(pcMoveKind(VIEW, { lat: 37.28, lng: 127.059 }), "near"); // 오른쪽으로 화면 한 칸 거의
+  assert.strictEqual(pcMoveKind(VIEW, { lat: 37.251, lng: 126.971 }), "near"); // 왼쪽 아래 대각선, 한 칸 안쪽
+  assert.strictEqual(pcMoveKind(VIEW, { lat: 37.309, lng: 127.059 }), "near"); // 오른쪽 위, 한 칸 안쪽
+});
+
+test("지도 이동 판정: 화면 한 칸 넘게 떨어짐 → far (축소 → 이동 → 확대)", () => {
+  assert.strictEqual(pcMoveKind(VIEW, { lat: 37.315, lng: 127.015 }), "far"); // 위로 한 칸 넘게
+  assert.strictEqual(pcMoveKind(VIEW, { lat: 37.245, lng: 127.015 }), "far"); // 아래
+  assert.strictEqual(pcMoveKind(VIEW, { lat: 37.28, lng: 127.07 }), "far"); // 오른쪽
+  assert.strictEqual(pcMoveKind(VIEW, { lat: 37.28, lng: 126.96 }), "far"); // 왼쪽
+  assert.strictEqual(pcMoveKind(VIEW, { lat: 37.2, lng: 127.2 }), "far"); // 광교 · 영통 쪽 멀리
+});
+
+test("지도 이동 값: PC 기본 레벨 5(250m) · 축소 +2 · 축소 0.3초 → panTo → 확대 0.3초", () => {
+  assert.strictEqual(PC_MAP_LEVEL, 5);
+  assert.strictEqual(PC_MOVE_OUT, 2);
+  assert.deepStrictEqual(PC_MOVE_MS, { out: 300, back: 300 });
+});
+
+test("+ / − 단추: 가장 크게(레벨 1)면 + 끔, 가장 작게(레벨 14)면 − 끔", () => {
+  assert.deepStrictEqual(pcZoomState(5, PC_ZOOM_MIN, PC_ZOOM_MAX), { zoomIn: true, zoomOut: true });
+  assert.deepStrictEqual(pcZoomState(PC_ZOOM_MIN, PC_ZOOM_MIN, PC_ZOOM_MAX), { zoomIn: false, zoomOut: true });
+  assert.deepStrictEqual(pcZoomState(PC_ZOOM_MAX, PC_ZOOM_MIN, PC_ZOOM_MAX), { zoomIn: true, zoomOut: false });
+  assert.strictEqual(PC_ZOOM_MIN, 1);
+  assert.strictEqual(PC_ZOOM_MAX, 14);
 });
 
 test("넘기기: 목록 순서대로, 처음 · 끝에서 멈춤", () => {

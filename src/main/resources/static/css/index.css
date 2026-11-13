@@ -216,6 +216,9 @@ body {
   flex: 1;
   touch-action: none; /* 핀치·드래그를 브라우저가 가로채지 않고 지도에 바로 전달 */
 }
+#mapZoom {
+  display: none; /* + / − 는 PC 만 (모바일은 두 손가락 확대) */
+}
 
 #sidebar {
   width: var(--sidebar-width);
@@ -1866,6 +1869,48 @@ body {
     grid-column: 1;
     grid-row: 1;
     min-width: 0;
+  }
+  /* 지도 + / − (11/13 확정 시안 R6): 지도 칸 오른쪽 아래 16px · 24px, 40px 두 칸 세로 묶음 */
+  #mapZoom {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: end;
+    justify-self: end;
+    margin: 0 16px 24px 0;
+    z-index: 5; /* 카카오 지도 위 */
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    box-shadow: var(--shadow-float);
+    overflow: hidden;
+  }
+  .map-zoom-btn {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .map-zoom-btn + .map-zoom-btn {
+    border-top: 1px solid var(--line);
+  }
+  .map-zoom-btn:hover {
+    background: var(--surface);
+  }
+  .map-zoom-btn[aria-disabled="true"] {
+    color: var(--line-strong); /* 가장 크게 · 작게: 아이콘만 흐리게 */
+    background: var(--bg);
+    cursor: default;
+  }
+  .map-zoom-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
   }
   #sidebar {
     grid-column: 3;

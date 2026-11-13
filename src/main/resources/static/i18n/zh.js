@@ -232,6 +232,9 @@
   "pcd.live": "{i} / {n} · {title}",
   "pcd.emptyTitle": "没有符合条件的活动",
   "pcd.emptyBody": "请更换分类、日期或搜索词",
+  "map.zoomIn": "放大地图",
+  "map.zoomOut": "缩小地图",
+  "map.zoomGroup": "地图缩放",
 
   // ===== 오시는 길 =====
   "transit.stops": "附近公交站",
