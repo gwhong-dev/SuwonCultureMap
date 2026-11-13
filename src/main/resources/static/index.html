@@ -43,9 +43,8 @@
     <!-- 첫 진입 애니메이션 (P7): 주소 ?intro=a|b|c 일 때만 덮개를 그림. 지도보다 먼저 덮으려고 body 맨 앞에서 동기로 읽음 -->
     <script src="/intro.js"></script>
     <div id="topbar">
-      <!-- PC 전용 로고: 낙관(도장 "수원" + 지도 핀) + 워드마크 "수원바이블" / 아래 줄 부제. 글자는 윤곽(path) — static/brand/logo.svg (scripts/brand) -->
+      <!-- PC 전용 로고 (11/13 B안): W4 워드마크 "SUWON ∩ BIBLE" / 아래 줄 부제 "수원 문화지도", 아이콘 없음. 글자는 윤곽(path) — static/brand/logo.svg (scripts/brand) -->
       <a class="topbar-brand" href="/" aria-label="수원바이블 · 수원 문화지도" data-i18n-attr="aria-label:meta.title">
-        <svg class="brand-seal" aria-hidden="true"><use href="/brand/logo.svg#seal-sm" /></svg>
         <span class="brand-words" aria-hidden="true"><svg class="brand-name"><use href="/brand/logo.svg#wordmark" /></svg><svg class="brand-sub"><use href="/brand/logo.svg#tagline" /></svg></span>
       </a>
       <select id="categorySelect">
@@ -197,7 +196,7 @@
     <!-- 모바일 전용: 홈 화면 (docs/design/mobile-design-v1.md 01). 지도 위를 덮고 페이지 전체가 스크롤 -->
     <section id="homeView" aria-label="홈" data-i18n-attr="aria-label:tab.home">
       <header class="home-head">
-        <span class="home-logo" role="img" aria-label="수원바이블 · 수원 문화지도" data-i18n-attr="aria-label:meta.title"><svg class="brand-seal" aria-hidden="true"><use href="/brand/logo.svg#seal-sm" /></svg><span class="brand-words" aria-hidden="true"><svg class="brand-name"><use href="/brand/logo.svg#wordmark" /></svg><svg class="brand-sub"><use href="/brand/logo.svg#tagline" /></svg></span></span>
+        <span class="home-logo" role="img" aria-label="수원바이블 · 수원 문화지도" data-i18n-attr="aria-label:meta.title"><span class="brand-words" aria-hidden="true"><svg class="brand-name"><use href="/brand/logo.svg#wordmark" /></svg><svg class="brand-sub"><use href="/brand/logo.svg#tagline" /></svg></span></span>
         <div class="home-head-actions">
           <!-- 화면 모드 ☾/☀ (PC 상단 바와 같은 두 단계, theme.js) — 기기 설정으로 되돌리기는 지도 탭 ☰ 메뉴 -->
           <!-- 화면 언어 (LangMobile): [지구] KO · EN · JA · 中文 알약 → 아래에서 올라오는 판 (lang-picker.js) -->

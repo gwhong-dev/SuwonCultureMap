@@ -39,10 +39,9 @@ function shouldPlayIntro(search, reducedMotion) {
   return !reducedMotion && introVariant(search) !== null;
 }
 
-// 로고: 도장 + 워드마크 / 부제 (static/brand/logo.svg 의 symbol, PC 상단 바 · 모바일 홈과 같은 그림)
+// 로고: W4 워드마크 / 부제 (static/brand/logo.svg 의 symbol, PC 상단 바 · 모바일 홈과 같은 그림 — 11/13 새 로고 B안, 도장 없음)
 var INTRO_LOGO =
   '<div class="intro-logo">' +
-  '<svg class="intro-seal"><use href="/brand/logo.svg#seal" /></svg>' +
   '<span class="intro-words"><svg class="intro-name"><use href="/brand/logo.svg#wordmark" /></svg>' +
   '<svg class="intro-sub"><use href="/brand/logo.svg#tagline" /></svg></span>' +
   "</div>";

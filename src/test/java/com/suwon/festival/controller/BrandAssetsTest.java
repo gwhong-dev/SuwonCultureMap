@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 // 서비스 브랜드(11/11): 이름 수원바이블 + 부제 수원 문화지도 · 아이콘 · manifest · 공유 이미지 · Pretendard 글꼴
+// 로고 · 아이콘(11/13 B안): 헤더 = W4 워드마크 + 부제(아이콘 없음), 파비콘 · 앱 아이콘 = B2 메인 아이콘
 @SpringBootTest
 @ActiveProfiles("test")
 class BrandAssetsTest {
@@ -55,8 +56,9 @@ class BrandAssetsTest {
         .contains("property=\"og:title\" content=\"수원바이블 · 수원 문화지도\"")
         .contains("property=\"og:image\" content=\"https://suwonbible.com/brand/og-image.png\"")
         .contains("class=\"topbar-brand\"", "class=\"home-logo\"")
-        // 로고 = 도장 + 워드마크 + 아래 줄 부제 (글자 윤곽 SVG, 11/11 낙관 + 핀)
-        .contains("href=\"/brand/logo.svg#seal-sm\"", "href=\"/brand/logo.svg#wordmark\"", "href=\"/brand/logo.svg#tagline\"")
+        // 로고 = W4 워드마크 + 아래 줄 부제 (글자 윤곽 SVG). 도장(옛 로고)은 헤더에서 뺌
+        .contains("href=\"/brand/logo.svg#wordmark\"", "href=\"/brand/logo.svg#tagline\"")
+        .doesNotContain("logo.svg#seal", "brand-seal")
         .contains("aria-label=\"수원바이블 · 수원 문화지도\"");
   }
 
@@ -70,9 +72,7 @@ class BrandAssetsTest {
         { "/brand/icon-192.png", "image/png" },
         { "/brand/icon-512.png", "image/png" },
         { "/brand/og-image.png", "image/png" },
-        { "/brand/logo-mark.svg", "image/svg+xml" },
         { "/brand/logo.svg", "image/svg+xml" },
-        { "/brand/logo-lockup.svg", "image/svg+xml" },
         { "/brand/fonts/Pretendard-Regular.subset.woff2", "font/woff2" },
         { "/brand/fonts/Pretendard-Medium.subset.woff2", "font/woff2" },
         { "/brand/fonts/Pretendard-Bold.subset.woff2", "font/woff2" },
@@ -90,13 +90,16 @@ class BrandAssetsTest {
   void 로고_SVG는_글꼴_없이_윤곽으로_그리고_글꼴_라이선스를_적음() throws Exception {
     String sprite = body("/brand/logo.svg");
     assertThat(sprite)
-        .contains("<symbol id=\"seal\"", "<symbol id=\"seal-sm\"", "<symbol id=\"wordmark\"", "<symbol id=\"tagline\"")
-        .contains("#b4472a") // 도장 벽돌색
+        .contains("<symbol id=\"wordmark\"", "<symbol id=\"tagline\"")
+        .contains("<symbol id=\"seal\"") // 도장은 인트로 1안 성문 장식에만 남김
+        .doesNotContain("<symbol id=\"seal-sm\"")
+        .contains("V-21A15 15 0 0 1") // W4 아치 (반원 지붕 + 직선 기둥, 아래 = 글자 기준선)
         .contains("SIL Open Font License")
         .doesNotContain("<text", "font-family", "@font-face"); // 글자는 path 로만
-    for (String f : new String[] { "/brand/logo-mark.svg", "/brand/logo-lockup.svg", "/brand/favicon.svg" }) {
-      assertThat(body(f)).as(f).contains("<path", "SIL Open Font License").doesNotContain("<text", "font-family");
-    }
+    // B2 메인 아이콘: 벽돌 원 + 성곽선 + SUWON / BIBLE 윤곽
+    assertThat(body("/brand/favicon.svg"))
+        .contains("<circle cx=\"100\" cy=\"100\" r=\"100\" fill=\"#b4472a\"", "M28 78H44V52", "<path", "SIL Open Font License")
+        .doesNotContain("<text", "font-family");
   }
 
   @Test
