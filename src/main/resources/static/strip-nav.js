@@ -1,4 +1,5 @@
 // 지도 하단 카드 줄 넘기기 (11/11) — 좌우 화살표 버튼 · 휠 · 키보드 ← → 로 한 장씩 + 위치 표시 글
+//  - 11/13 Q4 D안부터 카드 줄은 모바일만 (PC 는 상세 칸 — pc-card.js pcKeyAction)
 //  - 터치 · 트랙패드 좌우는 브라우저 기본 가로 스크롤 그대로
 //  - 화살표는 처음 카드에서 이전, 끝 카드에서 다음을 숨김
 //  - 휠은 세로가 더 클 때만 한 장 (가로가 크면 트랙패드 좌우라 기본 스크롤), 한 번 굴림에 여러 장 넘어가지 않게 잠깐 쉼
@@ -59,12 +60,12 @@ function stripLabelText(nearOrder, index, count, mobile) {
   return head + " · " + (Math.max(index, 0) + 1) + " / " + count;
 }
 
-// 마커를 누르지 않아도 카드 줄을 띄우나: 카드가 있고 지도가 보일 때
-//  - PC 는 늘 (11/11), 모바일은 지도 탭일 때 (P3 — 홈 · 목록 · 찜 · 검색 화면이 지도를 덮고 있으면 안 띄움)
-//  - 지도 빈 곳을 눌러도 닫지 않음 (P3 전엔 모바일만 닫았음)
+// 마커를 누르지 않아도 카드 줄을 띄우나: 모바일 지도 탭이고 카드가 있을 때
+//  - 모바일은 지도 탭일 때 (P3 — 홈 · 목록 · 찜 · 검색 화면이 지도를 덮고 있으면 안 띄움), 지도 빈 곳을 눌러도 닫지 않음
+//  - PC 는 카드 줄이 없음 (11/13 Q4 D안 — 지도 | 상세 칸 | 목록, 상세 칸이 대신함)
 function stripDefaultShown(isMobile, count, mapTabOpen) {
-  if (count <= 0) return false;
-  return !isMobile || !!mapTabOpen;
+  if (count <= 0 || !isMobile) return false;
+  return !!mapTabOpen;
 }
 
 // 카드 줄 위 "이 장소 행사 1 / 6" 띠의 수 (같은 장소 행사가 2개 이상일 때만, 아니면 빈 글 = 띠 숨김)
@@ -105,19 +106,6 @@ function stripKeyStep(k) {
   return 0;
 }
 
-// PC 토스트 아래 여백(px) — 지도 하단 카드 줄이 떠 있으면 줄 위로 (#206 검증 ⚠️: 기본 32px 자리가 카드 줄을 덮음)
-//  - stripTop = 피할 맨 위 화면 y (카드 줄 맨 위, 길찾기 작은 창이 열려 있으면 그 창 위쪽 중 작은 값. 줄이 숨었거나 상세창이 덮으면 null → 기본 자리)
-//  - 화면이 아주 낮아도 토스트(44px)가 위로 넘치지 않게 위쪽 16px 은 남김
-var TOAST_BASE_BOTTOM = 32;
-var TOAST_STRIP_GAP = 12;
-var TOAST_HEIGHT = 44;
-function pcToastBottom(viewportHeight, stripTop) {
-  if (stripTop === null || stripTop === undefined) return TOAST_BASE_BOTTOM;
-  var above = Math.round(viewportHeight - stripTop + TOAST_STRIP_GAP);
-  var maxBottom = viewportHeight - TOAST_HEIGHT - 16;
-  return Math.max(TOAST_BASE_BOTTOM, Math.min(above, maxBottom));
-}
-
 if (typeof module !== "undefined") {
   module.exports = {
     WHEEL_GAP_MS: WHEEL_GAP_MS,
@@ -133,7 +121,5 @@ if (typeof module !== "undefined") {
     detailPagerLabel: detailPagerLabel,
     SWIPE_MIN_PX: SWIPE_MIN_PX,
     swipeStep: swipeStep,
-    TOAST_BASE_BOTTOM: TOAST_BASE_BOTTOM,
-    pcToastBottom: pcToastBottom,
   };
 }

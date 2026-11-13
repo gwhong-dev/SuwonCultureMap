@@ -221,6 +221,18 @@
   "detail.intro": "소개",
   "detail.location": "위치",
 
+  // ===== PC 상세 칸 (11/13 Q4 D안 — 지도 | 상세 | 목록) =====
+  "pcd.label": "행사 상세",
+  "pcd.fav": "♡ 찜",
+  "pcd.faved": "♥ 찜함",
+  "pcd.favToast": "♥ 찜했어요",
+  "pcd.source": "원문 보기",
+  "pcd.hintNav": "넘기기",
+  "pcd.hintFav": "찜",
+  "pcd.live": "{i} / {n} · {title}",
+  "pcd.emptyTitle": "조건에 맞는 행사가 없어요",
+  "pcd.emptyBody": "분류 · 날짜 · 검색어를 바꿔 보세요",
+
   // ===== 오시는 길 (transit-nearby.js) =====
   "transit.stops": "가까운 정류장",
   "transit.stations": "가까운 역",
