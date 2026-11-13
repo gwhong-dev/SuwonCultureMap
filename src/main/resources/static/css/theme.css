@@ -30,6 +30,14 @@
   --brand-sub: #b4472a; /* 로고 아치 · 부제 (벽돌) */
   --fav: #c77d00; /* 찜 표시 글자 · 아이콘 */
   --fav-soft: #fff4e0; /* 찜 표시 바탕 */
+  /* 분류 색 (PC 분류 펼침 목록 R5 A4 — docs/design/2026-11-13-pc-pending.md): soft = 옅은 바탕, ink = 선 아이콘(3:1), text = 고른 줄 글자(4.5:1) */
+  --cat-all-soft: #f4f2ef; --cat-all-ink: #5f5a54; --cat-all-text: #5f5a54; /* 전체 분류 */
+  --cat-event-soft: #e4eef9; --cat-event-ink: #2f6aa8; --cat-event-text: #2f6aa8; /* 행사 (핀 #4A90D9) */
+  --cat-show-soft: #fbe6e5; --cat-show-ink: #b23a36; --cat-show-text: #8f2c29; /* 공연 (핀 #D9534F) */
+  --cat-exhibit-soft: #f1e6f6; --cat-exhibit-ink: #7a3796; --cat-exhibit-text: #7a3796; /* 전시 (핀 #8E44AD) */
+  --cat-festival-soft: #fdf0d9; --cat-festival-ink: #a5690a; --cat-festival-text: #8f5a08; /* 축제 (핀 #F5A623) */
+  --cat-etc-soft: #eceeee; --cat-etc-ink: #5f6a6b; --cat-etc-text: #5f6a6b; /* 기타 (핀 #7F8C8D) */
+  --cat-fav-soft: #fff4e0; --cat-fav-ink: #a86a00; --cat-fav-text: #8c5a00; /* 찜한 행사만 */
   --success: #157a3c; /* 마이 페이지 "연동됨" 글자 (진한 초록, 흰 바탕 5.4:1) */
   --danger: #b42318; /* 오류 · 탈퇴 글자 */
   --danger-soft: #fdecec; /* 오류 안내 바탕 */
@@ -65,6 +73,13 @@
     --brand-sub: #e07a57;
     --fav: #e8a64a;
     --fav-soft: #3a2e1a;
+    --cat-all-soft: #2a2825; --cat-all-ink: #d6d0c8; --cat-all-text: #d6d0c8;
+    --cat-event-soft: #1c2733; --cat-event-ink: #8db4dc; --cat-event-text: #8db4dc;
+    --cat-show-soft: #3a1f1e; --cat-show-ink: #f0928d; --cat-show-text: #f0928d;
+    --cat-exhibit-soft: #2e2136; --cat-exhibit-ink: #c99be0; --cat-exhibit-text: #c99be0;
+    --cat-festival-soft: #3a2e1a; --cat-festival-ink: #e8a64a; --cat-festival-text: #e8a64a;
+    --cat-etc-soft: #262a2a; --cat-etc-ink: #aab4b5; --cat-etc-text: #aab4b5;
+    --cat-fav-soft: #3a2e1a; --cat-fav-ink: #e8a64a; --cat-fav-text: #e8a64a;
     --success: #4cc38a;
     --danger: #f19a8f;
     --danger-soft: #3a1d1a;
@@ -100,6 +115,13 @@
   --brand-sub: #e07a57;
   --fav: #e8a64a;
   --fav-soft: #3a2e1a;
+  --cat-all-soft: #2a2825; --cat-all-ink: #d6d0c8; --cat-all-text: #d6d0c8;
+  --cat-event-soft: #1c2733; --cat-event-ink: #8db4dc; --cat-event-text: #8db4dc;
+  --cat-show-soft: #3a1f1e; --cat-show-ink: #f0928d; --cat-show-text: #f0928d;
+  --cat-exhibit-soft: #2e2136; --cat-exhibit-ink: #c99be0; --cat-exhibit-text: #c99be0;
+  --cat-festival-soft: #3a2e1a; --cat-festival-ink: #e8a64a; --cat-festival-text: #e8a64a;
+  --cat-etc-soft: #262a2a; --cat-etc-ink: #aab4b5; --cat-etc-text: #aab4b5;
+  --cat-fav-soft: #3a2e1a; --cat-fav-ink: #e8a64a; --cat-fav-text: #e8a64a;
   --success: #4cc38a;
   --danger: #f19a8f;
   --danger-soft: #3a1d1a;

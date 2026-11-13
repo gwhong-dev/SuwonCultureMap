@@ -473,6 +473,7 @@ function setDistrictFilter(district) {
 // ===== 필터링 (검색어 + 카테고리 + 진행 날짜 + 구, '찜'은 즐겨찾기 목록으로 필터) =====
 function filterMarkers() {
   if (!eventsLoaded) return; // 아직 받는 중(스켈레톤) 또는 실패 안내 표시 중 — 로그인 확인 등이 지우지 않게
+  syncPcSearch(); // PC 목록 칸 검색 띠 = 상단 바 #searchInput 값 (다른 곳에서 검색어를 지워도 맞춤)
   var keyword = document.getElementById("searchInput").value.trim();
   var selectedCategory = document.getElementById("categorySelect").value;
   var dateValue = document.getElementById("dateFilter").value;
@@ -480,6 +481,11 @@ function filterMarkers() {
   var hideEnded = hidesEndedEvents(dateValue);
   var runDays = filterDays(dateValue); // 한국 시간 기준, 필터 없으면 null
   var statusTab = currentStatusTab(); // 목록 위 탭 (진행 중 · 진행 예정), 날짜를 골랐으면 null
+  // PC 분류 펼침 목록 개수 (R5 A4): 분류만 빼고 다른 조건을 통과한 행사. 진행 탭은 그 분류를 골랐을 때 걸리는지로 ('찜' 은 안 걸림)
+  var countTab = statusTabApplies({ dateValue: dateValue, keyword: keyword, category: "all" }) ? pcStatusTab : null;
+  var favCountTab = statusTabApplies({ dateValue: dateValue, keyword: keyword, category: "찜" }) ? pcStatusTab : null;
+  var countEvents = [];
+  var favCountEvents = [];
 
   updateChipActive(); // 모바일 칩 선택 표시 동기화
   updateTabBar(); // 모바일 하단 탭 선택 표시 동기화
@@ -510,6 +516,10 @@ function filterMarkers() {
 
     item.runMatch = runDays ? matchRunDays(item.event, runDays) : null;
     var matchesDate = item.runMatch !== "no";
+    var matchesBase =
+      matchesKeyword && matchesPast && matchesDate && matchesDistrict(item.event, districtFilter) && (!freeOnly || isFreeEvent(item.event));
+    if (matchesBase && matchesStatusTab(item.event, countTab)) countEvents.push(item.event);
+    if (matchesBase && matchesStatusTab(item.event, favCountTab)) favCountEvents.push(item.event);
 
     // 날짜 줄 · 달력 개수는 종료 행사도 셈 (지난 날 칸에도 그날 열린 행사 수가 보이게, 오늘 이후 칸엔 종료 행사가 안 걸림)
     var matchesOthers =
@@ -524,6 +534,16 @@ function filterMarkers() {
     }
   });
   renderDatePanel(dateBaseItems, visibleItems.length, favScreen);
+  if (!favScreen) {
+    lastCategoryCounts = pcCategoryCounts(
+      countEvents,
+      function (id) {
+        return favoriteEventIds.has(id);
+      },
+      favCountEvents,
+    ); // pc-search.js
+    renderCatList();
+  }
 
   // 찜 탭(모바일) "최근 본": 위 조건 대신 최근 본 순서 그대로 (기록이라 검색어 · 날짜 · 지난 행사와 상관없이)
   if (!favScreen) favView = "fav"; // 찜 탭을 나가면 다음엔 '찜'부터
@@ -837,6 +857,14 @@ function renderSidebar(items) {
   var focusRowId = pcFocusedRowId(); // PC: 목록 줄에서 Space 찜 → 다시 그려도 같은 줄에 포커스 (키보드가 이어지게)
   list.innerHTML = "";
   list.removeAttribute("aria-busy"); // 스켈레톤 끝
+  // PC 검색 중이면 목록 맨 위 구분 제목 "‘가족’ 검색 결과 N개" (R4 A — 찜 구분 제목과 같은 모양, 지우기는 검색 띠 ✕ 하나)
+  var pcKeyword = document.getElementById("searchInput").value.trim();
+  if (!recent && !mobileQuery.matches && pcKeyword) {
+    var searchTitle = document.createElement("div");
+    searchTitle.className = "list-section-title search-section-title";
+    searchTitle.textContent = I18n.t("search.pcResults", { q: pcKeyword, n: sorted.length });
+    list.appendChild(searchTitle);
+  }
   if (recent) {
     if (sorted.length === 0) {
       renderEmptyBox(list, recentEmptyState(), EMPTY_CLOCK_SVG);
@@ -1831,6 +1859,8 @@ function renderCategoryChips() {
   });
   categoryChip.append(categoryText, categoryArrow, categoryPicker);
   chips.appendChild(categoryChip);
+  // PC 는 위 칩(브라우저 기본 선택 창) 대신 선 아이콘 칩 + 펼침 목록 (R5 A4, CSS 로 하나만 보임)
+  chips.appendChild(buildPcCategoryMenu());
 
   // 날짜 칩(진행 중 · 이번 주말 · 7일 안)은 없앰 (11/11 캘린더 시안): 날짜는 목록 위 날짜 줄 · 달력(모바일),
   // 목록 위 탭(PC)에서 고름. 날짜 필터가 켜져 있으면 분류 칩 바로 뒤에 해제 칩만 (updateDateChip)
@@ -1870,8 +1900,190 @@ function updateChipActive() {
     categoryPicker.value = selected;
     document.getElementById("categoryChipText").textContent = chipLabel(selected);
   }
+  updatePcCategoryChip(selected);
   updateDistrictChip();
   updateDateChip();
+}
+
+// ----- PC 분류 칩 + 펼침 목록 (11/13 확정 시안 R5 A4 — docs/design/2026-11-13-pc-pending.md "② 검색 · 분류") -----
+// 칩 [아이콘 칸 · 이름 · ▾] → 펼침 목록 listbox (선 아이콘 + 분류 색 바탕 + 개수). 고른 값은 숨긴 #categorySelect 에
+// 순서 · 개수 · 키보드 판정은 pc-search.js, 색은 theme.css --cat-<분류>-soft · ink · text (지도 핀 CATEGORY_STYLE 과 같은 계열)
+var CAT_SLUG = { all: "all", 행사: "event", 공연: "show", 전시: "exhibit", 축제: "festival", 기타: "etc", 찜: "fav" };
+var CAT_ICON_PATHS = {
+  all: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>', // 네모 4칸
+  event: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>', // 달력
+  show: '<path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>', // 음표
+  exhibit: '<rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="M6.5 16.5l4-5 3 3.5 2-2 2.5 3.5"/><circle cx="15.5" cy="9" r="1.3"/>', // 액자(산 그림)
+  festival: '<path d="M5.5 21V3.5"/><path d="M5.5 4.5h12l-2.5 4 2.5 4h-12"/>', // 깃발
+  etc: '<circle cx="5.5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18.5" cy="12" r="1.4"/>', // 점 3개
+  fav: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>', // 하트
+};
+var catMenuOpen = false;
+var catActiveIndex = 0; // 펼침 목록에서 키보드로 가리킨 줄
+var lastCategoryCounts = null; // 마지막 필터의 분류별 행사 수 (pc-search.js pcCategoryCounts)
+
+function catIconSvg(value, size) {
+  return (
+    '<svg viewBox="0 0 24 24" width="' + size + '" height="' + size + '" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    CAT_ICON_PATHS[CAT_SLUG[value] || "etc"] +
+    "</svg>"
+  );
+}
+
+function catMenuLabel(value) {
+  if (value === "all") return I18n.t("chip.allCategories");
+  if (value === "찜") return I18n.t("chip.favOnly");
+  return I18n.name("cat", value); // 값은 원래 분류 이름, 글자만 화면 언어
+}
+
+// 펼침 목록 줄 = #categorySelect 에 있는 값만 (행사 데이터에 있는 분류), 순서는 시안
+function catMenuRows() {
+  return pcCategoryRows(
+    Array.from(document.getElementById("categorySelect").options).map(function (option) {
+      return option.value;
+    }),
+  );
+}
+
+function buildPcCategoryMenu() {
+  var wrap = document.createElement("div");
+  wrap.id = "catMenu";
+  wrap.className = "cat-menu";
+  wrap.innerHTML =
+    '<button type="button" id="catChipBtn" class="cat-chip" aria-haspopup="listbox" aria-expanded="false" aria-controls="catListbox">' +
+    '<span class="cat-ico" aria-hidden="true"></span><span class="cat-chip-name"></span><span class="cat-caret" aria-hidden="true">▾</span>' +
+    "</button>" +
+    '<div id="catListbox" class="cat-pop" role="listbox" tabindex="-1" hidden></div>';
+  var button = wrap.querySelector("#catChipBtn");
+  var listbox = wrap.querySelector("#catListbox");
+  listbox.setAttribute("aria-label", I18n.t("chip.categoryList"));
+  button.addEventListener("click", function () {
+    if (catMenuOpen) closeCatMenu(true);
+    else openCatMenu();
+  });
+  button.addEventListener("keydown", function (e) {
+    if (catMenuOpen) return;
+    var r = pcCategoryKey(e.key, false, catActiveIndex, catMenuRows().length);
+    if (r.action !== "open") return;
+    e.preventDefault(); // Space 로 지도 · 목록이 스크롤되지 않게
+    openCatMenu();
+  });
+  listbox.addEventListener("keydown", function (e) {
+    var rows = catMenuRows();
+    var r = pcCategoryKey(e.key, true, catActiveIndex, rows.length);
+    if (r.action === "none") return;
+    if (r.action === "close") {
+      if (e.key === "Tab") {
+        closeCatMenu(false); // Tab 은 다음 칸으로 그대로 넘어감
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation(); // Esc 가 상세 창 닫기 · 키 툴팁 끄기(document keydown)까지 가지 않게 (#261 검증 ⚠️)
+      closeCatMenu(true);
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation(); // PC 키 처리(← → 넘기기 · Space 찜)로 가지 않게
+    if (r.action === "move") setCatActive(r.index, true);
+    else if (r.action === "pick") pickCategory(rows[r.index]);
+  });
+  // 줄 누르기 · 마우스를 올리면 그 줄을 가리킴
+  listbox.addEventListener("click", function (e) {
+    var option = e.target.closest(".cat-opt");
+    if (option) pickCategory(option.dataset.value);
+  });
+  listbox.addEventListener("mousemove", function (e) {
+    var option = e.target.closest(".cat-opt");
+    if (!option) return;
+    var index = catMenuRows().indexOf(option.dataset.value);
+    if (index >= 0 && index !== catActiveIndex) setCatActive(index, false);
+  });
+  return wrap;
+}
+
+// 바깥을 누르면 닫음 (포커스가 목록 안에 있었으면 칩으로)
+document.addEventListener("pointerdown", function (e) {
+  if (!catMenuOpen) return;
+  var menu = document.getElementById("catMenu");
+  if (menu && !menu.contains(e.target)) closeCatMenu(menu.contains(document.activeElement));
+});
+
+function openCatMenu() {
+  var rows = catMenuRows();
+  catMenuOpen = true;
+  catActiveIndex = Math.max(0, rows.indexOf(document.getElementById("categorySelect").value));
+  renderCatList();
+  var listbox = document.getElementById("catListbox");
+  listbox.hidden = false;
+  document.getElementById("catChipBtn").setAttribute("aria-expanded", "true");
+  listbox.focus({ preventScroll: true });
+}
+
+function closeCatMenu(focusChip) {
+  if (!catMenuOpen) return;
+  catMenuOpen = false;
+  var listbox = document.getElementById("catListbox");
+  listbox.hidden = true;
+  listbox.removeAttribute("aria-activedescendant");
+  var button = document.getElementById("catChipBtn");
+  button.setAttribute("aria-expanded", "false");
+  if (focusChip) button.focus({ preventScroll: true });
+}
+
+function pickCategory(value) {
+  document.getElementById("categorySelect").value = value;
+  closeCatMenu(true);
+  filterMarkers();
+}
+
+function setCatActive(index, scroll) {
+  catActiveIndex = index;
+  var listbox = document.getElementById("catListbox");
+  var active = null;
+  listbox.querySelectorAll(".cat-opt").forEach(function (option, i) {
+    var on = i === index;
+    option.classList.toggle("is-active", on);
+    if (on) active = option;
+  });
+  if (active) {
+    listbox.setAttribute("aria-activedescendant", active.id);
+    if (scroll) active.scrollIntoView({ block: "nearest" });
+  }
+}
+
+// 펼침 목록 줄: [아이콘 칸] 이름 · 개수 · (고른 줄) 체크. 찜한 행사만 앞에 구분선
+function renderCatList() {
+  var listbox = document.getElementById("catListbox");
+  if (!listbox) return;
+  var selected = document.getElementById("categorySelect").value;
+  var counts = lastCategoryCounts || {};
+  listbox.innerHTML = catMenuRows()
+    .map(function (value) {
+      var slug = CAT_SLUG[value];
+      var isSelected = value === selected;
+      return (
+        (value === "찜" ? '<div class="cat-sep" aria-hidden="true"></div>' : "") +
+        '<div class="cat-opt" role="option" id="catOpt-' + slug + '" data-value="' + escapeHtml(value) + '" data-cat="' + slug + '" aria-selected="' + isSelected + '">' +
+        '<span class="cat-ico">' + catIconSvg(value, 16) + "</span>" +
+        '<span class="cat-opt-name">' + escapeHtml(catMenuLabel(value)) + "</span>" +
+        '<span class="cat-count">' + (counts[value] != null ? counts[value] : "") + "</span>" +
+        '<span class="cat-check" aria-hidden="true">' +
+        (isSelected ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : "") +
+        "</span></div>"
+      );
+    })
+    .join("");
+  if (catMenuOpen) setCatActive(catActiveIndex, false);
+}
+
+// 칩 모양을 고른 값에 맞춤 (찜 보기 · 구 지도 등 다른 곳에서 값을 바꿔도 — updateChipActive 가 부름)
+function updatePcCategoryChip(selected) {
+  var button = document.getElementById("catChipBtn");
+  if (!button) return;
+  var slug = CAT_SLUG[selected] || "all";
+  button.dataset.cat = slug;
+  button.querySelector(".cat-ico").innerHTML = catIconSvg(selected in CAT_SLUG ? selected : "all", 14);
+  button.querySelector(".cat-chip-name").textContent = catMenuLabel(selected in CAT_SLUG ? selected : "all");
 }
 
 // 날짜 필터가 켜져 있으면(목록 날짜 줄 · 달력 · 홈 날짜 칩) 분류 칩 바로 뒤에 "📅 11월 14일 (토) ✕" — 누르면 해제
@@ -4019,6 +4231,7 @@ function pcPopupOpen() {
     document.getElementById("topbar").classList.contains("menu-open") ||
     !document.getElementById("langPop").hidden ||
     document.body.classList.contains("lang-sheet-open") ||
+    catMenuOpen || // 분류 펼침 목록 (R5 A4)
     calOpen ||
     calPickerOpen
   );
@@ -4293,6 +4506,64 @@ searchInputEl.addEventListener("input", function () {
 });
 searchInputEl.addEventListener("keydown", function (e) {
   if (e.key === "Enter") searchInputEl.blur(); // 키보드 닫기
+});
+
+// ----- PC 목록 칸 검색 띠 (11/13 확정 시안 R4 A — docs/design/2026-11-13-pc-pending.md "② 검색 · 분류") -----
+// 친 글자는 상단 바 #searchInput(PC 에선 숨김) 값으로 옮겨 필터는 하나로. ✕ = 비우고 입력칸에 포커스
+// 치는 동안 300ms 쉬면 지도가 결과로: 1곳 → 그 자리 · 여러 곳 → 결과 핀이 모두 보이게 · 0개 → 그대로 (pc-search.js pcSearchMapMove)
+// 검색어를 지우면 목록 · 상세는 원래대로, 지도는 그 자리에 둠
+var pcSearchInput = document.getElementById("pcSearchInput");
+var pcSearchClear = document.getElementById("pcSearchClear");
+var pcSearchMapTimer = null;
+
+// 상단 바 값 → 검색 띠 (찜 보기 · 진행 중 전체 등이 #searchInput 을 비운 뒤 filterMarkers 가 부름)
+function syncPcSearch() {
+  var value = document.getElementById("searchInput").value;
+  var input = document.getElementById("pcSearchInput"); // 위 var 보다 먼저 불릴 수 있어 직접 찾음
+  if (input.value !== value) input.value = value;
+  document.getElementById("pcSearchClear").hidden = value === "";
+  input.classList.toggle("has-value", value !== "");
+}
+
+function setPcSearch(value) {
+  document.getElementById("searchInput").value = value;
+  filterMarkers();
+  clearTimeout(pcSearchMapTimer);
+  if (!value.trim()) return; // 지우면 지도는 그 자리
+  pcSearchMapTimer = setTimeout(moveMapToSearchResults, PC_SEARCH_MAP_DELAY);
+}
+
+function moveMapToSearchResults() {
+  if (!map || mobileQuery.matches || !document.getElementById("searchInput").value.trim()) return;
+  var move = pcSearchMapMove(
+    lastSidebarItems.map(function (item) {
+      return item.event;
+    }),
+  ); // pc-search.js
+  if (move.kind === "center") {
+    map.panTo(new kakao.maps.LatLng(move.lat, move.lng));
+  } else if (move.kind === "bounds") {
+    var bounds = new kakao.maps.LatLngBounds();
+    move.points.forEach(function (p) {
+      bounds.extend(new kakao.maps.LatLng(p.lat, p.lng));
+    });
+    map.setBounds(bounds, 60, 60, 60, 60);
+  }
+}
+
+pcSearchInput.addEventListener("input", function () {
+  setPcSearch(pcSearchInput.value);
+});
+pcSearchInput.addEventListener("keydown", function (e) {
+  if (e.key === "Escape" && pcSearchInput.value) {
+    e.preventDefault(); // 브라우저 기본(검색칸 비우기)과 같은 일을 지도 이동 없이
+    e.stopPropagation(); // 검색어만 지우고 상세 칸 키 툴팁은 그대로 (#261 검증 ⚠️)
+    setPcSearch("");
+  }
+});
+pcSearchClear.addEventListener("click", function () {
+  setPcSearch("");
+  pcSearchInput.focus();
 });
 
 // ----- ☰ 메뉴 열기/닫기 (PC · 모바일 공통, P4) -----

@@ -65,6 +65,8 @@
   "chip.category": "Category",
   "chip.fav": "♥ Saved",
   "chip.favPlain": "Saved",
+  "chip.favOnly": "Saved only", // PC 분류 펼침 목록 마지막 줄 (R5 A4)
+  "chip.categoryList": "Choose a category", // PC 분류 펼침 목록 이름
   "chip.free": "💸 Free",
   "chip.clearDate": "Clear date filter: {title}",
   "chip.clearFilter": "Clear filter: {name}",
@@ -289,6 +291,7 @@
   "search.open": "Search events",
   "search.close": "Close search",
   "search.clear": "Clear search",
+  "search.pcResults": "{n} results for ‘{q}’", // PC 목록 맨 위 검색 구분 제목 (R4 A)
   "search.placeholder": "Search event names · places",
   "search.placeholderPc": "Search event names",
   "search.hint": "Search by event name or place",

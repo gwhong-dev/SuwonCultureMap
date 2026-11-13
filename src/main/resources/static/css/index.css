@@ -1602,6 +1602,244 @@ body {
   }
 }
 
+/* ===== PC 검색 · 분류 (11/13 확정 시안 R4 A · R5 A4 — docs/design/2026-11-13-pc-pending.md "② 검색 · 분류") =====
+   R4 A: 상단 바 검색창 → 목록 칸 맨 위 검색 띠 (값은 숨긴 #searchInput 에 옮겨 씀, index.js syncPcSearch)
+   R5 A4: 지도 위 분류 칩 = 선 아이콘 칩 + 펼침 목록 listbox (분류 색 = theme.css --cat-*). 모바일은 지금 그대로 */
+.cat-menu,
+.pc-search-band {
+  display: none;
+}
+/* 분류 색: 칩 · 줄의 data-cat → 그 분류 토큰 (soft 옅은 바탕 · ink 선 아이콘 · text 고른 줄 글자) */
+[data-cat="all"] { --cat-soft: var(--cat-all-soft); --cat-ink: var(--cat-all-ink); --cat-text: var(--cat-all-text); }
+[data-cat="event"] { --cat-soft: var(--cat-event-soft); --cat-ink: var(--cat-event-ink); --cat-text: var(--cat-event-text); }
+[data-cat="show"] { --cat-soft: var(--cat-show-soft); --cat-ink: var(--cat-show-ink); --cat-text: var(--cat-show-text); }
+[data-cat="exhibit"] { --cat-soft: var(--cat-exhibit-soft); --cat-ink: var(--cat-exhibit-ink); --cat-text: var(--cat-exhibit-text); }
+[data-cat="festival"] { --cat-soft: var(--cat-festival-soft); --cat-ink: var(--cat-festival-ink); --cat-text: var(--cat-festival-text); }
+[data-cat="etc"] { --cat-soft: var(--cat-etc-soft); --cat-ink: var(--cat-etc-ink); --cat-text: var(--cat-etc-text); }
+[data-cat="fav"] { --cat-soft: var(--cat-fav-soft); --cat-ink: var(--cat-fav-ink); --cat-text: var(--cat-fav-text); }
+@media (min-width: 1025px) {
+  #topbar #searchInput,
+  #categoryChips #categoryChip {
+    display: none; /* PC 는 목록 칸 검색 띠 · 아래 분류 칩 */
+  }
+
+  /* ----- R4 A 검색 띠: 바탕 --surface, 안쪽 12px 16px ----- */
+  .pc-search-band {
+    display: block;
+    flex: none;
+    padding: 12px 16px;
+    background: var(--surface);
+  }
+  .pc-search-field {
+    position: relative;
+  }
+  .pc-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    width: 20px;
+    height: 20px;
+    transform: translateY(-50%);
+    color: var(--sub);
+    pointer-events: none;
+  }
+  .pc-search-input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 44px;
+    padding: 0 44px 0 40px; /* 왼쪽 돋보기 · 오른쪽 ✕ 자리 */
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .pc-search-input::placeholder {
+    color: var(--sub);
+  }
+  .pc-search-input::-webkit-search-cancel-button {
+    display: none; /* 브라우저 기본 ✕ 대신 아래 ✕ 단추 하나 */
+  }
+  /* 포커스 · 글자 있음 = 테두리 1.5px --text (안쪽 그림자로 0.5px 더해 글자 자리가 움직이지 않게) */
+  .pc-search-input:focus,
+  .pc-search-input.has-value {
+    outline: none;
+    border-color: var(--text);
+    box-shadow: inset 0 0 0 0.5px var(--text);
+  }
+  .pc-search-clear {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    transform: translateY(-50%);
+    border: 0;
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--sub);
+    cursor: pointer;
+  }
+  .pc-search-clear[hidden] {
+    display: none;
+  }
+  .pc-search-clear svg {
+    width: 16px;
+    height: 16px;
+  }
+  .pc-search-clear:hover {
+    color: var(--text);
+  }
+  .pc-search-clear:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  /* 목록 맨 위 "‘가족’ 검색 결과 N개": 높이 44 · 13px · 700 · --sub · 바탕 --surface (찜 구분 제목과 같은 모양) */
+  .list-section-title.search-section-title {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    min-height: 44px;
+    padding-top: 0;
+    padding-bottom: 0;
+    font-size: 13px;
+  }
+
+  /* ----- R5 A4 분류 칩: 높이 36 · 반지름 18 · [24px 원 아이콘 칸] 이름 ▾ ----- */
+  .cat-menu {
+    display: block;
+    position: relative;
+  }
+  #categoryChips > .cat-menu {
+    box-shadow: none; /* 그림자는 칩 · 펼침 목록에 따로 (네모 그림자 안 생기게) */
+  }
+  .cat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-sizing: border-box;
+    height: 36px;
+    padding: 0 12px 0 6px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--bg);
+    color: var(--text);
+    box-shadow: var(--shadow-float);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .cat-chip:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .cat-ico {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    background: var(--cat-soft);
+    color: var(--cat-ink);
+  }
+  .cat-chip .cat-ico {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+  }
+  .cat-caret {
+    font-size: 11px;
+    color: var(--sub);
+  }
+
+  /* ----- 펼침 목록: 폭 250 · 칩 아래 8px · 안쪽 6px · 반지름 10 · 줄 사이 2px ----- */
+  .cat-pop {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 5;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 250px;
+    padding: 6px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+    box-shadow: var(--shadow-float);
+  }
+  .cat-pop[hidden] {
+    display: none;
+  }
+  .cat-pop:focus {
+    outline: none; /* 키보드 위치는 가리킨 줄 고리로 */
+  }
+  .cat-opt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 40px;
+    padding: 0 8px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .cat-opt .cat-ico {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+  }
+  .cat-opt-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cat-count {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--sub);
+  }
+  .cat-check {
+    display: inline-flex;
+    flex: none;
+    width: 16px;
+    height: 16px;
+  }
+  .cat-opt.is-active {
+    background: var(--surface); /* 마우스 · 키보드로 가리킨 줄 */
+  }
+  /* 고른 줄: 바탕 = 분류 옅은 색, 글자 700 · 분류 진한 글자색, 아이콘 칸 바탕 --bg, 오른쪽 체크 */
+  .cat-opt[aria-selected="true"] {
+    background: var(--cat-soft);
+    color: var(--cat-text);
+    font-weight: 700;
+  }
+  .cat-opt[aria-selected="true"] .cat-ico {
+    background: var(--bg);
+  }
+  .cat-pop:focus-visible .cat-opt.is-active {
+    box-shadow: inset 0 0 0 2px var(--text); /* 키보드로 가리킨 줄 */
+  }
+  .cat-sep {
+    flex: none;
+    height: 1px;
+    margin: 3px 2px;
+    background: var(--line);
+  }
+}
+
 /* ===== PC 3분할 D안 (11/13 확정 시안 Q4 PcNavD1 — docs/design/2026-11-13-todo-additions.md "Q4") =====
    지도 minmax(0, 1fr) | 상세 440px(늘 열림) | 목록 340px. 색은 시안 밝은 값 → 같은 토큰 (흰 원 = --bg, 먹 = --text) */
 .sr-only {
