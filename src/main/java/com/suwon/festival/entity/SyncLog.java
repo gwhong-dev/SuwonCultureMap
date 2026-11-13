@@ -25,7 +25,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SyncLog {
 
-  public enum Source { SWCF, INSTAGRAM, SWDB }
+  // LANDMARK = 재단 명소 59_C · 63_C (V10, 하루 1회 — LandmarkSyncService). 칸이 VARCHAR 라 값 추가에 DB 스크립트가 필요 없음
+  // SWDB = 수원문화DB 행사정보 (하루 1회 — SwdbSyncService)
+  public enum Source { SWCF, INSTAGRAM, LANDMARK, SWDB }
 
   public enum Status { SUCCESS, FAIL }
 

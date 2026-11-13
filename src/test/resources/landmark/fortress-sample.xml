@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+	<rss version="2.0">
+		<channel>
+		<title>가상 시설물 소개</title>
+		<link>http://www.swcf.or.kr/?p=59</link>
+		<description>시험용 가상 자료</description>
+		<pubDate>2026-11-13 12:00:00</pubDate>
+
+			<item>
+				<idx>9001</idx>
+				<category></category>
+				<title>가상북문(假想北門)</title>
+				<photos>
+					<photoInfo>
+						<photoUrl>http://www.swcf.or.kr/_File/test/gate.jpg</photoUrl>
+						<photoAlt></photoAlt>
+					</photoInfo>
+				</photos>
+				<coordinate>
+					<lat>127.01426159649375</lat>
+					<lng>37.28891080512977</lng>
+				</coordinate>
+				<description>&lt;p&gt;1794년(정조 18) 창건&lt;br /&gt;
+한국전쟁 때 문루 파괴&lt;br /&gt;
+1975년 문루 복원&lt;br /&gt;
+&lt;br /&gt;
+가상북문은 시험용 성의 북문이다. 이름은 &amp;lsquo;오래 편안하다&amp;rsquo;는 뜻이다.&lt;br /&gt;
+* 옹성 : 성문 밖에 쌓은 작은 성&lt;/p&gt;
+
+&lt;p class=&amp;#34;pd_b10&amp;#34;&gt;&amp;nbsp;&lt;/p&gt;
+
+&lt;div class=&amp;#34;line&amp;#34;&gt;&amp;nbsp;&lt;/div&gt;
+
+&lt;p&gt;&lt;b&gt;Test North Gate &lt;/b&gt;&lt;br /&gt;
+This is the north gate of a test fortress.&lt;/p&gt;
+</description>
+				<files>
+					<fileInfo>
+						<fileName>gate.jpg</fileName>
+					</fileInfo>
+				</files>
+				<link>http://www.swcf.or.kr/?p=59&amp;viewMode=view&amp;idx=9001</link>
+				<pubDate>2020-06-01 00:00:46</pubDate>
+			</item>
+
+			<item>
+				<idx>9002</idx>
+				<category></category>
+				<title>가상연못(假想淵)</title>
+				<photos>
+					<photoInfo>
+						<photoUrl>http://www.swcf.or.kr/_File/test/pond.jpg</photoUrl>
+						<photoAlt></photoAlt>
+					</photoInfo>
+				</photos>
+				<coordinate>
+					<lat></lat>
+					<lng></lng>
+				</coordinate>
+				<description>&lt;p&gt;1796년(정조 20) 조성&lt;br /&gt;
+&lt;br /&gt;
+가상연못은 시험용 연못이다. 본문의 &amp;lt;파랑새&amp;gt; 같은 한글 꺾쇠는 글자로 남는다.&lt;/p&gt;
+</description>
+				<link>http://www.swcf.or.kr/?p=59&amp;viewMode=view&amp;idx=9002</link>
+				<pubDate>2020-06-01 00:00:26</pubDate>
+			</item>
+
+			<item>
+				<idx>9003</idx>
+				<category></category>
+				<title>가상전(假想殿) - 비공개</title>
+				<photos>
+				</photos>
+				<coordinate>
+					<lat>37.28333808810258</lat>
+					<lng>127.01241684344076</lng>
+				</coordinate>
+				<description>&lt;p&gt;가상전은 시험용으로 만든 건물로, 지금은 들어갈 수 없다. 첫 줄이 문장이라 창건 줄이 없다.&lt;/p&gt;
+</description>
+				<link>http://www.swcf.or.kr/?p=63&amp;viewMode=view&amp;idx=9003</link>
+				<pubDate>2016-08-09 15:14:16</pubDate>
+			</item>
+
+			<item>
+				<idx>9004</idx>
+				<category></category>
+				<title>미복원 가상 성벽</title>
+				<photos>
+				</photos>
+				<coordinate>
+					<lat></lat>
+					<lng></lng>
+				</coordinate>
+				<description>&lt;p&gt;&amp;nbsp;&lt;/p&gt;
+
+&lt;p&gt;이곳은 성벽이 끊어진 구간이다.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Disconnected Part&lt;/strong&gt;&lt;br /&gt;
+This section was removed in the 1920s.&lt;/p&gt;
+</description>
+				<link>http://www.swcf.or.kr/?p=59&amp;viewMode=view&amp;idx=9004</link>
+				<pubDate>2020-06-01 00:00:03</pubDate>
+			</item>
+		</channel>
+	</rss>

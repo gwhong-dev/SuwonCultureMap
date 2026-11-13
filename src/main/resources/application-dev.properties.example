@@ -17,6 +17,9 @@ spring.jpa.show-sql=true
 
 # 수원문화재단 API
 swcf.api.key.event=여기에_키
+# 명소 (선택, 코드마다 키가 다름): 59_C 수원화성 시설물 · 63_C 화성행궁 시설물
+swcf.api.key.facility=여기에_키
+swcf.api.key.palace-facility=여기에_키
 
 # 카카오
 kakao.rest-api-key=여기에_키
