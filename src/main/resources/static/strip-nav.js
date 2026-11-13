@@ -104,7 +104,7 @@ function stripKeyStep(k) {
 }
 
 // PC 토스트 아래 여백(px) — 지도 하단 카드 줄이 떠 있으면 줄 위로 (#206 검증 ⚠️: 기본 32px 자리가 카드 줄을 덮음)
-//  - stripTop = 카드 줄 맨 위의 화면 y (줄이 숨었거나 상세창이 덮고 있으면 null → 기본 자리)
+//  - stripTop = 피할 맨 위 화면 y (카드 줄 맨 위, 길찾기 작은 창이 열려 있으면 그 창 위쪽 중 작은 값. 줄이 숨었거나 상세창이 덮으면 null → 기본 자리)
 //  - 화면이 아주 낮아도 토스트(44px)가 위로 넘치지 않게 위쪽 16px 은 남김
 var TOAST_BASE_BOTTOM = 32;
 var TOAST_STRIP_GAP = 12;

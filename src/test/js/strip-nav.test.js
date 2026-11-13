@@ -169,8 +169,9 @@ test("PC 토스트: 카드 줄이 없거나 상세창이 덮으면 기본 자리
 test("PC 토스트: 카드 줄이 떠 있으면 줄 맨 위보다 12px 위로 (줄을 덮지 않음)", () => {
   // 900px 화면, 카드 줄 맨 위 y=630 → 아래 여백 282 = 토스트 아래 끝이 줄 위 12px
   assert.strictEqual(pcToastBottom(900, 630), 282);
-  const bottom = pcToastBottom(800, 520.4);
-  assert.ok(800 - bottom <= 520.4, "토스트 아래 끝이 카드 줄 위");
+  assert.strictEqual(pcToastBottom(800, 520.4), 292); // 소수 자리는 반올림
+  // 길찾기 작은 창(줄보다 90px 위로 솟음)이 열려 있으면 그 위쪽 기준 → 창도 안 덮음
+  assert.strictEqual(pcToastBottom(900, Math.min(630, 540)), 372);
 });
 
 test("PC 토스트: 카드 줄이 아주 낮게 있어도 기본 자리보다 내려가지 않음", () => {
@@ -179,4 +180,8 @@ test("PC 토스트: 카드 줄이 아주 낮게 있어도 기본 자리보다 �
 
 test("PC 토스트: 화면이 아주 낮아도 위로 넘치지 않음 (위 16px 남김)", () => {
   assert.strictEqual(pcToastBottom(300, 10), 300 - 44 - 16);
+});
+
+test("PC 토스트: 화면이 92px 보다 낮아 위 한도가 기본보다 작아도 기본 자리(32px)", () => {
+  assert.strictEqual(pcToastBottom(80, 20), TOAST_BASE_BOTTOM);
 });
