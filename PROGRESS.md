@@ -46,6 +46,7 @@
 
 ## 🧰 나중에 할 일 (발견 사항)
 - [ ] (11/13 Playwright 화면 시험 도입) CI 에 화면 시험 연결 — `.github/workflows/ci.yml` 에 `npm ci` · `npx playwright install --with-deps chromium` · `npm run test:e2e` 단계 추가 (L 등급이라 따로 PR, 실행 방법 [docs/e2e-test.md](docs/e2e-test.md))
+- [ ] (11/13 #267 검증 ⚠️) `.dockerignore` 에 `node_modules/` · `test-results/` · `playwright-report/` 추가 — 로컬 `docker compose up --build` 때 빌드 컨텍스트가 약 13MB 늘어남(CI 는 node_modules 없어 영향 없음). Docker 설정이라 L 쪽으로 보고 #267 에선 안 고침
 - [ ] (11/13 #263 검증 ⚠️) CLAUDE.md 8번 분기 점검이 `send_later` 30분 예약을 쓰지만 로컬 데스크톱 앱엔 그 도구가 없음 → 메인이 분기를 점검하는 수단을 다시 정하기 (지금은 분기가 턴을 끝낼 때 앱이 메인을 깨우는 것에 기댐)
 - [ ] (11/13 R2 #260 검증 ⚠️) PC 상세 칸 ‹ › 처음 · 끝 화살표 대비: 확정 시안 값 `--line-strong` 이 밝은 테마 1.75:1(`#c9c3ba`/흰 바탕) · 어두운 테마 2.72:1 — 비활성 표시라 WCAG 예외지만 약시 사용자에겐 거의 안 보임. 원 · 테두리 · 그림자는 남아 단추 자리는 보임. 바꾸려면 시안 값이라 사용자 확인 뒤 약 3:1 색(예: `--sub` 섞음)
 - [ ] (11/13 명소 ①) 명소 동기화 실패 알림: `deploy/sync-alert.js` · `/api/sync-status` 는 재단 행사(SWCF)만 봄 → `sync_log` 의 LANDMARK 연속 실패도 알릴지 ② 때 정하기. 재단 응답에서 빠진 명소는 지우지 않고 `last_seen_at` 만 멈춤 → ② 화면에서 오래 안 보인 곳을 숨길지 정하기

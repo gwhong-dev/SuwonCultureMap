@@ -37,7 +37,8 @@ module.exports = defineConfig({
     url: "http://localhost:" + PORT + "/actuator/health",
     timeout: 240_000, // 첫 실행은 컴파일 포함
     reuseExistingServer: false, // 다른 프로필로 떠 있는 앱을 잘못 쓰지 않게 늘 새로 띄움
-    stdout: "ignore",
+    // 앱 로그는 시험 출력이 묻히지 않게 기본은 숨김. 앱이 안 뜨면 E2E_SERVER_LOG=1 로 다시 돌려 시작 오류를 봄 (#267 검증 ⚠️)
+    stdout: process.env.E2E_SERVER_LOG ? "pipe" : "ignore",
     stderr: "pipe",
   },
 });

@@ -16,6 +16,7 @@ npm run test:e2e                   # = npx playwright test
 - 첫 실행은 컴파일 때문에 1분 안팎, 그 뒤는 20초 안팎 (시험 4개)
 - 실패하면 `test-results/<시험 이름>/` 에 화면 구조(`error-context.md`) · 기록(`trace.zip`)이 남는다 → `npx playwright show-trace <trace.zip>` 으로 단계별 화면 보기
 - 시험 하나만: `npx playwright test -g "길찾기"`
+- 앱이 안 떠서 시간 초과(240초)로 끝나면: 앱 로그는 기본으로 숨겨 두므로 `E2E_SERVER_LOG=1 npx playwright test` (PowerShell 은 `$env:E2E_SERVER_LOG=1; npx playwright test`) 로 다시 돌려 시작 오류를 본다
 
 ## 구조
 
