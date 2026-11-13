@@ -1461,6 +1461,10 @@ document.getElementById("detailBackBtn").addEventListener("click", closeDetailMo
 document.getElementById("detailRouteBtn").addEventListener("click", function () {
   if (detailEvent) openRouteSheet(detailEvent);
 });
+// 주변 탭 맨 아래 "길찾기 (대중교통)" — 하단 바 [길찾기] 와 같은 창 (확정 시안 모바일 A)
+document.getElementById("detailTransitRoute").addEventListener("click", function () {
+  if (detailEvent) openRouteSheet(detailEvent);
+});
 document.getElementById("detailFavBtn").addEventListener("click", function () {
   if (detailEvent) toggleFavorite(detailEvent.id);
 });
@@ -4112,6 +4116,7 @@ function drawPcDetail() {
       : defaultPosterHtml(event, "pcd-img"); // 사진이 없으면 기본 그림 (P6)
     posterOnError(poster.querySelector("img.pcd-img"), event);
     renderPcMore(event);
+    resetPcTransit(); // 이전 행사의 오시는 길을 지우고, 늦게 올 이전 응답은 버림
     scroll.scrollTop = 0;
     clearTimeout(pcSettleTimer);
     var picked = pcUserPicked;
@@ -4138,14 +4143,15 @@ function drawPcDetail() {
   var time = findInfo(lines, ["시간", "요일"]) || fallbackTime(event);
   if (time) rows.push([I18n.t("detail.time"), time]);
   var place = pcCardPlace(eventPlace(event), eventDistrict(event)); // pc-card.js
-  if (place) rows.push([I18n.t("detail.place"), place]);
+  // 누르면 주소 복사 (확정 시안 PC A) — 복사할 값이 없으면(구 이름만 있는 행사) 그냥 글자 (#268 검증 ⚠️)
+  if (place) rows.push([I18n.t("detail.place"), place, pcCopyAddress(event) ? "place" : ""]);
   var fee = fields.fee || findInfo(lines, ["이용료", "요금", "입장료", "관람료", "참가비"], ["주차"]);
   if (fee) rows.push([I18n.t("detail.fee"), fee]);
   var sourceText = sourceLabel(event); // 인스타 · 수원문화DB 출처 줄 (수원문화DB 는 출처 표기 필수, docs/decisions/2026-11-13-swdb-crawling.md)
   if (sourceText) rows.push([I18n.t("detail.source"), sourceText]);
   document.getElementById("pcdRows").innerHTML = rows
     .map(function (row) {
-      return "<dt>" + escapeHtml(row[0]) + "</dt><dd>" + escapeHtml(row[1]) + "</dd>";
+      return "<dt>" + escapeHtml(row[0]) + "</dt><dd>" + (row[2] === "place" ? pcPlaceCopyHtml(row[1]) : escapeHtml(row[1])) + "</dd>";
     })
     .join("");
 
@@ -4183,12 +4189,12 @@ function renderPcMore(event) {
   if (event.info) {
     html += '<section class="pcd-sec"><h3>' + escapeHtml(I18n.t("detail.intro")) + '</h3><p class="pcd-intro">' + escapeHtml(event.info) + "</p></section>";
   }
-  var address = extractAddress(event.info) || eventPlace(event) || "";
+  var address = pcCopyAddress(event);
   html +=
     '<section class="pcd-sec"><h3>' + escapeHtml(I18n.t("detail.location")) + '</h3><div class="pcd-addr"><span>' +
     escapeHtml(address || I18n.t("detail.noLocation")) + "</span>" +
     (address ? '<button type="button" class="pcd-copy">' + escapeHtml(I18n.t("route.copy")) + "</button>" : "") +
-    '</div><div id="pcdTransit" class="pcd-transit" hidden></div></section>';
+    "</div></section>";
   if (event.startDate) {
     // 구글 캘린더 "일정 추가" (진행 날짜를 고르는 행사는 기본 날짜 하루 — 전 PC 상세 창과 같은 주소)
     var choices = calendarDateChoices(event);
@@ -4213,26 +4219,70 @@ function renderPcMore(event) {
   }
 }
 
-// 가까운 정류장 · 역 (transit-nearby.js) — 넘기다 멈춘 행사만 불러옴 (경기도 API 하루 한도 아낌), 비거나 실패면 숨김
-function loadPcTransit(event) {
+// 복사할 주소 = 모바일 [주소 복사] 와 같은 값 (원문 주소, 없으면 장소 글자)
+function pcCopyAddress(event) {
+  return extractAddress(event.info) || eventPlace(event) || "";
+}
+
+// 정보 표 "장소" 값 = 누르면 주소 복사 단추 (점선 밑줄 + 복사 아이콘) + "복사됨" 표시 자리
+function pcPlaceCopyHtml(text) {
+  return (
+    '<button type="button" class="pcd-place-copy" title="' + escapeHtml(I18n.t("pcd.copyHint")) +
+    '" aria-label="' + escapeHtml(I18n.t("pcd.copyAria", { text: text })) + '"><span>' + escapeHtml(text) + "</span>" +
+    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"></path></svg></button>' +
+    '<span class="pcd-copied" role="status"></span>'
+  );
+}
+
+var PC_COPIED_MS = 1500; // 시안: "복사됨" 1.5초
+var pcCopiedTimer = null;
+document.getElementById("pcdRows").addEventListener("click", function (e) {
+  var btn = e.target.closest(".pcd-place-copy");
+  var item = btn && pcItem(pcDetailId);
+  var address = item ? pcCopyAddress(item.event) : "";
+  if (!address) return;
+  var badge = btn.parentNode.querySelector(".pcd-copied");
+  copyText(address).then(
+    function () {
+      if (!badge || !badge.isConnected) return; // 그 사이 다른 행사로 넘김
+      clearTimeout(pcCopiedTimer);
+      badge.textContent = I18n.t("pcd.copied"); // 비어 있으면 CSS 가 숨김 (role=status 라 읽어 줌)
+      pcCopiedTimer = setTimeout(function () {
+        badge.textContent = "";
+      }, PC_COPIED_MS);
+    },
+    function () {
+      showToast(I18n.t("toast.copyFailedSelect"));
+    },
+  );
+});
+
+// 오시는 길 (transit-nearby.js transitPcHtml) — 넘기다 멈춘 행사만 불러옴 (경기도 API 하루 한도 아낌), 비거나 실패면 숨김
+function resetPcTransit() {
   var box = document.getElementById("pcdTransit");
+  pcTransitTicket++;
+  box.hidden = true;
+  box.innerHTML = "";
+}
+function loadPcTransit(event) {
   var ticket = ++pcTransitTicket;
-  if (!box || !event.latitude || !event.longitude) return;
+  if (!event.latitude || !event.longitude) return;
   fetch("/api/events/" + event.id + "/transit")
     .then(function (res) {
       return res.ok ? res.json() : null;
     })
     .then(function (data) {
-      var target = document.getElementById("pcdTransit");
-      if (ticket !== pcTransitTicket || pcDetailId !== event.id || !target) return;
-      var html = transitNearbyHtml(data);
+      if (ticket !== pcTransitTicket || pcDetailId !== event.id) return;
+      var html = transitPcHtml(data);
       if (!html) return;
-      target.innerHTML = html;
-      target.hidden = false;
+      var box = document.getElementById("pcdTransit");
+      box.innerHTML = html;
+      box.hidden = false;
     })
     .catch(function () {});
 }
-document.getElementById("pcdMore").addEventListener("click", function (e) {
+document.getElementById("pcdTransit").addEventListener("click", function (e) {
   var more = e.target.closest(".transit-more");
   if (more) expandTransitRoutes(more);
 });

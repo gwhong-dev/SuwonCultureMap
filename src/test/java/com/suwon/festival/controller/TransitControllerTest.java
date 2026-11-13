@@ -67,14 +67,15 @@ class TransitControllerTest {
     Event e = save(910001L, 37.2810212, 127.0162158);
     when(transitService.find(37.2810212, 127.0162158)).thenReturn(new NearbyTransit(
         List.of(new BusStop("행궁동", 120, 2, List.of("2", "13"))),
-        List.of(new Subway("수원역", List.of("1호선"), 900))));
+        List.of(new Subway("수원역", List.of("1호선"), 900)), true));
 
     MockHttpServletResponse res = mockMvc.perform(get("/api/events/" + e.getId() + "/transit")).andReturn().getResponse();
 
     assertThat(res.getStatus()).isEqualTo(200);
     assertThat(res.getContentAsString(StandardCharsets.UTF_8))
         .contains("\"busStops\":[{\"name\":\"행궁동\",\"distanceMeters\":120,\"walkMinutes\":2,\"routes\":[\"2\",\"13\"]}]")
-        .contains("\"subways\":[{\"name\":\"수원역\",\"lines\":[\"1호선\"],\"distanceMeters\":900}]");
+        .contains("\"subways\":[{\"name\":\"수원역\",\"lines\":[\"1호선\"],\"distanceMeters\":900}]")
+        .contains("\"subwayChecked\":true");
   }
 
   @Test
@@ -84,7 +85,7 @@ class TransitControllerTest {
     MockHttpServletResponse res = mockMvc.perform(get("/api/events/" + e.getId() + "/transit")).andReturn().getResponse();
 
     assertThat(res.getStatus()).isEqualTo(200);
-    assertThat(res.getContentAsString(StandardCharsets.UTF_8)).isEqualTo("{\"busStops\":[],\"subways\":[]}");
+    assertThat(res.getContentAsString(StandardCharsets.UTF_8)).isEqualTo("{\"busStops\":[],\"subways\":[],\"subwayChecked\":false}");
     verify(transitService, never()).find(anyDouble(), anyDouble());
   }
 
