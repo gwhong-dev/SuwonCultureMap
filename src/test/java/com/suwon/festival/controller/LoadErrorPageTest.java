@@ -42,7 +42,8 @@ class LoadErrorPageTest {
     // 받기(fetch · JSON) 실패만 "network", 그 뒤 화면 그리기 오류는 "render"
     assertThat(js).contains(".then(showEvents, function (err) {\n      failLoad(\"network\", err);");
     assertThat(js).contains(".catch(function (err) {\n      failLoad(\"render\", err);");
-    assertThat(js).contains("network: \"행사를 불러오지 못했어요.");
-    assertThat(js).contains("render: \"행사를 화면에 표시하지 못했어요.");
+    assertThat(js).contains("network: I18n.t(\"load.networkError\")", "render: I18n.t(\"load.renderError\")");
+    // 글은 화면 언어 글 묶음 (한국어 = i18n/ko.js)
+    assertThat(fetch("/i18n/ko.js")).contains("\"load.networkError\": \"행사를 불러오지 못했어요.", "\"load.renderError\": \"행사를 화면에 표시하지 못했어요.");
   }
 }

@@ -27,8 +27,7 @@
   --dim: rgba(20, 19, 18, 0.5); /* 하단 시트 뒤 덮개 */
   --bar: #f6f1e7; /* PC 상단 바 (종이색) */
   --bar-line: #e3dac8; /* PC 상단 바 아래 선 */
-  --brand-sub: #b4472a; /* 로고 부제 (벽돌) */
-  --seal-frame: transparent; /* 도장 뒤 칸: 밝을 땐 없음, 어두울 땐 종이색 칸 */
+  --brand-sub: #b4472a; /* 로고 아치 · 부제 (벽돌) */
   --fav: #c77d00; /* 찜 표시 글자 · 아이콘 */
   --fav-soft: #fff4e0; /* 찜 표시 바탕 */
   --success: #157a3c; /* 마이 페이지 "연동됨" 글자 (진한 초록, 흰 바탕 5.4:1) */
@@ -64,7 +63,6 @@
     --bar: #1e1c1a;
     --bar-line: #35322e;
     --brand-sub: #e07a57;
-    --seal-frame: #f6f1e7;
     --fav: #e8a64a;
     --fav-soft: #3a2e1a;
     --success: #4cc38a;
@@ -100,7 +98,6 @@
   --bar: #1e1c1a;
   --bar-line: #35322e;
   --brand-sub: #e07a57;
-  --seal-frame: #f6f1e7;
   --fav: #e8a64a;
   --fav-soft: #3a2e1a;
   --success: #4cc38a;

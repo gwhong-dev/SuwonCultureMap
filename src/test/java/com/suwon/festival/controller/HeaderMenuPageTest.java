@@ -46,20 +46,20 @@ class HeaderMenuPageTest {
   void 회원_이름_글자는_함수_하나에서만_정함() throws Exception {
     String js = fetch("/js/index.js");
     // P5(#239): 닉네임이 있으면 닉네임, 없으면 회원 번호
-    assertThat(js).contains("function memberLabel(data) {\n  return data.nickname || \"회원 #\" + data.memberId;\n}");
-    assertThat(js.split("회원 #", -1)).hasSize(2); // 이름 글자는 memberLabel 한 곳뿐
+    assertThat(js).contains("function memberLabel(data) {\n  return data.nickname || I18n.t(\"member.number\", { n: data.memberId });\n}");
+    assertThat(js.split("\"member.number\"", -1)).hasSize(2); // "회원 #{n}" 글은 i18n/ko.js // 이름 글자는 memberLabel 한 곳뿐
   }
 
   @Test
   void 서비스_안내와_처리방침은_메뉴_줄에만_있음() throws Exception {
     String html = fetch("/index.html");
     String menu = between(html, "<div id=\"menuLinks\"", "</div>");
-    assertThat(menu).contains("href=\"about.html\">서비스 안내</a>", "href=\"privacy.html\">개인정보 처리방침</a>");
-    assertThat(menu).contains("<button id=\"logoutBtn\" type=\"button\" class=\"menu-link\" hidden>로그아웃</button>");
+    assertThat(menu).contains("href=\"about.html\" data-i18n=\"menu.about\">서비스 안내</a>", "href=\"privacy.html\" data-i18n=\"menu.privacy\">개인정보 처리방침</a>");
+    assertThat(menu).contains("<button id=\"logoutBtn\" type=\"button\" class=\"menu-link\" hidden data-i18n=\"menu.logout\">로그아웃</button>");
     // 상단 바 바깥 단추로는 없음
     assertThat(html.split("href=\"about.html\"", -1)).hasSize(2);
     assertThat(html.split("href=\"privacy.html\"", -1)).hasSize(2);
-    assertThat(html).contains("<button id=\"mobileMenuBtn\" type=\"button\" aria-label=\"메뉴\" aria-expanded=\"false\">☰</button>");
+    assertThat(html).contains("<button id=\"mobileMenuBtn\" type=\"button\" aria-label=\"메뉴\" data-i18n-attr=\"aria-label:menu.label\" aria-expanded=\"false\">☰</button>");
   }
 
   @Test

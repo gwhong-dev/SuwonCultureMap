@@ -16,7 +16,8 @@ async function shot(page, svgFile, size, dest) {
 }
 
 (async () => {
-  const browser = await chromium.launch();
+  // 내장 크로미움이 안 뜨는 PC(Windows spawn UNKNOWN)는 설치된 크롬으로: BRAND_CHROME=1 node scripts/brand/render.js
+  const browser = await chromium.launch(process.env.BRAND_CHROME ? { channel: "chrome" } : {});
   const page = await browser.newPage({ deviceScaleFactor: 1 });
   await shot(page, path.join(out, "icon.svg"), 180, path.join(brand, "apple-touch-icon.png"));
   await shot(page, path.join(out, "icon.svg"), 192, path.join(brand, "icon-192.png"));

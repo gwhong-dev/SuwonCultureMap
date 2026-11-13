@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>로그인 - 수원바이블 · 수원 문화지도</title>
+    <title data-i18n="login.pageTitle">로그인 - 수원바이블 · 수원 문화지도</title>
     <meta name="description" content="수원바이블 · 수원 문화지도 — 수원의 공연 · 전시 · 축제를 지도에서 한눈에" />
     <meta name="theme-color" content="#b4472a" />
     <!-- 브랜드 아이콘 (static/brand). 크롬 · 엣지 = svg, 사파리 · 옛 브라우저 = png · ico -->
@@ -11,6 +11,12 @@
     <link rel="icon" href="/brand/favicon-32.png" sizes="32x32" type="image/png" />
     <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
     <link rel="manifest" href="/brand/manifest.json" />
+    <!-- 화면 언어 (i18n.js): 지도 화면에서 고른 언어를 이 페이지도 따름. theme.js 보다 먼저 -->
+    <script src="/i18n/ko.js"></script>
+    <script src="/i18n/en.js"></script>
+    <script src="/i18n/ja.js"></script>
+    <script src="/i18n/zh.js"></script>
+    <script src="/i18n.js"></script>
     <!-- 화면 모드: css 보다 먼저 동기로 읽어 첫 그리기 전에 <html data-theme> 설정 (깜빡임 방지) -->
     <script src="/theme.js"></script>
     <link rel="stylesheet" href="/css/fonts.css" />
@@ -19,7 +25,7 @@
   </head>
   <body>
     <div class="login-card">
-      <h1>소셜 계정으로 로그인</h1>
+      <h1 data-i18n="login.heading">소셜 계정으로 로그인</h1>
 
       <!-- 로그인 실패 안내 (서버가 /login.html?error=... 로 보냈을 때만 표시) -->
       <p id="loginError" class="login-error" hidden></p>
@@ -28,23 +34,26 @@
       <a
         class="social-btn kakao"
         href="/api/auth/kakao/login"
+        data-i18n="login.kakao"
         >카카오로 로그인</a
       >
       <a
         class="social-btn google"
         href="/api/auth/google/login"
+        data-i18n="login.google"
         >구글로 로그인</a
       >
       <a
         class="social-btn naver"
         href="/api/auth/naver/login"
+        data-i18n="login.naver"
         >네이버로 로그인</a
       >
 
-      <p class="age-note">로그인은 만 14세 이상만 이용할 수 있어요.</p>
-      <a class="back-link" href="about.html">서비스 안내</a>
-      <a class="back-link" href="privacy.html">개인정보 처리방침</a>
-      <a class="back-link" href="index.html">← 지도로 돌아가기</a>
+      <p class="age-note" data-i18n="login.ageNote">로그인은 만 14세 이상만 이용할 수 있어요.</p>
+      <a class="back-link" href="about.html" data-i18n="menu.about">서비스 안내</a>
+      <a class="back-link" href="privacy.html" data-i18n="menu.privacy">개인정보 처리방침</a>
+      <a class="back-link" href="index.html" data-i18n="page.backToMap">← 지도로 돌아가기</a>
     </div>
     <script src="/js/login.js"></script>
   </body>

@@ -51,8 +51,8 @@ test("상단 바 · 로고 토큰 (확정 시안 B: 종이색 바)", () => {
   assert.strictEqual(darkMedia["--bar-line"], "#35322e");
   assert.strictEqual(light["--brand-sub"], "#b4472a");
   assert.strictEqual(darkMedia["--brand-sub"], "#e07a57");
-  assert.strictEqual(light["--seal-frame"], "transparent");
-  assert.strictEqual(darkMedia["--seal-frame"], "#f6f1e7");
+  // 도장 뒤 칸(--seal-frame)은 새 로고(11/13 B안)에서 도장을 빼며 없앰
+  assert.strictEqual(light["--seal-frame"], undefined);
 });
 
 // WCAG 명암비 (#rrggbb 두 색)
@@ -105,4 +105,18 @@ test("about · login · mypage · privacy 도 토큰만 (소셜 로그인 · 연
       .replace(/\.(social-btn|link-btn)\.(kakao|google|naver) \{[^}]*\}/g, "");
     assert.deepStrictEqual(fixedColors(rest), [], name);
   }
+});
+
+// 새 로고(11/13 B안): 아치 path 는 fill 속성이 없어 <use> 쪽 CSS fill 을 물려받음 → 이 줄이 빠지면 아치가 검정(어두운 바에서 안 보임)
+test("로고 아치 · 부제 색은 --brand-sub (밝음 · 어두움 함께)", () => {
+  const rule = (text, sel) => {
+    const m = new RegExp("(?:^|\\n)\\s*" + sel.replace(/\./g, "\\.") + "\\s*\\{([^}]*)\\}").exec(text);
+    assert.ok(m, sel + " 규칙이 없음");
+    return m[1];
+  };
+  const name = rule(indexCss, ".brand-name");
+  assert.match(name, /color:\s*var\(--text\)/);
+  assert.match(name, /fill:\s*var\(--brand-sub\)/);
+  assert.match(rule(indexCss, ".brand-sub"), /color:\s*var\(--brand-sub\)/);
+  assert.match(rule(read("intro.css"), ".intro-name"), /fill:\s*var\(--brand-sub\)/);
 });

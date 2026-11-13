@@ -1,10 +1,12 @@
 // 실제 진행 날짜 표시 규칙 (설계 docs/event-schedule.md 7번)
 // 시험: node --test src/test/js/schedule-format.test.js (CI 에서 실행)
 var SCHEDULE_LIST_MAX = 5; // 이보다 많으면 카드에 날짜를 다 쓰지 않고 요약
-var WEEKDAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
+// 화면 언어 (i18n.js): 브라우저 = 전역 I18n, node 시험 = require (기본 한국어)
+var i18nApi = typeof I18n !== "undefined" ? I18n : require("./i18n.js").I18n;
+var WEEKDAY_NAMES = i18nApi.list("date.weekdays");
 
 function formatDateRange(event) {
-  if (!event.startDate) return "기간 정보 없음";
+  if (!event.startDate) return i18nApi.t("sched.noPeriod");
   return (
     event.startDate +
     (event.endDate && event.endDate !== event.startDate
@@ -50,13 +52,13 @@ function weekdaySummary(event) {
     expected++;
   }
   if (expected !== runDays.size) return null;
-  if (weekdays.size === 7) return "매일";
+  if (weekdays.size === 7) return i18nApi.t("sched.daily");
   // 월요일부터 일요일 순서로 표시. 4일 이상 이어지면 "월~토" 로 줄임 (모바일 카드 폭이 좁음)
   var order = [1, 2, 3, 4, 5, 6, 0];
   var kept = order.filter(function (d) {
     return weekdays.has(d);
   });
-  if (kept.length === 1) return WEEKDAY_NAMES[kept[0]] + "요일만";
+  if (kept.length === 1) return i18nApi.t("sched.onlyWeekday", { w: WEEKDAY_NAMES[kept[0]] });
   var consecutive = order.indexOf(kept[kept.length - 1]) - order.indexOf(kept[0]) === kept.length - 1;
   if (kept.length >= 4 && consecutive) {
     return WEEKDAY_NAMES[kept[0]] + "~" + WEEKDAY_NAMES[kept[kept.length - 1]];
@@ -78,11 +80,11 @@ function formatEventDates(event, now) {
   var range = sameYear ? shortDate(event.startDate) + " ~ " + shortDate(event.endDate) : formatDateRange(event);
   var text;
   if (dates.length <= SCHEDULE_LIST_MAX) {
-    text = range + " · 총 " + dates.length + "회 · " + dates.map(shortDate).join(", ");
+    text = range + " · " + i18nApi.t("sched.times", { n: dates.length }) + " · " + dates.map(shortDate).join(", ");
   } else {
-    text = range + " · " + (weekdaySummary(event) || "총 " + dates.length + "회");
+    text = range + " · " + (weekdaySummary(event) || i18nApi.t("sched.times", { n: dates.length }));
   }
-  return event.scheduleHolidayNote ? text + " · 공휴일 확인" : text;
+  return event.scheduleHolidayNote ? text + " · " + i18nApi.t("sched.checkHoliday") : text;
 }
 
 // 상세 팝업: 날짜가 많으면 달별 전체 목록 + 공휴일 안내 + 일정 원문
@@ -93,11 +95,11 @@ function formatScheduleDetail(event) {
     var byMonth = new Map();
     event.dates.forEach(function (date) {
       var parts = date.split("-");
-      var month = (crossYear ? parts[0] + "년 " : "") + Number(parts[1]) + "월";
+      var month = crossYear ? i18nApi.yearMonth(parts[0], Number(parts[1])) : i18nApi.month(Number(parts[1]));
       if (!byMonth.has(month)) byMonth.set(month, []);
       byMonth.get(month).push(Number(parts[2]));
     });
-    lines.push("진행일 " + event.dates.length + "회");
+    lines.push(i18nApi.t("sched.runDays", { n: event.dates.length }));
     byMonth.forEach(function (days, month) {
       lines.push(month + ": " + days.join(", "));
     });
@@ -108,17 +110,17 @@ function formatScheduleDetail(event) {
     var oneYear = confirmed.every(function (date) {
       return date.slice(0, 4) === confirmed[0].slice(0, 4);
     });
-    lines.push("확인된 회차: " + confirmed.map(oneYear ? shortDate : String).join(", "));
+    lines.push(i18nApi.t("sched.confirmed") + ": " + confirmed.map(oneYear ? shortDate : String).join(", "));
   }
-  if (hasRunDates(event) && event.scheduleHolidayNote) lines.push("공휴일은 원문 확인");
-  if (event.scheduleText) lines.push("일정 원문: " + event.scheduleText);
+  if (hasRunDates(event) && event.scheduleHolidayNote) lines.push(i18nApi.t("sched.holidayNote"));
+  if (event.scheduleText) lines.push(i18nApi.t("sched.raw") + ": " + event.scheduleText);
   return lines.join("\n");
 }
 
 // 모바일 상세 표 "진행" 줄. 일정 원문 한 줄뿐이고 그 값이 "시간" 줄과 같으면 같은 글이 두 번 보여 뺌
 function scheduleRowText(event, timeText) {
   var text = formatScheduleDetail(event);
-  var onlyRaw = event.scheduleText && text === "일정 원문: " + event.scheduleText;
+  var onlyRaw = event.scheduleText && text === i18nApi.t("sched.raw") + ": " + event.scheduleText;
   var squash = function (value) {
     return String(value || "").replace(/\s+/g, "");
   };
@@ -182,7 +184,7 @@ function matchRunDays(event, days) {
   return event.startDate === end ? "yes" : "maybe";
 }
 
-var MAYBE_RUN_NOTE = "기간 중 · 일정 확인";
+var MAYBE_RUN_NOTE = i18nApi.t("sched.maybe");
 
 // ===== 상태 배지 · D-day (디자인 docs/design/mobile-design-v1.md 2번) =====
 // 시작일 · 종료일만으로 계산 (오늘은 한국 시간). 둘 다 없는 행사는 null → 배지 없음
@@ -198,10 +200,10 @@ function eventStatus(event, now) {
   return "open";
 }
 
-var STATUS_LABELS = { open: "운영중", upcoming: "오픈예정", ended: "종료" };
+var STATUS_KEYS = { open: "status.open", upcoming: "status.upcoming", ended: "status.ended" };
 
 function statusLabel(status) {
-  return STATUS_LABELS[status] || "";
+  return STATUS_KEYS[status] ? i18nApi.t(STATUS_KEYS[status]) : "";
 }
 
 // 오늘(한국 시간)부터 그날까지 남은 날 수
@@ -214,9 +216,9 @@ function ddayText(event, now) {
   var status = eventStatus(event, now);
   if (status === "open") {
     var left = daysUntil(event.endDate || event.startDate, now);
-    return left === 0 ? "오늘 종료" : "종료까지 D-" + left;
+    return left === 0 ? i18nApi.t("dday.endsToday") : i18nApi.t("dday.toEnd", { n: left });
   }
-  if (status === "upcoming") return "D-" + daysUntil(event.startDate, now);
+  if (status === "upcoming") return i18nApi.t("dday.toStart", { n: daysUntil(event.startDate, now) });
   return null;
 }
 

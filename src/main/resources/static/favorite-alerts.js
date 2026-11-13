@@ -45,10 +45,13 @@ function favoriteAlerts(events, favoriteIds, now) {
     });
 }
 
+// 화면 언어 (i18n.js, node 시험 = 한국어)
+var alertI18n = typeof I18n !== "undefined" ? I18n : require("./i18n.js").I18n;
+
 // 알림 배지 글: "내일 시작" · "오늘 종료" · "N일 뒤 종료"
 function favoriteAlertLabel(alert) {
-  if (alert.kind === "starting") return "내일 시작";
-  return alert.days === 0 ? "오늘 종료" : alert.days + "일 뒤 종료";
+  if (alert.kind === "starting") return alertI18n.t("alert.startsTomorrow");
+  return alert.days === 0 ? alertI18n.t("dday.endsToday") : alertI18n.t("alert.endsIn", { n: alert.days });
 }
 
 // 본 알림을 가리는 열쇠: 행사 번호 + 종류 + 날짜 (동기화로 날짜가 바뀌면 새 알림)
