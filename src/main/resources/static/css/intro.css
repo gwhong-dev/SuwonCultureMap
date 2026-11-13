@@ -1,7 +1,7 @@
 /* ===== 첫 진입 애니메이션 — B안 계절 꽃잎 → 로고 (11/13 확정, 그리는 쪽 · 재생 조건은 intro.js) =====
    시간표: 그림이 움직이는 시간 1.5초(= intro.js INTRO_TOTAL_MS) → 0.3초 동안 사라짐(= INTRO_FADE_MS)
    키프레임 % = 시각 ÷ 1.5초 (0.7초 = 47%, 0.75초 = 50%, 1.05초 = 70%)
-   색은 theme.css 토큰만 → 밝은 · 어두운 테마 모두 맞음. 꽃잎 색만 이 파일에서 정함
+   색은 theme.css 토큰만 → 밝은 · 어두운 테마 모두 맞음 (꽃잎도 --petal-* 토큰)
    버린 A안(성문) · C안(장안문 → 방화수류정)은 docs/decisions/2026-11-13-intro-animation-b.md 에서 되살리는 법 */
 
 .intro {
@@ -64,12 +64,12 @@
 
 /* ----- 꽃잎: 흩날림 → 0.7초부터 가운데로 모여 사라지고 로고가 나타남 ----- */
 .ib-spring .ib-petal {
-  fill: #f4b6c2; /* 벚꽃 */
-  stroke: #d98a9c;
+  fill: var(--petal-spring); /* 벚꽃 */
+  stroke: var(--petal-spring-line);
 }
 .ib-autumn .ib-petal {
-  fill: #e8b83a; /* 은행잎 */
-  stroke: #c08f1a;
+  fill: var(--petal-autumn); /* 은행잎 */
+  stroke: var(--petal-autumn-line);
 }
 .ib-petal {
   stroke-width: 0.6;

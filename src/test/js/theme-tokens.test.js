@@ -151,3 +151,24 @@ test("분류 색 명암: 아이콘(ink)은 옅은 바탕 · 흰 칸 위 3:1, 고
     }
   }
 });
+
+// 첫 진입 애니메이션 꽃잎 (B안 #257): 색은 theme.css 토큰 한 곳 — 밝은 값은 확정 시안 그대로, 어두운 값은 따로
+const PETALS = ["--petal-spring", "--petal-spring-line", "--petal-autumn", "--petal-autumn-line"];
+
+test("꽃잎 색 토큰: 밝은 값은 확정 시안 그대로, 어두운 값도 있음", () => {
+  assert.strictEqual(light["--petal-spring"], "#f4b6c2");
+  assert.strictEqual(light["--petal-spring-line"], "#d98a9c");
+  assert.strictEqual(light["--petal-autumn"], "#e8b83a");
+  assert.strictEqual(light["--petal-autumn-line"], "#c08f1a");
+  for (const name of PETALS) {
+    assert.match(darkMedia[name] || "", /^#[0-9a-f]{6}$/, name + " 어두운 값 없음");
+    assert.notStrictEqual(darkMedia[name], light[name], name + " 어두운 값이 밝은 값과 같음");
+  }
+});
+
+test("intro.css 에 고정 색 없음 (꽃잎도 var(--petal-*))", () => {
+  const intro = read("intro.css");
+  assert.deepStrictEqual(fixedColors(intro), []);
+  assert.match(intro, /\.ib-spring \.ib-petal \{[^}]*fill:\s*var\(--petal-spring\);[^}]*stroke:\s*var\(--petal-spring-line\);/);
+  assert.match(intro, /\.ib-autumn \.ib-petal \{[^}]*fill:\s*var\(--petal-autumn\);[^}]*stroke:\s*var\(--petal-autumn-line\);/);
+});
