@@ -39,6 +39,9 @@ function cleanEventText(event) {
 var map;
 var markerList = [];
 var eventsLoaded = false; // 행사 목록을 받기 전엔 목록(스켈레톤 · 실패 안내)을 다시 그리지 않음
+// 지도 · 목록 검색칸(상단 #searchInput · PC 검색 띠)에서 마지막 글자를 IME 로 조합하는 중인지 → 치는 중 규칙 (home-picks.js searchTypingMode)
+var mapSearchComposing = false;
+var mapSearchTyping = false; // 마지막 filterMarkers 가 치는 중 규칙을 썼나 → 목록에서 넓혀서만 맞는 행사를 아래로 (renderSidebar)
 
 // ===== 모바일 레이아웃 상태값 (아래 '모바일 레이아웃' 영역에서 사용) =====
 var mobileQuery = window.matchMedia("(max-width: 1024px)");
@@ -475,6 +478,16 @@ function filterMarkers() {
   if (!eventsLoaded) return; // 아직 받는 중(스켈레톤) 또는 실패 안내 표시 중 — 로그인 확인 등이 지우지 않게
   syncPcSearch(); // PC 목록 칸 검색 띠 = 상단 바 #searchInput 값 (다른 곳에서 검색어를 지워도 맞춤)
   var keyword = document.getElementById("searchInput").value.trim();
+  // 치는 중 규칙: 조합 중이면 마지막 글자를 넓혀 찾음 ("과" → 광복도), 끝난 글자는 그대로 없을 때만 (모바일 검색 화면과 같음)
+  mapSearchTyping = keyword
+    ? searchTypingMode(
+        markerList.map(function (item) {
+          return item.event;
+        }),
+        keyword,
+        mapSearchComposing,
+      )
+    : false; // home-picks.js
   var selectedCategory = document.getElementById("categorySelect").value;
   var dateValue = document.getElementById("dateFilter").value;
   // 종료 행사는 기본으로 숨김. 지난 날짜를 고르면 그날 열린 행사(종료 포함)를 보여 줌 (calendar-strip.js, 11/13 P2)
@@ -501,7 +514,7 @@ function filterMarkers() {
       if (favoriteEventIds.has(item.event.id)) visibleItems.push(item);
       return;
     }
-    var matchesKeyword = matchesSearch(item.event, keyword); // 띄어쓰기 · 대소문자 무시, 제목 + 장소 (home-picks.js)
+    var matchesKeyword = matchesSearch(item.event, keyword, mapSearchTyping); // 띄어쓰기 · 대소문자 무시, 제목 + 장소 (home-picks.js)
     var matchesCategory;
 
     if (selectedCategory === "all") {
@@ -851,6 +864,15 @@ function renderSidebar(items) {
           return !favoriteEventIds.has(item.event.id);
         })
         .sort(compareStartDate);
+  if (!recent && mapSearchTyping) {
+    // 치는 중 규칙으로 넓혀서만 맞은 행사는 각 묶음 아래로 ("미" → 미술 먼저, 시민은 아래)
+    var searchKeyword = document.getElementById("searchInput").value.trim();
+    var eventOf = function (item) {
+      return item.event;
+    };
+    favorites = searchLooseLast(favorites, searchKeyword, true, eventOf); // home-picks.js
+    others = searchLooseLast(others, searchKeyword, true, eventOf);
+  }
   var sorted = favorites.concat(others);
 
   var list = document.getElementById("list");
@@ -996,9 +1018,32 @@ function renderSidebar(items) {
   if (previewEventId === null) showDefaultPreview(); // 카드 줄은 늘 떠 있게 (PC · 모바일 지도 탭)
 }
 
-document
-  .getElementById("searchInput")
-  .addEventListener("input", filterMarkers);
+// 검색칸 조합 상태 (한글 IME): 조합 중 입력은 치는 중 규칙으로, 조합이 끝나면(스페이스 · 다른 칸 · 엔터) 그대로 규칙으로 다시 거름
+//  setComposing = 조합 상태를 적을 곳, rerender = 조합이 끝난 뒤 다시 거를 함수
+//  같은 키로 바로 다음 글자 조합이 시작되면(광 → 광ㅂ) 다시 거르지 않음 (다음 input 이 거름)
+function watchSearchComposition(input, setComposing, rerender) {
+  var composing = false;
+  input.addEventListener("compositionstart", function () {
+    composing = true;
+    setComposing(true);
+  });
+  input.addEventListener("compositionend", function () {
+    composing = false;
+    setComposing(false);
+    setTimeout(function () {
+      if (!composing) rerender();
+    }, 0);
+  });
+}
+function setMapSearchComposing(on) {
+  mapSearchComposing = on;
+}
+
+document.getElementById("searchInput").addEventListener("input", function (e) {
+  mapSearchComposing = !!e.isComposing;
+  filterMarkers();
+});
+watchSearchComposition(document.getElementById("searchInput"), setMapSearchComposing, filterMarkers);
 document
   .getElementById("categorySelect")
   .addEventListener("change", filterMarkers);
@@ -3282,8 +3327,8 @@ function renderSearch() {
   var events = homeEvents();
   var district = searchDistrict(keyword);
   var districtPicks = district ? districtEvents(events, district) : [];
-  // 입력 중: 그대로 찾아 없으면 치는 중인 마지막 글자를 넓혀 찾음 ("숭" → 수원, "수워" → 수원). 엔터 결과는 그대로
-  var typing = !results && searchTyping(events, keyword);
+  // 입력 중: 조합 중이면 마지막 글자를 넓혀 찾음 ("과" → 광복, 그대로 맞는 행사가 위), 조합이 끝났으면 그대로 찾아 없을 때만 ("숭" → 수원). 엔터 결과는 그대로
+  var typing = !results && searchTypingMode(events, keyword, searchViewComposing);
   var picks = searchEvents(events, keyword, undefined, typing); // 운영중 · 오픈예정(종료 임박순) → 날짜 없음 → 종료
   var html = searchDistrictRowHtml(district, districtPicks.length);
   if (results) {
@@ -3345,10 +3390,21 @@ function showSearchResults() {
   renderSearch();
 }
 
-searchViewInput.addEventListener("input", function () {
+var searchViewComposing = false; // 검색 화면 입력칸에서 마지막 글자를 IME 로 조합하는 중 → 치는 중 규칙
+searchViewInput.addEventListener("input", function (e) {
   searchMode = "suggest"; // 다시 입력하면 입력 중 화면으로
+  searchViewComposing = !!e.isComposing;
   renderSearch();
 });
+watchSearchComposition(
+  searchViewInput,
+  function (on) {
+    searchViewComposing = on;
+  },
+  function () {
+    if (searchOpen) renderSearch();
+  },
+);
 searchViewInput.addEventListener("keydown", function (e) {
   if (e.key !== "Enter" || e.isComposing) return; // 한글 조합 중 엔터는 글자 확정
   e.preventDefault();
@@ -4551,9 +4607,11 @@ function moveMapToSearchResults() {
   }
 }
 
-pcSearchInput.addEventListener("input", function () {
+pcSearchInput.addEventListener("input", function (e) {
+  mapSearchComposing = !!e.isComposing; // 조합 중 "과" → 광복도 (home-picks.js searchTypingMode)
   setPcSearch(pcSearchInput.value);
 });
+watchSearchComposition(pcSearchInput, setMapSearchComposing, filterMarkers);
 pcSearchInput.addEventListener("keydown", function (e) {
   if (e.key === "Escape" && pcSearchInput.value) {
     e.preventDefault(); // 브라우저 기본(검색칸 비우기)과 같은 일을 지도 이동 없이

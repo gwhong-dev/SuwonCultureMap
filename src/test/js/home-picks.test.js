@@ -18,6 +18,9 @@ const {
   searchHighlight,
   searchDistrict,
   searchTyping,
+  searchTypingMode,
+  searchLooseOnly,
+  searchLooseLast,
   SEARCH_SUGGEST_MAX,
 } = require("../../main/resources/static/home-picks.js");
 
@@ -321,6 +324,73 @@ test("치는 중 규칙: 그대로 찾아 없을 때만 마지막 글자를 넓�
   assert.ok(!matchesSearch({ title: "달기 축제", place: "" }, "닭"));
   // 띄어쓰기가 낀 제목에서도 원래 제목 기준 강조
   assert.deepStrictEqual(searchHighlight("수 원 축제", "숭", true), { start: 0, end: 3 });
+});
+
+test("조합 중 규칙: '광복'을 치는 동안 모든 중간 글자에서 광복이 보임 ('과' 가 든 다른 행사가 있어도, 11/13)", () => {
+  const events = [
+    { id: 1, title: "치킨과 함께하는 미식여행", place: "" },
+    { id: 2, title: "광복절 기념 음악회", place: "" },
+    { id: 3, title: "고궁 산책", place: "" },
+  ];
+  // 두벌식으로 '광복' 을 칠 때 입력칸에 보이는 글자 (마지막 글자는 조합 중)
+  for (const keyword of ["ㄱ", "고", "과", "광", "광ㅂ", "광보", "광복"]) {
+    const typing = searchTypingMode(events, keyword, true);
+    assert.ok(searchEvents(events, keyword, WED, typing).some((e) => e.id === 2), keyword + " 에서 광복이 빠짐");
+  }
+  // 예전 규칙(조합 여부 모름)은 '과' 에서 치킨'과' 만 → 광복이 빠졌던 문제
+  assert.ok(!searchTyping(events, "과"));
+  assert.deepStrictEqual(ids(searchEvents(events, "과", WED, searchTyping(events, "과"))), [1]);
+  // 조합 중 '과': 그대로 맞는 치킨'과' 가 위, 넓혀서 맞는 광복이 아래
+  assert.ok(searchTypingMode(events, "과", true));
+  assert.deepStrictEqual(ids(searchEvents(events, "과", WED, true)), [1, 2]);
+  assert.ok(searchLooseOnly(events[1], "과", true));
+  assert.ok(!searchLooseOnly(events[0], "과", true));
+  assert.ok(!searchLooseOnly(events[1], "과", false)); // 치는 중 규칙이 아니면 늘 false
+  // 강조도 넓힌 규칙으로: '과' → 광복의 '광'
+  assert.deepStrictEqual(searchHighlight("광복절 기념 음악회", "과", true), { start: 0, end: 1 });
+});
+
+test("조합 여부별 치는 중 규칙: 조합 중이면 늘 넓힘, 끝난 글자는 그대로 없을 때만 (예전과 같음)", () => {
+  const events = [
+    { id: 4, title: "시민 음악회", place: "" },
+    { id: 5, title: "미술 체험", place: "" },
+  ];
+  // 조합이 끝난 '미' 는 그대로 (민 · 밀까지 넓히지 않음)
+  assert.ok(!searchTypingMode(events, "미", false));
+  assert.deepStrictEqual(ids(searchEvents(events, "미", WED, searchTypingMode(events, "미", false))), [5]);
+  // 조합 중 '미' → 미술 먼저, 시민(민)은 아래
+  assert.ok(searchTypingMode(events, "미", true));
+  assert.deepStrictEqual(ids(searchEvents(events, "미", WED, true)), [5, 4]);
+  // 조합이 끝났어도 그대로 맞는 게 없으면 넓힘 (조합 이벤트를 안 내는 키보드 대비): '숭' → 수원
+  assert.ok(searchTypingMode([{ id: 1, title: "수원 화성", place: "" }], "숭", false));
+  // 빈 검색어는 조합 중이어도 규칙 없음
+  assert.ok(!searchTypingMode(events, "", true));
+  assert.ok(!searchTypingMode(events, "  ", true));
+});
+
+test("조합 중 순서: 묶음(운영중 → 날짜 없음 → 종료)이 먼저, 그 안에서 그대로 맞는 행사가 위 (진행 중 행사가 20줄 밖으로 밀리지 않게)", () => {
+  const events = [
+    ev(1, "2026-09-01", "2026-10-01", "기념 사진전"), // 종료, 그대로 맞음
+    ev(2, "2026-11-01", "2026-11-30", "김준수 : 수궁"), // 운영중, 넓혀서만 맞음
+    ev(3, "2026-11-01", "2026-11-20", "가을 기타 연주"), // 운영중, 그대로 맞음
+  ];
+  assert.deepStrictEqual(ids(searchEvents(events, "기", WED, true)), [3, 2, 1]);
+  assert.deepStrictEqual(ids(searchEvents(events, "기", WED, false)), [3, 1]); // 조합이 끝난 '기' 는 그대로
+});
+
+test("searchLooseLast: 정렬한 순서는 두고 넓혀서만 맞는 줄을 아래로 (PC 목록 줄 { event } 도)", () => {
+  const rows = [
+    { event: { id: 2, title: "광복절 기념 음악회", place: "" } },
+    { event: { id: 1, title: "치킨과 함께하는 미식여행", place: "" } },
+    { event: { id: 6, title: "과학 축제", place: "" } },
+  ];
+  const eventOf = (row) => row.event;
+  assert.deepStrictEqual(
+    searchLooseLast(rows, "과", true, eventOf).map((r) => r.event.id),
+    [1, 6, 2],
+  );
+  // 치는 중 규칙이 아니면 그대로
+  assert.strictEqual(searchLooseLast(rows, "과", false, eventOf), rows);
 });
 
 test("검색어의 \\ · 이모지 · 정규식 기호도 글자 그대로 (예외 없음, 검증 ⚠️)", () => {
