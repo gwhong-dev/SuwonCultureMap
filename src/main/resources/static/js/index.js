@@ -1985,6 +1985,7 @@ function buildPcCategoryMenu() {
         return;
       }
       e.preventDefault();
+      e.stopPropagation(); // Esc 가 상세 창 닫기 · 키 툴팁 끄기(document keydown)까지 가지 않게 (#261 검증 ⚠️)
       closeCatMenu(true);
       return;
     }
@@ -4441,6 +4442,7 @@ pcSearchInput.addEventListener("input", function () {
 pcSearchInput.addEventListener("keydown", function (e) {
   if (e.key === "Escape" && pcSearchInput.value) {
     e.preventDefault(); // 브라우저 기본(검색칸 비우기)과 같은 일을 지도 이동 없이
+    e.stopPropagation(); // 검색어만 지우고 상세 칸 키 툴팁은 그대로 (#261 검증 ⚠️)
     setPcSearch("");
   }
 });
