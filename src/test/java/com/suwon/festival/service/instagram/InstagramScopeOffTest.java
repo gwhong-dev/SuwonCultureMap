@@ -93,7 +93,7 @@ class InstagramScopeOffTest {
     when(mergeRunner.runAfterSync()).thenReturn(new MergeSummary(true, 0, 0, 0));
 
     new ScheduledSyncJob(foundationSync, instagramSyncService, mergeRunner, mock(EventDistrictFiller.class),
-        mock(EventRepository.class)).runScheduled();
+        mock(EventRepository.class), mock(com.suwon.festival.service.landmark.LandmarkSyncService.class)).runScheduled();
 
     verify(client, never()).fetchRecent(anyString(), anyInt());
     verify(foundationSync).syncEvents();

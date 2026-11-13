@@ -35,7 +35,8 @@ public class SyncLogService {
     this(repository, Clock.system(KST));
   }
 
-  SyncLogService(SyncLogRepository repository, Clock clock) {
+  // 시험용 (고정 시계). 다른 패키지 시험(명소 하루 1회)에서도 씀
+  public SyncLogService(SyncLogRepository repository, Clock clock) {
     this.repository = repository;
     this.clock = clock;
   }
@@ -66,6 +67,17 @@ public class SyncLogService {
     } catch (RuntimeException e) {
       // 메시지는 남기지 않음 (DB 오류에 값이 섞일 수 있음)
       log.warn("동기화 이력 저장 실패 source={} status={} {}", source, status, e.getClass().getSimpleName());
+    }
+  }
+
+  // 출처별 마지막 성공 시각 (명소 하루 1회 판단용). 조회 실패면 비어 있음 → 부르는 쪽은 "할 때가 됨"으로 봄
+  public Optional<LocalDateTime> lastSuccessAt(SyncLog.Source source) {
+    try {
+      return repository.findFirstBySourceAndStatusOrderByFinishedAtDescIdDesc(source, SyncLog.Status.SUCCESS)
+          .map(SyncLog::getFinishedAt);
+    } catch (RuntimeException e) {
+      log.warn("동기화 이력 조회 실패 {}", e.getClass().getSimpleName());
+      return Optional.empty();
     }
   }
 

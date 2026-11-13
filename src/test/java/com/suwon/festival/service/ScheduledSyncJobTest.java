@@ -20,6 +20,8 @@ import com.suwon.festival.entity.Event;
 import com.suwon.festival.repository.EventRepository;
 import com.suwon.festival.service.instagram.InstagramSyncResult;
 import com.suwon.festival.service.instagram.InstagramSyncService;
+import com.suwon.festival.service.landmark.LandmarkSyncResult;
+import com.suwon.festival.service.landmark.LandmarkSyncService;
 import com.suwon.festival.service.merge.EventMergeRunner;
 import com.suwon.festival.service.merge.MergeSummary;
 import com.suwon.festival.service.place.EventDistrictFiller;
@@ -32,8 +34,9 @@ class ScheduledSyncJobTest {
   private final EventMergeRunner eventMergeRunner = mock(EventMergeRunner.class);
   private final EventDistrictFiller eventDistrictFiller = mock(EventDistrictFiller.class);
   private final EventRepository eventRepository = mock(EventRepository.class);
-  private final ScheduledSyncJob job =
-      new ScheduledSyncJob(eventSyncService, instagramSyncService, eventMergeRunner, eventDistrictFiller, eventRepository);
+  private final LandmarkSyncService landmarkSyncService = mock(LandmarkSyncService.class);
+  private final ScheduledSyncJob job = new ScheduledSyncJob(eventSyncService, instagramSyncService, eventMergeRunner,
+      eventDistrictFiller, eventRepository, landmarkSyncService);
 
   @BeforeEach
   void setUp() throws Exception {
@@ -41,6 +44,41 @@ class ScheduledSyncJobTest {
     when(instagramSyncService.sync())
         .thenReturn(new InstagramSyncResult(true, null, 1, 1, List.of(), 1, 1, 0, Map.of("READY", 3), Map.of(), 3, 0, 0, null, null));
     when(eventMergeRunner.runAfterSync()).thenReturn(new MergeSummary(true, 0, 0, 0));
+    when(landmarkSyncService.isDue()).thenReturn(true);
+    when(landmarkSyncService.sync()).thenReturn(new LandmarkSyncResult(true, false, 75, 75, 0, 0, 2, 8, List.of(), List.of()));
+  }
+
+  @Test
+  void 명소는_하루_한_번_때가_됐을_때만() throws Exception {
+    job.runScheduled();
+    verify(landmarkSyncService).sync();
+
+    when(landmarkSyncService.isDue()).thenReturn(false);
+    job.runScheduled();
+    verify(landmarkSyncService, times(1)).sync(); // 두 번째는 건너뜀
+    verify(eventSyncService, times(2)).syncEvents(); // 행사는 매번
+  }
+
+  @Test
+  void 명소가_실패해도_구정보와_합치기는_실행() {
+    when(landmarkSyncService.sync()).thenThrow(new IllegalStateException("가상 실패"));
+
+    job.runScheduled();
+
+    verify(eventDistrictFiller).fillMissing();
+    verify(eventMergeRunner).runAfterSync();
+  }
+
+  @Test
+  void 행사는_있고_명소가_없는_DB는_시작_직후_명소만() throws Exception {
+    when(eventRepository.existsBySource(Event.SOURCE_SWCF)).thenReturn(true);
+    when(landmarkSyncService.isEmpty()).thenReturn(true);
+
+    job.runIfEmpty();
+
+    verify(landmarkSyncService).sync();
+    verify(eventSyncService, never()).syncEvents();
+    verify(eventMergeRunner, never()).runAfterSync();
   }
 
   @Test
