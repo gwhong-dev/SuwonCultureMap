@@ -1,4 +1,4 @@
-// PC 카드 규칙 시험 (11/13 확정 시안 P1 · Q4 D안) — 배지 · 기간 줄 · 장소 줄 · 마커 튀어오름 · 키 범위 · 넘기기 · 위치 점 · 길찾기 창 자리
+// PC 카드 규칙 시험 (11/13 확정 시안 P1 · Q4 D안 · R1 B · R2) — 배지 · 기간 줄 · 장소 줄 · 마커 튀어오름 · 키 범위 · 넘기기 · ‹ › 줄 · 길찾기 창 자리
 const test = require("node:test");
 const assert = require("node:assert");
 const {
@@ -16,8 +16,7 @@ const {
   PC_ZOOM_MAX,
   pcMoveKind,
   pcZoomState,
-  PC_DOTS_MAX,
-  pcPagerDots,
+  pcPagerState,
   pcPosText,
   routePopPosition,
 } = require("../../main/resources/static/pc-card.js");
@@ -231,16 +230,18 @@ test("넘기기: 목록 순서대로, 처음 · 끝에서 멈춤", () => {
   assert.strictEqual(pcStepId([5], 5, 1), null);
 });
 
-test("위치 점: 2~10개면 지금 것만 true, 10개 넘거나 1개뿐이면 점 없음", () => {
-  assert.strictEqual(PC_DOTS_MAX, 10);
-  assert.deepStrictEqual(pcPagerDots(2, 6), [false, false, true, false, false, false]);
-  assert.strictEqual(pcPagerDots(0, 10).length, 10);
-  assert.deepStrictEqual(pcPagerDots(0, 11), []); // 알약 "1 / 11" 만
-  assert.deepStrictEqual(pcPagerDots(0, 1), []);
-  assert.deepStrictEqual(pcPagerDots(0, 0), []);
+test("‹ › 줄 (R1 B · R2): 처음은 ‹ 만 · 끝은 › 만 멈춤, 가운데 'N / 전체'", () => {
+  const ids = [7, 3, 9];
+  assert.deepStrictEqual(pcPagerState(ids, 7), { canPrev: false, canNext: true, text: "1 / 3" }); // 처음
+  assert.deepStrictEqual(pcPagerState(ids, 3), { canPrev: true, canNext: true, text: "2 / 3" });
+  assert.deepStrictEqual(pcPagerState(ids, 9), { canPrev: true, canNext: false, text: "3 / 3" }); // 끝
+  assert.deepStrictEqual(pcPagerState([5], 5), { canPrev: false, canNext: false, text: "1 / 1" }); // 1개뿐 → 둘 다 멈춤
+  // 지금 행사가 목록에서 빠졌으면(필터) 위치 글은 비우고, 넘기기는 첫 행사로 갈 수 있음 (pcStepId 와 같은 규칙)
+  assert.deepStrictEqual(pcPagerState(ids, 42), { canPrev: true, canNext: true, text: "" });
+  assert.deepStrictEqual(pcPagerState([], 42), { canPrev: false, canNext: false, text: "" });
 });
 
-test("위치 알약: '3 / 6', 행사가 없으면 빈 글", () => {
+test("위치 글: '3 / 6', 행사가 없으면 빈 글", () => {
   assert.strictEqual(pcPosText(2, 6), "3 / 6");
   assert.strictEqual(pcPosText(29, 30), "30 / 30");
   assert.strictEqual(pcPosText(-1, 4), "1 / 4");

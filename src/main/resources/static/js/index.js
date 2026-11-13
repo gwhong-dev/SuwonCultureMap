@@ -3850,7 +3850,6 @@ function drawPcDetail() {
   hint.hidden = false;
   empty.hidden = true;
   var ids = pcOrderIds();
-  var index = ids.indexOf(event.id);
 
   if (pcRenderedId !== event.id) {
     pcRenderedId = event.id;
@@ -3871,17 +3870,11 @@ function drawPcDetail() {
     }, PC_SETTLE_MS);
   }
 
-  // 위치 알약 · 점 · ‹ › (처음 · 끝이면 그쪽 단추 흐리게 — 포커스는 남김)
-  document.getElementById("pcdPos").textContent = index < 0 ? "" : pcPosText(index, ids.length); // pc-card.js
-  document.getElementById("pcdDots").innerHTML = pcPagerDots(index, ids.length) // pc-card.js
-    .map(function (on) {
-      return on ? '<span class="on"></span>' : "<span></span>";
-    })
-    .join("");
-  var canPrev = pcStepId(ids, event.id, -1) !== null;
-  var canNext = pcStepId(ids, event.id, 1) !== null;
-  document.getElementById("pcdPrev").setAttribute("aria-disabled", canPrev ? "false" : "true");
-  document.getElementById("pcdNext").setAttribute("aria-disabled", canNext ? "false" : "true");
+  // 포스터 아래 ‹ 3 / 30 › 줄 (처음 · 끝이면 그쪽 단추 화살표만 흐리게 — 포커스는 남김)
+  var pager = pcPagerState(ids, event.id); // pc-card.js
+  document.getElementById("pcdPos").textContent = pager.text;
+  document.getElementById("pcdPrev").setAttribute("aria-disabled", pager.canPrev ? "false" : "true");
+  document.getElementById("pcdNext").setAttribute("aria-disabled", pager.canNext ? "false" : "true");
 
   // 배지 → 제목 → 기간 · 시간 · 장소 · 요금 (값이 있는 줄만)
   document.getElementById("pcdBadges").outerHTML = pcBadgesHtml(event, "pcd-badges").replace('<div class="pcd-badges">', '<div id="pcdBadges" class="pcd-badges">');

@@ -230,6 +230,8 @@
   "pcd.source": "원문 보기",
   "pcd.hintNav": "넘기기",
   "pcd.hintFav": "찜",
+  "pcd.tipPrev": "이전", // PC 상세 칸 ‹ 툴팁 (짧게, R3 A)
+  "pcd.tipNext": "다음",
   "pcd.live": "{i} / {n} · {title}",
   "pcd.emptyTitle": "조건에 맞는 행사가 없어요",
   "pcd.emptyBody": "분류 · 날짜 · 검색어를 바꿔 보세요",

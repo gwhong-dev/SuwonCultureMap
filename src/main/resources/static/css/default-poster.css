@@ -92,3 +92,21 @@
 .poster-img:has(.status-badge) .dp-inner {
   padding-top: 30px;
 }
+/* PC 상세 칸 포스터 400×300 (확정 시안 R1 B — docs/design/2026-11-13-pc-pending.md):
+   분류 글자 위 왼쪽(22px 24px) → 제목 그 아래 20px, 위쪽 정렬(세로 가운데 아님) → 장소는 맨 아래 왼쪽 */
+.default-poster.pcd-img .dp-inner {
+  gap: 0;
+  padding: 22px 24px;
+}
+.default-poster.pcd-img .dp-label,
+.default-poster.pcd-img .dp-place {
+  font-size: 13px;
+}
+.default-poster.pcd-img .dp-title {
+  margin: 20px 0 0;
+  font-size: 26px;
+  line-height: 1.35;
+}
+.default-poster.pcd-img .dp-place {
+  margin-top: auto;
+}
