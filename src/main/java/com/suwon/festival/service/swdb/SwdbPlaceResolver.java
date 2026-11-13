@@ -42,10 +42,16 @@ public class SwdbPlaceResolver {
   static final int PLACE_MAX = 500; // event.place 칸 길이
 
   // 수원시 도로명 주소("수원시 영통구 반달로7번길 40") 또는 지번 주소("수원시 팔달구 인계동 1127", "하동 1023")
+  // 끝 번호 뒤에 숫자 · "번길" 이 이어지면 건물번호가 아님("정조로 825번길" → 주소로 안 봄, 검증 지적)
   private static final Pattern ADDRESS = Pattern.compile(
-      "수원시\\s+\\S+구\\s+(?:\\S+(?:로|길)(?:\\s*\\d+번?길)?\\s*\\d+(?:-\\d+)?|\\S+(?:동|가)\\d*\\s*(?:산\\s*)?\\d+(?:-\\d+)?)");
-  // "화성시 " "서울특별시 " 처럼 수원이 아닌 시 이름 (뒤에 빈칸 — "수원시립미술관" 같은 이름은 안 걸림)
-  private static final Pattern CITY = Pattern.compile("([가-힣]{2,4})(?:특별시|광역시|시)\\s");
+      "수원(?:특례)?시\\s+\\S+구\\s+(?:\\S+(?:로|길)(?:\\s*\\d+번?길)?\\s*\\d+(?:-\\d+)?"
+          + "|\\S+(?:동|가)\\d*\\s*(?:산\\s*)?\\d+(?:-\\d+)?)(?![\\d번길])");
+  // 수원 밖: 도 이름 뒤의 시 · 군("경기 화성시 ") 또는 광역 · 특별시로 시작("서울 중구 ")
+  // 도 이름을 붙여야 함 — "기획전시 공간" 의 "전시 " 같은 말을 시 이름으로 잘못 읽지 않게 (검증 지적)
+  private static final Pattern CITY = Pattern.compile(
+      "(?:경기도?|강원(?:특별자치)?도?|충청남도|충남|충청북도|충북)\\s+([가-힣]{1,4}?)(?:특례시|시|군)\\s");
+  private static final Pattern METRO = Pattern.compile(
+      "(?:^|[\\s(])(?:서울|인천|부산|대구|광주|대전|울산|세종)(?:특별시|광역시|특별자치시)?\\s");
   private static final Pattern WIDE = Pattern.compile("일대|일원|곳곳|이동형|순회");
   private static final Pattern WIDE_BASE = Pattern.compile("^(.+?)\\s*(?:일대|일원|곳곳)");
   private static final Pattern PAREN = Pattern.compile("\\([^)]*\\)|（[^）]*）");
@@ -117,13 +123,15 @@ public class SwdbPlaceResolver {
     return byName(first, label(text), WIDE_NOTE + "\n장소 원문: " + text);
   }
 
-  // "A, B, C" → 좌표를 찾은 첫 장소
+  // "A, B, C" → 좌표를 찾은 첫 장소. 카드 · 길찾기 이름도 핀을 찍은 장소로 ("여러 장소 · B 외 2곳", 검증 지적)
   private Result resolveMulti(String text, List<String> names) {
-    String place = multiLabel(names, names.size());
     String note = MULTI_NOTE + "\n장소 전체: " + text;
     Result last = Result.fail(Status.NO_COORD, "여러 장소 모두 못 찾음");
     for (String name : names) {
-      Result r = byName(name, place, note);
+      List<String> ordered = new ArrayList<>(names);
+      ordered.remove(name);
+      ordered.add(0, name);
+      Result r = byName(name, multiLabel(ordered, names.size()), note);
       if (r.status() == Status.FOUND || r.status() == Status.ERROR) return r;
       last = r;
     }
@@ -140,13 +148,14 @@ public class SwdbPlaceResolver {
   }
 
   static boolean outsideSuwon(String text) {
-    Matcher m = CITY.matcher(text + " ");
+    String t = text + " ";
+    Matcher m = CITY.matcher(t);
     boolean otherCity = false;
     while (m.find()) {
-      if (m.group(1).endsWith("수원")) return false;
+      if (m.group(1).startsWith("수원")) return false; // 수원시 · 수원특례시
       otherCity = true;
     }
-    return otherCity;
+    return otherCity || (METRO.matcher(t).find() && !t.contains("수원"));
   }
 
   static List<String> addresses(String text) {

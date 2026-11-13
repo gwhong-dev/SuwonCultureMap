@@ -108,7 +108,7 @@ class SwdbPlaceResolverTest {
   }
 
   @Test
-  void 여러_장소는_찾은_첫_장소에_핀_카드엔_외_N곳_상세엔_안내() {
+  void 여러_장소는_찾은_첫_장소에_핀_카드엔_그_장소_외_N곳_상세엔_안내() {
     places.add("푸른지대창작샘터", 37.27, 126.98);
     String raw = "111CM, 푸른지대창작샘터, 정조테마공연장, 지혜샘어린이도서관";
 
@@ -116,7 +116,7 @@ class SwdbPlaceResolverTest {
 
     assertThat(r.status()).isEqualTo(Status.FOUND);
     assertThat(r.lat()).isEqualTo(37.27);
-    assertThat(r.place()).isEqualTo("여러 장소 · 111CM 외 3곳");
+    assertThat(r.place()).isEqualTo("여러 장소 · 푸른지대창작샘터 외 3곳"); // 핀을 찍은 장소 이름 (길찾기 이름과 핀이 같게)
     assertThat(r.note()).startsWith(SwdbPlaceResolver.MULTI_NOTE).contains(raw);
   }
 
@@ -127,7 +127,7 @@ class SwdbPlaceResolverTest {
     var r = resolver.resolve("7/9 수원 신곡초(1층 미래관), 7/10 수원 신성초(4층 다목적실), 7/22 수원 영화초(3층)");
 
     assertThat(r.status()).isEqualTo(Status.FOUND);
-    assertThat(r.place()).isEqualTo("여러 장소 · 수원 신곡초 외 2곳");
+    assertThat(r.place()).isEqualTo("여러 장소 · 수원 신성초 외 2곳");
   }
 
   @Test
@@ -166,5 +166,33 @@ class SwdbPlaceResolverTest {
     places.fail = true;
 
     assertThat(resolver.resolve("가상 아트홀").status()).isEqualTo(Status.ERROR);
+  }
+
+  @Test
+  void 수원특례시_주소도_수원() {
+    // 카카오는 결과 주소를 "경기 수원시 …" 로 돌려줌
+    addresses.known.put("수원특례시 팔달구 효원로 1",
+        new PlaceCandidate("경기 수원시 팔달구 효원로 1", "경기 수원시 팔달구 효원로 1", null, 37.26, 127.03));
+
+    var r = resolver.resolve("경기 수원특례시 팔달구 효원로 1 가상아트센터");
+
+    assertThat(r.status()).isEqualTo(Status.FOUND);
+  }
+
+  @Test
+  void 전시_같은_말은_시_이름이_아님() {
+    places.add("가상 갤러리 기획전시 공간", 37.28, 127.01);
+
+    assertThat(SwdbPlaceResolver.outsideSuwon("가상 갤러리 기획전시 공간")).isFalse();
+    assertThat(SwdbPlaceResolver.outsideSuwon("행궁동 상설전시 마당")).isFalse();
+    assertThat(SwdbPlaceResolver.outsideSuwon("서울 중구 가상로 1")).isTrue();
+    assertThat(SwdbPlaceResolver.outsideSuwon("경기도 화성시 가상로 1")).isTrue();
+  }
+
+  @Test
+  void 건물번호_없는_번길은_주소로_안_봄() {
+    assertThat(SwdbPlaceResolver.addresses("경기 수원시 팔달구 정조로 825번길")).isEmpty();
+    assertThat(SwdbPlaceResolver.addresses("경기 수원시 팔달구 정조로825번길 9 4호"))
+        .containsExactly("수원시 팔달구 정조로825번길 9");
   }
 }

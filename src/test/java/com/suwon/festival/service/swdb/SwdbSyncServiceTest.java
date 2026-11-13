@@ -226,4 +226,54 @@ class SwdbSyncServiceTest {
     assertThat(SwdbSyncService.isRecruitment("2026 수원시민예술학교 수강생 모집")).isTrue();
     assertThat(SwdbSyncService.isRecruitment("가상 연주회")).isFalse();
   }
+
+  @Test
+  void 오늘_끝나는_행사는_저장() {
+    client.pages.put(1, listPage(listItem(ONGOING, "listcategory2", "공연", "오늘 마지막 공연", "가상홀", "2026-11-10")));
+    client.details.put(ONGOING, detailPage("공연", "2026-11-10일 10:00부터 ~ 2026-11-13일 18:00까지", "가상홀"));
+
+    assertThat(service(true).sync().saved()).isEqualTo(1);
+  }
+
+  @Test
+  void 상세를_못_읽거나_저장이_실패해도_다음_행사는_계속() {
+    givenFirstPage();
+    client.pages.put(1, listPage(
+        listItem("202611010000000001", "listcategory2", "공연", "상세 없음", "가상홀", "2026-11-20"),
+        listItem(ONGOING, "listcategory2", "공연", "가상 연주회", "가상홀", "2026-11-28")));
+    when(repository.save(any())).thenThrow(new IllegalStateException("가상 DB 오류")).thenReturn(null);
+    client.details.put("202611010000000001", detailPage("공연", "2026-11-20일 10:00부터 ~ 2026-11-20일 12:00까지", "가상홀"));
+
+    var result = service(true).sync();
+
+    assertThat(result.skipped()).containsEntry(SwdbSyncService.Skip.ERROR, 1);
+    assertThat(result.saved()).isEqualTo(1);
+  }
+
+  @Test
+  void 목록_요청이_실패한_날은_다음_예약에_다시_시도() {
+    SwdbClient failing = new SwdbClient() {
+      int calls;
+
+      @Override
+      public String listPage(int page) {
+        if (calls++ == 0) throw new IllegalStateException("가상 네트워크 오류");
+        return listPage();
+      }
+
+      private String listPage() {
+        return SwdbHtmlParserTest.listPage();
+      }
+
+      @Override
+      public String detailPage(String reqIdx) {
+        return null;
+      }
+    };
+    SwdbSyncService s = new SwdbSyncService(failing, resolver, repository, syncLog, true, clock);
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(s::syncIfDue).isInstanceOf(IllegalStateException.class);
+    assertThat(s.syncIfDue().ran()).isTrue();
+    verify(syncLog).fail(eq(SyncLog.Source.SWDB), any(), eq(0), any(Throwable.class));
+  }
 }

@@ -26,7 +26,7 @@ import com.suwon.festival.service.SyncLogService;
 
 // 수원문화DB 행사정보 → event (source=SWDB, source_key=reqIdx). 결정 · 규칙: docs/decisions/2026-11-13-swdb-crawling.md
 //  - 스위치 swdb.sync.enabled (기본 false): 꺼져 있으면 요청을 보내지 않음. 이미 저장된 행은 그대로 둠
-//  - 하루 1회: 예약 동기화(06 · 18시)마다 불리지만 마지막 실행 뒤 20시간이 안 지났으면 건너뜀
+//  - 하루 1회: 예약 동기화(06 · 18시)마다 불리지만 마지막 성공 뒤 20시간이 안 지났으면 건너뜀 (실패한 날은 다음 예약에 다시)
 //  - 목록은 1쪽부터, 한 쪽 전체가 시작일 180일보다 오래되면 멈춤. 상세는 "처음 보는 행사" 와 "아직 안 끝난 저장 행사" 만
 //  - 거르기(저장 안 함): 이미 끝남 · 제목에 "모집" · 기간 이상 · 수원 밖 · 좌표를 못 찾음
 //  - 저장 안 하는 것: 소개글 · 주관단체 및 개인(개인 이름) · 문의처(휴대폰 번호) · 이미지 파일(원본 주소만)
@@ -101,7 +101,6 @@ public class SwdbSyncService {
     LocalDateTime startedAt = syncLogService.now();
     int listed = 0;
     try {
-      lastRunAt = LocalDateTime.now(clock);
       Map<Skip, Integer> skipped = new EnumMap<>(Skip.class);
       LocalDate today = LocalDate.now(clock);
       LocalDate recent = today.minusDays(RECENT_DAYS);
@@ -115,7 +114,15 @@ public class SwdbSyncService {
         for (SwdbHtmlParser.ListItem item : items) {
           boolean isRecent = item.listDate() != null && !item.listDate().isBefore(recent);
           anyRecent |= isRecent;
-          switch (syncItem(item, isRecent, today)) {
+          Outcome outcome;
+          try {
+            outcome = syncItem(item, isRecent, today);
+          } catch (RuntimeException e) {
+            // 한 행의 저장 오류(DB 제약 등)가 그날 실행 전체를 멈추지 않게 그 행만 건너뜀 (검증 지적)
+            log.warn("수원문화DB 행사 처리 실패 reqIdx={} {}", item.reqIdx(), e.getClass().getSimpleName());
+            outcome = Outcome.SKIPPED_ERROR;
+          }
+          switch (outcome) {
             case SAVED -> saved++;
             case UPDATED -> updated++;
             case NOT_READ -> { }
@@ -132,6 +139,8 @@ public class SwdbSyncService {
       }
 
       Result result = new Result(true, null, listed, saved, updated, skipped);
+      // 끝까지 돈 실행만 "오늘 실행함"으로 기록 → 06시에 목록 요청이 실패하면 18시에 다시 시도 (검증 지적)
+      lastRunAt = LocalDateTime.now(clock);
       syncLogService.success(SyncLog.Source.SWDB, startedAt, listed, saved, updated,
           result.skippedText().isEmpty() ? null : "건너뜀 " + result.skippedText());
       return result;
