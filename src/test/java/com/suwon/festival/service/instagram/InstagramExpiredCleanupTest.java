@@ -278,4 +278,48 @@ class InstagramExpiredCleanupTest {
     em.clear();
     return r;
   }
+  // 관광 대상 아닌 인스타 행사 정리 — 최근 글 몇 개만 다시 처리되므로 오래된 글로 이미 올라간 행사도 동기화 끝에 내림
+  private int cleanNonTourist() {
+    em.flush();
+    em.clear();
+    int n = cleaner.cleanNonTourist();
+    em.flush();
+    em.clear();
+    return n;
+  }
+
+  @Test
+  void 관광_대상_아닌_인스타_행사는_진행날짜_숨긴_행과_함께_지우고_블록은_SKIPPED() {
+    Event forum = insta("제12회 가상 교통정책발전포럼", TODAY.plusDays(1), TODAY.plusDays(1));
+    eventDateRepository.save(new EventDate(forum.getId(), TODAY.plusDays(1)));
+    Event hidden = insta("가상 교통정책 포럼 안내", TODAY.plusDays(1), TODAY.plusDays(1));
+    hidden.mergeInto(forum.getId());
+    Event hiddenSwcf = swcf("숨긴 재단 행사", TODAY.plusDays(1), TODAY.plusDays(1));
+    hiddenSwcf.mergeInto(forum.getId());
+    InstagramBlock b = block(forum, "1790000000000951");
+    Event concert = insta("가상 시립교향악단 정기연주회", TODAY.plusDays(1), TODAY.plusDays(1));
+
+    assertThat(cleanNonTourist()).isEqualTo(2); // 포럼 + 숨긴 포럼
+    assertThat(exists(forum)).isFalse();
+    assertThat(exists(hidden)).isFalse();
+    assertThat(exists(concert)).isTrue();
+    assertThat(eventDateRepository.findByEventId(forum.getId())).isEmpty();
+    assertThat(eventRepository.findById(hiddenSwcf.getId()).orElseThrow().getMergedIntoId()).isNull();
+    InstagramBlock after = blockRepository.findById(b.getId()).orElseThrow();
+    assertThat(after.getStatus()).isEqualTo(InstagramBlock.Status.SKIPPED);
+    assertThat(after.getEvent()).isNull();
+    assertThat(after.getReason()).isEqualTo("관광 대상 아님: 포럼");
+  }
+
+  @Test
+  void 관광_대상_아니어도_찜이_걸린_행사와_재단_행사는_남김() {
+    Event favored = insta("가상 센터 20주년 기념식", TODAY.plusDays(1), TODAY.plusDays(1));
+    Member member = memberRepository.save(Member.create());
+    favorite(member, favored);
+    Event swcfForum = swcf("가상 재단 포럼", TODAY.plusDays(1), TODAY.plusDays(1));
+
+    assertThat(cleanNonTourist()).isZero();
+    assertThat(exists(favored)).isTrue();
+    assertThat(exists(swcfForum)).isTrue();
+  }
 }

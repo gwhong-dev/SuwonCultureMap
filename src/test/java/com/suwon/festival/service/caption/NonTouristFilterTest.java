@@ -71,4 +71,29 @@ class NonTouristFilterTest {
     assertThat(r.status()).isEqualTo(CandidateStatus.SKIPPED);
     assertThat(r.reason()).isEqualTo("관광 대상 아님: 세미나");
   }
+  @Test
+  void 띄어쓰기를_넘어_걸리지_않고_축성_230주년_투어_같은_관광_행사는_남김() {
+    List<String> kept = List.of("화성행궁 야간 공개 관람", "어린이날 기념 식물 나눔", "우정 책방 북토크", "굿바이 어린이 인형극",
+        "수원화성 축성 230주년 기념 야간 투어", "3·1운동 107주년 만세 재현", "가상 미술관 개관 기념 특별전");
+    for (String title : kept) {
+      assertThat(NonTouristFilter.reason(title, "가상 광장")).as(title).isNull();
+    }
+  }
+
+  @Test
+  void 공청회_심포지엄_시상식_준공식도_거름() {
+    assertThat(NonTouristFilter.reason("가상 도시계획 공청회", "가상 시민홀")).isEqualTo("관광 대상 아님: 공청회");
+    assertThat(NonTouristFilter.reason("가상 국제 심포지엄", "가상 컨벤션센터")).isEqualTo("관광 대상 아님: 심포지엄");
+    assertThat(NonTouristFilter.reason("가상 시민상 시상식", "가상 대강당")).isEqualTo("관광 대상 아님: 시상식");
+    assertThat(NonTouristFilter.reason("가상 복합센터 준공식", "가상 복합센터")).isEqualTo("관광 대상 아님: 준공식");
+  }
+
+  @Test
+  void 날짜를_못_읽은_블록도_관광_대상_아니면_SKIPPED() {
+    String c = "가상 정책 토론회\n🗓️ 매주 금~일요일\n📍 가상 아트홀";
+    BlockResult r = new CaptionParser(null).parse(c).get(0);
+    assertThat(r.status()).isEqualTo(CandidateStatus.SKIPPED);
+    assertThat(r.reason()).isEqualTo("관광 대상 아님: 토론회");
+    assertThat(r.event().startDate()).isNull();
+  }
 }
