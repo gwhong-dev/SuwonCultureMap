@@ -95,6 +95,42 @@
 
     <div id="app">
       <div id="map"></div>
+      <!-- PC 상세 칸 (11/13 확정 시안 Q4 PcNavD1 — docs/design/2026-11-13-todo-additions.md): 지도 | 상세 440px(늘 열림) | 목록 340px
+           처음엔 목록 첫 행사, 포스터 양옆 ‹ › · 키보드 ← → 로 오른쪽 목록 순서대로 넘김 (index.js renderPcDetail · pc-card.js pcKeyAction). 모바일은 숨김 -->
+      <section id="pcDetail" aria-label="행사 상세" data-i18n-attr="aria-label:pcd.label" tabindex="-1" aria-describedby="kbdHint">
+        <div id="pcdScroll" class="pcd-scroll">
+          <div class="pcd-main">
+            <div id="pcdPosterBox" class="pcd-poster-box">
+              <div id="pcdPoster" class="pcd-poster"></div>
+              <div class="pcd-nav prev">
+                <button id="pcdPrev" type="button" class="pcd-arrow" aria-label="이전 행사" data-i18n-attr="aria-label:detail.prev" aria-keyshortcuts="ArrowLeft" aria-describedby="kbdHint">‹</button>
+                <span class="pcd-tip" aria-hidden="true"><span data-i18n="detail.prev">이전 행사</span> <kbd>←</kbd></span>
+              </div>
+              <div class="pcd-nav next">
+                <button id="pcdNext" type="button" class="pcd-arrow" aria-label="다음 행사" data-i18n-attr="aria-label:detail.next" aria-keyshortcuts="ArrowRight" aria-describedby="kbdHint">›</button>
+                <span class="pcd-tip" aria-hidden="true"><span data-i18n="detail.next">다음 행사</span> <kbd>→</kbd></span>
+              </div>
+              <span id="pcdPos" class="pcd-pos"></span>
+            </div>
+            <div id="pcdDots" class="pcd-dots" aria-hidden="true"></div>
+            <div id="pcdBadges" class="pcd-badges"></div>
+            <h2 id="pcdTitle" class="pcd-title"></h2>
+            <dl id="pcdRows" class="pcd-rows"></dl>
+            <div class="pcd-actions">
+              <button id="pcdFav" type="button" class="pcd-fav" aria-pressed="false" aria-keyshortcuts="Space" aria-describedby="kbdHint"></button>
+              <button id="pcdRoute" type="button" class="pcd-route"><span class="route-label" data-i18n="route.title">길찾기</span></button>
+              <a id="pcdSource" class="pcd-source" href="#" target="_blank" rel="noopener"></a>
+            </div>
+          </div>
+          <!-- 나머지 정보 (소개 · 위치 · 가까운 정류장 · 역 · 캘린더) — 상세 칸 안에서 스크롤 -->
+          <div id="pcdMore" class="pcd-more"></div>
+        </div>
+        <div id="pcdEmpty" class="pcd-empty" hidden></div>
+        <!-- 키 표시 줄 (칸 바닥 고정) -->
+        <div id="kbdHint" class="kbd-hint"><kbd>←</kbd><kbd>→</kbd> <span data-i18n="pcd.hintNav">넘기기</span> <span class="kbd-sep" aria-hidden="true">·</span> <kbd>Space</kbd> <span data-i18n="pcd.hintFav">찜</span></div>
+        <!-- 넘길 때 "3 / 6 · 제목" 을 읽어 주는 곳 (토스트와 겹치지 않게 여기 한 곳) -->
+        <div id="pcdLive" class="sr-only" aria-live="polite"></div>
+      </section>
       <button id="sidebarToggleBtn">›</button>
       <aside id="sidebar">
         <!-- 모바일 전용: 바텀시트 손잡이 + 결과 개수 (끌어올리기) -->
@@ -174,7 +210,7 @@
       <button type="button" id="listMapBtn" class="list-map-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z" /></svg><span data-i18n="sheet.map">지도 보기</span>
       </button>
-      <!-- 하단 카드 ("가까운 순 · 1 / N" + 좌우로 넘기는 카드). PC = 기본으로 늘 표시 (11/11), 모바일 = 지도 탭이면 늘 (P3)
+      <!-- 하단 카드 ("가까운 순 · 1 / N" + 좌우로 넘기는 카드). 모바일 = 지도 탭이면 늘 (P3), PC 는 없음 (11/13 Q4 D안 — 상세 칸이 대신함)
            모바일은 위치 글이 카드 아래 "밀어서 다음 행사 · 1 / 32" (CSS order). 띠 = 같은 장소 행사가 2개 이상일 때만 -->
       <div id="previewArea">
         <span id="previewLabel"></span>
@@ -189,8 +225,6 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>
         </div>
-        <!-- PC 전용: 카드 줄 키보드 안내 (카드에 포커스가 있을 때만 동작, pc-card.js pcCardKeyAction) -->
-        <span id="previewHint" class="preview-hint" data-i18n="strip.hint">Enter 상세 · Space 찜 · ← → 넘기기</span>
       </div>
     </div>
     <!-- 모바일 전용: 홈 화면 (docs/design/mobile-design-v1.md 01). 지도 위를 덮고 페이지 전체가 스크롤 -->
