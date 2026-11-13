@@ -476,8 +476,32 @@ class ScheduleDisplayPageTest {
     // PC 는 상세 창(덮개) 대신 상세 칸, 찜 토스트는 찜할 때만 1.6초
     assertThat(js).contains("pcSelect(event.id, { announce: true, pan: true, outside: true });", "var PC_FAV_TOAST_MS = 1600;");
     assertThat(js).doesNotContain("pcCardKeyAction(", "pcToastBottom(");
-    // PC 첫 화면은 화성행궁 중심으로 확대 (아래 카드 줄이 없어져 아래 여백 24px)
-    assertThat(js).contains("if (!mobileQuery.matches) fitPcFirstView();", "map.setBounds(bounds, 70, 24, 24, 24);");
+    // PC 첫 화면은 축척 250m(레벨 5) + 상세 칸 첫 행사가 중심 (11/13 확정 B1 · B2 — 전엔 네 곳 범위로 100m)
+    assertThat(js).contains("level: mobileQuery.matches ? 6 : PC_MAP_LEVEL,", "function pcCenterFirst()", "pcFavoritesReady = true;");
+    assertThat(js).doesNotContain("fitPcFirstView", "PC_FIRST_VIEW");
+  }
+
+  @Test
+  void PC_지도_확대_단추와_먼_행사_이동은_확정_시안대로() throws Exception {
+    // 11/13 확정 시안 R6 · R7 (docs/design/2026-11-13-pc-pending.md "③ 지도 · 키")
+    String html = page();
+    assertThat(html).contains(
+        "<div id=\"mapZoom\" role=\"group\" aria-label=\"지도 확대 축소\" data-i18n-attr=\"aria-label:map.zoomGroup\">",
+        "id=\"mapZoomIn\"", "aria-label=\"지도 확대\"", "id=\"mapZoomOut\"", "aria-label=\"지도 축소\"");
+    String css = fetch("/css/index.css").replace("\r\n", "\n");
+    int media = css.indexOf("@media (min-width: 1025px) {\n  #app {");
+    assertThat(media).isPositive();
+    String pc = block(css, css.indexOf("{", media));
+    assertThat(rule(pc, "#mapZoom {")).contains("margin: 0 16px 24px 0;", "border-radius: 8px;", "box-shadow: var(--shadow-float);");
+    assertThat(rule(pc, ".map-zoom-btn {")).contains("width: 40px;", "height: 40px;");
+    assertThat(rule(pc, ".map-zoom-btn[aria-disabled=\"true\"] {")).contains("color: var(--line-strong);");
+    // 모바일은 숨김 (공통 규칙)
+    assertThat(rule(css, "#mapZoom {")).contains("display: none;");
+
+    String js = script();
+    assertThat(js).contains("function setupPcZoom()", "pcZoomState(", "map.setLevel(level, { animate: true });");
+    // 먼 행사: 축소 → panTo → 원래 레벨, 움직임 줄이기면 setCenter (판정은 pc-card.js pcMoveKind — node 시험)
+    assertThat(js).contains("function pcMoveMap(position, reduce)", "pcMoveKind(", "if (pan) pcMoveMap(");
   }
 
   @Test

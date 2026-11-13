@@ -233,6 +233,9 @@
   "pcd.live": "{i} / {n} · {title}",
   "pcd.emptyTitle": "조건에 맞는 행사가 없어요",
   "pcd.emptyBody": "분류 · 날짜 · 검색어를 바꿔 보세요",
+  "map.zoomIn": "지도 확대",
+  "map.zoomOut": "지도 축소",
+  "map.zoomGroup": "지도 확대 축소",
 
   // ===== 오시는 길 (transit-nearby.js) =====
   "transit.stops": "가까운 정류장",
