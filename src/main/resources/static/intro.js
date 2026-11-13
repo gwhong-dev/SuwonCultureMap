@@ -148,7 +148,12 @@ function startIntro(win, doc) {
 
   var done = false;
   var timer = null;
-  function finish() {
+  function finish(e) {
+    // 건너뛰려고 누른 키가 아래 화면(카드 넘기기 ← → · 상세 닫기 Esc 등)까지 가지 않게 여기서 멈춤 (document 캡처 단계)
+    if (e && e.type === "keydown") {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (done) return;
     done = true;
     win.clearTimeout(timer);

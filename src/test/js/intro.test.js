@@ -174,6 +174,18 @@ test("누르거나 키를 누르면 바로 건너뜀, 두 번 눌러도 한 번�
 
   const env2 = fakeEnv("?intro=b", false);
   startIntro(env2.win, env2.doc);
-  env2.listeners.keydown();
+  const key = { type: "keydown", stopped: false, prevented: false };
+  key.preventDefault = () => { key.prevented = true; };
+  key.stopPropagation = () => { key.stopped = true; };
+  env2.listeners.keydown(key);
   assert.deepStrictEqual(env2.el.classes, ["intro-out"]);
+  assert.ok(key.prevented && key.stopped, "건너뛴 키가 아래 화면(카드 넘기기 · Esc 닫기)까지 가지 않음");
+});
+
+test("어두운 테마에서도 1안 문 안(--bg)이 덮개 바탕(--bar)과 다른 색", () => {
+  const theme = read("css/theme.css");
+  assert.match(introCss, /\.ix-hole \{\n  fill: var\(--bg\);/);
+  const dark = theme.slice(theme.indexOf('[data-theme="dark"]'));
+  const val = (name) => dark.match(new RegExp("--" + name + ": (#[0-9a-f]+)"))[1];
+  assert.notStrictEqual(val("bg"), val("bar"));
 });

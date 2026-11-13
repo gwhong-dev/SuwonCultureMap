@@ -45,7 +45,7 @@
   fill: var(--text);
 }
 .ix-hole {
-  fill: var(--surface);
+  fill: var(--bg); /* 문 안: 덮개 바탕(--bar)과 다른 칸 — 어두운 테마에서 --surface 는 --bar 와 같은 색이라 안 보임 */
   stroke: var(--sub);
   stroke-width: 1.2;
 }
