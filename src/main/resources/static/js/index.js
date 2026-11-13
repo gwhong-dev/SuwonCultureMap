@@ -235,15 +235,7 @@ function renderLocationMarkers(visibleItems) {
   });
 }
 
-// 시작일 오름차순 비교 (날짜 없는 행사는 뒤로)
-function compareStartDate(a, b) {
-  var da = a.event.startDate;
-  var db = b.event.startDate;
-  if (!da && !db) return 0;
-  if (!da) return 1;
-  if (!db) return -1;
-  return da.localeCompare(db);
-}
+// 시작일 오름차순 비교 compareStartDate 는 fav-sort.js (찜 날짜순과 같은 규칙)
 
 // 지도를 처음 열었을 때의 기본 위치: 행궁동 중심 = 화성행궁 광장 (팔달구 정조로 825, 디자인 02)
 // 좌표는 재단 API(XML)가 "화성행궁 광장 · 우화관 바깥마당" 행사에 주는 값과 같게 맞춤 → 그 장소 마커와 정확히 겹침
@@ -778,19 +770,61 @@ function renderEmptyBox(list, state, iconSvg) {
   list.appendChild(box);
 }
 
+// ===== 찜한 행사 정렬 [날짜순 | 이름순] (확정 시안 FavSortC, fav-sort.js) =====
+// 고른 값은 이 기기 브라우저 저장소에만. 접근만 해도 오류가 나는 브라우저가 있어 try
+var favSortStore = createFavSortStore(
+  (function () {
+    try {
+      return window.localStorage;
+    } catch (e) {
+      return null;
+    }
+  })(),
+  "suwonbible.favSort",
+);
+var lastSidebarItems = []; // 정렬 단추를 누르면 같은 목록을 다시 그림
+
+// 찜 구분 제목 오른쪽 단추 묶음. 누르면 저장 → 목록 다시 그림 → 누른 단추에 초점을 돌려 둠 (키보드 사용자)
+function favSortGroupHtml(mode) {
+  return (
+    '<div class="fav-sort" role="group" aria-label="찜한 행사 정렬">' +
+    FAV_SORT_OPTIONS.map(function (option) {
+      return (
+        '<button type="button" class="fav-sort-btn" data-sort="' +
+        option.value +
+        '" aria-pressed="' +
+        (option.value === mode) +
+        '">' +
+        option.label +
+        "</button>"
+      );
+    }).join('<span class="fav-sort-sep" aria-hidden="true">|</span>') +
+    "</div>"
+  );
+}
+
+function changeFavSort(mode) {
+  if (normalizeFavSort(mode) === favSortStore.get()) return;
+  var next = favSortStore.set(mode);
+  renderSidebar(lastSidebarItems);
+  var pressed = document.querySelector('#list .fav-sort-btn[data-sort="' + next + '"]');
+  if (pressed) pressed.focus({ preventScroll: true }); // 초점만 옮기고 보던 자리는 그대로
+}
+
 // ===== Side-bar 카드 렌더링 (이미지 + 제목 + info 요약) =====
 function renderSidebar(items) {
+  lastSidebarItems = items;
   var recent = showingRecent(); // 최근 본: 본 순서 그대로, 구분 제목 없음
-  // 찜한 행사는 맨 위에 이름순, 나머지는 시작일 순
+  // 찜한 행사는 맨 위에 고른 정렬(기본 날짜순), 나머지는 시작일 순
+  var favSort = favSortStore.get();
   var favorites = recent
     ? []
-    : items
-        .filter(function (item) {
+    : sortFavorites(
+        items.filter(function (item) {
           return favoriteEventIds.has(item.event.id);
-        })
-        .sort(function (a, b) {
-          return a.event.title.localeCompare(b.event.title, "ko");
-        });
+        }),
+        favSort,
+      );
   var others = recent
     ? items
     : items
@@ -836,7 +870,19 @@ function renderSidebar(items) {
     h.textContent = text;
     list.appendChild(h);
   }
-  if (favorites.length > 0) addSectionTitle("★ 찜한 행사 " + favorites.length + "개 (이름순)");
+  if (favorites.length > 0) {
+    // 왼쪽 제목 + 오른쪽 [날짜순 | 이름순]
+    var favTitle = document.createElement("div");
+    favTitle.className = "list-section-title fav-section-title";
+    favTitle.innerHTML =
+      '<span class="fav-section-label">★ 찜한 행사 ' + favorites.length + "개</span>" + favSortGroupHtml(favSort);
+    favTitle.querySelectorAll(".fav-sort-btn").forEach(function (button) {
+      button.addEventListener("click", function () {
+        changeFavSort(button.dataset.sort);
+      });
+    });
+    list.appendChild(favTitle);
+  }
 
   sorted.forEach(function (item, index) {
     if (favorites.length > 0 && index === favorites.length) {
