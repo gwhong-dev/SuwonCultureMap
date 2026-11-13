@@ -7,5 +7,5 @@ public enum CandidateStatus {
   NO_DATE,  // 날짜를 못 읽음 → 지도 제외, 보류
   PENDING,  // 규칙으로 못 읽었고 AI 미연결 → AI 연결 뒤 다시 처리
   FAILED,   // 형식 · 검사 실패 → 지도 제외
-  SKIPPED   // 행사가 아님 (공지 · 소개 등)
+  SKIPPED   // 행사가 아님 (공지 · 소개 등) · 관광 대상 아님 (NonTouristFilter, 읽은 값 event 는 남음)
 }

@@ -44,6 +44,13 @@ final class BlockLog {
     return "블록 " + InstagramBlock.Status.RETIRED + " | 게시물 " + mediaId + " | 키 " + key + " | 제목 " + clean(title, TITLE_MAX);
   }
 
+  // 관광 대상 아님으로 바뀌어 예전 행사를 지운 블록
+  static String droppedLine(String mediaId, String blockKey, String title, String reason) {
+    String key = blockKey.substring(0, Math.min(KEY_PREFIX, blockKey.length()));
+    return "블록 " + InstagramBlock.Status.SKIPPED + " | 게시물 " + mediaId + " | 키 " + key + " | 제목 " + clean(title, TITLE_MAX)
+        + " | " + clean(reason, REASON_MAX) + " — 행사 삭제";
+  }
+
   // 줄바꿈 · 제어문자 · 보이지 않는 서식 문자(방향 제어 등) · 유니코드 줄 구분 문자 → 공백, 앞 max 글자만 (이모지는 반으로 안 자름)
   static String clean(String s, int max) {
     if (s == null || s.isBlank()) return "-";

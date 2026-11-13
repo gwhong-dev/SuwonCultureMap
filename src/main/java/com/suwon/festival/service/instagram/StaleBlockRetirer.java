@@ -26,7 +26,8 @@ import com.suwon.festival.service.merge.MergeCandidate;
 //    이미 같은 글에 따로 있던 행사는 제목이 비슷해도 다른 행사이므로 뒤를 잇는 행사로 보지 않음 (본편 ↔ 앙코르)
 //  - 뒤를 잇는 행사가 없으면 이번 처리가 "확정"일 때만 내림: READY 가 1개 이상이고, 나머지는 공지(SKIPPED)뿐.
 //    못 읽은 블록 · 좌표 실패 · 날짜 없음이 있으면 그중 하나가 이 행사의 새 모습일 수 있어 다음 실행으로 미룸
-//    (SKIPPED 는 지금 나오지 않음. AI 를 붙이면 일시적인 "행사 아님"이 멀쩡한 행사를 내리지 않는지 다시 볼 것)
+//    (SKIPPED 는 지금 "관광 대상 아님" 규칙(NonTouristFilter)에서만 나옴 — 다음에도 같은 결과.
+//     AI 를 붙이면 일시적인 "행사 아님"이 멀쩡한 행사를 내리지 않는지 다시 볼 것)
 //  - 옛 제목이 캡션에 그대로 있으면 미룸: 날짜 라벨을 못 읽으면 블록 자체가 안 나와 "확정"으로 보일 수 있음
 //  - 찜은 뒤를 잇는 행사로 옮김. 옮길 곳이 없으면 행사를 그대로 둠 (찜을 잃지 않음, 찜이 풀리면 다음 실행에서 내림)
 //    숨김(merged_into_id)으로 처리하지 않는 이유: 합치기는 매번 전체를 다시 계산해 그 값을 되돌림
@@ -99,6 +100,23 @@ class StaleBlockRetirer {
       logLines.add(BlockLog.retiredLine(mediaId, block.getBlockKey(), event.getTitle()));
     }
     return logLines;
+  }
+
+  // 관광 대상 아님(NonTouristFilter)으로 바뀐 블록의 행사 내리기 (InstagramPostProcessor, 같은 트랜잭션)
+  // 뒤를 잇는 행사가 없으므로 찜이 걸려 있으면 남김 (찜을 잃지 않음). 내렸으면 로그 줄, 남겼으면 null
+  String dropNonTourist(String mediaId, InstagramBlock block, String reason, LocalDateTime now) {
+    Event event = block.getEvent();
+    if (event == null) return null;
+    int favorites = favoriteRepository.findByEventId(event.getId()).size();
+    if (favorites > 0) {
+      log.warn("관광 대상 아님이지만 찜이 걸려 있어 내리지 않음 eventId={} 찜 {}건", event.getId(), favorites);
+      return null;
+    }
+    String title = event.getTitle(); // 지운 뒤엔 지연 로딩 프록시를 못 읽음 → 먼저 읽어 둠
+    eventRepository.findByMergedIntoId(event.getId()).forEach(hidden -> hidden.mergeInto(null));
+    block.update(InstagramBlock.Status.SKIPPED, reason, null, now);
+    eventRepository.delete(event);
+    return BlockLog.droppedLine(mediaId, block.getBlockKey(), title, reason);
   }
 
   private static Event successorOf(Event event, List<Event> fresh) {

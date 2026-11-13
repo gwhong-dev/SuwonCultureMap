@@ -68,6 +68,13 @@ public class CaptionParser {
 
   private static BlockResult checked(CaptionBlock block, Source source, ParsedEvent event) {
     ParsedEventValidator.Result v = ParsedEventValidator.validate(event, block.text());
+    // 관광 대상 아님 (규칙 · AI 결과 모두) → SKIPPED. 읽은 값은 남김: 블록 키가 그대로여야 예전에 올라간 행사를 찾아 내림
+    if (v.event() != null && (v.status() == CandidateStatus.PARSED || v.status() == CandidateStatus.NO_DATE)) {
+      String nonTourist = NonTouristFilter.reason(v.event().title(), v.event().placeName());
+      if (nonTourist != null) {
+        return new BlockResult(block, source, CandidateStatus.SKIPPED, v.event(), nonTourist, v.warnings());
+      }
+    }
     return new BlockResult(block, source, v.status(), v.event(), v.reason(), v.warnings());
   }
 }

@@ -422,4 +422,59 @@ class StaleBlockRetireTest {
 
     assertThat(events()).hasSize(1);
   }
+  // 고치기 전 상태 흉내: 관광 대상 아닌 블록이 READY 로 행사에 연결돼 있음 (운영 id 231 같은 경우)
+  private Event linkAsBeforeFix(String title) {
+    InstagramBlock block = blocks(MEDIA).get(0);
+    Event event = eventRepository.save(Event.builder().title(title).category("행사").latitude(37.28).longitude(127.01)
+        .startDate(java.time.LocalDate.of(2026, 11, 5)).endDate(java.time.LocalDate.of(2026, 11, 5)).place("가상 시청 중회의실")
+        .pubDate(LocalDateTime.of(2026, 10, 30, 9, 0)).source(Event.SOURCE_INSTAGRAM)
+        .sourceKey(BlockKeys.sourceKey(MEDIA, block.getBlockKey())).build());
+    block.update(InstagramBlock.Status.READY, null, event, LocalDateTime.of(2026, 10, 30, 9, 0));
+    em.flush();
+    em.clear();
+    return event;
+  }
+
+  private static String forum() {
+    return block("제1회 가상 교통정책발전포럼", "2026. 11. 5.(목) 14:00", "가상 시청 중회의실");
+  }
+
+  @Test
+  void 관광_대상_아님은_행사를_만들지_않고_SKIPPED() {
+    InstagramSyncResult r = syncCaption(forum());
+
+    assertThat(r.blocks().get("SKIPPED")).isEqualTo(1);
+    assertThat(events()).isEmpty();
+    assertThat(blocks(MEDIA)).singleElement().satisfies(b -> assertThat(b.getReason()).isEqualTo("관광 대상 아님: 포럼"));
+  }
+
+  @Test
+  void 예전에_올라간_관광_대상_아닌_행사는_다음_동기화에_지움() {
+    syncCaption(forum());
+    Long id = linkAsBeforeFix("제1회 가상 교통정책발전포럼").getId();
+
+    InstagramSyncResult r = syncCaption(forum());
+
+    assertThat(r.blocks().get("SKIPPED")).isEqualTo(1);
+    assertThat(eventRepository.findById(id)).isEmpty();
+    assertThat(blocks(MEDIA)).singleElement().satisfies(b -> {
+      assertThat(b.getStatus()).isEqualTo(InstagramBlock.Status.SKIPPED);
+      assertThat(b.getEvent()).isNull();
+    });
+  }
+
+  @Test
+  void 관광_대상_아닌_행사라도_찜이_걸려_있으면_남김() {
+    syncCaption(forum());
+    Event event = linkAsBeforeFix("제1회 가상 교통정책발전포럼");
+    favorite(member("찜회원"), event);
+
+    syncCaption(forum());
+
+    assertThat(eventRepository.findById(event.getId())).isPresent();
+    assertThat(blocks(MEDIA)).singleElement().satisfies(b -> {
+      assertThat(b.getStatus()).isEqualTo(InstagramBlock.Status.SKIPPED);
+      assertThat(b.getEvent()).isNotNull();
+    });
+  }
 }

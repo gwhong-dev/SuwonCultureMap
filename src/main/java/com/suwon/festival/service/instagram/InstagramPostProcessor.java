@@ -30,6 +30,7 @@ import com.suwon.festival.repository.InstagramMediaRepository;
 import com.suwon.festival.service.caption.CaptionAiClient;
 import com.suwon.festival.service.caption.CaptionParser;
 import com.suwon.festival.service.caption.CaptionParser.BlockResult;
+import com.suwon.festival.service.caption.NonTouristFilter;
 import com.suwon.festival.service.caption.ParsedEvent;
 import com.suwon.festival.service.place.PlaceGeocoder;
 import com.suwon.festival.service.schedule.EventScheduleWriter;
@@ -218,7 +219,14 @@ public class InstagramPostProcessor {
         }
         case NO_DATE -> status = InstagramBlock.Status.NO_DATE;
         case PENDING -> status = InstagramBlock.Status.PENDING;
-        case SKIPPED -> status = InstagramBlock.Status.SKIPPED;
+        case SKIPPED -> {
+          status = InstagramBlock.Status.SKIPPED;
+          // 관광 대상 아님은 규칙 결과라 다음에도 같음 → 예전에 올라간 행사는 내림 (찜이 걸려 있으면 남김)
+          if (block != null && block.getEvent() != null && NonTouristFilter.isNonTourist(reason)) {
+            String dropped = retirer.dropNonTourist(post.id(), block, reason, now);
+            if (dropped != null) logLines.add(dropped);
+          }
+        }
         default -> status = InstagramBlock.Status.FAILED;
       }
 
