@@ -213,7 +213,7 @@ public class PlaceGeocoder {
     return n.length() >= CONTAINED_NAME_MIN && squash(query).contains(n);
   }
 
-  static boolean inSuwon(PlaceCandidate c) {
+  public static boolean inSuwon(PlaceCandidate c) { // 수원문화DB 주소 검색 결과도 같은 기준 (SwdbPlaceResolver)
     boolean address = hasSuwon(c.address()) || hasSuwon(c.roadAddress());
     boolean box = c.lat() >= LAT_MIN && c.lat() <= LAT_MAX && c.lng() >= LNG_MIN && c.lng() <= LNG_MAX;
     return address && box;

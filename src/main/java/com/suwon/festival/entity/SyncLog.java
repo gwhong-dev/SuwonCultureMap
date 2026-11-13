@@ -25,7 +25,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SyncLog {
 
-  public enum Source { SWCF, INSTAGRAM }
+  public enum Source { SWCF, INSTAGRAM, SWDB }
 
   public enum Status { SUCCESS, FAIL }
 

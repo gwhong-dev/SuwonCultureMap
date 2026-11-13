@@ -403,7 +403,7 @@ class ScheduleDisplayPageTest {
     String mypage = fetch("/mypage.html");
     int info = mypage.indexOf("<div class=\"data-info\">");
     int sync = mypage.indexOf("<p class=\"data-info-line\" data-sync-status hidden></p>");
-    int source = mypage.indexOf("<p class=\"data-info-line\">출처 · 수원문화재단 공공데이터, 공식 인스타그램 계정</p>");
+    int source = mypage.indexOf("<p class=\"data-info-line\">출처 · 수원문화재단 공공데이터 · 수원문화DB, 공식 인스타그램 계정</p>");
     assertThat(info).isGreaterThan(mypage.indexOf("← 지도로 돌아가기"));
     assertThat(sync).isGreaterThan(info).isLessThan(source);
     assertThat(mypage.indexOf("<script src=\"/sync-status.js\"></script>")).isPositive();

@@ -15,13 +15,14 @@ import com.suwon.festival.entity.Event;
 import com.suwon.festival.repository.EventRepository;
 import com.suwon.festival.service.instagram.InstagramSyncResult;
 import com.suwon.festival.service.instagram.InstagramSyncService;
+import com.suwon.festival.service.swdb.SwdbSyncService;
 import com.suwon.festival.service.merge.EventMergeRunner;
 import com.suwon.festival.service.merge.MergeSummary;
 import com.suwon.festival.service.place.EventDistrictFiller;
 
 import lombok.RequiredArgsConstructor;
 
-// 재단 → 인스타 → 구 정보 → 합치기를 한 작업으로 자동 실행. 재단 행사가 없는 DB 는 앱이 뜬 직후에도 1회 실행
+// 재단 → 인스타 → 수원문화DB(하루 1회) → 구 정보 → 합치기를 한 작업으로 자동 실행. 재단 행사가 없는 DB 는 앱이 뜬 직후에도 1회 실행
 @Component
 @ConditionalOnProperty(name = "app.sync.enabled", havingValue = "true")
 @RequiredArgsConstructor
@@ -31,6 +32,7 @@ public class ScheduledSyncJob {
 
   private final EventSyncService eventSyncService;
   private final InstagramSyncService instagramSyncService;
+  private final SwdbSyncService swdbSyncService;
   private final EventMergeRunner eventMergeRunner;
   private final EventDistrictFiller eventDistrictFiller;
   private final EventRepository eventRepository;
@@ -60,14 +62,15 @@ public class ScheduledSyncJob {
     try {
       boolean foundationOk = syncFoundation();
       boolean instagramOk = syncInstagram();
+      boolean swdbOk = syncSwdb();
       // 앞 단계가 실패해도 저장된 행은 그대로라서 구 정보 · 합치기는 실행 (구 정보 실패는 다음 동기화 때 다시 → 결과에 넣지 않음)
       eventDistrictFiller.fillMissing();
       MergeSummary merge = eventMergeRunner.runAfterSync();
-      if (foundationOk && instagramOk && merge.ok()) {
+      if (foundationOk && instagramOk && swdbOk && merge.ok()) {
         log.info("자동 동기화 완료 · {}", merge.text());
       } else {
-        log.warn("자동 동기화 일부 실패 · 재단 {} · 인스타 {} · {}", foundationOk ? "성공" : "실패",
-            instagramOk ? "성공" : "실패", merge.text());
+        log.warn("자동 동기화 일부 실패 · 재단 {} · 인스타 {} · 수원문화DB {} · {}", foundationOk ? "성공" : "실패",
+            instagramOk ? "성공" : "실패", swdbOk ? "성공" : "실패", merge.text());
       }
     } finally {
       running.set(false);
@@ -103,6 +106,22 @@ public class ScheduledSyncJob {
       return true;
     } catch (RuntimeException e) {
       logFailure("인스타", e);
+      return false;
+    }
+  }
+
+  private boolean syncSwdb() {
+    try {
+      SwdbSyncService.Result result = swdbSyncService.syncIfDue();
+      if (!result.ran()) {
+        log.info("수원문화DB 동기화 건너뜀 · {}", result.message());
+      } else {
+        log.info("수원문화DB 동기화 · 목록 {}개, 새 행사 {}개, 갱신 {}개{}", result.listed(), result.saved(),
+            result.updated(), result.skippedText().isEmpty() ? "" : " · 건너뜀 " + result.skippedText());
+      }
+      return true;
+    } catch (RuntimeException e) {
+      logFailure("수원문화DB", e);
       return false;
     }
   }

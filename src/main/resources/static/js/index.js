@@ -894,9 +894,9 @@ function renderSidebar(items) {
 
     var imgSrc = cardImageUrl(item.event); // 사진이 없으면(인스타 행사 등) null → 기본 그림 (P6)
     div.className = "event-item";
-    var infoText = item.event.info
+    var infoText = hasOriginalInfo(item.event)
       ? extractSummaryInfo(item.event.info, item.event.fee) // 사이드바엔 요금/장소/시간만
-      : cardFallbackInfo(item.event); // info 원문이 없으면 장소 · 시간 칸
+      : cardFallbackInfo(item.event); // info 원문이 없으면(인스타 · 수원문화DB) 장소 · 시간 칸
     var isFavorited = favoriteEventIds.has(item.event.id); // 찜 여부 확인
 
     div.innerHTML =
@@ -1269,7 +1269,7 @@ function renderDetailMobile(event) {
   if (contact) rows.push(["문의", contact]);
   var host = fields.host || findInfo(lines, ["주최", "주관"]);
   if (host) rows.push(["주최", host]);
-  var source = sourceLabel(event); // 인스타 행사만 "인스타그램 @계정"
+  var source = sourceLabel(event); // 인스타 "인스타그램 @계정" · 수원문화DB
   if (source) rows.push(["출처", source]);
   var dl = document.getElementById("detailRows");
   dl.innerHTML = rows

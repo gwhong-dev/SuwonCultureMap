@@ -31,6 +31,7 @@ public class Event {
 
   public static final String SOURCE_SWCF = "SWCF";           // 수원문화재단 API
   public static final String SOURCE_INSTAGRAM = "INSTAGRAM";
+  public static final String SOURCE_SWDB = "SWDB";           // 수원문화DB 행사정보 (크롤링, docs/decisions/2026-11-13-swdb-crawling.md)
 
   @Column(unique = true)
   private Long idx;
@@ -100,11 +101,11 @@ public class Event {
 
   @Column(nullable = false, length = 20)
   private String source;
-  // 출처 (SOURCE_SWCF / SOURCE_INSTAGRAM). Enum 이 아니라 String 인 이유는 category 와 같음 (출처가 늘어도 매핑 에러 없음)
+  // 출처 (SOURCE_SWCF / SOURCE_INSTAGRAM / SOURCE_SWDB). Enum 이 아니라 String 인 이유는 category 와 같음 (출처가 늘어도 매핑 에러 없음)
 
   @Column(length = 100)
   private String sourceKey;
-  // 인스타 행사의 중복 방지 키 (게시물 id + 블록 키). 재단 행사는 null 이고 idx 로 중복을 막음
+  // 인스타 행사의 중복 방지 키 (게시물 id + 블록 키) · 수원문화DB 행사는 reqIdx. 재단 행사는 null 이고 idx 로 중복을 막음
 
   @Column
   private Long mergedIntoId;

@@ -20,6 +20,7 @@ import com.suwon.festival.entity.Event;
 import com.suwon.festival.repository.EventRepository;
 import com.suwon.festival.service.instagram.InstagramSyncResult;
 import com.suwon.festival.service.instagram.InstagramSyncService;
+import com.suwon.festival.service.swdb.SwdbSyncService;
 import com.suwon.festival.service.merge.EventMergeRunner;
 import com.suwon.festival.service.merge.MergeSummary;
 import com.suwon.festival.service.place.EventDistrictFiller;
@@ -29,11 +30,12 @@ class ScheduledSyncJobTest {
 
   private final EventSyncService eventSyncService = mock(EventSyncService.class);
   private final InstagramSyncService instagramSyncService = mock(InstagramSyncService.class);
+  private final SwdbSyncService swdbSyncService = mock(SwdbSyncService.class);
   private final EventMergeRunner eventMergeRunner = mock(EventMergeRunner.class);
   private final EventDistrictFiller eventDistrictFiller = mock(EventDistrictFiller.class);
   private final EventRepository eventRepository = mock(EventRepository.class);
   private final ScheduledSyncJob job =
-      new ScheduledSyncJob(eventSyncService, instagramSyncService, eventMergeRunner, eventDistrictFiller, eventRepository);
+      new ScheduledSyncJob(eventSyncService, instagramSyncService, swdbSyncService, eventMergeRunner, eventDistrictFiller, eventRepository);
 
   @BeforeEach
   void setUp() throws Exception {
@@ -41,15 +43,17 @@ class ScheduledSyncJobTest {
     when(instagramSyncService.sync())
         .thenReturn(new InstagramSyncResult(true, null, 1, 1, List.of(), 1, 1, 0, Map.of("READY", 3), Map.of(), 3, 0, 0, null, null));
     when(eventMergeRunner.runAfterSync()).thenReturn(new MergeSummary(true, 0, 0, 0));
+    when(swdbSyncService.syncIfDue()).thenReturn(new SwdbSyncService.Result(false, "스위치 꺼짐", 0, 0, 0, Map.of()));
   }
 
   @Test
   void 재단_인스타_구정보_합치기_순서로_실행() throws Exception {
     job.runScheduled();
 
-    InOrder order = inOrder(eventSyncService, instagramSyncService, eventDistrictFiller, eventMergeRunner);
+    InOrder order = inOrder(eventSyncService, instagramSyncService, swdbSyncService, eventDistrictFiller, eventMergeRunner);
     order.verify(eventSyncService).syncEvents();
     order.verify(instagramSyncService).sync();
+    order.verify(swdbSyncService).syncIfDue(); // 수원문화DB 는 구 정보 · 합치기 전에 (재단과 같은 행사면 합치기가 재단을 대표로)
     order.verify(eventDistrictFiller).fillMissing();
     order.verify(eventMergeRunner).runAfterSync();
   }
@@ -129,5 +133,15 @@ class ScheduledSyncJobTest {
     job.runIfEmpty();
 
     verify(eventSyncService, never()).syncEvents();
+  }
+
+  @Test
+  void 수원문화DB가_실패해도_구정보와_합치기는_실행() throws Exception {
+    when(swdbSyncService.syncIfDue()).thenThrow(new IllegalStateException("가상 실패"));
+
+    job.runScheduled();
+
+    verify(eventDistrictFiller).fillMissing();
+    verify(eventMergeRunner).runAfterSync();
   }
 }

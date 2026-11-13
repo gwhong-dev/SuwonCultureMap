@@ -26,9 +26,19 @@ function eventPlace(event) {
   return event.place || extractPlaceName(event.info);
 }
 
+// 수원문화DB 행사: info 칸에는 원문이 아니라 "장소가 여러 곳 · 원문 확인" 안내만 들어 있음 (소개글은 가져오지 않음)
+function isSwdbEvent(event) {
+  return event.source === "SWDB";
+}
+
+// info 칸이 재단 원문인지 (인스타 = 없음, 수원문화DB = 안내 글)
+function hasOriginalInfo(event) {
+  return !!event.info && !isSwdbEvent(event);
+}
+
 // 시간: info 원문이 없을 때만 timeText 칸 (있으면 원문에서 찾은 값을 씀 → null)
 function fallbackTime(event) {
-  if (event.info) return null;
+  if (hasOriginalInfo(event)) return null;
   return event.timeText || null;
 }
 
@@ -45,8 +55,9 @@ function isInstagramEvent(event) {
   return event.source === "INSTAGRAM";
 }
 
-// 출처 한 줄: 인스타 행사만 ("인스타그램 @계정"). 재단 행사는 null → 표시 안 함
+// 출처 한 줄: 인스타 행사 ("인스타그램 @계정") · 수원문화DB 행사. 재단 행사는 null → 표시 안 함
 function sourceLabel(event) {
+  if (isSwdbEvent(event)) return "수원문화DB(수원문화재단)";
   if (!isInstagramEvent(event)) return null;
   return event.sourceAccount ? "인스타그램 @" + event.sourceAccount : "인스타그램";
 }
@@ -62,10 +73,11 @@ function linkButtonText(event) {
   return isInstagramEvent(event) ? "인스타그램에서 보기 →" : "원문 보기 →";
 }
 
-// PC 상세 본문: info 원문, 없으면 장소 · 시간 · 출처 줄 (셋 다 없으면 "")
+// PC 상세 본문: info 원문, 없으면 장소 · 시간 · 출처 줄 (셋 다 없으면 ""). 수원문화DB 안내 글은 그 줄들 위에
 function detailInfoText(event) {
-  if (event.info) return event.info;
+  if (hasOriginalInfo(event)) return event.info;
   var lines = [];
+  if (event.info) lines.push(event.info, "");
   if (event.place) lines.push("장소: " + event.place);
   if (event.timeText) lines.push("시간: " + event.timeText);
   var source = sourceLabel(event);
@@ -80,7 +92,7 @@ function cardImageUrl(event) {
 
 // 목록 카드 요약 (info 원문이 없을 때): 장소 · 시간 줄. info 가 있으면 "" (기존 이용료/장소/시간 요약을 씀)
 function cardFallbackInfo(event) {
-  if (event.info) return "";
+  if (hasOriginalInfo(event)) return "";
   var lines = [];
   if (event.place) lines.push("장소: " + event.place);
   if (event.timeText) lines.push("시간: " + event.timeText);
@@ -126,6 +138,7 @@ if (typeof module !== "undefined") {
     detailInfoText: detailInfoText,
     cardImageUrl: cardImageUrl,
     cardFallbackInfo: cardFallbackInfo,
+    hasOriginalInfo: hasOriginalInfo,
     eventFeeText: eventFeeText,
     isFreeEvent: isFreeEvent,
   };
