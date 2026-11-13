@@ -91,7 +91,7 @@ public class InstagramSyncService {
     this(client, processor, tokenExpiry, instagramSwitch, accounts, fetchLimit, InstagramImageStore.disabled(), null, null, null);
   }
 
-  // 수집이 끝나면(꺼져 있어도) 종료 7일 지난 인스타 행사를 지우고(ExpiredInstagramEventCleaner),
+  // 수집이 끝나면(꺼져 있어도) 종료 7일 지난 · 관광 대상 아닌 인스타 행사를 지우고(ExpiredInstagramEventCleaner),
   // DB 행사가 더 쓰지 않는 사진 파일을 지움 → 행사가 지워지면 사진도 같은 실행에서 (docs/instagram-images.md)
   public InstagramSyncResult sync() {
     if (!running.compareAndSet(false, true)) {
@@ -145,6 +145,11 @@ public class InstagramSyncService {
     } catch (RuntimeException e) {
       // 한 트랜잭션이라 모두 되돌려짐 → 다음 동기화에서 다시. 메시지는 남기지 않음 (DB 오류에 값이 섞일 수 있음)
       log.warn("지난 인스타 행사 삭제 실패 {}", e.getClass().getSimpleName());
+    }
+    try {
+      expiredCleaner.cleanNonTourist();
+    } catch (RuntimeException e) {
+      log.warn("관광 대상 아닌 인스타 행사 삭제 실패 {}", e.getClass().getSimpleName());
     }
   }
 

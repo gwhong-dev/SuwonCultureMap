@@ -31,6 +31,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
       + "(e.endDate is not null and e.endDate <= :cutoff) or (e.endDate is null and e.startDate <= :cutoff))")
   List<Event> findExpired(@Param("source") String source, @Param("cutoff") java.time.LocalDate cutoff);
 
+  List<Event> findBySource(String source); // 출처별 전체 (관광 대상 아닌 인스타 행사 정리)
+
   List<Event> findByMergedIntoIdIsNull(); // 화면에 보이는 행사 (합쳐져 숨겨진 행 제외)
 
   List<Event> findByMergedIntoId(Long mergedIntoId); // 이 행사를 대표로 삼아 숨겨진 행 (대표를 지우기 전에 비움)
