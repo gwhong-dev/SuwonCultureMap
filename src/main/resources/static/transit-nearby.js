@@ -3,6 +3,8 @@
 // 을 HTML 글자로만 만듦 (연결 · 불러오기는 js/index.js loadDetailTransit). 빈 응답이면 "" → 칸을 숨김
 // 시험: node --test src/test/js/ (CI 에서 실행)
 
+// 화면 언어 (i18n.js, node 시험 = 한국어)
+var transitI18n = typeof I18n !== "undefined" ? I18n : require("./i18n.js").I18n;
 var TRANSIT_ROUTE_LIMIT = 6; // 버스 번호는 6개까지 보이고 나머지는 "+N" 을 누르면 펼침
 
 function transitEscape(text) {
@@ -35,7 +37,7 @@ function transitRouteChips(routes, limit) {
     .join("");
   if (list.length > max) {
     var rest = list.length - max;
-    html += '<button type="button" class="transit-more" aria-label="버스 ' + rest + "개 더 보기\">+" + rest + "</button>";
+    html += '<button type="button" class="transit-more" aria-label="' + transitEscape(transitI18n.t("transit.moreBus", { n: rest })) + '">+' + rest + "</button>";
   }
   return '<div class="transit-routes">' + html + "</div>";
 }
@@ -47,15 +49,15 @@ function transitNearbyHtml(data) {
   var html = "";
   if (stops.length) {
     html +=
-      '<div class="transit-block"><h4 class="transit-title">가까운 정류장</h4><ul class="transit-list">' +
+      '<div class="transit-block"><h4 class="transit-title">' + transitEscape(transitI18n.t("transit.stops")) + '</h4><ul class="transit-list">' +
       stops
         .map(function (s) {
           return (
             '<li class="transit-item"><div class="transit-head"><span class="transit-name">' +
             transitEscape(s.name) +
-            '</span><span class="transit-dist">도보 ' +
-            transitEscape(s.walkMinutes) +
-            "분 · " +
+            '</span><span class="transit-dist">' +
+            transitEscape(transitI18n.t("transit.walk", { n: s.walkMinutes })) +
+            " · " +
             transitDistanceText(s.distanceMeters) +
             "</span></div>" +
             transitRouteChips(s.routes) +
@@ -67,7 +69,7 @@ function transitNearbyHtml(data) {
   }
   if (subways.length) {
     html +=
-      '<div class="transit-block"><h4 class="transit-title">가까운 역</h4><ul class="transit-list">' +
+      '<div class="transit-block"><h4 class="transit-title">' + transitEscape(transitI18n.t("transit.stations")) + '</h4><ul class="transit-list">' +
       subways
         .map(function (w) {
           var lines = (w.lines || []).join(" · ");
@@ -75,7 +77,9 @@ function transitNearbyHtml(data) {
             '<li class="transit-item"><div class="transit-head"><span class="transit-name">' +
             transitEscape(w.name) +
             (lines ? ' <span class="transit-lines">' + transitEscape(lines) + "</span>" : "") +
-            '</span><span class="transit-dist">직선 ' +
+            '</span><span class="transit-dist">' +
+            transitEscape(transitI18n.t("transit.straight")) +
+            " " +
             transitDistanceText(w.distanceMeters) +
             "</span></div></li>"
           );
@@ -83,8 +87,8 @@ function transitNearbyHtml(data) {
         .join("") +
       "</ul></div>";
   }
-  var source = stops.length ? " · 버스 정보: 경기도 버스정보(공공데이터포털)" : "";
-  html += '<p class="transit-note">거리 · 도보 분은 직선거리 기준 추정' + source + "</p>";
+  var source = stops.length ? " · " + transitI18n.t("transit.source") : "";
+  html += '<p class="transit-note">' + transitEscape(transitI18n.t("transit.note") + source) + "</p>";
   return html;
 }
 

@@ -1,3 +1,6 @@
+// 화면 언어 (i18n.js): HTML 의 고정 글([data-i18n])을 먼저 그 언어로 — 아래 코드가 글을 읽거나 바꾸기 전에
+I18n.apply(document);
+
 // ===== 텍스트 정리 / 안전하게 화면에 넣기 =====
 // 재단 데이터 제목에 "<일월동행>" 같은 꺾쇠가 들어 있어서,
 // innerHTML에 그대로 넣으면 태그로 해석돼 글자가 사라짐 → 항상 이스케이프해서 넣음
@@ -326,8 +329,8 @@ function renderSkeleton() {
 
 // 실패 안내 (PC · 모바일 공통). kind: "network" = 서버에서 못 받음, "render" = 받았지만 화면에 그리다 오류
 var LOAD_ERROR_TEXT = {
-  network: "행사를 불러오지 못했어요.<br>네트워크를 확인한 뒤 다시 시도해 주세요.",
-  render: "행사를 화면에 표시하지 못했어요.<br>잠시 뒤 다시 시도해 주세요.",
+  network: I18n.t("load.networkError"),
+  render: I18n.t("load.renderError"),
 };
 
 function renderLoadError(kind) {
@@ -335,9 +338,9 @@ function renderLoadError(kind) {
   list.removeAttribute("aria-busy");
   list.innerHTML =
     '<div class="load-error" role="alert" data-kind="' + kind + '"><span>' + LOAD_ERROR_TEXT[kind] + "</span>" +
-    '<button type="button" id="retryLoadBtn">다시 시도</button></div>';
+    '<button type="button" id="retryLoadBtn">' + I18n.t("common.retry") + "</button></div>";
   document.getElementById("retryLoadBtn").addEventListener("click", loadEvents);
-  document.getElementById("resultCount").textContent = "불러오지 못했어요";
+  document.getElementById("resultCount").textContent = I18n.t("load.failedShort");
   updateSheetHeaderLabel();
 }
 
@@ -347,7 +350,7 @@ function loadEvents() {
   eventsLoaded = false;
   eventsLoadFailed = false;
   renderSkeleton();
-  document.getElementById("resultCount").textContent = "행사 불러오는 중…";
+  document.getElementById("resultCount").textContent = I18n.t("load.loading");
   updateSheetHeaderLabel(); // 다시 시도 때 "불러오지 못했어요" 라벨이 남지 않게
   renderHomeLoading();
   fetch("/api/events")
@@ -431,7 +434,7 @@ function setupCategoryOptions(events) {
     if (category === "찜" || categories.includes(category)) {
       var option = document.createElement("option");
       option.value = category;
-      option.textContent = category;
+      option.textContent = category === "찜" ? I18n.t("chip.favPlain") : I18n.name("cat", category); // 값은 원래 이름, 글자만 화면 언어
       select.appendChild(option);
     }
   });
@@ -578,7 +581,7 @@ function updateFavAlertDot() {
   var tab = document.querySelector('#tabBar .tab-item[data-tab="fav"]');
   document.getElementById("favTabDot").hidden = unseen === 0;
   if (unseen > 0) {
-    tab.setAttribute("aria-label", "찜, 새 알림 " + unseen + "개");
+    tab.setAttribute("aria-label", I18n.t("alert.tabLabel", { n: unseen }));
   } else {
     tab.removeAttribute("aria-label");
   }
@@ -591,10 +594,10 @@ function renderFavAlerts(list, favoriteItems) {
   if (!alerts.length) return;
   var box = document.createElement("section");
   box.className = "fav-alerts";
-  box.setAttribute("aria-label", "찜 알림");
+  box.setAttribute("aria-label", I18n.t("alert.boxLabel"));
   var title = document.createElement("strong");
   title.className = "fav-alerts-title";
-  title.textContent = "곧 시작 · 곧 종료 " + alerts.length + "개";
+  title.textContent = I18n.t("alert.title", { n: alerts.length });
   box.appendChild(title);
   var ul = document.createElement("ul");
   alerts.forEach(function (alert) {
@@ -711,7 +714,7 @@ function clearRecentViews() {
   recentStore.clear();
   filterMarkers();
   document.getElementById("favTabRecent").focus();
-  showToast("최근 본 기록을 지웠어요");
+  showToast(I18n.t("recent.cleared"));
 }
 
 // ===== Side-bar용 info 요약 (요금/장소/시간만 추출) =====
@@ -732,7 +735,7 @@ function extractSummaryInfo(infoText, fee) {
 
   // 1) 요금, 장소 순서로 먼저 추가
   if (fee) {
-    result.push("요금: " + fee);
+    result.push(I18n.t("detail.fee") + ": " + fee);
   } else if (map["이용료"]) {
     result.push(map["이용료"]);
   }
@@ -809,7 +812,7 @@ function renderSidebar(items) {
     } else {
       var note = document.createElement("div");
       note.className = "recent-note";
-      note.innerHTML = '<span>이 기기에만 저장돼요</span><button type="button">모두 지우기</button>';
+      note.innerHTML = "<span>" + I18n.t("recent.deviceOnly") + '</span><button type="button">' + I18n.t("recent.clearAll") + "</button>";
       note.querySelector("button").addEventListener("click", clearRecentViews);
       list.appendChild(note);
     }
@@ -819,7 +822,7 @@ function renderSidebar(items) {
     // 비회원 찜 목록 맨 위: 이 기기에만 있다는 안내 + 로그인 (최근 본 안내와 같은 모양)
     var guestNote = document.createElement("div");
     guestNote.className = "recent-note guest-note";
-    guestNote.innerHTML = '<span>이 기기에만 저장돼요 · 로그인하면 계정에 합쳐져요</span><button type="button">로그인</button>';
+    guestNote.innerHTML = "<span>" + I18n.t("fav.guestNote") + '</span><button type="button">' + I18n.t("nav.login") + "</button>";
     guestNote.querySelector("button").addEventListener("click", goToLogin);
     list.appendChild(guestNote);
   }
@@ -836,11 +839,11 @@ function renderSidebar(items) {
     h.textContent = text;
     list.appendChild(h);
   }
-  if (favorites.length > 0) addSectionTitle("★ 찜한 행사 " + favorites.length + "개 (이름순)");
+  if (favorites.length > 0) addSectionTitle(I18n.t("list.favSection", { n: favorites.length }));
 
   sorted.forEach(function (item, index) {
     if (favorites.length > 0 && index === favorites.length) {
-      addSectionTitle("전체 행사 (날짜순)");
+      addSectionTitle(I18n.t("list.allSection"));
     }
     var div = document.createElement("div");
 
@@ -897,7 +900,7 @@ function renderSidebar(items) {
 
   // ===== (모바일) 결과 개수 + 미리보기 카드도 같은 목록으로 갱신 =====
   document.getElementById("resultCount").innerHTML =
-    (recent ? "최근 본 " : onFavScreen() ? "찜 " : "행사 ") + "<strong>" + sorted.length + "</strong>개"; // P3 시안 "행사 32개"
+    I18n.t(recent ? "list.countRecent" : onFavScreen() ? "list.countFav" : "list.countEvents", { n: "<strong>" + sorted.length + "</strong>" }); // P3 시안 "행사 32개"
   updateSheetHeaderLabel();
   lastSortedItems = sorted;
   renderPreviewStrip(sorted);
@@ -954,7 +957,7 @@ function mergeGuestFavorites() {
     .then(function (result) {
       guestFavorites.clear();
       var text = guestMergeToastText(result.added);
-      if (text) showToast(text, "보기", showFavoriteList);
+      if (text) showToast(text, I18n.t("fav.view"), showFavoriteList);
     })
     .catch(function (err) {
       console.error("비회원 찜 합치기 실패", err);
@@ -964,7 +967,7 @@ function mergeGuestFavorites() {
 // 상단 바 · ☰ 메뉴에 보이는 회원 이름 — 이름 글자는 여기 한 곳에서만 정함
 // P5(#239): 닉네임이 있으면 닉네임, 없으면(같은 순간 이름 충돌로 이번 응답에 빠진 경우) 회원 번호
 function memberLabel(data) {
-  return data.nickname || "회원 #" + data.memberId;
+  return data.nickname || I18n.t("member.number", { n: data.memberId });
 }
 
 function checkAuth() {
@@ -1204,27 +1207,27 @@ function renderDetailMobile(event) {
   var lines = infoLines(event.info);
   var district = eventDistrict(event);
   document.getElementById("detailMeta").textContent =
-    [event.category, district].filter(Boolean).join(" · ");
+    [event.category && I18n.name("cat", event.category), district].filter(Boolean).join(" · ");
 
   // 정보 표: 기간 · 일정 · 시간 · 장소 · 요금 · 문의 · 주최 (값이 있는 줄만)
   // 요금 · 문의 · 주최는 서버가 분해한 칸(V7), 동기화 전 옛 행이면 원문에서 라벨 포함 여부로 찾음
   var fields = detailFields(event);
   var rows = [];
-  if (event.startDate) rows.push(["기간", document.getElementById("modalDate").textContent]);
+  if (event.startDate) rows.push([I18n.t("detail.period"), document.getElementById("modalDate").textContent]);
   var time = findInfo(lines, ["시간", "요일"]) || fallbackTime(event); // info 가 없으면 timeText
   var schedule = scheduleRowText(event, time); // 일정 원문이 시간 줄과 같으면 빈 값
-  if (schedule) rows.push(["진행", schedule]); // 값 안에 "일정 원문:" 이 있어 라벨은 "진행"
-  if (time) rows.push(["시간", time]);
+  if (schedule) rows.push([I18n.t("detail.schedule"), schedule]); // 값 안에 "일정 원문:" 이 있어 라벨은 "진행"
+  if (time) rows.push([I18n.t("detail.time"), time]);
   var place = eventPlace(event);
-  if (place) rows.push(["장소", place]);
+  if (place) rows.push([I18n.t("detail.place"), place]);
   var fee = fields.fee || findInfo(lines, ["이용료", "요금", "입장료", "관람료", "참가비"], ["주차"]); // "주차요금" 은 제외
-  if (fee) rows.push(["요금", fee]);
+  if (fee) rows.push([I18n.t("detail.fee"), fee]);
   var contact = fields.contact || findInfo(lines, ["문의"]);
-  if (contact) rows.push(["문의", contact]);
+  if (contact) rows.push([I18n.t("detail.contact"), contact]);
   var host = fields.host || findInfo(lines, ["주최", "주관"]);
-  if (host) rows.push(["주최", host]);
+  if (host) rows.push([I18n.t("detail.host"), host]);
   var source = sourceLabel(event); // 인스타 행사만 "인스타그램 @계정"
-  if (source) rows.push(["출처", source]);
+  if (source) rows.push([I18n.t("detail.source"), source]);
   var dl = document.getElementById("detailRows");
   dl.innerHTML = rows
     .map(function (row) {
@@ -1238,13 +1241,13 @@ function renderDetailMobile(event) {
   intro.textContent = event.info || "";
   intro.classList.remove("expanded");
   more.setAttribute("aria-expanded", "false");
-  more.textContent = "더보기";
+  more.textContent = I18n.t("detail.more");
   more.hidden = true; // 창이 보인 뒤 measureIntro 가 3줄을 넘을 때만 다시 켬
   document.getElementById("detailIntro").hidden = !event.info;
 
   // 위치: 주소 (없으면 장소명), 복사 버튼은 복사할 글이 있을 때만
   var address = extractAddress(event.info) || place || "";
-  document.getElementById("detailAddress").textContent = address || "위치 정보 없음";
+  document.getElementById("detailAddress").textContent = address || I18n.t("detail.noLocation");
   document.getElementById("detailCopyBtn").hidden = !address;
 }
 
@@ -1331,7 +1334,7 @@ document.getElementById("detailIntroMore").addEventListener("click", function ()
   var intro = document.getElementById("detailIntroText");
   var expanded = intro.classList.toggle("expanded");
   this.setAttribute("aria-expanded", expanded ? "true" : "false");
-  this.textContent = expanded ? "접기" : "더보기";
+  this.textContent = I18n.t(expanded ? "detail.less" : "detail.more");
 });
 document.getElementById("detailBackBtn").addEventListener("click", closeDetailModal);
 document.getElementById("detailRouteBtn").addEventListener("click", function () {
@@ -1347,10 +1350,10 @@ document.getElementById("detailCopyBtn").addEventListener("click", function () {
   var text = document.getElementById("detailAddress").textContent;
   copyText(text).then(
     function () {
-      showToast("주소를 복사했어요");
+      showToast(I18n.t("toast.addrCopied"));
     },
     function () {
-      showToast("복사하지 못했어요. 주소를 길게 눌러 복사해 주세요");
+      showToast(I18n.t("toast.copyFailedLong"));
     },
   );
 });
@@ -1383,10 +1386,10 @@ document.getElementById("shareCopyBtn").addEventListener("click", function () {
   copyText(eventShareUrl(detailEvent)).then(
     function () {
       closeShareSheet();
-      showToast("링크를 복사했어요");
+      showToast(I18n.t("toast.linkCopied"));
     },
     function () {
-      showToast("복사하지 못했어요");
+      showToast(I18n.t("toast.copyFailed"));
     },
   );
 });
@@ -1401,7 +1404,7 @@ document.getElementById("shareKakaoBtn").addEventListener("click", function () {
     console.error("카카오 SDK 초기화 실패", err);
   }
   if (!window.Kakao || !Kakao.Share) {
-    showToast("카카오톡 공유를 불러오지 못했어요. 링크 복사를 이용해 주세요");
+    showToast(I18n.t("share.sdkFailed"));
     return;
   }
   var event = detailEvent;
@@ -1419,14 +1422,14 @@ document.getElementById("shareKakaoBtn").addEventListener("click", function () {
         imageUrl: new URL(event.imageUrl || "/brand/og-image.png", location.href).href, // 상대 주소여도 절대 주소로
         link: link,
       },
-      buttons: [{ title: "지도에서 보기", link: link }],
+      buttons: [{ title: I18n.t("share.viewOnMap"), link: link }],
     });
     // 카카오톡으로 넘어가는 중 → 기록 칸은 바로 되돌리지 않음 (go(-1) 이 그 이동을 끊을 수 있음). 돌아오면 맞춤
     nav.forget("share");
     closeShareSheet();
   } catch (err) {
     console.error("카카오톡 공유 실패", err);
-    showToast("카카오톡 공유에 실패했어요. 링크 복사를 이용해 주세요");
+    showToast(I18n.t("share.failed"));
   }
 });
 
@@ -1582,10 +1585,10 @@ function updateFavoriteButton(eventId) {
   var btn = document.getElementById("modalFavoriteBtn");
   var favorited = favoriteEventIds.has(eventId);
   if (favorited) {
-    btn.textContent = "★ 즐겨찾기됨";
+    btn.textContent = I18n.t("detail.favOn");
     btn.classList.add("active");
   } else {
-    btn.textContent = "☆ 즐겨찾기";
+    btn.textContent = I18n.t("detail.favOff");
     btn.classList.remove("active");
   }
   // 모바일 상세: 상단 · 하단 ♡ (채운 하트 + accent)
@@ -1593,7 +1596,7 @@ function updateFavoriteButton(eventId) {
     var heart = document.getElementById(id);
     heart.classList.toggle("active", favorited);
     heart.setAttribute("aria-pressed", favorited ? "true" : "false");
-    heart.setAttribute("aria-label", favorited ? "찜 해제" : "찜하기");
+    heart.setAttribute("aria-label", I18n.t(favorited ? "fav.unfav" : "fav.fav"));
     heart.innerHTML = favorited
       ? '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>'
       : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>';
@@ -1711,7 +1714,7 @@ function favButtonHtml(isFavorited) {
   return (
     '<button type="button" class="card-fav' +
     (isFavorited ? " active" : "") +
-    '" aria-label="찜">' +
+    '" aria-label="' + I18n.t("fav.label") + '">' +
     (isFavorited ? "♥" : "♡") +
     "</button>"
   );
@@ -1719,10 +1722,11 @@ function favButtonHtml(isFavorited) {
 
 // ----- 칩 줄 (지도 상단: 분류 드롭다운 칩 · 날짜 해제 · 무료 — PC · 모바일 공통) -----
 function chipLabel(value) {
-  if (value === "all") return "전체 분류";
-  if (value === "찜") return "♥ 찜";
+  if (value === "all") return I18n.t("chip.allCategories");
+  if (value === "찜") return I18n.t("chip.fav");
   var style = CATEGORY_STYLE[value];
-  return style ? style.emoji + " " + value : value;
+  var name = I18n.name("cat", value); // 값은 원래 분류 이름, 글자만 화면 언어
+  return style ? style.emoji + " " + name : name;
 }
 
 function renderCategoryChips() {
@@ -1743,7 +1747,7 @@ function renderCategoryChips() {
   categoryArrow.textContent = "▾";
   var categoryPicker = document.createElement("select");
   categoryPicker.id = "categoryChipSelect";
-  categoryPicker.setAttribute("aria-label", "분류");
+  categoryPicker.setAttribute("aria-label", I18n.t("chip.category"));
   // 드롭다운(PC) 옵션과 같은 순서 → 고르면 PC 드롭다운 값을 바꾸고 필터 실행
   Array.from(select.options).forEach(function (option) {
     var item = document.createElement("option");
@@ -1766,7 +1770,7 @@ function renderCategoryChips() {
   freeChip.type = "button";
   freeChip.className = "chip";
   freeChip.dataset.value = "__free";
-  freeChip.textContent = "💸 무료";
+  freeChip.textContent = I18n.t("chip.free");
   freeChip.addEventListener("click", function () {
     freeOnly = !freeOnly;
     filterMarkers();
@@ -1823,7 +1827,7 @@ function updateDateChip() {
   }
   chip.classList.add("active"); // 위 updateChipActive 루프가 data-value 없는 이 칩의 active 를 지우므로 매번 다시 켬
   chip.textContent = "📅 " + title + " ✕";
-  chip.setAttribute("aria-label", title + " 날짜 필터 해제");
+  chip.setAttribute("aria-label", I18n.t("chip.clearDate", { title: title }));
 }
 
 // ----- 날짜 고르기 (calendar-strip.js, 11/11 시안 CalClosed · CalOpen · PcCard) -----
@@ -1905,7 +1909,7 @@ function renderDatePanel(baseItems, visibleCount, favScreen) {
     return matchesStatusTab(event, "upcoming");
   }).length;
   var calBtn = document.getElementById("pcCalBtn");
-  calBtn.textContent = (dayMode ? dateFilterTitle(dateValue) : "달력") + (calOpen ? " ▴" : " ▾");
+  calBtn.textContent = (dayMode ? dateFilterTitle(dateValue) : I18n.t("cal.calendar")) + (calOpen ? " ▴" : " ▾");
   calBtn.classList.toggle("active", dayMode);
   calBtn.setAttribute("aria-expanded", calOpen ? "true" : "false");
   document.getElementById("calOpenBtn").setAttribute("aria-expanded", calOpen ? "true" : "false");
@@ -1919,7 +1923,7 @@ function renderDatePanel(baseItems, visibleCount, favScreen) {
     }),
   );
   // 날짜 줄은 오늘부터라 지난 날을 골랐으면 오늘의 달 (10월 15일을 골라도 줄 위는 11월)
-  document.getElementById("stripMonth").textContent = monthOf(marked[0] && marked[0] >= today ? marked[0] : today).month + "월";
+  document.getElementById("stripMonth").textContent = I18n.month(monthOf(marked[0] && marked[0] >= today ? marked[0] : today).month);
   var strip = document.getElementById("dateStrip");
   var stripScroll = strip.scrollLeft;
   rebuildKeepingFocus(strip, function () {
@@ -1929,7 +1933,7 @@ function renderDatePanel(baseItems, visibleCount, favScreen) {
       button.innerHTML =
         '<span class="strip-dow">' + day.label + "</span>" +
         '<span class="strip-num">' + day.num + "</span>" +
-        '<span class="strip-count">' + (count ? count + "개" : "-") + "</span>";
+        '<span class="strip-count">' + (count ? I18n.t("cal.count", { n: count }) : "-") + "</span>";
       strip.appendChild(button);
     });
   });
@@ -1949,7 +1953,7 @@ function renderDatePanel(baseItems, visibleCount, favScreen) {
     document.getElementById("dayNavLong").textContent = title;
     document.getElementById("dayNavShort").textContent = shortDayTitle(day);
   }
-  if (title) document.getElementById("dateHeadingText").textContent = (day ? "" : title + " · ") + "행사 " + visibleCount + "개";
+  if (title) document.getElementById("dateHeadingText").textContent = (day ? "" : title + " · ") + I18n.t("cal.events", { n: visibleCount });
   var pastDay = pastSelectedDay(dateValue);
   var note = document.getElementById("pastDayNote");
   note.hidden = !pastDay;
@@ -1963,14 +1967,14 @@ function renderCalendarMonth(events, marked, today) {
   var counts = countRunDays(events, dates);
   updateCalTitle();
   // 달 이동 "‹ 10월" "12월 ›" — 지난달도 갈 수 있음 (11/13 P2)
-  [["calPrev", -1, "이전 달"], ["calNext", 1, "다음 달"]].forEach(function (nav) {
+  [["calPrev", -1, I18n.t("cal.prevMonth")], ["calNext", 1, I18n.t("cal.nextMonth")]].forEach(function (nav) {
     var button = document.getElementById(nav[0]);
     button.textContent = monthStepLabel(calShownMonth, nav[1]);
-    button.setAttribute("aria-label", nav[2] + " (" + shiftMonth(calShownMonth, nav[1]).month + "월)");
+    button.setAttribute("aria-label", nav[2] + " (" + I18n.month(shiftMonth(calShownMonth, nav[1]).month) + ")");
   });
   var grid = document.getElementById("calGrid");
   rebuildKeepingFocus(grid, function () {
-    ["일", "월", "화", "수", "목", "금", "토"].forEach(function (name, i) {
+    I18n.list("date.weekdays").forEach(function (name, i) {
       var head = document.createElement("span");
       head.className = "cal-dow" + (i === 0 ? " sun" : i === 6 ? " sat" : "");
       head.textContent = name;
@@ -2002,7 +2006,7 @@ function dayButton(className, day, marked, count) {
   button.className = className + (day.weekday === 0 ? " sun" : day.weekday === 6 ? " sat" : "") + (on ? " active" : "");
   button.dataset.day = day.date;
   button.setAttribute("aria-pressed", on ? "true" : "false");
-  button.setAttribute("aria-label", dayTitle(day.date) + " 행사 " + (count || 0) + "개");
+  button.setAttribute("aria-label", I18n.t("cal.dayLabel", { day: dayTitle(day.date), n: count || 0 }));
   return button;
 }
 
@@ -2032,8 +2036,9 @@ function openCalendar(open) {
 function updateCalTitle() {
   if (!calShownMonth) return;
   var titleBtn = document.getElementById("calTitle");
-  titleBtn.textContent = calShownMonth.year + "년 " + calShownMonth.month + "월 " + (calPickerOpen ? "▴" : "▾");
-  titleBtn.setAttribute("aria-label", calShownMonth.year + "년 " + calShownMonth.month + "월, 연도 · 달 고르기");
+  var ym = I18n.yearMonth(calShownMonth.year, calShownMonth.month);
+  titleBtn.textContent = ym + " " + (calPickerOpen ? "▴" : "▾");
+  titleBtn.setAttribute("aria-label", I18n.t("cal.pickLabel", { ym: ym }));
   titleBtn.setAttribute("aria-expanded", calPickerOpen ? "true" : "false");
 }
 
@@ -2050,13 +2055,13 @@ function setCalPicker(open) {
 }
 
 function renderCalPicker() {
-  document.getElementById("calPickerYear").textContent = calPickerYear + "년";
+  document.getElementById("calPickerYear").textContent = I18n.year(calPickerYear);
   var prevYear = document.getElementById("calPickerPrevYear");
   var nextYear = document.getElementById("calPickerNextYear");
   prevYear.textContent = "‹ " + (calPickerYear - 1);
-  prevYear.setAttribute("aria-label", calPickerYear - 1 + "년");
+  prevYear.setAttribute("aria-label", I18n.year(calPickerYear - 1));
   nextYear.textContent = calPickerYear + 1 + " ›";
-  nextYear.setAttribute("aria-label", calPickerYear + 1 + "년");
+  nextYear.setAttribute("aria-label", I18n.year(calPickerYear + 1));
   var months = document.getElementById("calPickerMonths");
   months.innerHTML = "";
   for (var month = 1; month <= 12; month++) {
@@ -2064,13 +2069,13 @@ function renderCalPicker() {
     button.type = "button";
     button.className = "cal-picker-month";
     button.dataset.month = month;
-    button.textContent = month + "월";
+    button.textContent = I18n.month(month);
     var current = calPickerYear === calShownMonth.year && month === calShownMonth.month;
     if (current) {
       button.classList.add("active"); // 지금 달력에 보이는 달
       button.setAttribute("aria-current", "true");
     }
-    button.setAttribute("aria-label", calPickerYear + "년 " + month + "월");
+    button.setAttribute("aria-label", I18n.yearMonth(calPickerYear, month));
     months.appendChild(button);
   }
 }
@@ -2206,8 +2211,9 @@ function updateDistrictChip() {
     chips.scrollLeft = 0; // 가로 스크롤 뒤에 숨지 않게
   }
   chip.classList.add("active"); // 위 updateChipActive 루프가 data-value 없는 이 칩의 active 를 지우므로 매번 다시 켬
-  chip.textContent = "📍 " + districtFilter + " ✕";
-  chip.setAttribute("aria-label", districtFilter + " 필터 해제");
+  var districtName = I18n.name("district", districtFilter);
+  chip.textContent = "📍 " + districtName + " ✕";
+  chip.setAttribute("aria-label", I18n.t("chip.clearFilter", { name: districtName }));
 }
 
 // ----- 바텀시트 (사이드바 목록을 아래에서 끌어올리는 방식) -----
@@ -2253,7 +2259,7 @@ function setSheetState(state) {
   setSheetY(y, true);
   // 시트가 내려가 있는 만큼 목록 아래 여백 → 마지막 카드까지 스크롤 가능 (전체는 CSS 가 하단 탭 자리만큼)
   document.getElementById("list").style.paddingBottom = state === "full" ? "" : y + 24 + "px";
-  document.getElementById("sheetToggleText").textContent = state === "peek" ? "목록 보기" : "지도 보기";
+  document.getElementById("sheetToggleText").textContent = I18n.t(state === "peek" ? "sheet.list" : "sheet.map");
   updateSheetHeaderLabel();
   if (state !== "peek") hidePreview(); // 목록이 지도를 덮으면 하단 카드는 닫음
   else if (previewEventId === null) showDefaultPreview(); // 지도 탭 = 카드 줄 기본 표시 (P3)
@@ -2272,7 +2278,7 @@ function updateSheetHeaderLabel() {
   header.setAttribute("aria-expanded", expanded ? "true" : "false");
   header.setAttribute(
     "aria-label",
-    document.getElementById("resultCount").textContent + ", " + (expanded ? "지도 보기" : "목록 보기"),
+    document.getElementById("resultCount").textContent + ", " + I18n.t(expanded ? "sheet.map" : "sheet.list"),
   );
 }
 
@@ -2498,7 +2504,7 @@ function renderHomeNow() {
     // 진행 중이 없거나, 진행 중 행사가 모두 아래 "곧 종료"에 나옴 (겹쳐 보이지 않게)
     track.innerHTML =
       '<p class="home-empty">' +
-      (count ? "진행 중인 행사는 모두 아래 '곧 종료'에 있어요" : "지금 진행 중인 행사가 없어요") +
+      escapeHtml(I18n.t(count ? "home.nowAllInSoon" : "home.noneNow")) +
       "</p>";
     return;
   }
@@ -2506,9 +2512,9 @@ function renderHomeNow() {
   // 누르거나 키보드로도 같은 곳으로 (버튼)
   track.innerHTML =
     cards.map(nowCardHtml).join("") +
-    '<button type="button" class="now-more" aria-label="진행 중 행사 전체를 지도에서 보기">' +
+    '<button type="button" class="now-more" aria-label="' + escapeHtml(I18n.t("home.nowMoreLabel")) + '">' +
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>' +
-    '<span class="now-more-text" aria-hidden="true">더 밀면 전체</span>' +
+    '<span class="now-more-text" aria-hidden="true">' + escapeHtml(I18n.t("home.nowMore")) + "</span>" +
     "</button>";
   track.scrollLeft = 0; // 다시 그릴 때 처음 카드부터
   bindHomeCards(track);
@@ -2576,7 +2582,7 @@ document.getElementById("homeNowAll").addEventListener("click", function () {
 function eventRowHtml(event) {
   var status = eventStatus(event);
   var dday = ddayText(event);
-  var sub = [event.category, eventDistrict(event), formatEventDates(event)].filter(Boolean);
+  var sub = [event.category && I18n.name("cat", event.category), eventDistrict(event), formatEventDates(event)].filter(Boolean);
   return (
     '<button type="button" class="event-row" data-event-id="' + event.id + '">' +
     '<span class="row-poster">' +
@@ -2620,7 +2626,7 @@ function renderHomeSoon() {
   if (picks.length === 0) {
     list.innerHTML =
       '<p class="home-empty">' +
-      (isEnding ? "7일 안에 끝나는 행사가 없어요" : "7일 안에 시작하는 행사가 없어요") +
+      escapeHtml(I18n.t(isEnding ? "home.noneEnding" : "home.noneStarting")) +
       "</p>";
     return;
   }
@@ -2719,8 +2725,8 @@ function renderHomeError() {
   var list = document.getElementById("homeSoonList");
   list.removeAttribute("aria-busy");
   list.innerHTML =
-    '<div class="home-empty" role="alert"><span>행사를 불러오지 못했어요.</span>' +
-    '<button type="button" id="homeRetryBtn">다시 시도</button></div>';
+    '<div class="home-empty" role="alert"><span>' + escapeHtml(I18n.t("home.loadFailed")) + "</span>" +
+    '<button type="button" id="homeRetryBtn">' + escapeHtml(I18n.t("common.retry")) + "</button></div>";
   document.getElementById("homeRetryBtn").addEventListener("click", loadEvents);
 }
 
@@ -2772,7 +2778,7 @@ function renderHomeNearby() {
       chip.type = "button";
       chip.className = "chip";
       chip.dataset.district = district;
-      chip.textContent = district.replace(/구$/, ""); // 장안 · 권선 · 팔달 · 영통
+      chip.textContent = I18n.name("districtShort", district); // 장안 · 권선 · 팔달 · 영통
       chip.addEventListener("click", function () {
         homeDistrict = district;
         renderHomeNearby();
@@ -2792,8 +2798,8 @@ function renderHomeNearby() {
   var go = document.getElementById("homeNearbyGo");
   go.disabled = nearbyPicks.length === 0;
   go.textContent = nearbyPicks.length
-    ? homeDistrict + " 행사 " + nearbyPicks.length + "개 · 지도에서 보기 →"
-    : homeDistrict + "에는 지금 볼 수 있는 행사가 없어요";
+    ? I18n.t("home.nearbyGo", { name: I18n.name("district", homeDistrict), n: nearbyPicks.length })
+    : I18n.t("home.nearbyNone", { name: I18n.name("district", homeDistrict) });
   document.getElementById("homeNearby").hidden = false;
   drawNearbyMap();
 }
@@ -2957,7 +2963,7 @@ function searchDistrictRowHtml(district, count) {
   return (
     '<button type="button" class="search-row search-district" data-district="' + district + '">' +
     '<span class="search-pin" aria-hidden="true">📍</span>' +
-    '<span class="search-title"><strong>' + district + "</strong> · 지도에서 행사 " + count + "개</span>" +
+    '<span class="search-title">' + I18n.t("search.districtRow", { name: "<strong>" + escapeHtml(I18n.name("district", district)) + "</strong>", n: count }) + "</span>" +
     "</button>"
   );
 }
@@ -2983,12 +2989,12 @@ function renderSearch() {
   document.getElementById("searchClearBtn").hidden = !keyword;
   if (!eventsLoaded) {
     list.innerHTML = eventsLoadFailed
-      ? '<p class="search-empty" role="alert">행사를 불러오지 못했어요. 닫은 뒤 다시 시도해 주세요</p>'
-      : '<p class="search-empty">행사를 불러오는 중이에요</p>';
+      ? '<p class="search-empty" role="alert">' + escapeHtml(I18n.t("search.loadFailed")) + "</p>"
+      : '<p class="search-empty">' + escapeHtml(I18n.t("search.loading")) + "</p>";
     return;
   }
   if (!keyword.trim()) {
-    list.innerHTML = '<p class="search-empty">행사 이름이나 장소로 찾아보세요</p>';
+    list.innerHTML = '<p class="search-empty">' + escapeHtml(I18n.t("search.hint")) + "</p>";
     return;
   }
   var events = homeEvents();
@@ -3001,12 +3007,12 @@ function renderSearch() {
   if (results) {
     // 결과: 맞는 행사 전부 (입력 중 행과 같은 규칙이라 종료 행사도 맨 아래에 나옴)
     html +=
-      '<div class="result-head"><span>검색 결과 <strong>' + picks.length + "개</strong></span>" +
-      '<span class="result-sort">종료 임박순</span></div>';
+      '<div class="result-head"><span>' + I18n.t("search.resultCount", { n: "<strong>" + picks.length + "</strong>" }) + "</span>" +
+      '<span class="result-sort">' + escapeHtml(I18n.t("search.sort")) + "</span></div>";
     html += picks.length
       ? picks.map(searchResultRowHtml).join("")
-      : '<div class="search-empty" role="status"><strong>‘' + escapeHtml(keyword.trim()) + "’ 검색 결과가 없어요</strong>" +
-        "<span>띄어쓰기 없이 짧게 쓰거나, 장소 이름(예: 아트리움 · 행궁)으로 찾아보세요</span></div>";
+      : '<div class="search-empty" role="status"><strong>' + escapeHtml(I18n.t("search.noResult", { q: keyword.trim() })) + "</strong>" +
+        "<span>" + escapeHtml(I18n.t("search.noResultTip")) + "</span></div>";
   } else {
     html += picks
       .slice(0, SEARCH_SUGGEST_MAX)
@@ -3014,7 +3020,7 @@ function renderSearch() {
         return searchRowHtml(event, keyword, typing);
       })
       .join("");
-    if (!html) html = '<p class="search-empty">‘' + escapeHtml(keyword.trim()) + "’와 맞는 행사가 없어요</p>";
+    if (!html) html = '<p class="search-empty">' + escapeHtml(I18n.t("search.noMatch", { q: keyword.trim() })) + "</p>";
   }
   list.innerHTML = html;
   list.scrollTop = 0;
@@ -3099,8 +3105,8 @@ function distanceSq(a, b) {
 // PC 카드 기간 줄 뒤 요약: 진행일 확정이면 "총 N회" 또는 요일 요약(주말 · 매일 …), 아니면 없음 (schedule-format.js)
 function pcPeriodSummary(event) {
   if (!hasRunDates(event) || event.startDate === event.endDate) return null;
-  if (event.dates.length <= SCHEDULE_LIST_MAX) return "총 " + event.dates.length + "회";
-  return weekdaySummary(event) || "총 " + event.dates.length + "회";
+  if (event.dates.length <= SCHEDULE_LIST_MAX) return I18n.t("sched.times", { n: event.dates.length });
+  return weekdaySummary(event) || I18n.t("sched.times", { n: event.dates.length });
 }
 
 // PC 카드 기간 줄 · 장소 줄 (아이콘 + PC 글 "08.01 – 12.19 · 주말"). 모바일은 P3 의 .preview-date · .preview-place — CSS 로 서로 숨김
@@ -3191,9 +3197,9 @@ function renderPreviewStrip(sortedItems) {
         placeLineHtml(item.event, "preview-place") +
         pc.lines +
         '<div class="preview-actions">' +
-        '<button type="button" class="preview-detail">상세 보기</button>' +
+        '<button type="button" class="preview-detail">' + escapeHtml(I18n.t("card.detail")) + "</button>" +
         '<button type="button" class="preview-route">' +
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11 21 3l-8 18-2-8-8-2z" /></svg><span class="route-label">길찾기</span></button>' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11 21 3l-8 18-2-8-8-2z" /></svg><span class="route-label">' + escapeHtml(I18n.t("route.title")) + "</span></button>" +
         "</div>" +
         "</div>" +
         favButtonHtml(favoriteEventIds.has(item.event.id));
@@ -3264,7 +3270,7 @@ function updatePreviewLabel() {
   band.hidden = !bandCount;
   if (bandCount) {
     band.innerHTML =
-      "이 장소 행사 <strong>" + bandCount + "</strong>" +
+      I18n.t("card.placeBand", { n: "<strong>" + bandCount + "</strong>" }) +
       (current.dataset.place ? '<span class="band-place"> · ' + escapeHtml(current.dataset.place) + "</span>" : "");
   }
   var arrows = stripArrowState(index, cards.length); // strip-nav.js
@@ -3610,7 +3616,7 @@ function openRouteSheet(event) {
   var address = extractAddress(event.info);
   document.getElementById("routeEvent").textContent = event.title;
   document.getElementById("routePlace").textContent = place;
-  document.getElementById("routeAddress").textContent = address || "주소 정보 없음";
+  document.getElementById("routeAddress").textContent = address || I18n.t("route.noAddress");
   document.getElementById("routeCopyBtn").hidden = !address;
   document.getElementById("routeKakao").href = kakaoRouteUrl(place, event.latitude, event.longitude);
   document.getElementById("routeNaver").href = naverRouteUrl(place, event.latitude, event.longitude);
@@ -3651,7 +3657,7 @@ function toggleRoutePop(event, button) {
   placeRoutePop();
   button.setAttribute("aria-expanded", "true");
   button.classList.add("open");
-  button.querySelector(".route-label").textContent = "길찾기 ▴";
+  button.querySelector(".route-label").textContent = I18n.t("route.title") + " ▴";
   dialogFocus.opened("routePop", pop);
 }
 function placeRoutePop() {
@@ -3676,7 +3682,7 @@ function closeRoutePop(returnFocus) {
   if (button.isConnected) {
     button.removeAttribute("aria-expanded"); // 모바일(하단 시트) 버튼엔 없음 — PC 창이 열린 동안만 (#241 검증)
     button.classList.remove("open");
-    button.querySelector(".route-label").textContent = "길찾기";
+    button.querySelector(".route-label").textContent = I18n.t("route.title");
   }
   if (returnFocus) dialogFocus.closed("routePop");
   else dialogFocus.forget("routePop");
@@ -3688,10 +3694,10 @@ document.getElementById("routePopCopy").addEventListener("click", function () {
   if (!routePopEvent) return;
   copyText(extractAddress(routePopEvent.info) || "").then(
     function () {
-      showToast("주소를 복사했어요");
+      showToast(I18n.t("toast.addrCopied"));
     },
     function () {
-      showToast("복사하지 못했어요. 주소를 직접 선택해 복사해 주세요");
+      showToast(I18n.t("toast.copyFailedSelect"));
     },
   );
 });
@@ -3740,10 +3746,10 @@ document.getElementById("routeCopyBtn").addEventListener("click", function () {
   if (!routeEvent) return;
   copyText(extractAddress(routeEvent.info) || "").then(
     function () {
-      showToast("주소를 복사했어요");
+      showToast(I18n.t("toast.addrCopied"));
     },
     function () {
-      showToast("복사하지 못했어요. 주소를 길게 눌러 복사해 주세요");
+      showToast(I18n.t("toast.copyFailedLong"));
     },
   );
 });

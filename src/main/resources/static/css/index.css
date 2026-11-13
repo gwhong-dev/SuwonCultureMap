@@ -3730,3 +3730,330 @@ body {
     animation: none !important;
   }
 }
+
+/* ===== 화면 언어 (11/13 확정 시안 Q3 LangE · LangD · LangMobile, lang-picker.js) ===== */
+/* PC 상단 바 단추: [지구 18] 지금 언어 14·700 | Language 13 ▾ — 높이 40 알약 */
+.lang-menu {
+  position: relative;
+  flex: none;
+}
+.lang-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--bar-line);
+  border-radius: 20px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lang-btn:hover {
+  border-color: var(--sub);
+}
+.lang-btn:focus-visible,
+.lang-option:focus-visible,
+.lang-row:focus-visible,
+.lang-pill:focus-visible,
+.lang-offer button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.lang-btn svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.lang-current {
+  font-size: 14px;
+  font-weight: 700;
+}
+.lang-sep {
+  width: 1px;
+  height: 14px;
+  background: color-mix(in srgb, var(--sub) 35%, transparent); /* 시안 #d6d0c7 (밝은 화면), 어두운 화면도 옅은 선 */
+}
+.lang-en {
+  font-size: 13px;
+  color: var(--sub);
+}
+.lang-caret {
+  font-size: 12px;
+  color: var(--sub);
+}
+/* 펼침 목록 (LangD): 폭 260, 단추 오른쪽 끝 · 상단 바 아래 8px */
+.lang-pop {
+  position: absolute;
+  top: calc(100% + 16px); /* 상단 바 아래 여백 8px + 8px */
+  right: 0;
+  z-index: 45;
+  width: 260px;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-float);
+}
+.lang-pop[hidden] {
+  display: none;
+}
+.lang-option,
+.lang-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 14px;
+  cursor: pointer;
+}
+.lang-native {
+  font-size: 15px;
+}
+.lang-english {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--sub);
+}
+.lang-check {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  visibility: hidden;
+}
+.lang-option:hover,
+.lang-option:focus-visible,
+.lang-row:hover {
+  background: var(--surface);
+}
+.lang-option[aria-selected="true"],
+.lang-row[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+.lang-option[aria-selected="true"] .lang-english,
+.lang-row[aria-pressed="true"] .lang-english {
+  color: var(--accent-ink);
+}
+.lang-option[aria-selected="true"] .lang-check,
+.lang-row[aria-pressed="true"] .lang-check {
+  visibility: visible;
+}
+.lang-note {
+  margin: 0;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--sub);
+}
+/* ☰ 메뉴 "언어 Language" 줄 · 홈 알약 단추는 모바일만 */
+.menu-lang,
+.lang-pill {
+  display: none;
+}
+
+/* 첫 방문 안내 줄 (LangE): 먹색 띠 52px — 어두운 화면도 같은 색 */
+.lang-offer {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 6px 0 16px;
+  box-sizing: border-box;
+  background: #1c1b1a;
+  color: #f2efea;
+  font-size: 14px;
+}
+.lang-offer-body {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  padding: 8px 0;
+}
+.lang-offer-body > svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.lang-offer-actions {
+  display: flex;
+  gap: 8px;
+}
+.lang-offer-yes,
+.lang-offer-keep {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 4px;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lang-offer-yes {
+  border: 0;
+  background: #e07a57;
+  color: #141312;
+  font-size: 14px;
+  font-weight: 700;
+}
+.lang-offer-keep {
+  border: 1px solid #5f5a54;
+  background: transparent;
+  color: #f2efea;
+  font-size: 13px;
+}
+.lang-offer-close {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: none;
+  color: #f2efea;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.lang-offer-mobile {
+  display: none;
+}
+
+/* 아래에서 올라오는 판 (LangMobile): 뒤 덮개 --dim, 손잡이 40×4 */
+.lang-sheet-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 120; /* 상세창(100) · 길찾기 판(110) 위 */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: var(--dim);
+}
+.lang-sheet-wrap[hidden] {
+  display: none;
+}
+.lang-sheet {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: sheetUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.lang-sheet-handle {
+  align-self: center;
+  width: 40px;
+  height: 4px;
+  margin-top: 8px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.lang-sheet-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  padding: 14px 20px 8px;
+  font-size: 17px;
+  font-weight: 700;
+}
+.lang-sheet-en {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--sub);
+}
+.lang-rows {
+  display: flex;
+  flex-direction: column;
+}
+.lang-row {
+  height: 56px;
+  padding: 0 20px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+.lang-row .lang-native {
+  font-size: 16px;
+}
+.lang-sheet .lang-note {
+  padding: 12px 20px 16px;
+}
+@media (max-width: 1024px) {
+  .lang-menu,
+  .lang-offer-pc {
+    display: none;
+  }
+  .lang-offer-mobile {
+    display: flex;
+    align-items: flex-start;
+    padding: 6px 4px 10px 16px;
+  }
+  /* 좁으면 글 한 줄 + 단추 줄 (두 줄) */
+  .lang-offer-mobile .lang-offer-body {
+    justify-content: flex-start;
+    gap: 10px 8px;
+  }
+  .lang-offer-mobile .lang-offer-text {
+    flex: 1 1 calc(100% - 30px);
+  }
+  .lang-offer-mobile .lang-offer-actions {
+    flex-basis: 100%;
+  }
+  .lang-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 36px;
+    margin-right: 4px;
+    padding: 0 10px;
+    border: 1px solid var(--text);
+    border-radius: 18px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+  }
+  .lang-pill svg {
+    width: 16px;
+    height: 16px;
+  }
+  .lang-code {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .menu-lang {
+    display: flex;
+    gap: 8px;
+  }
+  .menu-lang svg {
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+  .menu-lang-en {
+    color: var(--sub);
+  }
+}
+/* PC 안내 줄은 높이 52px 고정 → 지도 위 칩 줄을 그만큼 내림 (칩은 상단 바 기준 절대 위치) */
+@media (min-width: 1025px) {
+  .lang-offer-pc {
+    height: 52px;
+  }
+  body.lang-offer-on #categoryChips {
+    top: calc(100% + 52px + 12px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lang-sheet {
+    animation: none !important;
+  }
+}

@@ -48,11 +48,16 @@ function toggledMode(mode, systemDark) {
   return isDarkMode(mode, systemDark) ? "light" : "dark";
 }
 
+// 화면 언어 (i18n.js) 가 있는 페이지는 그 언어로, 없는 페이지(about · privacy) · node 시험은 한국어
+function themeText(key, ko) {
+  return typeof I18n !== "undefined" ? I18n.t(key) : ko;
+}
+
 // PC 단추 모양: 밝을 때 ☾ "어두운 화면으로", 어두울 때 ☀ "밝은 화면으로"
 function toggleLabel(mode, systemDark) {
   return isDarkMode(mode, systemDark)
-    ? { icon: "sun", label: "밝은 화면으로" }
-    : { icon: "moon", label: "어두운 화면으로" };
+    ? { icon: "sun", label: themeText("theme.toLight", "밝은 화면으로") }
+    : { icon: "moon", label: themeText("theme.toDark", "어두운 화면으로") };
 }
 
 function applyMode(root, mode) {
