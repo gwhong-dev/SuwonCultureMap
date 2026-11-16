@@ -3717,15 +3717,24 @@ body {
     font-size: 14px;
     text-align: center;
   }
-  /* ① 끝 좁은 안내 (P3 확정 시안 HomeOverscroll): 폭 52px · 바탕 없이 화살표 + 세로 글자 "더 밀면 전체" (벽돌 글자)
-     끝에서 한 번 더 밀면 지도 탭 + 진행 중 + 카드 줄 (index.js setupNowEndSwipe). 사용자: "해 보고 수정" */
+  /* ① 끝 좁은 안내 (P3 HomeOverscroll → 11/16 확정 시안 '이어 보기', docs/design/2026-11-16-p3-pull-map-intro.md):
+     폭 52px · 바탕 없이 화살표 + 가로 두 줄 "넘기면 / 지도로" (벽돌 글자)
+     ② 끝에서 한 번 더 당기면 --now-pull(늘어난 양 px, index.js setNowPull)만큼 카드 줄은 왼쪽 · 안내 칸은 넓게 · 화살표는 오른쪽
+        당기는 동안(.pulling)은 손을 바로 따라가고, 놓으면 260ms 에 제자리로. 기준을 넘으면(.over) 화살표 1.15배 + "놓으면 지도로" */
+  #homeNowTrack {
+    --now-pull: 0;
+    --pull-spring: 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    overscroll-behavior-x: none; /* 아이폰 고무줄 튕김 대신 아래 당김 움직임 하나만 */
+    transform: translateX(calc(var(--now-pull) * -0.6px));
+    transition: transform var(--pull-spring);
+  }
   .now-more {
-    flex: 0 0 52px;
+    flex: 0 0 calc(52px + var(--now-pull) * 0.6px);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     padding: 10px 0;
     border: 0;
     background: none;
@@ -3733,16 +3742,92 @@ body {
     font: inherit;
     cursor: pointer;
     scroll-snap-align: end;
+    transition: flex-basis var(--pull-spring);
   }
   .now-more svg {
     width: 20px;
     height: 20px;
+    transform: translateX(calc(var(--now-pull) * 0.35px));
+    transition: transform var(--pull-spring);
+  }
+  .now-more.over svg {
+    transform: translateX(calc(var(--now-pull) * 0.35px)) scale(1.15);
+  }
+  #homeNowTrack.pulling,
+  #homeNowTrack.pulling .now-more {
+    transition: none;
+  }
+  #homeNowTrack.pulling .now-more svg {
+    transition: transform 120ms ease-out;
   }
   .now-more-text {
-    writing-mode: vertical-rl;
+    width: 52px;
     font-size: 12px;
     font-weight: 500;
-    line-height: 1.3;
+    line-height: 1.35;
+    text-align: center;
+    word-break: keep-all; /* "넘기면 / 지도로" 띄어쓰기에서만 줄바꿈 */
+  }
+
+  /* ③ 지도 전환 덮개 (11/16 확정 시안 '이어 보기' A3): 지도 자리(하단 탭 위까지)를 종이색으로 덮고
+     지도가 준비되면(.reveal) 핀 자리에서 구멍(.map-intro-hole)이 커지며 지도가 드러남.
+     구멍 = 투명한 원 + 바깥을 덮는 큰 그림자 → 원 크기만 키우면 됨 (index.js playMapIntro) */
+  .map-intro:not([hidden]) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--tab-height) + env(safe-area-inset-bottom, 0px));
+    z-index: 38; /* 홈(35) · 검색창(30) 위, 하단 탭(40) 아래 */
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: mapIntroIn 140ms ease-out;
+  }
+  .map-intro-hole {
+    position: absolute;
+    left: var(--hole-x, 50%);
+    top: var(--hole-y, 40%);
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    box-shadow: 0 0 0 300vmax var(--bar);
+    transform: translate(-50%, -50%);
+  }
+  .map-intro.reveal .map-intro-hole {
+    width: 300vmax;
+    height: 300vmax;
+    transition: width 420ms cubic-bezier(0.55, 0, 0.25, 1), height 420ms cubic-bezier(0.55, 0, 0.25, 1);
+  }
+  .map-intro-body {
+    position: relative; /* 구멍 그림자 위 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 0 24px;
+    color: var(--text);
+    text-align: center;
+  }
+  .map-intro.reveal .map-intro-body {
+    opacity: 0;
+    transition: opacity 150ms ease-out;
+  }
+  .map-intro-pin {
+    width: 44px;
+    height: 44px;
+    color: var(--accent);
+    animation: mapIntroPin 260ms cubic-bezier(0.3, 1.4, 0.5, 1);
+  }
+  .map-intro .brand-name {
+    width: 186.4px; /* PC 상단 바 워드마크와 같은 크기 (비율 186.4 : 17.7) */
+    height: 17.7px;
+  }
+  .map-intro-text {
+    margin: 0;
+    font-size: 14px;
+    color: var(--sub);
   }
   .now-more:focus-visible {
     outline: 2px solid var(--accent);
@@ -4471,6 +4556,19 @@ body {
   }
 }
 
+@keyframes mapIntroIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mapIntroPin {
+  from {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+}
+
 @keyframes sheetUp {
   from {
     transform: translateY(100%);
@@ -4487,9 +4585,23 @@ body {
   .marker-hop-icon,
   .marker-hop-ring,
   .modal-card,
-  .sk::after {
+  .sk::after,
+  #homeNowTrack,
+  .now-more,
+  .now-more svg,
+  .map-intro-pin {
     transition: none !important;
     animation: none !important;
+  }
+  /* 덮개는 원형 펼침 대신 흐려짐 (index.js playMapIntro 가 같은 시간 뒤 닫음) */
+  .map-intro.reveal .map-intro-hole {
+    width: 0;
+    height: 0;
+    transition: none;
+  }
+  .map-intro.reveal {
+    opacity: 0;
+    transition: opacity 150ms ease-out;
   }
 }
 

@@ -501,3 +501,30 @@ test("끝 넘김: 끝에 닿은 채 시작해 왼쪽으로 40px 이상 밀어야
   assert.strictEqual(homeEndSwipe(true, 80, 0), false); // 오른쪽으로 = 앞 카드로
   assert.strictEqual(homeEndSwipe(true, -50, 80), false); // 세로 스크롤
 });
+
+// ----- ② 당김 움직임 · ③ 지도 전환 덮개 (11/16 확정 시안 '이어 보기', docs/design/2026-11-16-p3-pull-map-intro.md) -----
+const { HOME_PULL_MAX, homePullEase, homePullOver, MAP_INTRO_MAX_MS, mapIntroReady } = require("../../main/resources/static/home-picks.js");
+
+test("당김: 손을 따라 늘어나되 점점 무거워지고 70px 을 넘지 않음", () => {
+  assert.strictEqual(homePullEase(0), 0);
+  assert.strictEqual(homePullEase(-30), 0); // 오른쪽으로 = 안 늘어남
+  assert.ok(homePullEase(10) > 8 && homePullEase(10) < 10); // 처음엔 거의 손을 따라감
+  assert.ok(homePullEase(40) < 40);
+  assert.ok(homePullEase(80) > homePullEase(40)); // 더 당기면 더 늘어남
+  assert.ok(homePullEase(1000) <= HOME_PULL_MAX);
+  assert.ok(homePullEase(1000) > HOME_PULL_MAX - 1);
+});
+
+test("당김: 끝 넘김 거리(40px)를 넘으면 '놓으면 지도로' — 놓았을 때 지도로 가는 기준과 같음", () => {
+  assert.strictEqual(homePullOver(HOME_END_SWIPE_PX - 1), false);
+  assert.strictEqual(homePullOver(HOME_END_SWIPE_PX), true);
+  assert.strictEqual(homePullOver(HOME_END_SWIPE_PX), homeEndSwipe(true, -HOME_END_SWIPE_PX, 0));
+});
+
+test("지도 전환 덮개: tilesloaded 면 바로, 타일 그림 완료는 0.25초 뒤부터, 늦어도 1.5초", () => {
+  assert.strictEqual(mapIntroReady(0, true, false), true);
+  assert.strictEqual(mapIntroReady(100, false, true), false); // 홈 뒤에 있던 옛 타일일 수 있어 바로 믿지 않음
+  assert.strictEqual(mapIntroReady(250, false, true), true);
+  assert.strictEqual(mapIntroReady(1000, false, false), false);
+  assert.strictEqual(mapIntroReady(MAP_INTRO_MAX_MS, false, false), true);
+});

@@ -307,6 +307,16 @@
       </div>
       <div id="searchSuggest" class="search-suggest"></div>
     </section>
+    <!-- 모바일 전용: 홈 끝 당김 → 지도 탭으로 처음 갈 때 지도를 불러오는 동안 덮개, 준비되면 핀 자리에서 원형으로 펼침
+         (11/16 확정 시안 '이어 보기', docs/design/2026-11-16-p3-pull-map-intro.md ③). 글은 화면 읽기에선 role=status 로 한 번 -->
+    <div id="mapIntro" class="map-intro" hidden>
+      <span id="mapIntroHole" class="map-intro-hole" aria-hidden="true"></span>
+      <div class="map-intro-body">
+        <svg id="mapIntroPin" class="map-intro-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z" /><circle cx="12" cy="10" r="2.2" /></svg>
+        <span class="brand-words" aria-hidden="true"><svg class="brand-name"><use href="/brand/logo.svg#wordmark" /></svg></span>
+        <p id="mapIntroText" class="map-intro-text" role="status"></p>
+      </div>
+    </div>
     <!-- 모바일 전용: 하단 탭 (docs/design/mobile-design-v1.md 2번) -->
     <nav id="tabBar" aria-label="하단 탭" data-i18n-attr="aria-label:tab.label">
       <button type="button" class="tab-item" data-tab="home">
