@@ -3728,8 +3728,10 @@ body {
     transform: translateX(calc(var(--now-pull) * -0.6px));
     transition: transform var(--pull-spring);
   }
+  /* 칸 폭은 52px 그대로 두고 넓어지는 모습은 transform 으로만 (폭을 바꾸면 스크롤 끝이 늘어 실기기에서 카드가 두 배로 밀림, #270 검증 ⚠️)
+     시안 = 칸이 왼쪽으로 0.6 넓어짐(오른쪽 끝 고정) → 칸과 함께 −0.6 움직인 글자는 +0.3, 화살표는 +0.3 + 0.35 = +0.65 */
   .now-more {
-    flex: 0 0 calc(52px + var(--now-pull) * 0.6px);
+    flex: 0 0 52px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -3742,19 +3744,18 @@ body {
     font: inherit;
     cursor: pointer;
     scroll-snap-align: end;
-    transition: flex-basis var(--pull-spring);
   }
   .now-more svg {
     width: 20px;
     height: 20px;
-    transform: translateX(calc(var(--now-pull) * 0.35px));
+    transform: translateX(calc(var(--now-pull) * 0.65px));
     transition: transform var(--pull-spring);
   }
   .now-more.over svg {
-    transform: translateX(calc(var(--now-pull) * 0.35px)) scale(1.15);
+    transform: translateX(calc(var(--now-pull) * 0.65px)) scale(1.15);
   }
   #homeNowTrack.pulling,
-  #homeNowTrack.pulling .now-more {
+  #homeNowTrack.pulling .now-more-text {
     transition: none;
   }
   #homeNowTrack.pulling .now-more svg {
@@ -3766,7 +3767,9 @@ body {
     font-weight: 500;
     line-height: 1.35;
     text-align: center;
-    word-break: keep-all; /* "넘기면 / 지도로" 띄어쓰기에서만 줄바꿈 */
+    word-break: keep-all; /* "넘기면 / 지도로" 띄어쓰기에서만 줄바꿈 — 언어마다 한 줄이 칸 안인지는 i18n.test.js */
+    transform: translateX(calc(var(--now-pull) * 0.3px));
+    transition: transform var(--pull-spring);
   }
 
   /* ③ 지도 전환 덮개 (11/16 확정 시안 '이어 보기' A3): 지도 자리(하단 탭 위까지)를 종이색으로 덮고
@@ -4587,7 +4590,7 @@ body {
   .modal-card,
   .sk::after,
   #homeNowTrack,
-  .now-more,
+  .now-more-text,
   .now-more svg,
   .map-intro-pin {
     transition: none !important;

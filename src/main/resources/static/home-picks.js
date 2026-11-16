@@ -101,11 +101,6 @@ function homePullEase(pull) {
   return pull > 0 ? HOME_PULL_MAX * (1 - Math.exp(-pull / HOME_PULL_MAX)) : 0;
 }
 
-// 지금 놓으면 지도로 가나 (기준 = 끝 넘김 거리). 넘으면 안내가 "놓으면 지도로" 로 바뀜
-function homePullOver(pull) {
-  return pull >= HOME_END_SWIPE_PX;
-}
-
 // 지도 전환 덮개(③)를 걷어도 되나: 카카오 tilesloaded, 또는 0.25초 뒤 타일 그림이 다 불러와짐, 늦어도 1.5초
 var MAP_INTRO_MIN_MS = 250;
 var MAP_INTRO_MAX_MS = 1500;
@@ -408,7 +403,6 @@ if (typeof module !== "undefined") {
     homeEndSwipe: homeEndSwipe,
     HOME_PULL_MAX: HOME_PULL_MAX,
     homePullEase: homePullEase,
-    homePullOver: homePullOver,
     MAP_INTRO_MAX_MS: MAP_INTRO_MAX_MS,
     mapIntroReady: mapIntroReady,
     monthGroups: monthGroups,

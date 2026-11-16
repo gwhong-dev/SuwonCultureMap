@@ -255,3 +255,16 @@ test("HTML: 언어 단추 · 판 자리와 글 묶음 · i18n.js 를 theme.js �
   assert.ok(index.indexOf('id="langBtn"') < index.indexOf('id="themeToggleBtn"'));
   assert.ok(index.indexOf('id="homeLangBtn"') < index.indexOf('id="homeThemeBtn"'));
 });
+
+// 홈 끝 안내(52px 칸 · 12px 글자, 11/16 확정 시안 '이어 보기')는 띄어쓰기에서만 줄을 바꿈(keep-all)
+// → 언어마다 띄어쓰기로 나눈 한 줄이 칸을 넘지 않아야 함 (#270 검증 ❌: ja · zh 가 한 줄로 넘쳐 잘렸음)
+test("홈 끝 안내: 4개 언어 모두 한 줄이 52px 칸 안 (한중일 글자 12px · 로마자 약 7px 로 어림)", () => {
+  const width = (s) => [...s].reduce((w, ch) => w + (/[぀-ヿ㐀-鿿가-힯]/.test(ch) ? 12 : 7), 0);
+  for (const lang of I18N_LANGS) {
+    for (const key of ["home.nowMore", "home.nowMoreRelease"]) {
+      for (const line of messages[lang][key].split(" ")) {
+        assert.ok(width(line) <= 52, lang + " " + key + " '" + line + "' = " + width(line) + "px");
+      }
+    }
+  }
+});

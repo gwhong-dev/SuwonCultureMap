@@ -256,8 +256,8 @@ class ScheduleDisplayPageTest {
     int mobile = css.indexOf("@media (max-width: 1024px)");
     // 끝 안내는 가로 두 줄 "넘기면 / 지도로" + 당김 움직임 (11/16 확정 시안 '이어 보기') — 세로 글자 없앰
     assertThat(css).doesNotContain("writing-mode: vertical-rl;");
-    assertThat(css.indexOf("flex: 0 0 calc(52px + var(--now-pull) * 0.6px);", mobile)).isGreaterThan(mobile);
-    assertThat(js).contains("setNowPull(track, Math.max(0, -dx));", "showNowEvents(\"map\", true)");
+    assertThat(css.indexOf("transform: translateX(calc(var(--now-pull) * 0.3px));", mobile)).isGreaterThan(mobile);
+    assertThat(js).contains("setNowPull(track, Math.max(0, -dx), homeEndSwipe(true, dx, dy));", "showNowEvents(\"map\", true)");
     // 지도 탭에 처음 갈 때만 덮개 → 핀 자리에서 펼침, 이미 열었으면 바로 지도
     assertThat(html).contains("id=\"mapIntro\" class=\"map-intro\" hidden", "id=\"mapIntroText\"");
     assertThat(js).contains("withIntro && tab === \"map\" && !mapTabOpened && mobileQuery.matches", "if (tab === \"map\") mapTabOpened = true;");

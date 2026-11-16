@@ -503,9 +503,11 @@ test("끝 넘김: 끝에 닿은 채 시작해 왼쪽으로 40px 이상 밀어야
 });
 
 // ----- ② 당김 움직임 · ③ 지도 전환 덮개 (11/16 확정 시안 '이어 보기', docs/design/2026-11-16-p3-pull-map-intro.md) -----
-const { HOME_PULL_MAX, homePullEase, homePullOver, MAP_INTRO_MAX_MS, mapIntroReady } = require("../../main/resources/static/home-picks.js");
+const { HOME_PULL_MAX, homePullEase, MAP_INTRO_MAX_MS, mapIntroReady } = require("../../main/resources/static/home-picks.js");
 
 test("당김: 손을 따라 늘어나되 점점 무거워지고 70px 을 넘지 않음", () => {
+  assert.strictEqual(HOME_PULL_MAX, 70); // 확정 시안 값
+  assert.ok(Math.abs(homePullEase(70) - 44.25) < 0.01); // 70 × (1 − e^−1)
   assert.strictEqual(homePullEase(0), 0);
   assert.strictEqual(homePullEase(-30), 0); // 오른쪽으로 = 안 늘어남
   assert.ok(homePullEase(10) > 8 && homePullEase(10) < 10); // 처음엔 거의 손을 따라감
@@ -515,10 +517,12 @@ test("당김: 손을 따라 늘어나되 점점 무거워지고 70px 을 넘지 
   assert.ok(homePullEase(1000) > HOME_PULL_MAX - 1);
 });
 
-test("당김: 끝 넘김 거리(40px)를 넘으면 '놓으면 지도로' — 놓았을 때 지도로 가는 기준과 같음", () => {
-  assert.strictEqual(homePullOver(HOME_END_SWIPE_PX - 1), false);
-  assert.strictEqual(homePullOver(HOME_END_SWIPE_PX), true);
-  assert.strictEqual(homePullOver(HOME_END_SWIPE_PX), homeEndSwipe(true, -HOME_END_SWIPE_PX, 0));
+test("당김: '놓으면 지도로' 표시는 놓았을 때 지도로 가는 판정(homeEndSwipe)과 같은 함수로 — 세로로 많이 내리면 안 뜸", () => {
+  // index.js setNowPull(track, pull, homeEndSwipe(true, dx, dy)) — #270 검증 ⚠️: 가로 거리만 보면 50px 당긴 뒤 아래로 60px 내렸을 때
+  // "놓으면 지도로"가 보이는데 놓아도 안 넘어갔음
+  assert.strictEqual(homeEndSwipe(true, -HOME_END_SWIPE_PX, 0), true);
+  assert.strictEqual(homeEndSwipe(true, -50, 60), false);
+  assert.strictEqual(homeEndSwipe(true, -(HOME_END_SWIPE_PX - 1), 0), false);
 });
 
 test("지도 전환 덮개: tilesloaded 면 바로, 타일 그림 완료는 0.25초 뒤부터, 늦어도 1.5초", () => {
