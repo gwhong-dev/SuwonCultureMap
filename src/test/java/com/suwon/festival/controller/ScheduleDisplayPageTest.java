@@ -249,12 +249,19 @@ class ScheduleDisplayPageTest {
     assertThat(js).contains("stripLabelText(!!previewOrigin, index, cards.length, mobileQuery.matches)");
     assertThat(js).doesNotContain("mapClickClosesStrip", "\"half\"", "preview-stack");
     // 홈 끝 넘김 → 지도 탭 + 진행 중, 카드 줄에서 연 상세는 좌우로 앞뒤 행사
-    assertThat(js).contains("homeEndSwipe(start.atEnd,", "showNowEvents(\"map\")", "showNowEvents(\"list\")");
+    assertThat(js).contains("homeEndSwipe(start.atEnd,", "showNowEvents(\"map\", true)", "showNowEvents(\"list\")");
     assertThat(js).contains("stripDetailPager(item.event.id)", "swipeStep(t.clientX - start.x, t.clientY - start.y)");
 
     String css = fetch("/css/index.css");
     int mobile = css.indexOf("@media (max-width: 1024px)");
-    assertThat(css.indexOf("writing-mode: vertical-rl;", mobile)).isGreaterThan(mobile); // 세로 글자 "더 밀면 전체"
+    // 끝 안내는 가로 두 줄 "넘기면 / 지도로" + 당김 움직임 (11/16 확정 시안 '이어 보기') — 세로 글자 없앰
+    assertThat(css).doesNotContain("writing-mode: vertical-rl;");
+    assertThat(css.indexOf("transform: translateX(calc(var(--now-pull) * 0.3px));", mobile)).isGreaterThan(mobile);
+    assertThat(js).contains("setNowPull(track, Math.max(0, -dx), homeEndSwipe(true, dx, dy));", "showNowEvents(\"map\", true)");
+    // 지도 탭에 처음 갈 때만 덮개 → 핀 자리에서 펼침, 이미 열었으면 바로 지도
+    assertThat(html).contains("id=\"mapIntro\" class=\"map-intro\" hidden", "id=\"mapIntroText\"");
+    assertThat(js).contains("withIntro && tab === \"map\" && !mapTabOpened && mobileQuery.matches", "if (tab === \"map\") mapTabOpened = true;");
+    assertThat(css.indexOf(".map-intro.reveal .map-intro-hole {", mobile)).isGreaterThan(mobile);
     assertThat(css.indexOf("body.sheet-full:not(.fav-screen) #listMapBtn {", mobile)).isGreaterThan(mobile);
   }
 

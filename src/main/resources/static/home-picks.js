@@ -91,9 +91,22 @@ function nowOpenCards(events, now) {
     .slice(0, HOME_NOW_MAX);
 }
 
-// ① 끝 넘김 (P3, 11/13 확정 시안 HomeOverscroll): 마지막 카드에서 밀면 끝의 좁은 안내 "더 밀면 전체" 가 보이고,
-// 끝에 닿은 채로 한 번 더 밀면 지도 탭 + '진행 중' + 카드 줄. 사용자: "실제 적용해 봐야 알겠다" → 값은 운영에서 보고 조정
+// ① 끝 넘김 (P3, 11/13 확정 시안 HomeOverscroll → 11/16 개선 docs/design/2026-11-16-p3-pull-map-intro.md):
+// 마지막 카드에서 밀면 끝의 좁은 안내 "넘기면 지도로" 가 보이고, 끝에 닿은 채로 한 번 더 당기면 지도 탭 + '진행 중' + 카드 줄
 var HOME_END_SWIPE_PX = 40;
+var HOME_PULL_MAX = 70; // 당김 움직임: 손을 따라 늘어나되 점점 무거워져 최대 약 70px
+
+// 당긴 거리(px) → 화면이 늘어나는 양(px). 70 × (1 − e^(−p/70)): 처음엔 손을 거의 따라가고 멀수록 덜 늘어남
+function homePullEase(pull) {
+  return pull > 0 ? HOME_PULL_MAX * (1 - Math.exp(-pull / HOME_PULL_MAX)) : 0;
+}
+
+// 지도 전환 덮개(③)를 걷어도 되나: 카카오 tilesloaded, 또는 0.25초 뒤 타일 그림이 다 불러와짐, 늦어도 1.5초
+var MAP_INTRO_MIN_MS = 250;
+var MAP_INTRO_MAX_MS = 1500;
+function mapIntroReady(elapsedMs, tilesLoaded, tilesComplete) {
+  return !!tilesLoaded || elapsedMs >= MAP_INTRO_MAX_MS || (elapsedMs >= MAP_INTRO_MIN_MS && !!tilesComplete);
+}
 
 // 가로 줄이 끝까지 넘어갔나 (소수점 · 1px 어긋남 허용)
 function atScrollEnd(scrollLeft, scrollWidth, clientWidth) {
@@ -388,6 +401,10 @@ if (typeof module !== "undefined") {
     HOME_END_SWIPE_PX: HOME_END_SWIPE_PX,
     atScrollEnd: atScrollEnd,
     homeEndSwipe: homeEndSwipe,
+    HOME_PULL_MAX: HOME_PULL_MAX,
+    homePullEase: homePullEase,
+    MAP_INTRO_MAX_MS: MAP_INTRO_MAX_MS,
+    mapIntroReady: mapIntroReady,
     monthGroups: monthGroups,
   };
 }

@@ -37,6 +37,7 @@ function cleanEventText(event) {
 }
 
 var map;
+var mapTabOpened = false; // (모바일) 이 페이지에서 지도 탭을 한 번이라도 열었나 (selectTab) — 열었으면 지도 전환 덮개 없이 바로 지도 (playMapIntro)
 var markerList = [];
 var eventsLoaded = false; // 행사 목록을 받기 전엔 목록(스켈레톤 · 실패 안내)을 다시 그리지 않음
 // 지도 · 목록 검색칸(상단 #searchInput · PC 검색 띠)에서 마지막 글자를 IME 로 조합하는 중인지 → 치는 중 규칙 (home-picks.js searchTypingMode)
@@ -2714,6 +2715,8 @@ function selectTab(tab) {
   }
   hideHome();
   hidePreview();
+  if (tab === "map") mapTabOpened = true; // 다음부턴 지도 전환 덮개 없이 (playMapIntro)
+  else cancelMapIntro(); // 덮개가 떠 있는 동안 목록 · 찜으로 가면 바로 닫음
   favTabOpen = tab === "fav"; // 분류 드롭다운은 건드리지 않음 → 공연 칩 → 찜 탭 → 지도 탭이면 공연 그대로
   filterMarkers();
   setSheetState(tab === "map" ? "peek" : "full");
@@ -2731,6 +2734,7 @@ var homeSoonMode = "ending"; // "ending" 곧 종료 | "starting" 곧 시작
 var homeMonthKey = null; // 달별 행사에서 고른 달 ("2026-12"). 없으면 첫 달
 
 function showHome() {
+  cancelMapIntro(); // 지도 전환 덮개(z 38)가 홈(35)을 가리지 않게 (덮개 중 홈 탭 · 뒤로 가기)
   nav.close("tab"); // 홈에서 나가며 쌓은 칸을 되돌림 (뒤로 가기로 왔으면 이미 빠짐)
   favView = "fav"; // 찜 탭을 나감 → 다음엔 '찜'부터
   if (favTabOpen) {
@@ -2823,7 +2827,7 @@ function renderHomeNow() {
       "</p>";
     return;
   }
-  // 끝에 좁은 안내 (P3 확정 시안 HomeOverscroll): 밀어서 보이면 "더 밀면 전체", 끝에서 한 번 더 밀면 지도 탭 (아래 끝 넘김)
+  // 끝에 좁은 안내 (P3 → 11/16 확정 시안 '이어 보기'): 밀어서 보이면 "넘기면 지도로", 끝에서 한 번 더 당기면 지도 탭 (아래 끝 넘김)
   // 누르거나 키보드로도 같은 곳으로 (버튼)
   track.innerHTML =
     cards.map(nowCardHtml).join("") +
@@ -2834,29 +2838,112 @@ function renderHomeNow() {
   track.scrollLeft = 0; // 다시 그릴 때 처음 카드부터
   bindHomeCards(track);
   track.querySelector(".now-more").addEventListener("click", function () {
-    showNowEvents("map");
+    showNowEvents("map", true);
   });
 }
 
 // 진행 중 행사 전체: 날짜 필터 오늘(값 today = 홈 수 N 과 같은 판정) + 다른 필터는 풀어서 목록 수 = N
 //  - "전체 →" = 목록 탭, 끝 넘김 · 끝 안내 = 지도 탭 + 카드 줄 (P3, 거기서 연 상세는 좌우로 앞뒤 행사)
-function showNowEvents(tab) {
+//  - withIntro: 끝 넘김 · 끝 안내로 지도에 처음 갈 때 덮개 → 핀에서 펼침 (11/16 확정 시안 ③, playMapIntro)
+function showNowEvents(tab, withIntro) {
   document.getElementById("searchInput").value = "";
   document.getElementById("categorySelect").value = "all";
   document.getElementById("dateFilter").value = "today";
   freeOnly = false;
   districtFilter = null;
   pcStatusTab = null;
+  if (withIntro && tab === "map" && !mapTabOpened && mobileQuery.matches) playMapIntro();
   selectTab(tab); // filterMarkers 가 목록 · 칩 · 카드 줄까지 맞춤
 }
 document.getElementById("homeNowAll").addEventListener("click", function () {
   showNowEvents("list");
 });
 
-// 끝 넘김: 끝에 닿은 채로 시작해 왼쪽으로 한 번 더 밀면 지도 탭 (home-picks.js homeEndSwipe — 첫 밀기는 안내만 보임)
+// ③ 지도 전환 덮개 (11/16 확정 시안 '이어 보기' A3, docs/design/2026-11-16-p3-pull-map-intro.md)
+// 이 페이지에서 지도 탭을 처음 열 때만: 홈 뒤에 숨어 있던 지도가 타일을 불러오는 동안 빈 회색 대신 종이색 덮개 +
+// "N곳의 지도가 펼쳐지는 중". 준비되면(home-picks.js mapIntroReady) 핀 자리에서 원이 커지며 지도가 드러남
+var MAP_INTRO_REVEAL_MS = 420; // 펼침 길이 (index.css .map-intro.reveal 과 같게)
+var mapIntroRun = 0; // 덮개 차례 번호 — 닫거나 다시 띄우면 늘어나 이전 차례의 기다림 · 타이머가 손을 뗌
+var mapIntroTiles = null; // 지금 차례의 tilesloaded 듣기 함수 (닫을 때 해제)
+function reducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+// 덮개를 바로 닫음: 덮개가 떠 있는 동안(최대 약 1.9초) 홈 탭 · 뒤로 가기 · 다른 탭으로 가면 그 화면을 가리지 않게 (#270 검증 ⚠️)
+function cancelMapIntro() {
+  var intro = document.getElementById("mapIntro");
+  mapIntroRun++;
+  if (mapIntroTiles && map) kakao.maps.event.removeListener(map, "tilesloaded", mapIntroTiles);
+  mapIntroTiles = null;
+  intro.hidden = true;
+  intro.classList.remove("reveal");
+}
+function playMapIntro() {
+  var intro = document.getElementById("mapIntro");
+  cancelMapIntro();
+  var run = mapIntroRun;
+  var startedAt = Date.now();
+  var tilesLoaded = false;
+  mapIntroTiles = function () {
+    tilesLoaded = true;
+  };
+  if (map) kakao.maps.event.addListener(map, "tilesloaded", mapIntroTiles);
+  var text = document.getElementById("mapIntroText");
+  text.textContent = "";
+  intro.hidden = false;
+  // role=status 글은 덮개가 보인 뒤에 넣어야 화면 읽기가 읽음 (#270 검증 ⚠️)
+  requestAnimationFrame(function () {
+    if (run !== mapIntroRun) return;
+    text.textContent = I18n.t("home.mapIntro", { n: document.getElementById("homeNowCount").textContent });
+  });
+
+  // 타일 그림(카카오 지도 안의 img)이 다 불러와졌나 — tilesloaded 가 안 오는 경우(움직임 없음)를 대비
+  function tilesComplete() {
+    var imgs = document.querySelectorAll("#map img");
+    if (!imgs.length) return false;
+    for (var i = 0; i < imgs.length; i++) {
+      if (!imgs[i].complete) return false;
+    }
+    return true;
+  }
+  (function wait() {
+    if (run !== mapIntroRun) return; // 그사이 닫힘
+    if (!mapIntroReady(Date.now() - startedAt, tilesLoaded, tilesComplete())) {
+      setTimeout(wait, 60);
+      return;
+    }
+    if (map) kakao.maps.event.removeListener(map, "tilesloaded", mapIntroTiles);
+    mapIntroTiles = null;
+    // 구멍 중심 = 핀 자리 (덮개 기준 좌표)
+    var box = intro.getBoundingClientRect();
+    var pin = document.getElementById("mapIntroPin").getBoundingClientRect();
+    intro.style.setProperty("--hole-x", pin.left + pin.width / 2 - box.left + "px");
+    intro.style.setProperty("--hole-y", pin.top + pin.height / 2 - box.top + "px");
+    intro.classList.add("reveal");
+    setTimeout(function () {
+      if (run !== mapIntroRun) return;
+      intro.hidden = true;
+      intro.classList.remove("reveal");
+    }, reducedMotion() ? 150 : MAP_INTRO_REVEAL_MS);
+  })();
+}
+
+// 끝 넘김: 끝에 닿은 채로 시작해 왼쪽으로 한 번 더 당기면 지도 탭 (home-picks.js homeEndSwipe — 첫 밀기는 안내만 보임)
+// ② 당기는 동안 손을 따라 카드 줄 · 끝 안내가 늘어나고(homePullEase), 놓으면 넘어갈 때(over = homeEndSwipe 와 같은 판정)
+//    "놓으면 지도로". 움직임 줄이기 설정이면 늘어나지 않고 글만 바뀜 (확정 시안 문서 ③ 마지막 줄)
+function setNowPull(track, pull, over) {
+  var more = track.querySelector(".now-more");
+  track.style.setProperty("--now-pull", reducedMotion() ? "0" : homePullEase(pull).toFixed(1));
+  if (!more) return;
+  more.classList.toggle("over", over);
+  more.querySelector(".now-more-text").textContent = I18n.t(over ? "home.nowMoreRelease" : "home.nowMore");
+}
 (function setupNowEndSwipe() {
   var track = document.getElementById("homeNowTrack");
   var start = null;
+  function release() {
+    track.classList.remove("pulling");
+    setNowPull(track, 0, false); // 놓으면 260ms 에 제자리로 (index.css --pull-spring)
+  }
   track.addEventListener(
     "touchstart",
     function (e) {
@@ -2868,7 +2955,28 @@ document.getElementById("homeNowAll").addEventListener("click", function () {
         x: e.touches[0].clientX,
         y: e.touches[0].clientY,
         atEnd: atScrollEnd(track.scrollLeft, track.scrollWidth, track.clientWidth),
+        pulling: false,
       };
+    },
+    { passive: true },
+  );
+  track.addEventListener(
+    "touchmove",
+    function (e) {
+      if (!start || !start.atEnd) return;
+      var t = e.touches[0];
+      var dx = t.clientX - start.x;
+      var dy = t.clientY - start.y;
+      if (!start.pulling) {
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return; // 아직 방향을 모름
+        if (-dx <= Math.abs(dy)) {
+          start.atEnd = false; // 세로 스크롤 · 오른쪽(앞 카드로) → 이번 터치는 당김 아님
+          return;
+        }
+        start.pulling = true;
+        track.classList.add("pulling");
+      }
+      setNowPull(track, Math.max(0, -dx), homeEndSwipe(true, dx, dy));
     },
     { passive: true },
   );
@@ -2878,14 +2986,17 @@ document.getElementById("homeNowAll").addEventListener("click", function () {
       if (!start) return;
       var t = e.changedTouches[0];
       var go = homeEndSwipe(start.atEnd, t.clientX - start.x, t.clientY - start.y);
+      var pulled = start.pulling;
       start = null;
-      if (go) showNowEvents("map");
+      if (pulled) release();
+      if (go) showNowEvents("map", true);
     },
     { passive: true },
   );
   track.addEventListener(
     "touchcancel",
     function () {
+      if (start && start.pulling) release();
       start = null;
     },
     { passive: true },
