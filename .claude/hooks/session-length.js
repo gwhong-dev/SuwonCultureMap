@@ -1,14 +1,16 @@
-// 대화 길이 지키기 (CLAUDE.md 8번 "메인 교체" · 결정 기록 docs/decisions/2026-11-13-session-length-hook.md)
+// 대화 길이 지키기 (CLAUDE.md 8번 "메인 교체" · 결정 기록 docs/decisions/2026-11-13-session-length-hook.md · 2026-11-23-token-diet.md)
 //  - 대화 크기 = 대화 기록(transcript)의 마지막 응답 토큰 사용량 (input + cache_creation + cache_read)
 //  - UserPromptSubmit: WARN 이상이면 "지금 작업 단계가 끝나면 넘기기" 를 Claude 에게 보여 줌
 //  - Stop: BLOCK 이상인데 그 뒤로 새 메인 세션(start_session)도, 분기의 "[분기 막힘] 대화 길이 초과" 답변도 없으면 멈춤을 막음
-// 기준: 새 세션 시작 비용 ≈ 기본 지침 · 도구 목록 10만 토큰 중 4만 새로 읽기 (11/13 실측) → 20만부터 경고, 30만부터 차단
+// 기준(11/23 바꿈): 15만부터 경고, 20만부터 차단. 20만 넘은 턴이 비용의 59% (11/23 집계)
+//  - 평소엔 .claude/settings.json 의 자동 요약 창(CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000)이 20만 전에 요약해서 차단까지 안 감
+//  - 차단은 그 설정이 안 먹을 때(폴더 신뢰 전 · 다른 도구)의 안전망
 // 문제가 생기면(입력 깨짐 · 기록 파일 없음 · 이미 훅으로 이어 쓰는 중) 막지 않고 통과 (항상 exit 0)
 
 const fs = require("node:fs");
 
-const WARN = 200000;
-const BLOCK = 300000;
+const WARN = 150000;
+const BLOCK = 200000;
 // 넘기기로 인정: 새 메인 세션 시작(start_session) 만. hand_off_to_session 은 지금 작업만 떼어 내 메인 대화가 그대로 길게 남음 (검증 지적)
 const HANDOFF_TOOL = /(?:^|__)start_session$/;
 // 분기 세션은 새 세션을 만들지 않으므로 이 표시를 답변에 쓰면 넘긴 것으로 침 → 이후 턴마다 다시 막히지 않음 (검증 지적)
