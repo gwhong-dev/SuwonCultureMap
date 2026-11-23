@@ -95,8 +95,15 @@ test("실제 실행: 기록 파일을 읽어 차단 JSON 출력, 파일이 없�
   fs.writeFileSync(file, log(user, reply(BLOCK + 50000)));
   const run = (input) => execFileSync("node", [HOOK], { input, encoding: "utf8" });
   assert.strictEqual(JSON.parse(run(JSON.stringify({ hook_event_name: "Stop", transcript_path: file }))).decision, "block");
-  assert.match(JSON.parse(run(JSON.stringify({ hook_event_name: "UserPromptSubmit", transcript_path: file }))).hookSpecificOutput.additionalContext, /35만/);
+  assert.match(JSON.parse(run(JSON.stringify({ hook_event_name: "UserPromptSubmit", transcript_path: file }))).hookSpecificOutput.additionalContext, new RegExp(`${Math.round((BLOCK + 50000) / 10000)}만`));
   assert.strictEqual(run(JSON.stringify({ hook_event_name: "Stop", transcript_path: path.join(dir, "없음.jsonl") })), "");
   assert.strictEqual(run("{깨진"), "");
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("기준값: 경고 15만 < 차단 20만 = 자동 요약 창(.claude/settings.json) — 11/23 토큰 처방", () => {
+  const settings = JSON.parse(fs.readFileSync(path.join(__dirname, "../../../.claude/settings.json"), "utf8"));
+  assert.strictEqual(WARN, 150000);
+  assert.strictEqual(BLOCK, 200000);
+  assert.strictEqual(Number(settings.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW), BLOCK);
 });

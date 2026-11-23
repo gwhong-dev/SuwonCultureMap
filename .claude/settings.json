@@ -1,5 +1,16 @@
 {
   "language": "korean",
+  "env": {
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000"
+  },
+  "enabledPlugins": {
+    "superpowers@synced": false,
+    "adhd-study-coach@synced": false,
+    "learn-with-coursera@synced": false,
+    "pdf-viewer@synced": false,
+    "superpowers@claude-plugins-official": false,
+    "context7@claude-plugins-official": false
+  },
   "permissions": {
     "allow": [
       "mcp__Notion__notion-search",
