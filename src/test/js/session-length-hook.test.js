@@ -107,3 +107,10 @@ test("기준값: 경고 15만 < 차단 20만 = 자동 요약 창(.claude/setting
   assert.strictEqual(BLOCK, 200000);
   assert.strictEqual(Number(settings.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW), BLOCK);
 });
+
+test("자동 요약 뒤: 마지막 크기가 줄면 경고 · 차단 모두 풀림 (요약 뒤 넘기기는 CLAUDE.md 8번 규칙으로)", () => {
+  const text = log(reply(WARN + 40000), user, reply(30000));
+  assert.strictEqual(measure(text).context, 31002);
+  assert.strictEqual(decide(prompt, text), null);
+  assert.strictEqual(decide(stop(), log(reply(BLOCK + 10000), user, reply(30000))), null);
+});
