@@ -26,8 +26,8 @@ import com.suwon.festival.service.merge.MergeCandidate;
 //    이미 같은 글에 따로 있던 행사는 제목이 비슷해도 다른 행사이므로 뒤를 잇는 행사로 보지 않음 (본편 ↔ 앙코르)
 //  - 뒤를 잇는 행사가 없으면 이번 처리가 "확정"일 때만 내림: READY 가 1개 이상이고, 나머지는 공지(SKIPPED)뿐.
 //    못 읽은 블록 · 좌표 실패 · 날짜 없음이 있으면 그중 하나가 이 행사의 새 모습일 수 있어 다음 실행으로 미룸
-//    (SKIPPED 는 지금 "관광 대상 아님" 규칙(NonTouristFilter)에서만 나옴 — 다음에도 같은 결과.
-//     AI 를 붙이면 일시적인 "행사 아님"이 멀쩡한 행사를 내리지 않는지 다시 볼 것)
+//    (SKIPPED 중 "관광 대상 아님" 규칙(NonTouristFilter)은 다음에도 같은 결과라 확정으로 봄.
+//     AI 가 낸 "행사 아님"(CaptionParser.AI_NOT_EVENT)은 판단이라 확정으로 보지 않음 → 그 글의 옛 행사는 미룸)
 //  - 옛 제목이 캡션에 그대로 있으면 미룸: 날짜 라벨을 못 읽으면 블록 자체가 안 나와 "확정"으로 보일 수 있음
 //  - 찜은 뒤를 잇는 행사로 옮김. 옮길 곳이 없으면 행사를 그대로 둠 (찜을 잃지 않음, 찜이 풀리면 다음 실행에서 내림)
 //    숨김(merged_into_id)으로 처리하지 않는 이유: 합치기는 매번 전체를 다시 계산해 그 값을 되돌림
@@ -51,10 +51,12 @@ class StaleBlockRetirer {
   }
 
   // 이번 처리 결과. ready: 이번 READY 행사 전체, fresh: 그중 이번에 새로 READY 가 된 행사, statuses: 이번 블록 상태들
-  record Current(List<Event> ready, List<Event> fresh, Set<InstagramBlock.Status> statuses, String caption) {
+  // aiSkipped: AI 판단으로 "행사 아님"이 된 블록이 있음 (확정으로 보지 않음)
+  record Current(List<Event> ready, List<Event> fresh, Set<InstagramBlock.Status> statuses, String caption,
+      boolean aiSkipped) {
 
     boolean conclusive() {
-      return !ready.isEmpty() && CONCLUSIVE.containsAll(statuses);
+      return !ready.isEmpty() && !aiSkipped && CONCLUSIVE.containsAll(statuses);
     }
 
     boolean mentions(String title) {

@@ -45,3 +45,6 @@ instagram.app-id=
 #  - 대상 계정 · 개수를 바꾸려면 (기본값 suwon_city · 10개)
 # instagram.accounts=suwon_city
 # instagram.fetch-limit=10
+
+# 캡션 AI — Gemini API 키 (Google AI Studio, 선택). 비우면 AI 를 쓰지 않음
+gemini.api-key=

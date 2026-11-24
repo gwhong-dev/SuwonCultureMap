@@ -62,6 +62,9 @@ services:
       SWDB_SYNC_ENABLED: ${SWDB_SYNC_ENABLED:-false}
       # 오시는 길 — 경기도 정류소 조회 API 키 (선택, 없으면 정류소 칸을 숨김)
       GG_BUS_SERVICE_KEY: ${GG_BUS_SERVICE_KEY:-}
+      # 캡션 AI — Gemini API 키 (선택, 없으면 규칙으로 못 읽은 인스타 블록은 대기). CAPTION_AI_ENABLED=false 로 끔
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      CAPTION_AI_ENABLED: ${CAPTION_AI_ENABLED:-true}
       # 자동 동기화 시각 (초 분 시 일 월 요일, 한국 시간)
       APP_SYNC_CRON: ${APP_SYNC_CRON:-0 0 6,18 * * *}
     ports:

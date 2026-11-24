@@ -20,6 +20,7 @@ import com.suwon.festival.entity.Event;
 import com.suwon.festival.entity.Favorite;
 import com.suwon.festival.entity.InstagramBlock;
 import com.suwon.festival.entity.InstagramMedia;
+import com.suwon.festival.entity.CaptionAiResult;
 import com.suwon.festival.entity.Landmark;
 import com.suwon.festival.entity.LoginMethod;
 import com.suwon.festival.entity.Member;
@@ -38,13 +39,14 @@ class RepositorySchemaTest {
   @Autowired private InstagramMediaRepository instagramMediaRepository;
   @Autowired private InstagramBlockRepository instagramBlockRepository;
   @Autowired private LandmarkRepository landmarkRepository;
+  @Autowired private CaptionAiResultRepository captionAiResultRepository;
   @Autowired private Flyway flyway;
   @Autowired private EntityManager em;
 
   @Test
   void Flyway가_마지막_버전까지_적용함() {
     assertThat(flyway.info().current()).isNotNull();
-    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("10"); // V10 = landmark (명소)
+    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("11"); // V11 = caption_ai_result (캡션 AI 보관)
     assertThat(flyway.info().pending()).isEmpty();
   }
 
@@ -157,6 +159,25 @@ class RepositorySchemaTest {
     Event hidden = eventRepository.saveAndFlush(instagramEvent("m4#숨김"));
     hidden.mergeInto(-1L);
     assertThatThrownBy(() -> em.flush()).hasRootCauseInstanceOf(java.sql.SQLIntegrityConstraintViolationException.class);
+  }
+
+  @Test
+  void 캡션_AI_결과를_칸_최대_길이로_저장하고_다시_읽음() {
+    LocalDateTime now = LocalDateTime.of(2026, 11, 24, 12, 0);
+    CaptionAiResult.Fields f = new CaptionAiResult.Fields("가".repeat(255), "공연", LocalDate.of(2026, 11, 5),
+        LocalDate.of(2026, 11, 7), "시".repeat(1000), "장".repeat(500));
+    captionAiResultRepository.saveAndFlush(CaptionAiResult.of("a".repeat(32), CaptionAiResult.Outcome.EVENT, f,
+        "gemini-3.5-flash-lite", now));
+    captionAiResultRepository.saveAndFlush(CaptionAiResult.of("b".repeat(32), CaptionAiResult.Outcome.NOT_EVENT, f,
+        "gemini-3.5-flash-lite", now));
+    em.clear();
+
+    CaptionAiResult event = captionAiResultRepository.findById("a".repeat(32)).orElseThrow();
+    assertThat(event.fields()).isEqualTo(f);
+    assertThat(event.getCreatedAt()).isEqualTo(now);
+    CaptionAiResult notEvent = captionAiResultRepository.findById("b".repeat(32)).orElseThrow();
+    assertThat(notEvent.getOutcome()).isEqualTo(CaptionAiResult.Outcome.NOT_EVENT);
+    assertThat(notEvent.fields()).isEqualTo(CaptionAiResult.Fields.EMPTY);
   }
 
   @Test
