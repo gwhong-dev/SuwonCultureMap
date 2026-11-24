@@ -92,7 +92,8 @@ public class GeminiCaptionClient implements CaptionAiClient {
   private static final Pattern EMAIL = Pattern.compile("[\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+");
   private static final Pattern MENTION = Pattern.compile("(?<![\\w.])@[\\w.]+");
   private static final Pattern PHONE = Pattern.compile(
-      "(?<!\\d)(?:0\\d{1,2}[-. )]?\\d{3,4}[-. ]?\\d{4}|1\\d{3}-\\d{4})(?!\\d)");
+      // 지역 · 휴대 번호 + 대표번호(15xx · 16xx · 18xx) — "1990-2025 회고전" · "1000-2000원" 은 그대로 둠
+      "(?<!\\d)(?:0\\d{1,2}[-. )]?\\d{3,4}[-. ]?\\d{4}|1[568]\\d{2}-\\d{4})(?!\\d)");
 
   static String scrub(String text) {
     if (text == null) return "";
@@ -144,26 +145,34 @@ public class GeminiCaptionClient implements CaptionAiClient {
     if (format != null) f.put("format", format);
   }
 
-  // 응답 → ParsedEvent. 잘림 · 모양 다름 · JSON 깨짐 = 못 읽음(empty). 실패 상태 = 예외(다음에 다시)
+  // 응답 → ParsedEvent
+  // - 못 읽음(empty, 결과 보관됨 → 같은 블록은 다시 안 부름): 모델이 답을 끝까지 냈는데(completed · incomplete=잘림) 그 글이 JSON 객체가 아님
+  // - 예외(보관 안 함 → 다음 동기화에서 다시): 응답 자체가 JSON 이 아님 · status 없음 · 진행 중 · 실패 상태 · 모델 글 없음
+  //   → API 모양이 바뀌거나 일시 오류일 때 블록이 "AI도 못 읽음"으로 굳지 않게 (#274 검증 지적)
   static Optional<ParsedEvent> readResponse(String body) {
     JsonNode root;
     try {
       root = JSON.readTree(body == null ? "" : body);
     } catch (JsonProcessingException e) {
-      return Optional.empty();
+      throw new GeminiException("Gemini 응답이 JSON 이 아님");
     }
-    if (root == null || root.isMissingNode()) return Optional.empty();
+    if (root == null || !root.isObject()) throw new GeminiException("Gemini 응답 모양이 다름");
     String status = root.path("status").asText("");
-    if (status.equals("failed") || status.equals("cancelled")) throw new GeminiException("Gemini 상태 " + status);
-    if (!status.equals("completed")) return Optional.empty(); // incomplete(잘림) 등
+    if (status.equals("incomplete")) return Optional.empty(); // 출력 한도에서 잘림 — 같은 입력이면 다시 잘림
+    if (!status.equals("completed")) throw new GeminiException("Gemini 상태 " + (status.isEmpty() ? "없음" : status));
 
     StringBuilder text = new StringBuilder();
+    boolean hasOutput = false;
     for (JsonNode step : root.path("steps")) {
       if (!"model_output".equals(step.path("type").asText())) continue;
       for (JsonNode c : step.path("content")) {
-        if ("text".equals(c.path("type").asText())) text.append(c.path("text").asText(""));
+        if ("text".equals(c.path("type").asText())) {
+          hasOutput = true;
+          text.append(c.path("text").asText(""));
+        }
       }
     }
+    if (!hasOutput) throw new GeminiException("Gemini 응답에 모델 글 없음");
     JsonNode out;
     try {
       out = JSON.readTree(text.toString());

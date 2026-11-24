@@ -93,6 +93,10 @@ class GeminiCaptionClientTest {
         "가을 음악회 @suwon_city 문의 031-228-1234 · culture@suwon.go.kr\n자세히 https://www.suwon.go.kr/a?b=1\n2026. 11. 5.");
     assertThat(scrubbed).doesNotContain("@suwon_city", "031-228-1234", "culture@suwon.go.kr", "https://")
         .contains("가을 음악회", "2026. 11. 5.");
+
+    // 대표번호는 지우고, 연도 범위 · 금액 범위 · 시간은 그대로
+    String kept = GeminiCaptionClient.scrub("1990-2025 회고전 · 입장료 1000-2000원 · 10:00~18:00 · 문의 1899-3300");
+    assertThat(kept).contains("1990-2025 회고전", "1000-2000원", "10:00~18:00").doesNotContain("1899-3300");
   }
 
   @Test
@@ -112,16 +116,29 @@ class GeminiCaptionClientTest {
   }
 
   @Test
-  void 잘린_응답_깨진_JSON_모양이_다른_응답은_못_읽음() throws IOException {
+  void 모델이_답을_냈는데_JSON_객체가_아니거나_잘렸으면_못_읽음() throws IOException {
     for (String body : new String[] {
         interaction("incomplete", "{\"isEvent\":true,\"title\":\"가을"),
         interaction("completed", "죄송하지만 읽을 수 없습니다"),
-        interaction("completed", "[1,2]"),
-        "{\"unexpected\":true}",
-        "not json" }) {
+        interaction("completed", "[1,2]") }) {
       server.reset();
       server.expect(requestTo(GeminiCaptionClient.URL)).andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
       assertThat(client.parse("가을 음악회")).as(body).isEmpty();
+    }
+  }
+
+  @Test
+  void 응답_모양이_다르거나_진행_중이면_예외로_다음에_다시() {
+    // 보관(UNREADABLE)되면 그 블록이 "AI도 못 읽음"으로 굳으므로, API 쪽 문제는 예외로 올려 PENDING 으로 남김
+    for (String body : new String[] {
+        "{\"unexpected\":true}",
+        "not json",
+        "{\"status\":\"in_progress\",\"steps\":[]}",
+        "{\"status\":\"completed\",\"steps\":[{\"type\":\"thought\"}]}" }) {
+      server.reset();
+      server.expect(requestTo(GeminiCaptionClient.URL)).andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+      assertThatThrownBy(() -> client.parse("가을 음악회")).as(body)
+          .isInstanceOf(GeminiCaptionClient.GeminiException.class);
     }
   }
 

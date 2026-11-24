@@ -48,6 +48,7 @@
 
 ## 🧰 나중에 할 일 (발견 사항)
 - [ ] (11/24 캡션 AI) 동기화는 최근 게시물 10개만 다시 읽어 그보다 오래된 `PENDING` 블록은 AI 로 다시 처리되지 않음 → 필요하면 한 번만 다시 처리하는 수동 경로
+- [ ] (11/24 #274 검증 ⚠️) 캡션 AI 호출 간격 · 상한: 무료 등급 분당 한도에 맞춘 간격 없음(넘으면 429 → PENDING 으로 다음에 다시), 하루 상한은 메모리 값이라 재배포 때 0 부터 · 429 도 상한을 씀. 게시물 트랜잭션 안에서 HTTP 호출(블록당 최대 35초) — 실사용량 보고 필요하면 조정
 - [ ] (11/13 Playwright 화면 시험 도입) CI 에 화면 시험 연결 — `.github/workflows/ci.yml` 에 `npm ci` · `npx playwright install --with-deps chromium` · `npm run test:e2e` 단계 추가 (L 등급이라 따로 PR, 실행 방법 [docs/e2e-test.md](docs/e2e-test.md))
 - [ ] (11/13 #267 검증 ⚠️) `.dockerignore` 에 `node_modules/` · `test-results/` · `playwright-report/` 추가 — 로컬 `docker compose up --build` 때 빌드 컨텍스트가 약 13MB 늘어남(CI 는 node_modules 없어 영향 없음). Docker 설정이라 L 쪽으로 보고 #267 에선 안 고침
 - [ ] (11/13 #152 기록) 녹화 스크립트 — 다른 PC 임시 폴더 확인: 11/5 portfolio-v3 화면 녹화(Playwright 390×844 + ffmpeg) 스크립트가 저장소에 없고 이 PC(`hong-notetbook`)의 `%TEMP%` · `~/.claude` 에도 없음. 다른 PC 에서 찾으면 `scripts/portfolio/` 에 복사(절대 경로 · 비밀값 빼고, 맨 위 주석에 쓰는 법). 당시 클라우드 세션에서 녹화했다면 남아 있지 않음
