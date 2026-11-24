@@ -10,6 +10,9 @@ public class CaptionParser {
 
   public enum Source { RULE, AI, NONE }
 
+  // AI 가 "행사 아님"이라고 본 블록의 이유. 규칙(관광 대상 아님)과 달리 판단이라, 옛 행사를 내리는 근거로 쓰지 않음 (StaleBlockRetirer)
+  public static final String AI_NOT_EVENT = "AI: 행사 아님";
+
   // 블록 1개의 최종 결과
   public record BlockResult(CaptionBlock block, Source source, CandidateStatus status,
       ParsedEvent event, String reason, List<String> warnings) {
@@ -75,6 +78,13 @@ public class CaptionParser {
         return new BlockResult(block, source, CandidateStatus.SKIPPED, v.event(), nonTourist, v.warnings());
       }
     }
-    return new BlockResult(block, source, v.status(), v.event(), v.reason(), v.warnings());
+    String reason = v.reason();
+    if (source == Source.AI && v.status() == CandidateStatus.SKIPPED) reason = AI_NOT_EVENT;
+    return new BlockResult(block, source, v.status(), v.event(), reason, v.warnings());
+  }
+
+  // AI 판단으로 SKIPPED 가 된 블록인지
+  public static boolean isAiNotEvent(BlockResult r) {
+    return r.source() == Source.AI && r.status() == CandidateStatus.SKIPPED && AI_NOT_EVENT.equals(r.reason());
   }
 }

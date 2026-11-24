@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,9 @@ import com.suwon.festival.repository.FavoriteRepository;
 import com.suwon.festival.repository.InstagramBlockRepository;
 import com.suwon.festival.repository.InstagramMediaRepository;
 import com.suwon.festival.repository.MemberRepository;
+import com.suwon.festival.service.caption.CaptionAiClient;
 import com.suwon.festival.service.caption.CaptionParser;
+import com.suwon.festival.service.caption.ParsedEvent;
 import com.suwon.festival.service.instagram.InstagramFetchException.Kind;
 import com.suwon.festival.service.merge.EventMergeService;
 import com.suwon.festival.service.place.PlaceCandidate;
@@ -82,9 +85,14 @@ class StaleBlockRetireTest {
   void setUp() {
     client = new InstagramSyncServiceTest.FakeClient();
     search = new SwitchableSearch();
+    useAi(null);
+  }
+
+  // 캡션 정리에 쓸 AI 를 바꿔 끼움 (null = AI 미연결)
+  private void useAi(CaptionAiClient ai) {
     Clock clock = Clock.fixed(Instant.parse("2026-10-31T03:00:00Z"), InstagramPostProcessor.KST);
     InstagramPostProcessor processor = new InstagramPostProcessor(mediaRepository, blockRepository, eventRepository,
-        new PlaceGeocoder(search), new CaptionParser(null), clock, retirer, scheduleWriter);
+        new PlaceGeocoder(search), new CaptionParser(ai), clock, retirer, scheduleWriter);
     service = new InstagramSyncService(client, processor, new InstagramTokenExpiry("", clock), new InstagramSwitch(true), ACCOUNT, 10);
   }
 
@@ -372,6 +380,27 @@ class StaleBlockRetireTest {
     assertThat(r.blocks().get("NO_DATE")).isEqualTo(1);
     assertThat(r.blocks().get("RETIRED")).isZero();
     assertThat(events()).extracting(Event::getTitle).contains("겨울 음악회");
+  }
+
+  @Test
+  void AI가_행사_아님으로_본_블록이_있으면_뒤를_잇는_행사가_없는_옛_행사를_지우지_않음() {
+    syncCaption(concert("가을 음악회") + "\n\n" + other("겨울 음악회"));
+
+    // 겨울 음악회 자리가 날짜 줄 2개짜리 안내로 바뀜 → 규칙이 못 고르고 AI 가 "행사 아님" 판단
+    // AI 판단은 확정이 아니라서, 사라진 건지 잘못 본 건지 모름 → 옛 행사를 남김
+    useAi(text -> Optional.of(new ParsedEvent(false, null, null, null, null, null, null)));
+    String changed = concert("가을 음악회") + "\n\n" + String.join("\n",
+        "안내",
+        "🗓️ 신청: 2026. 10. 1. ~ 10. 20.",
+        "🗓️ 접수: 2026. 11. 5.(목)",
+        "📍 다른 아트홀");
+    InstagramSyncResult r = syncCaption(changed);
+
+    assertThat(r.blocks().get("SKIPPED")).isEqualTo(1);
+    assertThat(r.blocks().get("RETIRED")).isZero();
+    assertThat(events()).extracting(Event::getTitle).contains("겨울 음악회");
+    assertThat(blocks(MEDIA)).filteredOn(b -> b.getStatus() == InstagramBlock.Status.SKIPPED)
+        .singleElement().satisfies(b -> assertThat(b.getReason()).isEqualTo(CaptionParser.AI_NOT_EVENT));
   }
 
   @Test

@@ -16,6 +16,7 @@
 
 **다음 할 일**
 - 👉 입사 지원
+- 🤖 캡션 AI — Gemini 무료 연결(11/24, L, [결정](docs/decisions/2026-11-24-caption-ai-gemini.md), #PR): 규칙으로 못 읽은 인스타 블록을 AI 로 정리 · 결과 보관(V11) · 하루 200회 · 끄는 스위치 `CAPTION_AI_ENABLED`. 남음: 사용자 Gemini 키 발급 → 로컬 실호출 확인 → 사용자 "머지" → 운영 `.env` 에 `GEMINI_API_KEY`
 - 🎨 사용자 할 일 16개(11/12~13, 시안 [docs/design/2026-11-13-improvement-drafts.md](docs/design/2026-11-13-improvement-drafts.md)): P1~P6 머지 · 배포 ✅(#236~#241), P7 첫 진입 애니메이션 3안 ✅(#242) → **B안(계절 꽃잎 → 로고) 확정 · 처음 방문 1회**(11/13 사용자, 이 PR — 미리 보기 `?intro=b`, A · C 이력 [결정](docs/decisions/2026-11-13-intro-animation-b.md))
 - 🎨 P3 끝 넘김 개선(11/14 사용자 아이폰 확인 🟡 → 11/16 시안 확정 [docs/design/2026-11-16-p3-pull-map-intro.md](docs/design/2026-11-16-p3-pull-map-intro.md), 이 PR): 끝 안내 "넘기면 지도로"(가로 두 줄) + 당김 움직임 + 처음 지도 갈 때 "N곳의 지도가 펼쳐지는 중" 덮개 → 핀에서 원형 펼침. 아이폰 실기기 느낌은 사용자 확인 남음
 - ✅ 할 일 문서 "추가_20261113" 시안 확정(11/13, [docs/design/2026-11-13-todo-additions.md](docs/design/2026-11-13-todo-additions.md)) → 분기 병렬 개발 완료, 모두 머지 · 배포 · 헬스 UP(11/13): Q1 찜 정렬 [날짜순 | 이름순] #250 · Q2 새 로고 W4 · 파비콘 B2 · 공유 배너 #251 · Q3 화면 언어 4개(한 · 영 · 일 · 중) #252 · Q4 PC 3분할 D안(지도 | 상세 440px | 목록 340px) #256
@@ -46,6 +47,7 @@
 - PC에서 `Connection refused` 가 나면 MySQL 서비스가 꺼진 것 → `services.msc` 에서 MySQL80 시작 (관리자 권한)
 
 ## 🧰 나중에 할 일 (발견 사항)
+- [ ] (11/24 캡션 AI) 동기화는 최근 게시물 10개만 다시 읽어 그보다 오래된 `PENDING` 블록은 AI 로 다시 처리되지 않음 → 필요하면 한 번만 다시 처리하는 수동 경로
 - [ ] (11/13 Playwright 화면 시험 도입) CI 에 화면 시험 연결 — `.github/workflows/ci.yml` 에 `npm ci` · `npx playwright install --with-deps chromium` · `npm run test:e2e` 단계 추가 (L 등급이라 따로 PR, 실행 방법 [docs/e2e-test.md](docs/e2e-test.md))
 - [ ] (11/13 #267 검증 ⚠️) `.dockerignore` 에 `node_modules/` · `test-results/` · `playwright-report/` 추가 — 로컬 `docker compose up --build` 때 빌드 컨텍스트가 약 13MB 늘어남(CI 는 node_modules 없어 영향 없음). Docker 설정이라 L 쪽으로 보고 #267 에선 안 고침
 - [ ] (11/13 #152 기록) 녹화 스크립트 — 다른 PC 임시 폴더 확인: 11/5 portfolio-v3 화면 녹화(Playwright 390×844 + ffmpeg) 스크립트가 저장소에 없고 이 PC(`hong-notetbook`)의 `%TEMP%` · `~/.claude` 에도 없음. 다른 PC 에서 찾으면 `scripts/portfolio/` 에 복사(절대 경로 · 비밀값 빼고, 맨 위 주석에 쓰는 법). 당시 클라우드 세션에서 녹화했다면 남아 있지 않음

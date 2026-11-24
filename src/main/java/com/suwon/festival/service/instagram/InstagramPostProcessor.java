@@ -83,7 +83,7 @@ public class InstagramPostProcessor {
       EventRepository eventRepository, PlaceGeocoder geocoder, ObjectProvider<CaptionAiClient> ai,
       StaleBlockRetirer retirer, EventScheduleWriter scheduleWriter, InstagramImageStore imageStore,
       InstagramExpiry expiry) {
-    // AI 구현이 아직 없음 → null → 규칙으로 못 읽은 블록은 PENDING (AI 를 붙이면 다음 실행에서 다시 처리)
+    // AI 는 키가 있을 때만 빈이 있음(CaptionAiConfig) → 없으면 null → 규칙으로 못 읽은 블록은 PENDING
     this(mediaRepository, blockRepository, eventRepository, geocoder, new CaptionParser(ai.getIfAvailable()),
         Clock.system(KST), retirer, scheduleWriter, imageStore, expiry);
   }
@@ -150,6 +150,7 @@ public class InstagramPostProcessor {
     List<Event> fresh = new java.util.ArrayList<>(); // 그중 이번에 새로 READY 가 된 행사 (READY 로 이어진 블록 제외)
 
     List<BlockResult> results = parser.parse(post.caption());
+    boolean aiSkipped = results.stream().anyMatch(CaptionParser::isAiNotEvent);
     for (BlockResult r : results) {
       String key = BlockKeys.of(r);
       if (!seen.add(key)) {
@@ -252,7 +253,7 @@ public class InstagramPostProcessor {
     if (!results.isEmpty()) {
       existing.keySet().removeAll(seen);
       List<String> retired = retirer.retire(post.id(), existing.values(),
-          new StaleBlockRetirer.Current(ready, fresh, counts.keySet(), post.caption()), now);
+          new StaleBlockRetirer.Current(ready, fresh, counts.keySet(), post.caption(), aiSkipped), now);
       if (!retired.isEmpty()) counts.put(InstagramBlock.Status.RETIRED, retired.size());
       logLines.addAll(retired);
     }
