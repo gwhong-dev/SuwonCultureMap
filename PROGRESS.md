@@ -16,7 +16,7 @@
 
 **다음 할 일**
 - 👉 입사 지원
-- 🤖 캡션 AI — Gemini 무료 연결(11/24, L, [결정](docs/decisions/2026-11-24-caption-ai-gemini.md), #PR): 규칙으로 못 읽은 인스타 블록을 AI 로 정리 · 결과 보관(V11) · 하루 200회 · 끄는 스위치 `CAPTION_AI_ENABLED`. 남음: 사용자 Gemini 키 발급 → 로컬 실호출 확인 → 사용자 "머지" → 운영 `.env` 에 `GEMINI_API_KEY`
+- 🤖 캡션 AI — Gemini 무료 연결(11/24, L, [결정](docs/decisions/2026-11-24-caption-ai-gemini.md), #274): 규칙으로 못 읽은 인스타 블록을 AI 로 정리 · 결과 보관(V11) · 하루 200회 · 끄는 스위치 `CAPTION_AI_ENABLED`. 남음: 사용자 Gemini 키 발급 → 로컬 실호출 확인 → 사용자 "머지" → 운영 `.env` 에 `GEMINI_API_KEY`
 - 🎨 사용자 할 일 16개(11/12~13, 시안 [docs/design/2026-11-13-improvement-drafts.md](docs/design/2026-11-13-improvement-drafts.md)): P1~P6 머지 · 배포 ✅(#236~#241), P7 첫 진입 애니메이션 3안 ✅(#242) → **B안(계절 꽃잎 → 로고) 확정 · 처음 방문 1회**(11/13 사용자, 이 PR — 미리 보기 `?intro=b`, A · C 이력 [결정](docs/decisions/2026-11-13-intro-animation-b.md))
 - 🎨 P3 끝 넘김 개선(11/14 사용자 아이폰 확인 🟡 → 11/16 시안 확정 [docs/design/2026-11-16-p3-pull-map-intro.md](docs/design/2026-11-16-p3-pull-map-intro.md), 이 PR): 끝 안내 "넘기면 지도로"(가로 두 줄) + 당김 움직임 + 처음 지도 갈 때 "N곳의 지도가 펼쳐지는 중" 덮개 → 핀에서 원형 펼침. 아이폰 실기기 느낌은 사용자 확인 남음
 - ✅ 할 일 문서 "추가_20261113" 시안 확정(11/13, [docs/design/2026-11-13-todo-additions.md](docs/design/2026-11-13-todo-additions.md)) → 분기 병렬 개발 완료, 모두 머지 · 배포 · 헬스 UP(11/13): Q1 찜 정렬 [날짜순 | 이름순] #250 · Q2 새 로고 W4 · 파비콘 B2 · 공유 배너 #251 · Q3 화면 언어 4개(한 · 영 · 일 · 중) #252 · Q4 PC 3분할 D안(지도 | 상세 440px | 목록 340px) #256
