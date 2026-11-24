@@ -46,7 +46,6 @@
 - PC에서 `Connection refused` 가 나면 MySQL 서비스가 꺼진 것 → `services.msc` 에서 MySQL80 시작 (관리자 권한)
 
 ## 🧰 나중에 할 일 (발견 사항)
-- [ ] (11/24 서버 재부팅 점검) `docker-compose.yml` 재시작 설정 — `db` 는 설정 없음 · `app` 은 `on-failure` 라 **서버 재부팅 뒤 사이트가 저절로 다시 뜨지 않음** → 둘 다 `restart: unless-stopped` 로 (L 등급 — Docker 설정, 따로 PR). 그 전까지 재부팅 뒤엔 서버에서 `cd ~/SuwonCultureMap && docker compose up -d`
 - [ ] (11/13 Playwright 화면 시험 도입) CI 에 화면 시험 연결 — `.github/workflows/ci.yml` 에 `npm ci` · `npx playwright install --with-deps chromium` · `npm run test:e2e` 단계 추가 (L 등급이라 따로 PR, 실행 방법 [docs/e2e-test.md](docs/e2e-test.md))
 - [ ] (11/13 #267 검증 ⚠️) `.dockerignore` 에 `node_modules/` · `test-results/` · `playwright-report/` 추가 — 로컬 `docker compose up --build` 때 빌드 컨텍스트가 약 13MB 늘어남(CI 는 node_modules 없어 영향 없음). Docker 설정이라 L 쪽으로 보고 #267 에선 안 고침
 - [ ] (11/13 #152 기록) 녹화 스크립트 — 다른 PC 임시 폴더 확인: 11/5 portfolio-v3 화면 녹화(Playwright 390×844 + ffmpeg) 스크립트가 저장소에 없고 이 PC(`hong-notetbook`)의 `%TEMP%` · `~/.claude` 에도 없음. 다른 PC 에서 찾으면 `scripts/portfolio/` 에 복사(절대 경로 · 비밀값 빼고, 맨 위 주석에 쓰는 법). 당시 클라우드 세션에서 녹화했다면 남아 있지 않음
