@@ -30,7 +30,7 @@ class SearchCrawlerFilesTest {
   }
 
   @Test
-  void robots_txt_는_text_plain_으로_열리고_로그인_마이페이지_API_를_막고_사이트맵을_알림() throws Exception {
+  void robots_txt_는_text_plain_으로_열리고_로그인_마이페이지_API_를_막되_행사목록과_사이트맵은_알림() throws Exception {
     HttpResponse<String> res = get("/robots.txt");
 
     assertThat(res.statusCode()).isEqualTo(200);
@@ -38,6 +38,10 @@ class SearchCrawlerFilesTest {
     assertThat(res.body())
         .contains("User-agent: *", "Allow: /", "Disallow: /api/", "Disallow: /login.html", "Disallow: /mypage.html")
         .contains("Sitemap: https://suwonbible.com/sitemap.xml");
+    // 첫 화면 행사 목록(/api/events)은 검색엔진이 화면을 그릴 때 받아야 하므로 열어 둠 (그 밖의 /api/ 는 막음)
+    assertThat(res.body()).contains("Allow: /api/events$");
+    // 사이트 전체를 막는 줄이 끼어들면 실패 (contains 는 "Disallow: /api/" 에도 걸려서 줄 단위로 비교)
+    assertThat(res.body().lines().map(String::strip)).doesNotContain("Disallow: /", "Disallow: /*");
   }
 
   @Test

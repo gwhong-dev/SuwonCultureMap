@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
+Allow: /api/events$
 Disallow: /api/
 Disallow: /login.html
 Disallow: /mypage.html
