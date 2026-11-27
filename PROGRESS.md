@@ -26,6 +26,7 @@
 - ✅ 오시는 길 — 주변 탭 정류장 · 역(11/12, #220, M, 운영 정류장 표시 확인(11/12) — 운영 `.env` 에 버스 키 추가 뒤): 모바일 상세 "주변" 탭 주소 아래에 가까운 정류장 3곳(같은 이름 = 길 건너 양쪽 합침, 도보 분 · 거리 · 버스 번호 칩 6개 + "+N") · 가까운 역 2곳(카카오 SW8, 호선 묶음). `GET /api/events/{id}/transit`(행사 좌표로만) · `NearbyTransitService` 좌표 소수 4자리 캐시(버스 24시간 · 역 1시간 · 실패 10분) + 경기도 API 하루 800회 상한(검증 지적), 키 없음 · 실패 · 상한 = 칸 숨김. "1007(예약)"은 같은 번호가 있으면 뺌 → 다음 단계 ✅(11/13, #268, M — 확정 시안 [docs/design/2026-11-13-transit-next.md](docs/design/2026-11-13-transit-next.md)): 모바일 탭 맨 아래 "길찾기 (대중교통)" · PC 상세 칸 "오시는 길"(정류장 2칸 격자) · 장소 줄 누르면 주소 복사 · 역 없음 줄(응답 `subwayChecked`)
 - ✅ g) 테마 정리(11/12, M — 확정 시안 상단 바 B 종이색): ① PC 색 토큰화 + 종이색 상단 바 + `data-theme` 구조(#222) · ② `theme.js` · PC ☾/☀ · ☰ 화면 모드 3칸(📱 · ☀ · ☾ 그림) · `theme.css` 공용 토큰 · 나머지 페이지 다크(#223) → 운영 배포 · 헬스 UP. 모바일 홈 상단 ☾/☀(#224, 사용자 요청)
 - 🗂️ 데이터 출처 확장(11/13, [결정 기록](docs/decisions/2026-11-13-swdb-crawling.md), 시안 [명소 · 수원문화DB](https://claude.ai/artifact/YTC4Cy8BgSKZo1LyL2QS9J)): 수원문화DB 행사 크롤링(#255, L, 운영 스위치 `SWDB_SYNC_ENABLED=true` ✅ — 11/24 서버 `.env` 확인 · 운영 행사 중 수원문화DB 2건) · 🗺️ **명소(랜드마크)** ① 재단 59_C · 63_C 저장 · 동기화(분기 세션, L) → ② 명소 페이지 · 메인 지도 체크박스(시안 있음: 비공개 '관람 불가' 강조 · 명소 찜 가능 · 지도 카드 줄엔 안 섞고 마커 누르면 상세 창) → ③ 상설 3건 → ④ 수원 이야기(재단 회신 뒤). 수원문화DB 문화공간 104곳 · 경기도서관은 명소 테이블에 나중에
+- ✅ 검색엔진 등록 준비(11/27, M, 이 PR): `static/robots.txt`(`/api/` · `/login.html` · `/mypage.html` 막음 + 사이트맵 주소) · `static/sitemap.xml`(`/` · `/about.html` · `/privacy.html` 만) → 운영 200. 다음은 사용자: 네이버 서치어드바이저 · 구글 서치콘솔에 사이트맵 제출
 - 보류(사용자 결정): 필터 상세(무료 · 지난 행사 · 필터 시트) · 인스타 사진 없을 때 처리 · 무료 표시 안 함
 
 **확인 남음**
@@ -46,6 +47,7 @@
 - PC에서 `Connection refused` 가 나면 MySQL 서비스가 꺼진 것 → `services.msc` 에서 MySQL80 시작 (관리자 권한)
 
 ## 🧰 나중에 할 일 (발견 사항)
+- [ ] (11/27 robots · sitemap PR) 행사별 페이지 `/events/{id}`(28번)를 만들면 `sitemap.xml` 에 행사 주소를 넣기 — 지금 `/?event=번호` 는 모든 주소가 같은 HTML 이라 중복 문서가 되어 넣지 않음. 행사가 매일 바뀌므로 그땐 정적 파일 대신 서버가 만들어 주는 사이트맵으로
 - [ ] (11/13 Playwright 화면 시험 도입) CI 에 화면 시험 연결 — `.github/workflows/ci.yml` 에 `npm ci` · `npx playwright install --with-deps chromium` · `npm run test:e2e` 단계 추가 (L 등급이라 따로 PR, 실행 방법 [docs/e2e-test.md](docs/e2e-test.md))
 - [ ] (11/13 #267 검증 ⚠️) `.dockerignore` 에 `node_modules/` · `test-results/` · `playwright-report/` 추가 — 로컬 `docker compose up --build` 때 빌드 컨텍스트가 약 13MB 늘어남(CI 는 node_modules 없어 영향 없음). Docker 설정이라 L 쪽으로 보고 #267 에선 안 고침
 - [ ] (11/13 #152 기록) 녹화 스크립트 — 다른 PC 임시 폴더 확인: 11/5 portfolio-v3 화면 녹화(Playwright 390×844 + ffmpeg) 스크립트가 저장소에 없고 이 PC(`hong-notetbook`)의 `%TEMP%` · `~/.claude` 에도 없음. 다른 PC 에서 찾으면 `scripts/portfolio/` 에 복사(절대 경로 · 비밀값 빼고, 맨 위 주석에 쓰는 법). 당시 클라우드 세션에서 녹화했다면 남아 있지 않음
