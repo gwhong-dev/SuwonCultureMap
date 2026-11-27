@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Allow: /api/events$
+Disallow: /api/
+Disallow: /login.html
+Disallow: /mypage.html
+
+Sitemap: https://suwonbible.com/sitemap.xml
