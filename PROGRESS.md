@@ -47,6 +47,7 @@
 - PC에서 `Connection refused` 가 나면 MySQL 서비스가 꺼진 것 → `services.msc` 에서 MySQL80 시작 (관리자 권한)
 
 ## 🧰 나중에 할 일 (발견 사항)
+- [ ] (11/27 #275 CI) 비밀값 검사(gitleaks) 잡이 `fetch-depth: 0` + `gitleaks git .` 로 **모든 브랜치 기록**을 훑음 → #274 브랜치 첫 커밋의 오탐(`.env.example` 빈 `GEMINI_API_KEY=` 다음 줄을 값으로 오인, 예외 지문은 #274 에만 있음)이 #275 처럼 상관없는 PR 까지 막음. 검사 범위를 PR 머지 기록(HEAD)으로 좁히기 — `.github/` 라 L 등급, 따로 PR
 - [ ] (11/27 robots · sitemap PR) 행사별 페이지 `/events/{id}`(28번)를 만들면 `sitemap.xml` 에 행사 주소를 넣기 — 지금 `/?event=번호` 는 모든 주소가 같은 HTML 이라 중복 문서가 되어 넣지 않음. 행사가 매일 바뀌므로 그땐 정적 파일 대신 서버가 만들어 주는 사이트맵으로. 같은 때 `index.html` 에 `<link rel="canonical">` 을 넣어 공유된 `/?event=N` 주소가 중복 문서로 잡히지 않게 (#275 검증 ⚠️)
 - [ ] (11/13 Playwright 화면 시험 도입) CI 에 화면 시험 연결 — `.github/workflows/ci.yml` 에 `npm ci` · `npx playwright install --with-deps chromium` · `npm run test:e2e` 단계 추가 (L 등급이라 따로 PR, 실행 방법 [docs/e2e-test.md](docs/e2e-test.md))
 - [ ] (11/13 #267 검증 ⚠️) `.dockerignore` 에 `node_modules/` · `test-results/` · `playwright-report/` 추가 — 로컬 `docker compose up --build` 때 빌드 컨텍스트가 약 13MB 늘어남(CI 는 node_modules 없어 영향 없음). Docker 설정이라 L 쪽으로 보고 #267 에선 안 고침
